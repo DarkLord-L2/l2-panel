@@ -70,6 +70,7 @@
     justify-content:flex-start;
     gap:16px;
     padding:20px 16px 48px;
+    transition: padding-left .15s;
     background:
       radial-gradient(ellipse at 50% 30%, var(--bg) 0%, var(--bg-vignette) 100%);
     font-family: "Bahnschrift", "Segoe UI Semibold", "Trebuchet MS", sans-serif;
@@ -388,6 +389,8 @@
   }
   .library.dragover{ border-color: var(--gold); }
   .library.hidden{ display:none; }
+  /* когда у класса есть иконки — резервируем под колонку место, чтобы она не перекрывала панель */
+  body.has-sidebar{ padding-left:340px; }
   /* тот же скроллбар для Chrome/Edge/Safari */
   .library::-webkit-scrollbar{ width:10px; }
   .library::-webkit-scrollbar-track{ background: var(--panel); border-radius:6px; }
@@ -1573,6 +1576,7 @@
       ...state.globalGroups.map(g => ({ ...g, scope: "g" }))
     ];
     libraryEl.classList.toggle("hidden", !groups.length);
+    document.body.classList.toggle("has-sidebar", !!groups.length);
     groups.forEach(g => {
       const block = document.createElement("div");
       block.className = "lib-group";
