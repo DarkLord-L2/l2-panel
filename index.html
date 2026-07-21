@@ -380,11 +380,37 @@
     box-shadow: inset 0 0 0 1px rgba(0,0,0,.35), 0 10px 30px rgba(0,0,0,.35);
     overflow:hidden;
     z-index:30;
+    transition: width .15s;
   }
   .library.dragover{ border-color: var(--gold); }
   .library.hidden{ display:none; }
   /* когда у класса есть иконки — резервируем под колонку место, чтобы она не перекрывала панель */
   body.has-sidebar{ padding-left:340px; }
+  body.has-sidebar.sidebar-collapsed{ padding-left:72px; }
+
+  .library.collapsed{ width:40px; }
+  .library.collapsed .library-scroll,
+  .library.collapsed .lib-trash-btn{ display:none; }
+
+  .library-head{
+    flex:none;
+    display:flex;
+    justify-content:flex-end;
+    padding:6px 6px 0;
+  }
+  .library.collapsed .library-head{ justify-content:center; padding:6px 0 0; }
+  .lib-collapse-btn{
+    width:24px; height:24px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:5px;
+    border:1px solid var(--border);
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    color: var(--gold-dim);
+    font-size:13px;
+    line-height:1;
+    cursor:pointer;
+  }
+  .lib-collapse-btn:hover{ border-color: var(--border-lit); color: var(--gold); }
 
   .library-scroll{
     flex:1;
@@ -932,6 +958,9 @@
 <div id="floatLayer"></div>
 
 <div class="library" id="library">
+  <div class="library-head">
+    <button class="lib-collapse-btn" id="libCollapseBtn" title="Свернуть панель иконок">‹</button>
+  </div>
   <div class="library-scroll" id="libraryScroll"></div>
   <button class="lib-trash-btn" id="libTrashBtn" title="Показать/скрыть удаление иконок">🗑</button>
 </div>
@@ -1053,6 +1082,7 @@
           <li>Перетащите иконку с ячейки в пустое место страницы — она уберётся с панели (в группе останется).</li>
           <li>Крестик на иконке убирает её из группы, крестик у названия группы — удаляет всю группу (на уже расставленные ячейки это не влияет). Эти крестики, как и само добавление иконок, доступны только владельцу — тому, у кого в этом браузере сохранён токен из «🌐 Общий доступ». У остальных их нет вообще.</li>
           <li>У владельца внизу колонки с иконками есть кнопка 🗑 — по умолчанию крестики удаления скрыты, чтобы не мешали смотреть иконки; кнопка их показывает и прячет обратно.</li>
+          <li>Кнопка «‹» вверху колонки сворачивает её в узкую полоску (нажмите «›», чтобы развернуть обратно) — иконки при этом никуда не пропадают, просто скрыты из вида. Браузер запоминает, свёрнута она или нет.</li>
         </ul>
       </div>
     </details>
@@ -1579,7 +1609,23 @@
   const libraryEl = document.getElementById("library");
   const libraryScrollEl = document.getElementById("libraryScroll");
   const libTrashBtn = document.getElementById("libTrashBtn");
+  const libCollapseBtn = document.getElementById("libCollapseBtn");
   const libFileInput = document.getElementById("libFileInput");
+
+  const LIB_COLLAPSE_KEY = "l2LibraryCollapsed";
+  let libraryCollapsed = localStorage.getItem(LIB_COLLAPSE_KEY) === "1";
+  function applyLibraryCollapsed(){
+    libraryEl.classList.toggle("collapsed", libraryCollapsed);
+    document.body.classList.toggle("sidebar-collapsed", libraryCollapsed);
+    libCollapseBtn.textContent = libraryCollapsed ? "›" : "‹";
+    libCollapseBtn.title = libraryCollapsed ? "Развернуть панель иконок" : "Свернуть панель иконок";
+  }
+  libCollapseBtn.addEventListener("click", () => {
+    libraryCollapsed = !libraryCollapsed;
+    localStorage.setItem(LIB_COLLAPSE_KEY, libraryCollapsed ? "1" : "0");
+    applyLibraryCollapsed();
+  });
+  applyLibraryCollapsed();
 
   function groupsForClassKey(key){
     const p = state.profiles[key];
