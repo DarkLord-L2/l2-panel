@@ -1,0 +1,2650 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Панель скилов</title>
+<style>
+  :root{
+    --bg: #14110c;
+    --bg-vignette: #0c0a07;
+    --panel: #211a11;
+    --panel-2: #291f14;
+    --border: #5a4423;
+    --border-lit: #8a6a2c;
+    --gold: #d4a340;
+    --gold-dim: #a9822f;
+    --text: #e9dfc4;
+    --text-dim: #9c8f74;
+    --slot-empty-a: #1b160f;
+    --slot-empty-b: #221b12;
+    --danger: #b3503f;
+    --danger-lit: #d66a55;
+    --focus: #e8c874;
+  }
+  :root[data-theme="light"]{
+    --bg: #cdbe9c;
+    --bg-vignette: #b7a67f;
+    --panel: #e4d6b3;
+    --panel-2: #ecdfbe;
+    --border: #9c8352;
+    --border-lit: #7a6132;
+    --gold: #8a6113;
+    --gold-dim: #6e4d10;
+    --text: #2c2314;
+    --text-dim: #5c4d31;
+    --slot-empty-a: #d8c9a2;
+    --slot-empty-b: #e0d3ae;
+    --danger: #a13d2c;
+    --danger-lit: #7f2f21;
+    --focus: #8a6113;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg: #cdbe9c;
+      --bg-vignette: #b7a67f;
+      --panel: #e4d6b3;
+      --panel-2: #ecdfbe;
+      --border: #9c8352;
+      --border-lit: #7a6132;
+      --gold: #8a6113;
+      --gold-dim: #6e4d10;
+      --text: #2c2314;
+      --text-dim: #5c4d31;
+      --slot-empty-a: #d8c9a2;
+      --slot-empty-b: #e0d3ae;
+      --danger: #a13d2c;
+      --danger-lit: #7f2f21;
+      --focus: #8a6113;
+    }
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    gap:16px;
+    padding:20px 16px 48px;
+    background:
+      radial-gradient(ellipse at 50% 30%, var(--bg) 0%, var(--bg-vignette) 100%);
+    font-family: "Bahnschrift", "Segoe UI Semibold", "Trebuchet MS", sans-serif;
+    color: var(--text);
+  }
+
+  header{
+    text-align:center;
+  }
+  h1{
+    margin:0 0 4px;
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    font-weight:700;
+    letter-spacing:.04em;
+    font-size: clamp(22px, 3vw, 30px);
+    color: var(--gold);
+    text-shadow: 0 1px 0 rgba(0,0,0,.4);
+    text-wrap: balance;
+  }
+  .char-nav{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  .char-nav select{
+    font-family:inherit;
+    font-size:12.5px;
+    letter-spacing:.03em;
+    padding:7px 12px;
+    border-radius:5px;
+    border:1px solid var(--border);
+    background: var(--panel);
+    color: var(--gold);
+    cursor:pointer;
+  }
+  .char-nav select:hover{ border-color: var(--border-lit); }
+  .char-nav select:focus-visible{ outline:2px solid var(--focus); outline-offset:1px; }
+  .share-btn{
+    position:fixed;
+    bottom:16px; left:16px;
+    font-family:inherit;
+    font-size:12.5px;
+    letter-spacing:.03em;
+    padding:8px 16px;
+    border-radius:5px;
+    border:1px solid var(--border);
+    background: var(--panel);
+    color: var(--gold);
+    cursor:pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,.4);
+    z-index:56;
+  }
+  .share-btn:hover{ border-color: var(--border-lit); }
+
+  /* спейсеры делят свободное место пополам: панель стоит на середине между шапкой и низом */
+  .flex-spacer{ flex:1 1 0; }
+
+  .credit{
+    align-self:flex-end;
+    margin-right:70px;
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    font-size:12px;
+    letter-spacing:.12em;
+    color: var(--text-dim);
+    user-select:none;
+    opacity:.8;
+  }
+  .credit span{
+    color: var(--gold-dim);
+    text-shadow: 0 1px 0 rgba(0,0,0,.4);
+  }
+  .credit::before,
+  .credit::after{
+    content:"———";
+    margin:0 12px;
+    color: var(--border);
+    letter-spacing:-2px;
+  }
+
+  .stage{
+    display:flex;
+    align-items:flex-end;
+    gap:12px;
+    /* место под все 6 рядов: нижний ряд закреплён, новые ряды растут вверх */
+    min-height:334px;
+  }
+  .stage.vertical{ min-height:0; }
+  .stage.moved{
+    position:fixed;
+    z-index:39;
+    min-height:0;
+  }
+  #mainGrip{ cursor:grab; touch-action:none; }
+  #mainGrip:active{ cursor:grabbing; }
+
+  .sidebar{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-end;
+    gap:6px;
+    padding:6px 4px;
+    align-self:stretch;
+  }
+  .sidebar-spacer{ flex:1; }
+  .arrow-btn{
+    width:30px; height:22px;
+    display:flex; align-items:center; justify-content:center;
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--border);
+    border-radius:4px;
+    color: var(--gold);
+    cursor:pointer;
+    font-size:11px;
+    user-select:none;
+    transition: background .12s, border-color .12s, transform .06s;
+  }
+  .arrow-btn:hover:not(.disabled){ border-color: var(--border-lit); background: linear-gradient(180deg,#332818,#241c11); }
+  .arrow-btn:active:not(.disabled){ transform: translateY(1px); }
+  .arrow-btn.disabled{ opacity:.3; cursor:default; }
+  .arrow-btn .rot{
+    display:inline-block;
+    transform: rotate(90deg);
+    font-size:14px;
+    font-weight:700;
+  }
+  .arrow-btn .rot-dn{ transform: rotate(-90deg); }
+
+  .pager{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-between;
+    width:18px;
+    height:46px;
+    flex:none;
+  }
+  .pg{
+    width:18px;
+    height:13px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:none;
+    border:none;
+    color: var(--gold-dim);
+    font-size:9px;
+    line-height:1;
+    cursor:pointer;
+    padding:0;
+  }
+  .pg:hover{ color: var(--gold); }
+  .pg-num{
+    font-size:10px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    line-height:1;
+    user-select:none;
+  }
+
+  .panel-controls{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    align-self:flex-end;
+    padding:6px 4px;
+  }
+  .ctl-btn{
+    width:30px; height:24px;
+    display:flex; align-items:center; justify-content:center;
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--border);
+    border-radius:4px;
+    color: var(--gold);
+    cursor:pointer;
+    font-size:12px;
+    padding:0;
+    user-select:none;
+  }
+  .ctl-btn:hover{ border-color: var(--border-lit); }
+  .ctl-btn.active{
+    border-color: var(--gold);
+    box-shadow: 0 0 0 1px var(--gold-dim) inset;
+  }
+
+  /* вертикальный режим основной панели */
+  .stage.vertical .grid{ flex-direction:row; }
+  .stage.vertical .row{ flex-direction:column; }
+  .stage.vertical .pager{ width:46px; height:18px; flex-direction:row; }
+
+  /* плавающие панели 11–13 */
+  .float-panel{
+    position:fixed;
+    z-index:40;
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:6px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.45);
+    display:flex;
+    gap:6px;
+  }
+  .float-head{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-between;
+    gap:4px;
+  }
+  .float-grip{
+    cursor:grab;
+    color: var(--text-dim);
+    font-size:13px;
+    line-height:1;
+    padding:2px 3px;
+    user-select:none;
+    touch-action:none;
+  }
+  .float-grip:active{ cursor:grabbing; }
+  .float-grip:hover{ color: var(--gold); }
+  .float-num{
+    font-size:10px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .float-shape{
+    background:none;
+    border:1px solid var(--border);
+    border-radius:4px;
+    color: var(--gold-dim);
+    font-size:10px;
+    width:20px; height:20px;
+    cursor:pointer;
+    padding:0;
+  }
+  .float-shape:hover{ color: var(--gold); border-color: var(--border-lit); }
+  .float-cells{
+    display:grid;
+    gap:5px;
+  }
+
+  .grid{
+    display:flex;
+    flex-direction:column-reverse;
+    gap:5px;
+    padding:9px;
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--border);
+    border-radius:6px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.35), 0 10px 30px rgba(0,0,0,.45);
+  }
+  .row{
+    display:flex;
+    gap:5px;
+  }
+  .row.hidden{ display:none; }
+
+  .cell{
+    position:relative;
+    width:46px;
+    height:46px;
+    border-radius:5px;
+    border:1px solid var(--border);
+    background:
+      repeating-linear-gradient(135deg, var(--slot-empty-a) 0 6px, var(--slot-empty-b) 6px 12px);
+    background-size: cover;
+    background-position:center;
+    cursor:pointer;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04);
+    transition: border-color .12s, box-shadow .12s;
+  }
+  .cell.filled{
+    background-repeat:no-repeat;
+    cursor:grab;
+  }
+  .cell.filled:active{ cursor:grabbing; }
+  .cell:hover{ border-color: var(--border-lit); }
+  .cell.armed{
+    border-color: var(--focus);
+    box-shadow: 0 0 0 2px var(--focus), inset 0 0 0 1px rgba(0,0,0,.5);
+    animation: pulse 1s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce){ .cell.armed{ animation:none; } }
+  @keyframes pulse{
+    0%,100%{ box-shadow: 0 0 0 2px var(--focus), inset 0 0 0 1px rgba(0,0,0,.5); }
+    50%{ box-shadow: 0 0 0 2px transparent, inset 0 0 0 1px rgba(0,0,0,.5); }
+  }
+  .cell:focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
+  .cell.dragover{
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px var(--gold), inset 0 0 0 1px rgba(0,0,0,.5);
+  }
+
+  .library{
+    width:100%;
+    max-width:640px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    padding:10px 12px;
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--border);
+    border-radius:6px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.35);
+  }
+  .library.dragover{ border-color: var(--gold); }
+  .library.hidden{ display:none; }
+  .lib-grid{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    min-height:38px;
+    max-height:118px;
+    overflow-y:auto;
+  }
+  .lib-item{
+    position:relative;
+    width:38px;
+    height:38px;
+    border-radius:5px;
+    border:1px solid var(--border);
+    background-size:cover;
+    background-position:center;
+    cursor:grab;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.5);
+  }
+  .lib-item:hover{ border-color: var(--border-lit); }
+  .lib-item:active{ cursor:grabbing; }
+  .lib-item .remove{
+    position:absolute;
+    top:-6px; right:-6px;
+    width:17px; height:17px;
+    border-radius:50%;
+    background: var(--danger);
+    color:#fff;
+    font-size:11px;
+    font-weight:700;
+    line-height:17px;
+    text-align:center;
+    z-index:3;
+    cursor:pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,.5);
+  }
+  .lib-item .remove:hover{ background: var(--danger-lit); transform: scale(1.1); }
+  .lib-item.selected{
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px var(--gold);
+  }
+
+  .lib-group + .lib-group{ margin-top:10px; }
+  .lib-group-head{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:5px;
+  }
+  .lib-group-name{
+    font-size:11.5px;
+    font-weight:600;
+    color: var(--text-dim);
+    text-transform:uppercase;
+    letter-spacing:.05em;
+  }
+  .lib-group-badge{
+    font-size:9.5px;
+    padding:1px 6px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    color: var(--gold-dim);
+  }
+  .lib-group-del{
+    margin-left:auto;
+    background:none;
+    border:none;
+    color: var(--text-dim);
+    font-size:14px;
+    line-height:1;
+    cursor:pointer;
+    padding:0 3px;
+  }
+  .lib-group-del:hover{ color: var(--danger-lit); }
+
+  .badge{
+    position:absolute;
+    right:1px; bottom:1px;
+    min-width:13px;
+    padding:0 3px;
+    height:14px;
+    line-height:14px;
+    font-size:9.5px;
+    font-weight:700;
+    text-align:center;
+    color:#1a140b;
+    background: linear-gradient(180deg, #f0d27a, var(--gold-dim));
+    border:1px solid rgba(0,0,0,.5);
+    border-radius:3px;
+    z-index:2;
+    letter-spacing:0;
+  }
+  .badge.empty{
+    background: rgba(0,0,0,.3);
+    border-color: var(--border);
+    opacity:.5;
+  }
+  .badge:hover{ filter: brightness(1.3); opacity:1; }
+
+  .slot-num{
+    position:absolute;
+    left:2px; top:1px;
+    font-size:8px;
+    color: rgba(255,255,255,.28);
+    z-index:1;
+    pointer-events:none;
+  }
+  :root[data-theme="light"] .slot-num{ color: rgba(0,0,0,.22); }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]) .slot-num{ color: rgba(0,0,0,.22); }
+  }
+
+  .menu-btn{
+    position:fixed;
+    top:14px; left:16px;
+    font-size:14px;
+    padding:6px 11px;
+    border-radius:5px;
+    border:1px solid var(--border);
+    background: var(--panel);
+    color: var(--text-dim);
+    cursor:pointer;
+    z-index:56;
+  }
+  .menu-btn:hover{ color: var(--gold); border-color: var(--border-lit); }
+  .menu-panel{
+    position:fixed;
+    top:52px; left:16px;
+    z-index:55;
+    min-width:220px;
+    background: var(--panel);
+    border:1px solid var(--border);
+    border-radius:6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    overflow:hidden;
+    display:none;
+  }
+  .menu-panel.show{ display:block; }
+  .menu-panel button{
+    display:block;
+    width:100%;
+    text-align:left;
+    padding:10px 14px;
+    background:none;
+    border:none;
+    color: var(--text);
+    font-family:inherit;
+    font-size:12.5px;
+    cursor:pointer;
+  }
+  .menu-panel button:hover{ background: var(--panel-2); color: var(--gold); }
+  .menu-panel button.danger:hover{ color: var(--danger-lit); }
+  .menu-panel hr{ border:none; border-top:1px solid var(--border); margin:0; }
+
+  .help-btn{
+    position:fixed;
+    bottom:16px; right:16px;
+    width:34px; height:34px;
+    border-radius:50%;
+    border:1px solid var(--border);
+    background: var(--panel);
+    color: var(--gold);
+    font-size:16px;
+    font-family:inherit;
+    cursor:pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,.4);
+    z-index:56;
+  }
+  .help-btn:hover{ border-color: var(--border-lit); }
+
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    background: rgba(0,0,0,.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:70;
+    padding:20px;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal{
+    max-width:540px;
+    max-height:82vh;
+    overflow-y:auto;
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--border-lit);
+    border-radius:8px;
+    padding:20px 24px 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  }
+  .modal h2{
+    margin:0 0 12px;
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    color: var(--gold);
+    font-size:18px;
+    letter-spacing:.04em;
+  }
+  .modal h3{
+    margin:14px 0 6px;
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:.07em;
+    color: var(--gold-dim);
+  }
+  .modal p, .modal li{
+    font-size:13px;
+    line-height:1.55;
+    color: var(--text);
+    margin:4px 0;
+  }
+  .modal ul{ margin:4px 0; padding-left:18px; }
+  .help-section{
+    border:1px solid var(--border);
+    border-radius:6px;
+    margin:8px 0;
+    overflow:hidden;
+    background: var(--panel-2);
+  }
+  .help-section summary{
+    cursor:pointer;
+    padding:10px 14px;
+    font-size:12px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color: var(--gold-dim);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    user-select:none;
+    list-style:none;
+  }
+  .help-section summary::-webkit-details-marker{ display:none; }
+  .help-section summary::marker{ content:""; }
+  .help-section summary::after{
+    content:"▸";
+    flex:none;
+    font-size:11px;
+    color: var(--text-dim);
+    transition: transform .15s;
+  }
+  .help-section[open] summary::after{ transform: rotate(90deg); }
+  .help-section summary:hover{ color: var(--gold); }
+  .help-section summary:hover::after{ color: var(--gold); }
+  .help-section .help-body{ padding:2px 14px 12px; }
+  .help-section .help-body p:first-child,
+  .help-section .help-body ul:first-child{ margin-top:0; }
+  .modal .kbd{
+    display:inline-block;
+    padding:0 5px;
+    border:1px solid var(--border);
+    border-bottom-width:2px;
+    border-radius:4px;
+    background: var(--panel-2);
+    font-size:11.5px;
+  }
+  .modal .char-nav{ margin:10px 0 4px; justify-content:flex-start; }
+  .modal .action-btn{
+    display:block;
+    width:100%;
+    margin-top:14px;
+    font-family:inherit;
+    font-size:13px;
+    letter-spacing:.03em;
+    padding:9px 14px;
+    border-radius:5px;
+    border:1px solid var(--border);
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    color: var(--gold);
+    cursor:pointer;
+  }
+  .modal .action-btn:hover{ border-color: var(--border-lit); }
+  .modal .action-btn.danger-btn{ color: var(--danger-lit); border-color: var(--danger); }
+  .modal .action-btn.danger-btn:hover{ background: var(--danger); color:#fff; }
+  .confirm-modal{ max-width:380px; }
+  .confirm-modal .gh-row{ margin-top:14px; }
+  .gh-input{
+    display:block;
+    width:100%;
+    font-family:inherit;
+    font-size:13px;
+    padding:8px 10px;
+    border-radius:5px;
+    border:1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text);
+  }
+  .gh-input:focus-visible{ outline:2px solid var(--focus); outline-offset:1px; }
+  .gh-hint{ font-size:11.5px; color: var(--text-dim); margin-top:6px; }
+  .gh-gistline{
+    font-family: "Bahnschrift", monospace;
+    font-size:12px;
+    color: var(--gold-dim);
+    word-break: break-all;
+  }
+  .gh-row{ display:flex; gap:8px; }
+  .gh-row .action-btn{ flex:1; margin-top:0; }
+  .gh-status{ min-height:1.4em; font-size:12px; color: var(--text-dim); }
+
+  .scope-row{
+    display:flex;
+    gap:18px;
+    font-size:13px;
+    margin:10px 0 4px;
+  }
+  .scope-row label{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    cursor:pointer;
+    color: var(--text);
+  }
+
+  .macro-line-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin:3px 0;
+  }
+  .macro-line-num{
+    width:16px;
+    font-size:10px;
+    color: var(--text-dim);
+    text-align:right;
+    flex:none;
+  }
+  .macro-line-input{
+    flex:1;
+    font-family:inherit;
+    font-size:12.5px;
+    padding:5px 8px;
+    border-radius:4px;
+    border:1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text);
+  }
+  .macro-line-count{
+    width:32px;
+    font-size:10px;
+    color: var(--text-dim);
+    text-align:right;
+    flex:none;
+    font-variant-numeric: tabular-nums;
+  }
+  .macro-view-lines{
+    font-family: "Bahnschrift", monospace;
+    font-size:13px;
+    line-height:1.7;
+    white-space:pre-wrap;
+    background: var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:10px 12px;
+  }
+  .modal-close{
+    float:right;
+    margin:-4px -10px 0 8px;
+    background:none;
+    border:none;
+    color: var(--text-dim);
+    font-size:20px;
+    line-height:1;
+    cursor:pointer;
+  }
+  .modal-close:hover{ color: var(--gold); }
+
+  .theme-toggle{
+    position:fixed;
+    top:14px; right:16px;
+    font-size:11px;
+    padding:6px 10px;
+    border-radius:5px;
+    border:1px solid var(--border);
+    background: var(--panel);
+    color: var(--text-dim);
+    cursor:pointer;
+  }
+
+  /* context menu */
+  .ctx{
+    position:fixed;
+    z-index:50;
+    min-width:150px;
+    background: var(--panel);
+    border:1px solid var(--border);
+    border-radius:6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    overflow:hidden;
+    display:none;
+  }
+  .ctx button{
+    display:block;
+    width:100%;
+    text-align:left;
+    padding:9px 12px;
+    background:none;
+    border:none;
+    color: var(--text);
+    font-family:inherit;
+    font-size:12.5px;
+    cursor:pointer;
+  }
+  .ctx button:hover{ background: var(--panel-2); color: var(--gold); }
+  .ctx button.danger:hover{ color: var(--danger-lit); }
+  .ctx hr{ border:none; border-top:1px solid var(--border); margin:0; }
+
+  .toast{
+    position:fixed;
+    bottom:20px; left:50%;
+    transform: translateX(-50%) translateY(12px);
+    background: var(--panel);
+    border:1px solid var(--border-lit);
+    color: var(--text);
+    padding:9px 16px;
+    border-radius:6px;
+    font-size:12.5px;
+    opacity:0;
+    pointer-events:none;
+    transition: opacity .2s, transform .2s;
+    z-index:60;
+  }
+  .toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+
+  input[type="file"]{ display:none; }
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" id="themeToggle">☾ / ☀</button>
+
+<button class="menu-btn" id="menuBtn" title="Меню">☰</button>
+<div class="menu-panel" id="menuPanel">
+  <button id="menuAddIcons">Добавить иконки</button>
+  <button id="menuAddMacro">➕ Добавить макрос</button>
+  <button id="menuGithub">🌐 Общий доступ (GitHub)</button>
+  <hr />
+  <button id="btnExport">Экспорт в файл</button>
+  <button id="btnImport">Импорт из файла</button>
+  <hr />
+  <button class="danger" id="btnClearAll">Очистить панель класса</button>
+  <input type="file" id="importFile" accept="application/json" />
+</div>
+
+<div class="modal-overlay" id="ghOverlay">
+  <div class="modal">
+    <button class="modal-close" id="ghClose" title="Закрыть">×</button>
+    <h2>Общий доступ к иконкам</h2>
+    <p>Ваши картинки публикуются в публичный GitHub Gist. Любой, кто откроет ссылку на эту панель, увидит их автоматически — но добавлять и менять их может только тот, у кого есть токен.</p>
+
+    <h3>Токен (только на этом устройстве)</h3>
+    <input type="password" id="ghTokenInput" class="gh-input" placeholder="ghp_..." autocomplete="off" spellcheck="false" />
+    <p class="gh-hint">Создаётся на github.com → Settings → Developer settings → Personal access tokens (classic), scope «gist». Никогда никому не пересылайте его.</p>
+
+    <h3>Общее хранилище</h3>
+    <p class="gh-gistline" id="ghGistLine">—</p>
+    <div class="gh-row">
+      <button class="action-btn" id="ghGistCopy">Скопировать ID</button>
+    </div>
+
+    <div class="gh-row">
+      <button class="action-btn" id="ghPublishBtn">📤 Опубликовать все классы</button>
+      <button class="action-btn" id="ghPullBtn">🔄 Обновить из общего доступа</button>
+    </div>
+    <button class="action-btn" id="ghForgetBtn">Забыть токен на этом устройстве</button>
+    <p class="gh-status" id="ghStatus"></p>
+  </div>
+</div>
+
+<header>
+  <h1>Панель скилов</h1>
+</header>
+
+<div class="char-nav">
+  <select id="raceSelect" title="Раса"></select>
+  <select id="classSelect" title="Класс"></select>
+</div>
+
+<button id="btnShare" class="share-btn" title="Скопировать ссылку на раскладку">Поделиться</button>
+
+<div class="flex-spacer"></div>
+
+<div class="stage">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-spacer"></div>
+    <button class="arrow-btn" id="arrowUp" title="Открыть ряд выше"><span class="rot">«</span></button>
+    <button class="arrow-btn" id="arrowDown" title="Скрыть верхний ряд"><span class="rot rot-dn">«</span></button>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="panel-controls">
+    <button class="ctl-btn" id="mainGrip" title="Перетащить панель (двойной клик — вернуть на место)">≣</button>
+    <button class="ctl-btn" id="btnFloats" title="Доп. панели 11–13: добавить / убрать">«</button>
+    <button class="ctl-btn" id="btnOrient" title="Горизонтально / вертикально">⇄</button>
+    <button class="ctl-btn" id="btnLock" title="Закрыть панель (замок)">🔓</button>
+  </div>
+</div>
+
+<div id="floatLayer"></div>
+
+<div class="library" id="library"></div>
+
+<div class="library" id="macroLibrary">
+  <div class="lib-group">
+    <div class="lib-group-head"><span class="lib-group-name">Мои макросы</span></div>
+    <div class="lib-grid" id="macroGrid"></div>
+  </div>
+</div>
+
+<div class="flex-spacer"></div>
+
+<footer class="credit">⚔ <span>Scryde МрачныйЛорд</span></footer>
+
+<input type="file" id="libFileInput" accept="image/*" multiple />
+
+<div class="modal-overlay" id="addIconsOverlay">
+  <div class="modal">
+    <button class="modal-close" id="addIconsClose" title="Закрыть">×</button>
+    <h2>Добавить иконки</h2>
+
+    <div class="scope-row">
+      <label><input type="radio" name="addScope" id="addScopeClass" checked /> Для одного класса</label>
+      <label><input type="radio" name="addScope" id="addScopeGlobal" /> Общая для всех классов</label>
+    </div>
+
+    <div class="char-nav" id="addRaceClassRow">
+      <select id="addRaceSelect" title="Раса"></select>
+      <select id="addClassSelect" title="Класс"></select>
+    </div>
+
+    <h3>Группа</h3>
+    <select id="addGroupSelect"></select>
+    <input type="text" id="addGroupName" class="gh-input" placeholder="Название новой группы" style="margin-top:6px;" />
+
+    <button class="action-btn" id="addIconsPick">Выбрать файлы…</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="macroOverlay">
+  <div class="modal">
+    <button class="modal-close" id="macroClose" title="Закрыть">×</button>
+    <h2>Новый макрос</h2>
+    <p>Макросы может создавать любой, кто открыл панель — они хранятся только у вас в браузере. А вот иконки для них выдаёт владелец панели.</p>
+
+    <h3>Иконка</h3>
+    <div class="lib-grid" id="macroIconPicker"></div>
+    <div class="gh-row">
+      <button class="action-btn" id="macroAddIconBtn">+ Добавить иконку для макросов</button>
+    </div>
+    <p class="gh-hint">Опубликованными для всех эти иконки станут, только если их добавит и опубликует владелец панели через «🌐 Общий доступ».</p>
+    <input type="file" id="macroIconFile" accept="image/*" multiple />
+
+    <h3>Название</h3>
+    <input type="text" id="macroNameInput" class="gh-input" placeholder="Например: Бафф-сет" maxlength="30" />
+
+    <h3>Текст (до 12 строк, каждая до 25 символов)</h3>
+    <div id="macroLines"></div>
+
+    <button class="action-btn" id="macroSaveBtn">Сохранить макрос</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="macroViewOverlay">
+  <div class="modal">
+    <button class="modal-close" id="macroViewClose" title="Закрыть">×</button>
+    <h2 id="macroViewTitle">Макрос</h2>
+    <div class="macro-view-lines" id="macroViewLines"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirmOverlay">
+  <div class="modal confirm-modal">
+    <h2 id="confirmTitle">Подтвердите</h2>
+    <p id="confirmMsg"></p>
+    <div class="gh-row">
+      <button class="action-btn danger-btn" id="confirmYes">Да</button>
+      <button class="action-btn" id="confirmNo">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="copyTextOverlay">
+  <div class="modal confirm-modal">
+    <h2 id="copyTextTitle">Скопируйте</h2>
+    <input type="text" id="copyTextInput" class="gh-input" readonly />
+    <div class="gh-row">
+      <button class="action-btn" id="copyTextBtn">Скопировать</button>
+      <button class="action-btn" id="copyTextClose">Закрыть</button>
+    </div>
+    <p class="gh-hint">Если кнопка не сработала — выделите текст выше и нажмите Ctrl+C (⌘+C на Mac).</p>
+  </div>
+</div>
+
+<button class="help-btn" id="helpBtn" title="Руководство">?</button>
+<div class="modal-overlay" id="helpOverlay">
+  <div class="modal">
+    <button class="modal-close" id="helpClose" title="Закрыть">×</button>
+    <h2>Как пользоваться панелью</h2>
+
+    <details class="help-section">
+      <summary>Персонажи</summary>
+      <div class="help-body">
+        <p>Сверху выбираете расу и класс. У каждого класса — своя панель и своя библиотека иконок: переключаетесь между персонажами, и всё остаётся на своих местах.</p>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary>Иконки и группы</summary>
+      <div class="help-body">
+        <ul>
+          <li>Меню ☰ → «Добавить иконки»: выбираете «Для одного класса» или «Общая для всех классов», выбираете группу (существующую или создаёте новую по имени) и жмёте «Выбрать файлы…».</li>
+          <li>Группа «для одного класса» видна только на панели этого класса. Группа «общая для всех» появляется у каждого персонажа автоматически, без повторной загрузки.</li>
+          <li>Иконки показываются полоской из подписанных групп под панелью — у общих групп рядом с названием значок «общая».</li>
+          <li>Из группы перетащите иконку на любую ячейку — она там останется. Одну иконку можно ставить в несколько ячеек.</li>
+          <li>Файл из проводника можно бросить и сразу на ячейку — он попадёт и туда, и в группу «Иконки» текущего класса.</li>
+          <li>Иконку можно перетащить с одной ячейки на другую: пустая ячейка её примет, а если там уже есть иконка — они поменяются местами.</li>
+          <li>Перетащите иконку с ячейки в пустое место страницы — она уберётся с панели (в группе останется).</li>
+          <li>Крестик на иконке убирает её из группы, крестик у названия группы — удаляет всю группу (на уже расставленные ячейки это не влияет). Эти крестики, как и само добавление иконок, видны только владельцу — тому, у кого в этом браузере сохранён токен из «🌐 Общий доступ». У остальных их просто нет.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary>Макросы</summary>
+      <div class="help-body">
+        <ul>
+          <li>☰ → «➕ Добавить макрос» — доступно каждому, кто открыл панель, и хранится только в его браузере.</li>
+          <li>Иконку для макроса выбираете из набора, который выдаёт владелец панели (кнопка «+ Добавить иконку для макросов» пополняет этот набор — общим для всех он станет, только если владелец опубликует его через «🌐 Общий доступ»).</li>
+          <li>В самом макросе — до 12 строк текста, в каждой до 25 символов.</li>
+          <li>Готовые макросы показываются полоской «Мои макросы» под иконками — перетаскиваются на ячейки панели так же, как обычные иконки.</li>
+          <li>Клик по ячейке с макросом (не перетаскивание) показывает его текст.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary>Клавиши</summary>
+      <div class="help-body">
+        <ul>
+          <li>Клик по бейджу в углу ячейки — панель ждёт нажатия. Нажмите любую клавишу (буква, цифра, F1–F12…), и она привяжется.</li>
+          <li>Нажмите ту же клавишу ещё раз на той же ячейке — бинд снимется, бейдж снова пустой.</li>
+          <li><span class="kbd">Esc</span> — отменить выбор клавиши.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary>Ряды и строки</summary>
+      <div class="help-body">
+        <ul>
+          <li>Всего у класса <b>10 строк</b> по 12 ячеек, на экране видно до <b>6 рядов</b>.</li>
+          <li>Кнопки «двойные стрелки» слева от нижнего ряда открывают ряд выше и скрывают верхний.</li>
+          <li>Маленькие стрелки ▲/▼ с номером слева от каждого ряда перелистывают этот ряд по строкам 1–10 (после 10 идёт снова 1). Сам ряд остаётся на месте, соседние ряды не меняются.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary>Доп. панели 11–13</summary>
+      <div class="help-body">
+        <ul>
+          <li>Кнопка <b>«</b> справа от панели добавляет плавающие панели — строки 11, 12 и 13, по одной за нажатие. Когда открыты все три, следующее нажатие убирает их.</li>
+          <li>Перетаскивайте их за ручку ≣ куда угодно — за край экрана они не уйдут.</li>
+          <li>Кнопка ▦ на панели меняет форму: 1×12 → 2×6 → 3×4 → 4×3 → 6×2 → 12×1.</li>
+          <li>Иконки и клавиши на них вешаются так же, как на основной панели. Перелистать эти строки нельзя.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary>Перенос, поворот и замок</summary>
+      <div class="help-body">
+        <ul>
+          <li>Ручка <b>≣</b> в столбике кнопок — перетащить основную панель в любое место экрана. Двойной клик по ручке возвращает её на стандартное место.</li>
+          <li>Кнопка <b>⇄</b> ставит основную панель вертикально и обратно.</li>
+          <li>Кнопка <b>🔓/🔒</b> — замок: пока он закрыт, ничего нельзя добавить или убрать (иконки, клавиши, очистка). Перелистывание и перетаскивание панелей работают.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary>Очистка</summary>
+      <div class="help-body">
+        <p>Правый клик по ячейке — убрать картинку, убрать клавишу или очистить ячейку целиком.</p>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary>Поделиться (одна ссылка, один класс)</summary>
+      <div class="help-body">
+        <ul>
+          <li>Кнопка «Поделиться» снизу слева копирует ссылку, внутри которой зашита вся раскладка текущего класса — картинки, клавиши и ряды.</li>
+          <li>Получатель открывает ссылку, подтверждает — и раскладка загружается ему в тот же класс, а картинки попадают в его библиотеку.</li>
+          <li>Чем больше картинок на панели, тем длиннее ссылка. Если мессенджер обрезает её — передайте раскладку файлом через ☰ Экспорт/Импорт.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary>Общий доступ (GitHub) — только для владельца</summary>
+      <div class="help-body">
+        <ul>
+          <li>Это для сценария «я один раз добавил иконки — сто друзей открыли ссылку и сразу всё увидели», без ручного импорта.</li>
+          <li>Картинки хранятся в публичном GitHub Gist. Токен для записи храните только вы, в своём браузере — никто другой не сможет ничего опубликовать, даже открыв ту же ссылку.</li>
+          <li>Вставьте свой токен один раз, нажмите «📤 Опубликовать все классы» — картинки всех классов уходят в общее хранилище.</li>
+          <li>У любого, кто впервые открывает ссылку на панель, картинки подтянутся сами. «🔄 Обновить из общего доступа» — подтянуть свежую версию вручную (например, если вы что-то добавили после того, как друг уже открывал панель).</li>
+          <li>Бинды клавиш не публикуются — каждый выставляет их под свою клавиатуру сам.</li>
+          <li>Набор иконок для макросов публикуется вместе с остальным — так у всех будет одинаковый выбор картинок для своих макросов. Сами макросы (текст) при этом не публикуются, они личные.</li>
+          <li>Пункты «Добавить иконки» и «🌐 Общий доступ (GitHub)» в меню ☰ видны только вам — как только токен сохранён в этом браузере.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary>Меню ☰ (сверху слева)</summary>
+      <div class="help-body">
+        <p>Добавление иконок и общий доступ через GitHub — только у владельца. Экспорт всех классов в один файл, импорт из файла и очистка панели текущего класса — у всех. Экспорт нужен для бэкапа или переноса на другой компьютер — в остальном всё сохраняется автоматически в этом браузере.</p>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary>Тема</summary>
+      <div class="help-body">
+        <p>Кнопка ☾/☀ сверху справа переключает тёмную и светлую тему.</p>
+      </div>
+    </details>
+  </div>
+</div>
+
+<div class="ctx" id="ctxMenu">
+  <button id="ctxClearImg">Убрать картинку</button>
+  <button id="ctxClearKey">Убрать клавишу</button>
+  <hr />
+  <button class="danger" id="ctxClearAll">Очистить ячейку</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const ROWS = 6, COLS = 12, BARS = 10;
+  const FLOAT_MAX = 3; // доп. строки 11–13
+  const SHAPES = ["12x1","6x2","4x3","3x4","2x6","1x12"]; // колонки x ряды
+  const STORAGE_KEY = "l2SkillPanelData";
+  const THEME_KEY = "l2SkillPanelTheme";
+
+  // ---- общее хранилище картинок (GitHub Gist) ----
+  const GH_API = "https://api.github.com";
+  const GH_FILE = "l2-panel-data.json";
+  const DEFAULT_GIST_ID = ""; // сюда впишем ID после первой публикации
+  const GH_TOKEN_KEY = "l2GhToken";
+  const GH_GIST_KEY = "l2GhGistId";
+
+  const CLASSES = {
+    "Human Fighter": ["Dreadnought","Duelist","Phoenix Knight","Hell Knight","Adventurer","Sagittarius"],
+    "Human Mystic": ["Archmage","Soultaker","Arcana Lord","Cardinal","Hierophant"],
+    "Elven Fighter": ["Eva's Templar","Sword Muse","Wind Rider","Moonlight Sentinel"],
+    "Elven Mystic": ["Mystic Muse","Elemental Master","Eva's Saint"],
+    "Dark Fighter": ["Shillien Templar","Spectral Dancer","Ghost Hunter","Ghost Sentinel"],
+    "Dark Mystic": ["Storm Screamer","Spectral Master","Shillien Saint"],
+    "Orc Fighter": ["Titan","Grand Khavatari"],
+    "Orc Mystic": ["Dominator","Doomcryer"],
+    "Dwarven Fighter": ["Fortune Seeker","Maestro"],
+    "Kamael Male": ["Doombringer","Soul Hound","Judicator"],
+    "Kamael Female": ["Female Soul Hound","Trickster","Judicator"]
+  };
+  const RACES = Object.keys(CLASSES);
+
+  function uid(){
+    return crypto.randomUUID ? crypto.randomUUID() : "id" + Date.now() + Math.random().toString(36).slice(2,8);
+  }
+
+  let state = loadState();
+  const isFreshInstall = Object.keys(state.profiles).length === 0;
+  let prof = activeProfile();
+
+  function emptyProfile(){
+    return { cells: {}, expandedRows: 1, rowBars: [1,2,3,4,5,6], groups: [] };
+  }
+  function defaultState(){
+    return {
+      currentRace: RACES[0],
+      currentClass: CLASSES[RACES[0]][0],
+      profiles: {},
+      floats: [],
+      mainVertical: false,
+      locked: false,
+      globalGroups: [],
+      macros: [],
+      macroIcons: []
+    };
+  }
+  function normalizeRoot(st){
+    if(!Array.isArray(st.floats)) st.floats = [];
+    st.floats = st.floats.slice(0, FLOAT_MAX).map((f, i) => ({
+      x: typeof f.x === "number" ? f.x : 40 + i * 30,
+      y: typeof f.y === "number" ? f.y : 90 + i * 40,
+      shape: SHAPES.includes(f.shape) ? f.shape : "12x1"
+    }));
+    st.mainVertical = !!st.mainVertical;
+    st.locked = !!st.locked;
+    if(!st.mainPos || typeof st.mainPos.x !== "number" || typeof st.mainPos.b !== "number"){
+      st.mainPos = null;
+    }
+    if(!Array.isArray(st.globalGroups)) st.globalGroups = [];
+    st.globalGroups.forEach(g => {
+      if(!g.id) g.id = uid();
+      if(!Array.isArray(g.icons)) g.icons = [];
+      if(!g.name) g.name = "Группа";
+    });
+    if(!Array.isArray(st.macros)) st.macros = [];
+    st.macros.forEach(m => {
+      if(!m.id) m.id = uid();
+      if(!Array.isArray(m.lines)) m.lines = [];
+      while(m.lines.length < 12) m.lines.push("");
+      m.lines = m.lines.slice(0, 12).map(l => String(l || "").slice(0, 25));
+      if(!m.name) m.name = "Макрос";
+    });
+    if(!Array.isArray(st.macroIcons)) st.macroIcons = [];
+    return st;
+  }
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return defaultState();
+      const parsed = JSON.parse(raw);
+      if(parsed.profiles){
+        if(!CLASSES[parsed.currentRace]) parsed.currentRace = RACES[0];
+        if(!CLASSES[parsed.currentRace].includes(parsed.currentClass)){
+          parsed.currentClass = CLASSES[parsed.currentRace][0];
+        }
+        return normalizeRoot(parsed);
+      }
+      // старый формат (одна панель) — переносим в первый класс
+      const st = defaultState();
+      if(parsed.cells){
+        st.profiles[st.currentRace + "|" + st.currentClass] = {
+          cells: parsed.cells,
+          expandedRows: Math.min(parsed.expandedRows || 1, ROWS),
+          library: Array.isArray(parsed.library) ? parsed.library : []
+        };
+      }
+      return st;
+    }catch(e){ return defaultState(); }
+  }
+  function profileKey(){ return state.currentRace + "|" + state.currentClass; }
+  function activeProfile(){
+    if(!state.profiles[profileKey()]) state.profiles[profileKey()] = emptyProfile();
+    const p = state.profiles[profileKey()];
+    if(!p.cells) p.cells = {};
+    if(!p.expandedRows) p.expandedRows = 1;
+    p.expandedRows = Math.min(p.expandedRows, ROWS);
+    if(!Array.isArray(p.rowBars)) p.rowBars = [];
+    for(let i = 0; i < ROWS; i++){
+      const v = p.rowBars[i];
+      p.rowBars[i] = (typeof v === "number" && v >= 1 && v <= BARS) ? Math.floor(v) : i + 1;
+    }
+    p.rowBars.length = ROWS;
+    if(!Array.isArray(p.groups)){
+      // миграция со старого плоского списка иконок
+      p.groups = Array.isArray(p.library) && p.library.length
+        ? [{ id: "default", name: "Иконки", icons: p.library }]
+        : [];
+    }
+    delete p.library;
+    p.groups.forEach(g => {
+      if(!g.id) g.id = uid();
+      if(!Array.isArray(g.icons)) g.icons = [];
+      if(!g.name) g.name = "Группа";
+    });
+    return p;
+  }
+  function saveState(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  const grid = document.getElementById("grid");
+  const arrowUp = document.getElementById("arrowUp");
+  const arrowDown = document.getElementById("arrowDown");
+  const ctxMenu = document.getElementById("ctxMenu");
+  const toast = document.getElementById("toast");
+
+  let armedCell = null;        // key currently waiting for a keypress
+  let ctxTargetKey = null;     // cell key the context menu is open for
+  let draggingFromCell = null; // slot key of the cell an icon is being dragged from
+
+  const cellEls = {};   // slot key "r-c" -> {cell, badge}
+  const pagerNums = {}; // slot row -> number element
+
+  function cellKey(r,c){ return r + "-" + c; }
+  // ряд r экрана показывает строку prof.rowBars[r-1] из 10; данные лежат по ключу "строка-колонка"
+  function dataKeyFor(r, c){ return prof.rowBars[r-1] + "-" + c; }
+  // ключи "f11-3" — ячейки плавающих панелей (строки 11–13), без перелистывания
+  function slotToData(slotKey){
+    if(slotKey[0] === "f") return slotKey.slice(1);
+    const p = slotKey.split("-");
+    return dataKeyFor(+p[0], +p[1]);
+  }
+
+  function makeCell(key, colLabel){
+    const cell = document.createElement("div");
+    cell.className = "cell";
+    cell.tabIndex = 0;
+    cell.dataset.key = key;
+
+    const num = document.createElement("span");
+    num.className = "slot-num";
+    num.textContent = colLabel;
+    cell.appendChild(num);
+
+    const badge = document.createElement("div");
+    badge.className = "badge";
+    cell.appendChild(badge);
+
+    badge.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if(state.locked){ showToast("Панель закрыта — снимите замок"); return; }
+      armKeyCapture(key);
+    });
+    cell.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      if(state.locked){ showToast("Панель закрыта — снимите замок"); return; }
+      openContextMenu(e.clientX, e.clientY, key);
+    });
+    cell.addEventListener("dragover", (e) => {
+      if(state.locked) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = draggingFromCell ? "move" : "copy";
+      cell.classList.add("dragover");
+    });
+    cell.addEventListener("dragleave", () => cell.classList.remove("dragover"));
+    cell.addEventListener("drop", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      cell.classList.remove("dragover");
+      if(state.locked) return;
+      if(e.dataTransfer.files && e.dataTransfer.files.length){
+        fileToIcon(e.dataTransfer.files[0], (dataUrl) => {
+          setCellImg(key, dataUrl);
+          addFileDropToDefaultGroup(dataUrl);
+        });
+        return;
+      }
+      const txt = e.dataTransfer.getData("text/plain");
+      if(txt.startsWith("cell:")){
+        // перенос иконки (и данных макроса, если есть) с ячейки на ячейку; если целевая занята — меняются местами
+        const srcDk = slotToData(txt.slice(5));
+        const dstDk = slotToData(key);
+        if(srcDk !== dstDk && prof.cells[srcDk] && prof.cells[srcDk].img){
+          if(!prof.cells[dstDk]) prof.cells[dstDk] = {};
+          const src = prof.cells[srcDk];
+          const dst = prof.cells[dstDk];
+          const dstBackup = { img: dst.img, macroLines: dst.macroLines, macroName: dst.macroName };
+          dst.img = src.img;
+          if(src.macroLines){ dst.macroLines = src.macroLines; dst.macroName = src.macroName; }
+          else { delete dst.macroLines; delete dst.macroName; }
+          if(dstBackup.img){
+            src.img = dstBackup.img;
+            if(dstBackup.macroLines){ src.macroLines = dstBackup.macroLines; src.macroName = dstBackup.macroName; }
+            else { delete src.macroLines; delete src.macroName; }
+          } else {
+            delete src.img;
+            delete src.macroLines;
+            delete src.macroName;
+          }
+          renderAllCells();
+          saveState();
+        }
+        return;
+      }
+      if(txt.startsWith("lib:")){
+        const parts = txt.split(":");
+        const src = findGroupIcon(parts[1], parts[2], +parts[3]);
+        if(src) setCellImg(key, src);
+        return;
+      }
+      if(txt.startsWith("macro:")){
+        const macro = state.macros.find(m => m.id === txt.slice(6));
+        if(macro) setCellMacro(key, macro);
+        return;
+      }
+    });
+    cell.addEventListener("dragstart", (e) => {
+      const data = prof.cells[slotToData(key)];
+      if(state.locked || !data || !data.img){
+        e.preventDefault();
+        return;
+      }
+      e.dataTransfer.setData("text/plain", "cell:" + key);
+      e.dataTransfer.effectAllowed = "copyMove";
+      draggingFromCell = key;
+    });
+    cell.addEventListener("dragend", () => { draggingFromCell = null; });
+    cell.addEventListener("click", (e) => {
+      if(e.target === badge) return;
+      const data = prof.cells[slotToData(key)];
+      if(data && data.macroLines) showMacroPopup(data.macroName, data.macroLines);
+    });
+
+    return { cell, badge };
+  }
+
+  function flipBar(r, d){
+    let b = prof.rowBars[r-1] + d;
+    if(b > BARS) b = 1;
+    if(b < 1) b = BARS;
+    prof.rowBars[r-1] = b;
+    renderAllCells();
+    saveState();
+  }
+
+  function buildGrid(){
+    grid.innerHTML = "";
+    for(let r = 1; r <= ROWS; r++){
+      const row = document.createElement("div");
+      row.className = "row";
+      row.dataset.row = r;
+
+      const pager = document.createElement("div");
+      pager.className = "pager";
+      const up = document.createElement("button");
+      up.className = "pg";
+      up.textContent = "▲";
+      up.title = "Следующая строка (1–" + BARS + ")";
+      up.addEventListener("click", () => flipBar(r, +1));
+      const num = document.createElement("div");
+      num.className = "pg-num";
+      const dn = document.createElement("button");
+      dn.className = "pg";
+      dn.textContent = "▼";
+      dn.title = "Предыдущая строка (1–" + BARS + ")";
+      dn.addEventListener("click", () => flipBar(r, -1));
+      pager.appendChild(up);
+      pager.appendChild(num);
+      pager.appendChild(dn);
+      row.appendChild(pager);
+      pagerNums[r] = num;
+
+      for(let c = 1; c <= COLS; c++){
+        const key = cellKey(r,c);
+        const made = makeCell(key, c);
+        row.appendChild(made.cell);
+        cellEls[key] = made;
+      }
+      grid.appendChild(row);
+    }
+    applyExpanded();
+    renderAllCells();
+  }
+
+  function applyExpanded(){
+    for(let r = 1; r <= ROWS; r++){
+      const rowEl = grid.querySelector('.row[data-row="'+r+'"]');
+      rowEl.classList.toggle("hidden", r > prof.expandedRows);
+    }
+    arrowUp.classList.toggle("disabled", prof.expandedRows >= ROWS);
+    arrowDown.classList.toggle("disabled", prof.expandedRows <= 1);
+  }
+
+  function renderCell(key){
+    const data = prof.cells[slotToData(key)];
+    const { cell, badge } = cellEls[key];
+    if(data && data.img){
+      cell.style.backgroundImage = 'url("' + data.img + '")';
+      cell.classList.add("filled");
+      cell.draggable = true;
+    } else {
+      cell.style.backgroundImage = "";
+      cell.classList.remove("filled");
+      cell.draggable = false;
+    }
+    const hasKey = !!(data && data.key);
+    badge.textContent = hasKey ? data.key : "";
+    badge.classList.toggle("empty", !hasKey);
+  }
+  function renderAllCells(){
+    for(let r = 1; r <= ROWS; r++){
+      if(pagerNums[r]) pagerNums[r].textContent = prof.rowBars[r-1];
+    }
+    Object.keys(cellEls).forEach(renderCell);
+  }
+
+  arrowUp.addEventListener("click", () => {
+    if(prof.expandedRows < ROWS){
+      prof.expandedRows++;
+      applyExpanded();
+      saveState();
+    }
+  });
+  arrowDown.addEventListener("click", () => {
+    if(prof.expandedRows > 1){
+      prof.expandedRows--;
+      applyExpanded();
+      saveState();
+    }
+  });
+
+  // ---- image assignment ----
+  function fileToIcon(file, cb){
+    if(!file || !file.type || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 64; // хватает для ячейки 46px и не раздувает общее хранилище
+        let w = img.width, h = img.height;
+        if(w > MAX || h > MAX){
+          const s = Math.min(MAX / w, MAX / h);
+          w = Math.round(w * s); h = Math.round(h * s);
+        }
+        const cv = document.createElement("canvas");
+        cv.width = w; cv.height = h;
+        cv.getContext("2d").drawImage(img, 0, 0, w, h);
+        cb(cv.toDataURL("image/webp", 0.82));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function setCellImg(key, dataUrl){
+    const dk = slotToData(key);
+    if(!prof.cells[dk]) prof.cells[dk] = {};
+    prof.cells[dk].img = dataUrl;
+    delete prof.cells[dk].macroLines;
+    delete prof.cells[dk].macroName;
+    renderAllCells();
+    saveState();
+  }
+
+  function setCellMacro(key, macro){
+    const dk = slotToData(key);
+    if(!prof.cells[dk]) prof.cells[dk] = {};
+    prof.cells[dk].img = macro.icon;
+    prof.cells[dk].macroLines = macro.lines.slice();
+    prof.cells[dk].macroName = macro.name;
+    renderAllCells();
+    saveState();
+  }
+
+  // ---- группы иконок (личные для класса + общие для всех) ----
+  const libraryEl = document.getElementById("library");
+  const libFileInput = document.getElementById("libFileInput");
+
+  function groupsForClassKey(key){
+    const p = state.profiles[key];
+    return (p && Array.isArray(p.groups)) ? p.groups : [];
+  }
+  function findGroupList(scope){ return scope === "g" ? state.globalGroups : prof.groups; }
+  function findGroupIcon(scope, groupId, idx){
+    const g = findGroupList(scope).find(x => x.id === groupId);
+    return g && g.icons[idx];
+  }
+  function ensureGroup(scope, groupId, name){
+    const list = findGroupList(scope);
+    let g = list.find(x => x.id === groupId);
+    if(!g){
+      g = { id: groupId || uid(), name: name || "Группа", icons: [] };
+      list.push(g);
+    }
+    return g;
+  }
+  function addToGroup(scope, groupId, name, dataUrl){
+    const g = ensureGroup(scope, groupId, name);
+    if(!g.icons.includes(dataUrl)) g.icons.push(dataUrl);
+    renderLibrary();
+    saveState();
+  }
+  function addFileDropToDefaultGroup(dataUrl){
+    addToGroup("c", "default", "Иконки", dataUrl);
+  }
+
+  function renderLibrary(){
+    libraryEl.innerHTML = "";
+    const groups = [
+      ...prof.groups.map(g => ({ ...g, scope: "c" })),
+      ...state.globalGroups.map(g => ({ ...g, scope: "g" }))
+    ];
+    libraryEl.classList.toggle("hidden", !groups.length);
+    groups.forEach(g => {
+      const block = document.createElement("div");
+      block.className = "lib-group";
+
+      const head = document.createElement("div");
+      head.className = "lib-group-head";
+      const name = document.createElement("span");
+      name.className = "lib-group-name";
+      name.textContent = g.name;
+      head.appendChild(name);
+      if(g.scope === "g"){
+        const badge = document.createElement("span");
+        badge.className = "lib-group-badge";
+        badge.textContent = "общая";
+        head.appendChild(badge);
+      }
+      if(isOwner()){
+        const del = document.createElement("button");
+        del.className = "lib-group-del";
+        del.textContent = "×";
+        del.title = "Удалить группу со всеми иконками";
+        del.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          const ok = await showConfirm('Удалить группу "' + g.name + '" со всеми иконками?', { yesLabel: "Удалить" });
+          if(!ok) return;
+          const list = g.scope === "g" ? state.globalGroups : prof.groups;
+          const idx = list.findIndex(x => x.id === g.id);
+          if(idx >= 0) list.splice(idx, 1);
+          renderLibrary();
+          saveState();
+          showToast("Группа удалена");
+        });
+        head.appendChild(del);
+      }
+      block.appendChild(head);
+
+      const grid = document.createElement("div");
+      grid.className = "lib-grid";
+      g.icons.forEach((src, i) => {
+        const item = document.createElement("div");
+        item.className = "lib-item";
+        item.draggable = true;
+        item.style.backgroundImage = 'url("' + src + '")';
+        item.title = "Перетащите на ячейку панели";
+        item.addEventListener("dragstart", (e) => {
+          e.dataTransfer.setData("text/plain", "lib:" + g.scope + ":" + g.id + ":" + i);
+          e.dataTransfer.effectAllowed = "copy";
+        });
+        if(isOwner()){
+          const rm = document.createElement("div");
+          rm.className = "remove";
+          rm.textContent = "×";
+          rm.title = "Убрать иконку из группы";
+          rm.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const list = g.scope === "g" ? state.globalGroups : prof.groups;
+            const grp = list.find(x => x.id === g.id);
+            if(grp) grp.icons.splice(i, 1);
+            renderLibrary();
+            saveState();
+            showToast("Иконка убрана из группы");
+          });
+          item.appendChild(rm);
+        }
+        grid.appendChild(item);
+      });
+      block.appendChild(grid);
+      libraryEl.appendChild(block);
+    });
+  }
+
+  libraryEl.addEventListener("dragover", (e) => {
+    if(Array.from(e.dataTransfer.types).includes("Files")){
+      e.preventDefault();
+      libraryEl.classList.add("dragover");
+    }
+  });
+  libraryEl.addEventListener("dragleave", () => libraryEl.classList.remove("dragover"));
+  libraryEl.addEventListener("drop", (e) => {
+    e.preventDefault();
+    libraryEl.classList.remove("dragover");
+    Array.from(e.dataTransfer.files).forEach(f => fileToIcon(f, addFileDropToDefaultGroup));
+  });
+
+  // ---- key binding ----
+  function armKeyCapture(key){
+    if(armedCell){
+      cellEls[armedCell].cell.classList.remove("armed");
+    }
+    armedCell = key;
+    cellEls[key].cell.classList.add("armed");
+    showToast("Нажмите клавишу для привязки… (Esc — отмена)");
+  }
+
+  function keyLabel(e){
+    if(e.key === " ") return "Space";
+    if(e.key.length === 1) return e.key.toUpperCase();
+    const map = {
+      ArrowUp:"↑", ArrowDown:"↓", ArrowLeft:"←", ArrowRight:"→",
+      Escape:"Esc", Control:"Ctrl", Alt:"Alt", Shift:"Shift",
+      Backquote:"`"
+    };
+    return map[e.key] || e.key;
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if(!armedCell) return;
+    e.preventDefault();
+    cellEls[armedCell].cell.classList.remove("armed");
+    if(e.key === "Escape"){
+      armedCell = null;
+      hideToast();
+      return;
+    }
+    if(["Control","Alt","Shift","Meta"].includes(e.key)){
+      // modifiers alone are not useful bindings; keep waiting
+      cellEls[armedCell].cell.classList.add("armed");
+      return;
+    }
+    const label = keyLabel(e);
+    const dk = slotToData(armedCell);
+    if(!prof.cells[dk]) prof.cells[dk] = {};
+    if(prof.cells[dk].key === label){
+      // та же клавиша на той же ячейке — снимаем бинд
+      delete prof.cells[dk].key;
+      showToast('Клавиша "' + label + '" снята');
+    } else {
+      prof.cells[dk].key = label;
+      showToast('Клавиша "' + label + '" привязана');
+    }
+    renderAllCells();
+    saveState();
+    armedCell = null;
+  });
+
+  // ---- context menu ----
+  function openContextMenu(x, y, key){
+    ctxTargetKey = key;
+    ctxMenu.style.display = "block";
+    const maxX = window.innerWidth - ctxMenu.offsetWidth - 8;
+    const maxY = window.innerHeight - ctxMenu.offsetHeight - 8;
+    ctxMenu.style.left = Math.min(x, maxX) + "px";
+    ctxMenu.style.top = Math.min(y, maxY) + "px";
+  }
+  function closeContextMenu(){
+    ctxMenu.style.display = "none";
+    ctxTargetKey = null;
+  }
+  document.addEventListener("click", (e) => {
+    if(!ctxMenu.contains(e.target)) closeContextMenu();
+  });
+  document.getElementById("ctxClearImg").addEventListener("click", () => {
+    if(ctxTargetKey){
+      const dk = slotToData(ctxTargetKey);
+      if(prof.cells[dk]){
+        delete prof.cells[dk].img;
+        delete prof.cells[dk].macroLines;
+        delete prof.cells[dk].macroName;
+      }
+      renderAllCells();
+      saveState();
+    }
+    closeContextMenu();
+  });
+  document.getElementById("ctxClearKey").addEventListener("click", () => {
+    if(ctxTargetKey){
+      const dk = slotToData(ctxTargetKey);
+      if(prof.cells[dk]) delete prof.cells[dk].key;
+      renderAllCells();
+      saveState();
+    }
+    closeContextMenu();
+  });
+  document.getElementById("ctxClearAll").addEventListener("click", () => {
+    if(ctxTargetKey){
+      delete prof.cells[slotToData(ctxTargetKey)];
+      renderAllCells();
+      saveState();
+    }
+    closeContextMenu();
+  });
+
+  // ---- toolbar ----
+  document.getElementById("btnClearAll").addEventListener("click", async () => {
+    if(state.locked){ showToast("Панель закрыта — снимите замок"); return; }
+    const ok = await showConfirm("Очистить панель класса «" + state.currentClass + "»?", { yesLabel: "Очистить" });
+    if(!ok) return;
+    prof.cells = {};
+    renderAllCells();
+    saveState();
+    showToast("Панель очищена");
+  });
+  document.getElementById("btnExport").addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "l2-skill-panel.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+  document.getElementById("btnImport").addEventListener("click", () => {
+    document.getElementById("importFile").click();
+  });
+  document.getElementById("importFile").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const parsed = JSON.parse(reader.result);
+        if(parsed.profiles){
+          state = parsed;
+          if(!CLASSES[state.currentRace]) state.currentRace = RACES[0];
+          if(!CLASSES[state.currentRace].includes(state.currentClass)){
+            state.currentClass = CLASSES[state.currentRace][0];
+          }
+        } else if(parsed.cells){
+          // старый формат — кладём в панель текущего класса
+          state.profiles[profileKey()] = {
+            cells: parsed.cells,
+            expandedRows: Math.min(parsed.expandedRows || 1, ROWS),
+            library: Array.isArray(parsed.library) ? parsed.library : []
+          };
+        } else {
+          throw new Error("bad file");
+        }
+        normalizeRoot(state);
+        refreshNav();
+        switchProfile();
+        renderFloats();
+        applyOrient();
+        applyLock();
+        showToast("Импортировано");
+      }catch(err){
+        showToast("Не удалось прочитать файл настроек");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  });
+
+  // ---- toast ----
+  let toastTimer = null;
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, 2200);
+  }
+  function hideToast(){ toast.classList.remove("show"); }
+
+  // ---- свои модалки подтверждения/копирования (страница в песочнице — window.confirm/alert/prompt там не работают) ----
+  const confirmOverlay = document.getElementById("confirmOverlay");
+  const confirmTitle = document.getElementById("confirmTitle");
+  const confirmMsg = document.getElementById("confirmMsg");
+  const confirmYes = document.getElementById("confirmYes");
+  const confirmNo = document.getElementById("confirmNo");
+  function showConfirm(message, opts){
+    opts = opts || {};
+    confirmTitle.textContent = opts.title || "Подтвердите";
+    confirmMsg.textContent = message;
+    confirmYes.textContent = opts.yesLabel || "Да";
+    confirmOverlay.classList.add("show");
+    return new Promise((resolve) => {
+      function onYes(){ cleanup(true); }
+      function onNo(){ cleanup(false); }
+      function onOverlay(e){ if(e.target === confirmOverlay) cleanup(false); }
+      function cleanup(result){
+        confirmOverlay.classList.remove("show");
+        confirmYes.removeEventListener("click", onYes);
+        confirmNo.removeEventListener("click", onNo);
+        confirmOverlay.removeEventListener("click", onOverlay);
+        resolve(result);
+      }
+      confirmYes.addEventListener("click", onYes);
+      confirmNo.addEventListener("click", onNo);
+      confirmOverlay.addEventListener("click", onOverlay);
+    });
+  }
+
+  const copyTextOverlay = document.getElementById("copyTextOverlay");
+  const copyTextTitle = document.getElementById("copyTextTitle");
+  const copyTextInput = document.getElementById("copyTextInput");
+  async function copyOrShow(text, title){
+    try{
+      await navigator.clipboard.writeText(text);
+      showToast("Скопировано");
+    }catch(err){
+      copyTextTitle.textContent = title || "Скопируйте";
+      copyTextInput.value = text;
+      copyTextOverlay.classList.add("show");
+      copyTextInput.focus();
+      copyTextInput.select();
+    }
+  }
+  document.getElementById("copyTextBtn").addEventListener("click", async () => {
+    copyTextInput.focus();
+    copyTextInput.select();
+    try{
+      await navigator.clipboard.writeText(copyTextInput.value);
+      showToast("Скопировано");
+      copyTextOverlay.classList.remove("show");
+    }catch(err){
+      document.execCommand("copy");
+    }
+  });
+  document.getElementById("copyTextClose").addEventListener("click", () => copyTextOverlay.classList.remove("show"));
+  copyTextOverlay.addEventListener("click", (e) => { if(e.target === copyTextOverlay) copyTextOverlay.classList.remove("show"); });
+
+  // ---- theme toggle ----
+  const root = document.documentElement;
+  function applyTheme(t){
+    if(t) root.setAttribute("data-theme", t);
+    else root.removeAttribute("data-theme");
+  }
+  applyTheme(localStorage.getItem(THEME_KEY));
+  document.getElementById("themeToggle").addEventListener("click", () => {
+    const current = root.getAttribute("data-theme") ||
+      (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    const next = current === "dark" ? "light" : "dark";
+    localStorage.setItem(THEME_KEY, next);
+    applyTheme(next);
+  });
+
+  // бросок иконки из ячейки в пустое место страницы — убирает её с панели
+  document.addEventListener("dragover", (e) => {
+    if(draggingFromCell) e.preventDefault();
+  });
+  document.addEventListener("drop", (e) => {
+    if(!draggingFromCell) return;
+    e.preventDefault();
+    const dk = slotToData(draggingFromCell);
+    if(prof.cells[dk]){
+      delete prof.cells[dk].img;
+      delete prof.cells[dk].macroLines;
+      delete prof.cells[dk].macroName;
+      renderAllCells();
+      saveState();
+      showToast("Иконка убрана с панели");
+    }
+    draggingFromCell = null;
+  });
+
+  // ---- floating panels (bars 11-13) ----
+  const floatLayer = document.getElementById("floatLayer");
+  const floatRefs = []; // {panel, cfg}
+
+  function clampFloat(panel, cfg){
+    cfg.x = Math.min(Math.max(0, cfg.x), Math.max(0, window.innerWidth - panel.offsetWidth));
+    cfg.y = Math.min(Math.max(0, cfg.y), Math.max(0, window.innerHeight - panel.offsetHeight));
+    panel.style.left = cfg.x + "px";
+    panel.style.top = cfg.y + "px";
+  }
+  function applyShape(panel, cfg){
+    const cols = +cfg.shape.split("x")[0];
+    panel.querySelector(".float-cells").style.gridTemplateColumns = "repeat(" + cols + ", 46px)";
+  }
+  function makeDraggable(panel, grip, cfg){
+    grip.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      const offX = e.clientX - cfg.x, offY = e.clientY - cfg.y;
+      const move = (ev) => {
+        cfg.x = ev.clientX - offX;
+        cfg.y = ev.clientY - offY;
+        clampFloat(panel, cfg);
+      };
+      const up = () => {
+        document.removeEventListener("pointermove", move);
+        document.removeEventListener("pointerup", up);
+        saveState();
+      };
+      document.addEventListener("pointermove", move);
+      document.addEventListener("pointerup", up);
+    });
+  }
+
+  function renderFloats(){
+    Object.keys(cellEls).forEach(k => { if(k[0] === "f") delete cellEls[k]; });
+    floatRefs.length = 0;
+    floatLayer.innerHTML = "";
+    state.floats.forEach((cfg, i) => {
+      const bar = BARS + 1 + i; // 11, 12, 13
+      const panel = document.createElement("div");
+      panel.className = "float-panel";
+
+      const head = document.createElement("div");
+      head.className = "float-head";
+      const grip = document.createElement("div");
+      grip.className = "float-grip";
+      grip.textContent = "≣";
+      grip.title = "Перетащить панель";
+      const numEl = document.createElement("div");
+      numEl.className = "float-num";
+      numEl.textContent = bar;
+      const shapeBtn = document.createElement("button");
+      shapeBtn.className = "float-shape";
+      shapeBtn.textContent = "▦";
+      shapeBtn.title = "Изменить форму (1×12, 2×6, 3×4…)";
+      shapeBtn.addEventListener("click", () => {
+        cfg.shape = SHAPES[(SHAPES.indexOf(cfg.shape) + 1) % SHAPES.length];
+        applyShape(panel, cfg);
+        clampFloat(panel, cfg);
+        saveState();
+      });
+      head.appendChild(grip);
+      head.appendChild(numEl);
+      head.appendChild(shapeBtn);
+      panel.appendChild(head);
+
+      const cellsWrap = document.createElement("div");
+      cellsWrap.className = "float-cells";
+      for(let c = 1; c <= COLS; c++){
+        const key = "f" + bar + "-" + c;
+        const made = makeCell(key, c);
+        cellsWrap.appendChild(made.cell);
+        cellEls[key] = made;
+      }
+      panel.appendChild(cellsWrap);
+      floatLayer.appendChild(panel);
+
+      applyShape(panel, cfg);
+      makeDraggable(panel, grip, cfg);
+      clampFloat(panel, cfg);
+      floatRefs.push({ panel, cfg });
+    });
+    renderAllCells();
+  }
+
+  document.getElementById("btnFloats").addEventListener("click", () => {
+    if(state.floats.length >= FLOAT_MAX){
+      state.floats = [];
+      showToast("Доп. панели убраны");
+    } else {
+      const i = state.floats.length;
+      state.floats.push({ x: 60 + i * 40, y: 80 + i * 50, shape: "12x1" });
+      showToast("Добавлена панель " + (BARS + 1 + i));
+    }
+    renderFloats();
+    saveState();
+  });
+  window.addEventListener("resize", () => {
+    floatRefs.forEach(ref => clampFloat(ref.panel, ref.cfg));
+    applyMainPos();
+  });
+
+  // ---- main panel drag ----
+  const stageEl = document.querySelector(".stage");
+  const mainGrip = document.getElementById("mainGrip");
+
+  // позиция хранится как left + отступ от низа окна, чтобы ряды росли вверх
+  function applyMainPos(){
+    if(state.mainPos){
+      stageEl.classList.add("moved");
+      const w = stageEl.offsetWidth, h = stageEl.offsetHeight;
+      state.mainPos.x = Math.min(Math.max(0, state.mainPos.x), Math.max(0, window.innerWidth - w));
+      state.mainPos.b = Math.min(Math.max(0, state.mainPos.b), Math.max(0, window.innerHeight - h));
+      stageEl.style.left = state.mainPos.x + "px";
+      stageEl.style.bottom = state.mainPos.b + "px";
+    } else {
+      stageEl.classList.remove("moved");
+      stageEl.style.left = "";
+      stageEl.style.bottom = "";
+    }
+  }
+  mainGrip.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    const rect = stageEl.getBoundingClientRect();
+    const startPos = state.mainPos
+      ? { x: state.mainPos.x, b: state.mainPos.b }
+      : { x: rect.left, b: window.innerHeight - rect.bottom };
+    const startX = e.clientX, startY = e.clientY;
+    let dragging = false;
+    const move = (ev) => {
+      if(!dragging){
+        if(Math.abs(ev.clientX - startX) < 3 && Math.abs(ev.clientY - startY) < 3) return;
+        dragging = true;
+        if(!state.mainPos) state.mainPos = { x: startPos.x, b: startPos.b };
+      }
+      state.mainPos.x = startPos.x + (ev.clientX - startX);
+      state.mainPos.b = startPos.b - (ev.clientY - startY);
+      applyMainPos();
+    };
+    const up = () => {
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", up);
+      if(dragging) saveState();
+    };
+    document.addEventListener("pointermove", move);
+    document.addEventListener("pointerup", up);
+  });
+  mainGrip.addEventListener("dblclick", () => {
+    state.mainPos = null;
+    applyMainPos();
+    saveState();
+    showToast("Панель вернулась на место");
+  });
+
+  // ---- orientation & lock ----
+  const btnLock = document.getElementById("btnLock");
+  function applyOrient(){
+    stageEl.classList.toggle("vertical", state.mainVertical);
+  }
+  function applyLock(){
+    btnLock.textContent = state.locked ? "🔒" : "🔓";
+    btnLock.classList.toggle("active", state.locked);
+  }
+  document.getElementById("btnOrient").addEventListener("click", () => {
+    state.mainVertical = !state.mainVertical;
+    applyOrient();
+    saveState();
+  });
+  btnLock.addEventListener("click", () => {
+    state.locked = !state.locked;
+    applyLock();
+    saveState();
+    showToast(state.locked ? "Панель закрыта — изменения запрещены" : "Панель открыта");
+  });
+
+  // ---- hamburger menu ----
+  const menuBtn = document.getElementById("menuBtn");
+  const menuPanel = document.getElementById("menuPanel");
+  // «Добавить иконки» и «Общий доступ» видит только владелец (у кого сохранён токен)
+  function refreshOwnerUI(){
+    const owner = isOwner();
+    document.getElementById("menuAddIcons").style.display = owner ? "" : "none";
+    document.getElementById("menuGithub").style.display = owner ? "" : "none";
+  }
+  menuBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    refreshOwnerUI();
+    menuPanel.classList.toggle("show");
+  });
+  menuPanel.addEventListener("click", (e) => {
+    if(e.target.tagName === "BUTTON") menuPanel.classList.remove("show");
+  });
+  document.addEventListener("click", (e) => {
+    if(!menuPanel.contains(e.target) && e.target !== menuBtn){
+      menuPanel.classList.remove("show");
+    }
+  });
+
+  // ---- help modal ----
+  const helpOverlay = document.getElementById("helpOverlay");
+  document.getElementById("helpBtn").addEventListener("click", () => helpOverlay.classList.add("show"));
+  document.getElementById("helpClose").addEventListener("click", () => helpOverlay.classList.remove("show"));
+  helpOverlay.addEventListener("click", (e) => {
+    if(e.target === helpOverlay) helpOverlay.classList.remove("show");
+  });
+  window.addEventListener("keydown", (e) => {
+    if(e.key === "Escape" && !armedCell){
+      helpOverlay.classList.remove("show");
+      menuPanel.classList.remove("show");
+      addIconsOverlay.classList.remove("show");
+      ghOverlay.classList.remove("show");
+      macroOverlay.classList.remove("show");
+      macroViewOverlay.classList.remove("show");
+      confirmOverlay.classList.remove("show");
+      copyTextOverlay.classList.remove("show");
+    }
+  });
+
+  // ---- add icons modal (группы: свои для класса или общие для всех) ----
+  const addIconsOverlay = document.getElementById("addIconsOverlay");
+  const addRaceSelect = document.getElementById("addRaceSelect");
+  const addClassSelect = document.getElementById("addClassSelect");
+  const addScopeClass = document.getElementById("addScopeClass");
+  const addScopeGlobal = document.getElementById("addScopeGlobal");
+  const addRaceClassRow = document.getElementById("addRaceClassRow");
+  const addGroupSelect = document.getElementById("addGroupSelect");
+  const addGroupName = document.getElementById("addGroupName");
+
+  function currentAddScope(){ return addScopeGlobal.checked ? "g" : "c"; }
+
+  function refreshAddGroupSelect(){
+    const scope = currentAddScope();
+    const list = scope === "g" ? state.globalGroups : groupsForClassKey(addRaceSelect.value + "|" + addClassSelect.value);
+    addGroupSelect.innerHTML = "";
+    const optNew = document.createElement("option");
+    optNew.value = "__new__";
+    optNew.textContent = "➕ Новая группа…";
+    addGroupSelect.appendChild(optNew);
+    list.forEach(g => {
+      const o = document.createElement("option");
+      o.value = g.id;
+      o.textContent = g.name;
+      addGroupSelect.appendChild(o);
+    });
+    addGroupSelect.value = "__new__";
+    addGroupName.style.display = "block";
+    addGroupName.value = "";
+  }
+
+  document.getElementById("menuAddIcons").addEventListener("click", () => {
+    fillSelect(addRaceSelect, RACES, state.currentRace);
+    fillSelect(addClassSelect, CLASSES[state.currentRace], state.currentClass);
+    addScopeClass.checked = true;
+    addRaceClassRow.style.display = "flex";
+    refreshAddGroupSelect();
+    addIconsOverlay.classList.add("show");
+  });
+  [addScopeClass, addScopeGlobal].forEach(r => r.addEventListener("change", () => {
+    addRaceClassRow.style.display = currentAddScope() === "g" ? "none" : "flex";
+    refreshAddGroupSelect();
+  }));
+  addRaceSelect.addEventListener("change", () => {
+    fillSelect(addClassSelect, CLASSES[addRaceSelect.value], CLASSES[addRaceSelect.value][0]);
+    refreshAddGroupSelect();
+  });
+  addClassSelect.addEventListener("change", refreshAddGroupSelect);
+  addGroupSelect.addEventListener("change", () => {
+    addGroupName.style.display = addGroupSelect.value === "__new__" ? "block" : "none";
+  });
+  document.getElementById("addIconsPick").addEventListener("click", () => {
+    libFileInput.value = "";
+    libFileInput.click();
+  });
+  document.getElementById("addIconsClose").addEventListener("click", () => addIconsOverlay.classList.remove("show"));
+  addIconsOverlay.addEventListener("click", (e) => {
+    if(e.target === addIconsOverlay) addIconsOverlay.classList.remove("show");
+  });
+
+  libFileInput.addEventListener("change", () => {
+    const files = Array.from(libFileInput.files);
+    if(!files.length) return;
+    const scope = currentAddScope();
+    let groupId = addGroupSelect.value;
+    let groupName = addGroupName.value.trim();
+    if(groupId === "__new__"){
+      if(!groupName){ showToast("Введите название группы"); return; }
+      groupId = uid();
+    } else {
+      const list = scope === "g" ? state.globalGroups : groupsForClassKey(addRaceSelect.value + "|" + addClassSelect.value);
+      const existing = list.find(g => g.id === groupId);
+      groupName = existing ? existing.name : groupName;
+    }
+    if(scope === "c"){
+      // переключаемся на выбранный класс — так группа гарантированно создастся в нужном профиле
+      state.currentRace = addRaceSelect.value;
+      state.currentClass = addClassSelect.value;
+      refreshNav();
+      switchProfile();
+    }
+    files.forEach(f => fileToIcon(f, (dataUrl) => addToGroup(scope, groupId, groupName, dataUrl)));
+    addIconsOverlay.classList.remove("show");
+    showToast("Иконки добавлены в группу «" + groupName + "»");
+  });
+
+  // ---- character switcher ----
+  const raceSelect = document.getElementById("raceSelect");
+  const classSelect = document.getElementById("classSelect");
+
+  function fillSelect(sel, items, current){
+    sel.innerHTML = "";
+    items.forEach(v => {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = v;
+      if(v === current) o.selected = true;
+      sel.appendChild(o);
+    });
+  }
+  function refreshNav(){
+    fillSelect(raceSelect, RACES, state.currentRace);
+    fillSelect(classSelect, CLASSES[state.currentRace], state.currentClass);
+  }
+  function switchProfile(){
+    prof = activeProfile();
+    applyExpanded();
+    renderAllCells();
+    renderLibrary();
+    saveState();
+  }
+  raceSelect.addEventListener("change", () => {
+    state.currentRace = raceSelect.value;
+    state.currentClass = CLASSES[state.currentRace][0];
+    refreshNav();
+    switchProfile();
+  });
+  classSelect.addEventListener("change", () => {
+    state.currentClass = classSelect.value;
+    switchProfile();
+  });
+
+  // ---- share link ----
+  async function deflateBytes(bytes){
+    if(typeof CompressionStream === "undefined") return null;
+    const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate-raw"));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+  async function inflateBytes(bytes){
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+  function b64urlEncode(bytes){
+    let bin = "";
+    for(let i = 0; i < bytes.length; i += 0x8000){
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function b64urlDecode(s){
+    s = s.replace(/-/g, "+").replace(/_/g, "/");
+    while(s.length % 4) s += "=";
+    const bin = atob(s);
+    const bytes = new Uint8Array(bin.length);
+    for(let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+
+  document.getElementById("btnShare").addEventListener("click", async () => {
+    if(!Object.keys(prof.cells).length){
+      showToast("Панель пустая — нечем делиться");
+      return;
+    }
+    const payload = {
+      r: state.currentRace,
+      c: state.currentClass,
+      e: prof.expandedRows,
+      b: prof.rowBars,
+      f: state.floats,
+      v: state.mainVertical,
+      cells: prof.cells
+    };
+    const json = new TextEncoder().encode(JSON.stringify(payload));
+    const packed = await deflateBytes(json);
+    const link = location.href.split("#")[0] + "#s=" + (packed ? "d" : "u") + b64urlEncode(packed || json);
+    await copyOrShow(link, "Ссылка на раскладку (~" + Math.max(1, Math.round(link.length / 1024)) + " КБ)");
+  });
+
+  async function tryLoadShared(){
+    const m = location.hash.match(/^#s=([du])(.+)$/);
+    if(!m) return;
+    try{
+      const bytes = b64urlDecode(m[2]);
+      const json = m[1] === "d" ? await inflateBytes(bytes) : bytes;
+      const payload = JSON.parse(new TextDecoder().decode(json));
+      if(!payload.cells || !CLASSES[payload.r] || !CLASSES[payload.r].includes(payload.c)){
+        throw new Error("bad payload");
+      }
+      const ok = await showConfirm(
+        "Вам поделились раскладкой: " + payload.r + " — " + payload.c + ". Загрузить её? Панель этого класса будет заменена.",
+        { yesLabel: "Загрузить" }
+      );
+      if(ok){
+        state.currentRace = payload.r;
+        state.currentClass = payload.c;
+        const existing = state.profiles[profileKey()] || emptyProfile();
+        const groups = Array.isArray(existing.groups) ? existing.groups.slice() : [];
+        let defaultGroup = groups.find(g => g.id === "default");
+        if(!defaultGroup){
+          defaultGroup = { id: "default", name: "Иконки", icons: [] };
+          groups.push(defaultGroup);
+        }
+        Object.values(payload.cells).forEach(cd => {
+          if(cd && cd.img && !defaultGroup.icons.includes(cd.img)) defaultGroup.icons.push(cd.img);
+        });
+        state.profiles[profileKey()] = {
+          cells: payload.cells,
+          expandedRows: Math.min(payload.e || 1, ROWS),
+          rowBars: Array.isArray(payload.b) ? payload.b : undefined,
+          groups: groups
+        };
+        if(Array.isArray(payload.f)) state.floats = payload.f;
+        if(typeof payload.v === "boolean") state.mainVertical = payload.v;
+        normalizeRoot(state);
+        refreshNav();
+        switchProfile();
+        renderFloats();
+        applyOrient();
+        showToast("Раскладка загружена");
+      }
+    }catch(err){
+      showToast("Не удалось прочитать ссылку с раскладкой");
+    }
+    history.replaceState(null, "", location.pathname + location.search);
+  }
+
+  // ---- общее хранилище картинок (GitHub Gist) ----
+  function ghToken(){ return localStorage.getItem(GH_TOKEN_KEY) || ""; }
+  // владелец — тот, у кого в этом браузере сохранён токен публикации;
+  // только он видит крестики удаления групп/иконок
+  function isOwner(){ return !!ghToken(); }
+  function ghGistId(){ return localStorage.getItem(GH_GIST_KEY) || DEFAULT_GIST_ID; }
+
+  // собираем картинки всех классов + общий набор иконок для макросов — бинды клавиш и сами макросы остаются личными
+  function buildSharedPayload(){
+    const profiles = {};
+    Object.keys(state.profiles).forEach(key => {
+      const cells = state.profiles[key].cells || {};
+      const imgs = {};
+      Object.keys(cells).forEach(ck => {
+        if(cells[ck] && cells[ck].img) imgs[ck] = cells[ck].img;
+      });
+      if(Object.keys(imgs).length) profiles[key] = imgs;
+    });
+    return { updatedAt: Date.now(), profiles, macroIcons: state.macroIcons };
+  }
+
+  async function ghPublish(){
+    const token = ghToken();
+    if(!token){
+      ghStatus("Сначала вставьте токен.", true);
+      return;
+    }
+    ghStatus("Публикую…");
+    const payload = JSON.stringify(buildSharedPayload(), null, 0);
+    const gistId = ghGistId();
+    try{
+      let res;
+      if(gistId){
+        res = await fetch(GH_API + "/gists/" + gistId, {
+          method: "PATCH",
+          headers: { "Authorization": "token " + token, "Content-Type": "application/json" },
+          body: JSON.stringify({ files: { [GH_FILE]: { content: payload } } })
+        });
+      } else {
+        res = await fetch(GH_API + "/gists", {
+          method: "POST",
+          headers: { "Authorization": "token " + token, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            description: "L2 Skill Panel — общие иконки",
+            public: true,
+            files: { [GH_FILE]: { content: payload } }
+          })
+        });
+      }
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      localStorage.setItem(GH_GIST_KEY, data.id);
+      renderGhModal();
+      ghStatus("Опубликовано ✓ (" + new Date().toLocaleTimeString() + ")");
+      showToast("Иконки опубликованы для всех");
+    }catch(err){
+      ghStatus("Ошибка публикации: проверьте токен (нужен scope «gist»).", true);
+    }
+  }
+
+  async function ghFetchShared(){
+    const gistId = ghGistId();
+    if(!gistId) return null;
+    const res = await fetch(GH_API + "/gists/" + gistId);
+    if(!res.ok) return null;
+    const data = await res.json();
+    const file = data.files && data.files[GH_FILE];
+    if(!file) return null;
+    const raw = await fetch(file.raw_url);
+    if(!raw.ok) return null;
+    try{ return JSON.parse(await raw.text()); }catch(e){ return null; }
+  }
+
+  function mergeSharedInto(shared, force){
+    if(!shared) return 0;
+    let changed = 0;
+    if(shared.profiles){
+      Object.keys(shared.profiles).forEach(key => {
+        if(!state.profiles[key]) state.profiles[key] = emptyProfile();
+        const p = state.profiles[key];
+        if(!p.cells) p.cells = {};
+        Object.keys(shared.profiles[key]).forEach(ck => {
+          const already = p.cells[ck] && p.cells[ck].img;
+          if(force || !already){
+            if(!p.cells[ck]) p.cells[ck] = {};
+            p.cells[ck].img = shared.profiles[key][ck];
+            changed++;
+          }
+        });
+      });
+    }
+    if(Array.isArray(shared.macroIcons)){
+      shared.macroIcons.forEach(src => {
+        if(!state.macroIcons.includes(src)){ state.macroIcons.push(src); changed++; }
+      });
+    }
+    return changed;
+  }
+
+  async function ghPullLatest(force){
+    ghStatus("Загружаю из общего доступа…");
+    const shared = await ghFetchShared();
+    if(!shared){
+      ghStatus("Общее хранилище пока пустое или недоступно.", true);
+      return;
+    }
+    const changed = mergeSharedInto(shared, force);
+    if(changed){
+      switchProfile();
+      renderAllCells();
+      saveState();
+    }
+    ghStatus(changed ? "Обновлено: " + changed + " иконок." : "Уже всё актуально.");
+    showToast("Общие иконки обновлены");
+  }
+
+  async function ghAutoAdoptOnFirstVisit(isFreshInstall){
+    if(!ghGistId()) return;
+    const shared = await ghFetchShared();
+    if(!shared) return;
+    const changed = mergeSharedInto(shared, isFreshInstall);
+    if(changed){
+      switchProfile();
+      renderAllCells();
+      saveState();
+    }
+  }
+
+  // ---- GitHub modal ----
+  const ghOverlay = document.getElementById("ghOverlay");
+  const ghTokenInput = document.getElementById("ghTokenInput");
+  const ghGistLine = document.getElementById("ghGistLine");
+  const ghStatusEl = document.getElementById("ghStatus");
+  function ghStatus(msg, isErr){
+    ghStatusEl.textContent = msg;
+    ghStatusEl.style.color = isErr ? "var(--danger-lit)" : "var(--text-dim)";
+  }
+  function renderGhModal(){
+    ghTokenInput.value = ghToken();
+    const id = ghGistId();
+    ghGistLine.textContent = id ? ("ID: " + id) : "Ещё не публиковалось на этом устройстве.";
+  }
+  document.getElementById("menuGithub").addEventListener("click", () => {
+    renderGhModal();
+    ghStatus("");
+    ghOverlay.classList.add("show");
+  });
+  ghTokenInput.addEventListener("change", () => {
+    localStorage.setItem(GH_TOKEN_KEY, ghTokenInput.value.trim());
+    renderLibrary();
+    refreshOwnerUI();
+  });
+  document.getElementById("ghPublishBtn").addEventListener("click", ghPublish);
+  document.getElementById("ghPullBtn").addEventListener("click", async () => {
+    const ok = await showConfirm("Заменить локальные картинки на те, что в общем хранилище (там, где они есть)?", { yesLabel: "Заменить" });
+    if(ok) ghPullLatest(true);
+  });
+  document.getElementById("ghForgetBtn").addEventListener("click", () => {
+    localStorage.removeItem(GH_TOKEN_KEY);
+    renderGhModal();
+    renderLibrary();
+    refreshOwnerUI();
+    ghStatus("Токен забыт на этом устройстве.");
+  });
+  document.getElementById("ghGistCopy").addEventListener("click", async () => {
+    const id = ghGistId();
+    if(!id) return;
+    await copyOrShow(id, "ID общего хранилища");
+  });
+  document.getElementById("ghClose").addEventListener("click", () => ghOverlay.classList.remove("show"));
+  ghOverlay.addEventListener("click", (e) => { if(e.target === ghOverlay) ghOverlay.classList.remove("show"); });
+
+  // ---- макросы ----
+  const macroOverlay = document.getElementById("macroOverlay");
+  const macroIconPicker = document.getElementById("macroIconPicker");
+  const macroIconFile = document.getElementById("macroIconFile");
+  const macroNameInput = document.getElementById("macroNameInput");
+  const macroLinesWrap = document.getElementById("macroLines");
+  const macroLibraryEl = document.getElementById("macroLibrary");
+  const macroGridEl = document.getElementById("macroGrid");
+  const macroViewOverlay = document.getElementById("macroViewOverlay");
+  let macroSelectedIcon = null;
+
+  function renderMacroIconPicker(){
+    macroIconPicker.innerHTML = "";
+    state.macroIcons.forEach((src) => {
+      const item = document.createElement("div");
+      item.className = "lib-item";
+      item.style.backgroundImage = 'url("' + src + '")';
+      item.title = "Выбрать эту иконку";
+      if(macroSelectedIcon === src) item.classList.add("selected");
+      item.addEventListener("click", () => {
+        macroSelectedIcon = src;
+        renderMacroIconPicker();
+      });
+      macroIconPicker.appendChild(item);
+    });
+  }
+  document.getElementById("macroAddIconBtn").addEventListener("click", () => {
+    macroIconFile.value = "";
+    macroIconFile.click();
+  });
+  macroIconFile.addEventListener("change", () => {
+    Array.from(macroIconFile.files).forEach(f => fileToIcon(f, (dataUrl) => {
+      if(!state.macroIcons.includes(dataUrl)) state.macroIcons.push(dataUrl);
+      macroSelectedIcon = dataUrl;
+      saveState();
+      renderMacroIconPicker();
+    }));
+  });
+
+  function buildMacroLines(){
+    macroLinesWrap.innerHTML = "";
+    for(let i = 1; i <= 12; i++){
+      const row = document.createElement("div");
+      row.className = "macro-line-row";
+      const num = document.createElement("span");
+      num.className = "macro-line-num";
+      num.textContent = i;
+      const input = document.createElement("input");
+      input.type = "text";
+      input.maxLength = 25;
+      input.className = "macro-line-input";
+      const count = document.createElement("span");
+      count.className = "macro-line-count";
+      count.textContent = "0/25";
+      input.addEventListener("input", () => { count.textContent = input.value.length + "/25"; });
+      row.appendChild(num);
+      row.appendChild(input);
+      row.appendChild(count);
+      macroLinesWrap.appendChild(row);
+    }
+  }
+  buildMacroLines();
+
+  document.getElementById("menuAddMacro").addEventListener("click", () => {
+    macroSelectedIcon = null;
+    renderMacroIconPicker();
+    macroNameInput.value = "";
+    macroLinesWrap.querySelectorAll(".macro-line-input").forEach(inp => {
+      inp.value = "";
+      inp.nextElementSibling.textContent = "0/25";
+    });
+    macroOverlay.classList.add("show");
+  });
+  document.getElementById("macroClose").addEventListener("click", () => macroOverlay.classList.remove("show"));
+  macroOverlay.addEventListener("click", (e) => { if(e.target === macroOverlay) macroOverlay.classList.remove("show"); });
+
+  document.getElementById("macroSaveBtn").addEventListener("click", () => {
+    if(!macroSelectedIcon){ showToast("Выберите иконку для макроса"); return; }
+    const name = macroNameInput.value.trim() || "Макрос";
+    const lines = Array.from(macroLinesWrap.querySelectorAll(".macro-line-input")).map(inp => inp.value.slice(0, 25));
+    state.macros.push({ id: uid(), name, icon: macroSelectedIcon, lines });
+    saveState();
+    renderMacros();
+    macroOverlay.classList.remove("show");
+    showToast("Макрос «" + name + "» сохранён");
+  });
+
+  function renderMacros(){
+    macroGridEl.innerHTML = "";
+    macroLibraryEl.classList.toggle("hidden", !state.macros.length);
+    state.macros.forEach((m) => {
+      const item = document.createElement("div");
+      item.className = "lib-item";
+      item.draggable = true;
+      item.style.backgroundImage = 'url("' + m.icon + '")';
+      item.title = m.name + " — перетащите на ячейку";
+      item.addEventListener("dragstart", (e) => {
+        e.dataTransfer.setData("text/plain", "macro:" + m.id);
+        e.dataTransfer.effectAllowed = "copy";
+      });
+      const rm = document.createElement("div");
+      rm.className = "remove";
+      rm.textContent = "×";
+      rm.title = "Удалить макрос";
+      rm.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const ok = await showConfirm('Удалить макрос "' + m.name + '"?', { yesLabel: "Удалить" });
+        if(!ok) return;
+        state.macros = state.macros.filter(x => x.id !== m.id);
+        renderMacros();
+        saveState();
+        showToast("Макрос удалён");
+      });
+      item.appendChild(rm);
+      macroGridEl.appendChild(item);
+    });
+  }
+
+  function showMacroPopup(name, lines){
+    document.getElementById("macroViewTitle").textContent = name || "Макрос";
+    const nonEmpty = lines.filter(l => l && l.trim());
+    document.getElementById("macroViewLines").textContent = nonEmpty.length ? nonEmpty.join("\n") : "(пусто)";
+    macroViewOverlay.classList.add("show");
+  }
+  document.getElementById("macroViewClose").addEventListener("click", () => macroViewOverlay.classList.remove("show"));
+  macroViewOverlay.addEventListener("click", (e) => { if(e.target === macroViewOverlay) macroViewOverlay.classList.remove("show"); });
+
+  refreshNav();
+  buildGrid();
+  renderLibrary();
+  renderMacros();
+  renderFloats();
+  applyOrient();
+  applyLock();
+  applyMainPos();
+  refreshOwnerUI();
+  tryLoadShared();
+  ghAutoAdoptOnFirstVisit(isFreshInstall);
+})();
+</script>
+</body>
+</html>
