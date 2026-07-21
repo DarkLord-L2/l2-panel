@@ -1082,8 +1082,8 @@
         <ul>
           <li>Это для сценария «я один раз добавил иконки — сто друзей открыли ссылку и сразу всё увидели», без ручного импорта.</li>
           <li>Картинки хранятся в публичном GitHub Gist. Токен для записи храните только вы, в своём браузере — никто другой не сможет ничего опубликовать, даже открыв ту же ссылку.</li>
-          <li>Вставьте свой токен один раз, нажмите «📤 Опубликовать все классы» — картинки всех классов уходят в общее хранилище.</li>
-          <li>У любого, кто впервые открывает ссылку на панель, картинки подтянутся сами. «🔄 Обновить из общего доступа» — подтянуть свежую версию вручную (например, если вы что-то добавили после того, как друг уже открывал панель).</li>
+          <li>Вставьте свой токен один раз, нажмите «📤 Опубликовать все классы» — публикуются и сами группы иконок (личные для класса и общие для всех), и картинки, уже расставленные по ячейкам панели.</li>
+          <li>У любого, кто впервые открывает ссылку на панель, группы и картинки подтянутся сами. «🔄 Обновить из общего доступа» — подтянуть свежую версию вручную (например, если вы что-то добавили после того, как друг уже открывал панель).</li>
           <li>Бинды клавиш не публикуются — каждый выставляет их под свою клавиатуру сам.</li>
           <li>Набор иконок для макросов публикуется вместе с остальным — так у всех будет одинаковый выбор картинок для своих макросов. Сами макросы (текст) при этом не публикуются, они личные.</li>
           <li>Пункт «Добавить иконки» в меню ☰ появляется только после того, как токен сохранён в этом браузере (через «🌐 Общий доступ» — этот пункт виден всем, чтобы было куда вставить токен).</li>
@@ -2345,15 +2345,24 @@
   // собираем картинки всех классов + общий набор иконок для макросов — бинды клавиш и сами макросы остаются личными
   function buildSharedPayload(){
     const profiles = {};
+    const groups = {};
     Object.keys(state.profiles).forEach(key => {
-      const cells = state.profiles[key].cells || {};
+      const p = state.profiles[key];
+      const cells = p.cells || {};
       const imgs = {};
       Object.keys(cells).forEach(ck => {
         if(cells[ck] && cells[ck].img) imgs[ck] = cells[ck].img;
       });
       if(Object.keys(imgs).length) profiles[key] = imgs;
+      if(Array.isArray(p.groups) && p.groups.length) groups[key] = p.groups;
     });
-    return { updatedAt: Date.now(), profiles, macroIcons: state.macroIcons };
+    return {
+      updatedAt: Date.now(),
+      profiles,
+      groups,
+      globalGroups: state.globalGroups,
+      macroIcons: state.macroIcons
+    };
   }
 
   async function ghPublish(){
@@ -2408,6 +2417,23 @@
     try{ return JSON.parse(await raw.text()); }catch(e){ return null; }
   }
 
+  // добавляет недостающие группы/иконки в список, ничего не удаляя (безопасное объединение)
+  function mergeGroupList(targetList, incomingGroups){
+    let changed = 0;
+    (incomingGroups || []).forEach(ig => {
+      let g = targetList.find(x => x.id === ig.id);
+      if(!g){
+        g = { id: ig.id, name: ig.name || "Группа", icons: [] };
+        targetList.push(g);
+        changed++;
+      }
+      (ig.icons || []).forEach(src => {
+        if(!g.icons.includes(src)){ g.icons.push(src); changed++; }
+      });
+    });
+    return changed;
+  }
+
   function mergeSharedInto(shared, force){
     if(!shared) return 0;
     let changed = 0;
@@ -2425,6 +2451,17 @@
           }
         });
       });
+    }
+    if(shared.groups){
+      Object.keys(shared.groups).forEach(key => {
+        if(!state.profiles[key]) state.profiles[key] = emptyProfile();
+        const p = state.profiles[key];
+        if(!Array.isArray(p.groups)) p.groups = [];
+        changed += mergeGroupList(p.groups, shared.groups[key]);
+      });
+    }
+    if(Array.isArray(shared.globalGroups)){
+      changed += mergeGroupList(state.globalGroups, shared.globalGroups);
     }
     if(Array.isArray(shared.macroIcons)){
       shared.macroIcons.forEach(src => {
