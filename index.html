@@ -365,7 +365,7 @@
     box-shadow: 0 0 0 2px var(--gold), inset 0 0 0 1px rgba(0,0,0,.5);
   }
 
-  /* левая колонка с иконками: закреплена сбоку, одна общая прокрутка на весь список */
+  /* левая колонка с иконками: закреплена сбоку, одна общая прокрутка на весь список, кнопка-корзина снизу не прокручивается */
   .library{
     position:fixed;
     left:16px;
@@ -374,32 +374,66 @@
     width:308px;
     display:flex;
     flex-direction:column;
-    gap:8px;
-    padding:10px 12px;
     background: linear-gradient(180deg, var(--panel-2), var(--panel));
     border:1px solid var(--border);
     border-radius:6px;
     box-shadow: inset 0 0 0 1px rgba(0,0,0,.35), 0 10px 30px rgba(0,0,0,.35);
-    overflow-y:auto;
-    overflow-x:hidden;
+    overflow:hidden;
     z-index:30;
-    /* тонкий скроллбар в тон сайта (Firefox) */
-    scrollbar-width:thin;
-    scrollbar-color: var(--border-lit) var(--panel);
   }
   .library.dragover{ border-color: var(--gold); }
   .library.hidden{ display:none; }
   /* когда у класса есть иконки — резервируем под колонку место, чтобы она не перекрывала панель */
   body.has-sidebar{ padding-left:340px; }
+
+  .library-scroll{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    padding:10px 12px;
+    overflow-y:auto;
+    overflow-x:hidden;
+    /* тонкий скроллбар в тон сайта (Firefox) */
+    scrollbar-width:thin;
+    scrollbar-color: var(--border-lit) var(--panel);
+  }
   /* тот же скроллбар для Chrome/Edge/Safari */
-  .library::-webkit-scrollbar{ width:10px; }
-  .library::-webkit-scrollbar-track{ background: var(--panel); border-radius:6px; }
-  .library::-webkit-scrollbar-thumb{
+  .library-scroll::-webkit-scrollbar{ width:10px; }
+  .library-scroll::-webkit-scrollbar-track{ background: var(--panel); border-radius:6px; }
+  .library-scroll::-webkit-scrollbar-thumb{
     background: linear-gradient(180deg, var(--border-lit), var(--border));
     border-radius:6px;
     border:2px solid var(--panel);
   }
-  .library::-webkit-scrollbar-thumb:hover{ background: var(--gold-dim); }
+  .library-scroll::-webkit-scrollbar-thumb:hover{ background: var(--gold-dim); }
+
+  .lib-trash-btn{
+    display:none;
+    flex:none;
+    margin:0 10px 10px auto;
+    width:30px; height:30px;
+    align-items:center;
+    justify-content:center;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    color: var(--text-dim);
+    font-size:14px;
+    cursor:pointer;
+  }
+  .lib-trash-btn:hover{ border-color: var(--border-lit); color: var(--gold); }
+  .lib-trash-btn.owner{ display:flex; }
+  .lib-trash-btn.active{
+    color: var(--danger-lit);
+    border-color: var(--danger);
+    box-shadow: 0 0 0 1px var(--danger) inset;
+  }
+  /* крестики удаления видны только когда включён режим корзины */
+  #library .remove, #library .lib-group-del{ display:none; }
+  #library.show-delete .remove{ display:block; }
+  #library.show-delete .lib-group-del{ display:block; }
+
   .lib-grid{
     display:grid;
     grid-template-columns: repeat(6, 38px);
@@ -897,7 +931,10 @@
 
 <div id="floatLayer"></div>
 
-<div class="library" id="library"></div>
+<div class="library" id="library">
+  <div class="library-scroll" id="libraryScroll"></div>
+  <button class="lib-trash-btn" id="libTrashBtn" title="Показать/скрыть удаление иконок">🗑</button>
+</div>
 
 <div class="library" id="macroLibrary">
   <div class="lib-group">
@@ -1014,7 +1051,8 @@
           <li>Файл из проводника можно бросить и сразу на ячейку — он попадёт и туда, и в группу «Иконки» текущего класса.</li>
           <li>Иконку можно перетащить с одной ячейки на другую: пустая ячейка её примет, а если там уже есть иконка — они поменяются местами.</li>
           <li>Перетащите иконку с ячейки в пустое место страницы — она уберётся с панели (в группе останется).</li>
-          <li>Крестик на иконке убирает её из группы, крестик у названия группы — удаляет всю группу (на уже расставленные ячейки это не влияет). Эти крестики, как и само добавление иконок, видны только владельцу — тому, у кого в этом браузере сохранён токен из «🌐 Общий доступ». У остальных их просто нет.</li>
+          <li>Крестик на иконке убирает её из группы, крестик у названия группы — удаляет всю группу (на уже расставленные ячейки это не влияет). Эти крестики, как и само добавление иконок, доступны только владельцу — тому, у кого в этом браузере сохранён токен из «🌐 Общий доступ». У остальных их нет вообще.</li>
+          <li>У владельца внизу колонки с иконками есть кнопка 🗑 — по умолчанию крестики удаления скрыты, чтобы не мешали смотреть иконки; кнопка их показывает и прячет обратно.</li>
         </ul>
       </div>
     </details>
@@ -1539,6 +1577,8 @@
 
   // ---- группы иконок (личные для класса + общие для всех) ----
   const libraryEl = document.getElementById("library");
+  const libraryScrollEl = document.getElementById("libraryScroll");
+  const libTrashBtn = document.getElementById("libTrashBtn");
   const libFileInput = document.getElementById("libFileInput");
 
   function groupsForClassKey(key){
@@ -1570,13 +1610,14 @@
   }
 
   function renderLibrary(){
-    libraryEl.innerHTML = "";
+    libraryScrollEl.innerHTML = "";
     const groups = [
       ...prof.groups.map(g => ({ ...g, scope: "c" })),
       ...state.globalGroups.map(g => ({ ...g, scope: "g" }))
     ];
     libraryEl.classList.toggle("hidden", !groups.length);
     document.body.classList.toggle("has-sidebar", !!groups.length);
+    libTrashBtn.classList.toggle("owner", isOwner());
     groups.forEach(g => {
       const block = document.createElement("div");
       block.className = "lib-group";
@@ -1644,9 +1685,14 @@
         grid.appendChild(item);
       });
       block.appendChild(grid);
-      libraryEl.appendChild(block);
+      libraryScrollEl.appendChild(block);
     });
   }
+
+  libTrashBtn.addEventListener("click", () => {
+    const active = libraryEl.classList.toggle("show-delete");
+    libTrashBtn.classList.toggle("active", active);
+  });
 
   libraryEl.addEventListener("dragover", (e) => {
     if(Array.from(e.dataTransfer.types).includes("Files")){
