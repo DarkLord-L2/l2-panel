@@ -910,7 +910,7 @@
 
     <h3>Группа</h3>
     <select id="addGroupSelect"></select>
-    <input type="text" id="addGroupName" class="gh-input" placeholder="Название новой группы" style="margin-top:6px;" />
+    <input type="text" id="addGroupName" class="gh-input" placeholder="Название новой группы" maxlength="40" style="margin-top:6px;" />
 
     <button class="action-btn" id="addIconsPick">Выбрать файлы…</button>
   </div>
@@ -2268,7 +2268,8 @@
   }
 
   document.getElementById("btnShare").addEventListener("click", async () => {
-    if(!Object.keys(prof.cells).length){
+    const hasImg = Object.values(prof.cells).some(cd => cd && cd.img);
+    if(!hasImg){
       showToast("Панель пустая — нечем делиться");
       return;
     }
