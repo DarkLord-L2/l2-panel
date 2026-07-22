@@ -120,6 +120,25 @@ async function adminDeleteUser(userId){
   return body;
 }
 
+// Распознавание ников на одном скриншоте (переписи/налогов) через Gemini.
+// Доступно только glavadmin/admin — проверяется внутри самой функции.
+async function adminOcrNicknames(imageDataUrl){
+  const { data: { session } } = await client.auth.getSession();
+  if(!session) throw new Error("no_session");
+
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/ocr-nicknames`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ image: imageDataUrl }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if(!res.ok) throw new Error((body.error || "request_failed") + (body.detail ? ": " + body.detail : ""));
+  return body.nicknames || [];
+}
+
 window.L2Cabinet = {
   client,
   login,
@@ -129,4 +148,5 @@ window.L2Cabinet = {
   getVisibleSections,
   adminCreateUser,
   adminDeleteUser,
+  adminOcrNicknames,
 };
