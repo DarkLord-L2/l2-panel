@@ -149,7 +149,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 }
 
 /* ---- app shell (index.html) ---- */
-.app-shell{ min-height:100vh; display:flex; flex-direction:column; }
+/* высота жёстко зафиксирована в 100vh (не min-height) и переполнение спрятано,
+   чтобы скроллился только .content, а шапка с меню оставались на месте */
+.app-shell{ height:100vh; overflow:hidden; display:flex; flex-direction:column; }
 .topbar{
   display:flex;
   align-items:center;

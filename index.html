@@ -70,7 +70,8 @@
     if(view.type === "iframe"){
       const frame = document.createElement("iframe");
       frame.className = "content-frame";
-      frame.src = view.src;
+      // ?v= — не даёт браузеру подсунуть закэшированную старую версию раздела
+      frame.src = view.src + "?v=" + Date.now();
       content.appendChild(frame);
     } else {
       const label = sections.find(s => s.key === key)?.label || key;
