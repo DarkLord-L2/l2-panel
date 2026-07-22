@@ -187,6 +187,27 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .sidebar-nav a:hover{ color: var(--gold); background: var(--panel-2); }
 .sidebar-nav a.active{ color: var(--gold); border-left-color: var(--gold); background: var(--panel-2); }
 .sidebar-nav .soon{ opacity:.5; cursor:default; pointer-events:none; }
+.nav-group-toggle{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  width:100%;
+  margin-top:8px;
+  padding:10px 20px;
+  background:none;
+  border:none;
+  font-family:inherit;
+  font-size:13px;
+  letter-spacing:.02em;
+  color: var(--text-dim);
+  cursor:pointer;
+}
+.nav-group-toggle:hover{ color: var(--gold); }
+.nav-group-arrow{ font-size:14px; transition: transform .15s; }
+.nav-group-toggle.open .nav-group-arrow{ transform: rotate(90deg); }
+.nav-group-children{ display:none; flex-direction:column; gap:2px; }
+.nav-group-children.open{ display:flex; }
+.sidebar-nav a.nav-sub{ padding-left:32px; }
 
 .content{ flex:1; min-width:0; overflow:auto; padding:24px; }
 .content-frame{ width:100%; height:100%; border:none; }

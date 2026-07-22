@@ -42,6 +42,12 @@
     gear_check:  { type: "stub" },
   };
 
+  // Чисто визуальная группировка пунктов меню — на права доступа не влияет,
+  // каждый раздел внутри группы по-прежнему включается/выключается по роли отдельно.
+  const NAV_GROUPS = [
+    { label: "Учёт клана", keys: ["census", "taxes"] },
+  ];
+
   const profile = await L2Cabinet.getProfile();
   if(!profile){
     // сессия есть, а профиля нет — учётку создали не полностью, работать нельзя
@@ -88,17 +94,52 @@
     location.hash = "#" + key;
   }
 
-  sections.forEach(s => {
+  function makeNavLink(s, sub){
     const a = document.createElement("a");
     a.href = "#" + s.key;
     a.textContent = s.label;
     a.dataset.key = s.key;
+    if(sub) a.classList.add("nav-sub");
     a.addEventListener("click", (e) => { e.preventDefault(); renderSection(s.key); });
-    nav.appendChild(a);
-  });
+    return a;
+  }
 
   const wanted = location.hash.replace("#", "");
   const startKey = sections.find(s => s.key === wanted)?.key || sections[0]?.key;
+
+  const groupedKeys = new Set(NAV_GROUPS.flatMap(g => g.keys));
+  const renderedGroups = new Set();
+
+  sections.forEach(s => {
+    if(!groupedKeys.has(s.key)){
+      nav.appendChild(makeNavLink(s, false));
+      return;
+    }
+    const group = NAV_GROUPS.find(g => g.keys.includes(s.key));
+    if(renderedGroups.has(group.label)) return; // дочерние пункты уже выведены вместе с первым
+    renderedGroups.add(group.label);
+
+    const children = sections.filter(x => group.keys.includes(x.key));
+    const startsOpen = children.some(x => x.key === startKey);
+
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "nav-group-toggle" + (startsOpen ? " open" : "");
+    toggle.innerHTML = '<span>' + group.label + '</span><span class="nav-group-arrow">▸</span>';
+
+    const childWrap = document.createElement("div");
+    childWrap.className = "nav-group-children" + (startsOpen ? " open" : "");
+    children.forEach(x => childWrap.appendChild(makeNavLink(x, true)));
+
+    toggle.addEventListener("click", () => {
+      const open = childWrap.classList.toggle("open");
+      toggle.classList.toggle("open", open);
+    });
+
+    nav.appendChild(toggle);
+    nav.appendChild(childWrap);
+  });
+
   if(startKey) renderSection(startKey);
   else content.innerHTML = '<p class="hint">Для вашей роли пока не открыто ни одного раздела.</p>';
 
