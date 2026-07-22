@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Налоги — Кабинет клана</title>
+<link rel="stylesheet" href="js/theme.css" />
+<style>
+  .report-modal{ max-width:640px; }
+  .weeks-list{ display:flex; flex-direction:column; gap:6px; max-height:320px; overflow-y:auto; margin:10px 0; }
+  .weeks-list label{ display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; }
+  .report-actions{ display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
+  .sort-row{ display:flex; align-items:center; gap:10px; margin:10px 0; }
+  .sort-row select{ flex:none; width:auto; }
+  .report-table{ width:100%; border-collapse:collapse; font-size:13px; }
+  .report-table th{ text-align:left; padding:7px 10px; color: var(--gold-dim); font-size:11px; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid var(--border); }
+  .report-table td{ padding:7px 10px; }
+  .legend{ display:flex; flex-wrap:wrap; gap:14px; margin-top:16px; font-size:12px; color: var(--text-dim); }
+  .legend .swatch{ display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+</style>
+</head>
+<body>
+
+<div class="roster-wrap" id="wrap" style="display:none;">
+  <div class="page-head">
+    <h1>⚔ Налоги</h1>
+    <a class="btn btn-ghost" href="index.html" target="_top">← Кабинет</a>
+  </div>
+
+  <section class="card week-nav">
+    <button class="btn" id="prevWeekBtn">◀</button>
+    <div class="week-label" id="weekLabel"></div>
+    <button class="btn" id="nextWeekBtn">▶</button>
+    <button class="btn" id="todayBtn">Сегодня</button>
+    <button class="btn btn-primary" id="openReportBtn">📊 Отчёт по налогам</button>
+  </section>
+
+  <section class="card">
+    <div class="table-head-row">
+      <h2>Заплатили на этой неделе (<span id="weekCount">0</span>)</h2>
+      <div class="tools">
+        <button class="btn btn-primary" id="addEntryBtn" style="display:none;">+ Добавить оплаты</button>
+        <button class="btn" id="expandBtn" title="Развернуть на весь экран">⤢</button>
+        <button class="btn" id="trashModeBtn" title="Режим удаления списком" style="display:none;">🗑</button>
+      </div>
+    </div>
+
+    <div class="table-head-row" id="bulkTools" style="display:none; margin-top:8px;">
+      <div class="tools">
+        <button class="btn" id="selectAllBtn">Выбрать всех</button>
+        <button class="btn btn-danger" id="deleteSelectedBtn">Удалить выбранных (0)</button>
+      </div>
+    </div>
+
+    <div class="chip-row roster-row" id="weekBody"></div>
+    <p class="empty-hint" id="emptyHint" style="display:none;">На этой неделе ещё никто не платил.</p>
+  </section>
+
+  <section class="card upload-card" id="uploadCard" style="display:none;">
+    <h2>Загрузить скрины оплат</h2>
+    <p class="hint">До 9 скриншотов со списком заплативших. Каждый распознаётся отдельно — если один собьётся, остальные не пострадают.</p>
+    <input type="file" id="fileInput" accept="image/*" multiple style="display:none;" />
+    <button class="btn" id="filePickBtn" style="margin:10px 0;">Выбрать файлы…</button>
+    <p class="upload-status" id="uploadStatus"></p>
+
+    <div class="chip-row" id="chipRow"></div>
+
+    <div class="manual-add">
+      <input type="text" id="manualNick" placeholder="Добавить ник вручную" />
+      <button class="btn" id="manualAddBtn">Добавить</button>
+    </div>
+
+    <p class="error-msg" id="uploadError"></p>
+    <div class="form-row" style="display:flex; gap:10px;">
+      <button class="btn btn-primary" id="saveWeekBtn">Сохранить оплаты</button>
+      <button class="btn btn-ghost" id="cancelUploadBtn">Отмена</button>
+    </div>
+  </section>
+</div>
+
+<!-- Отчёт по налогам: три под-экрана в одной модалке -->
+<div class="modal-overlay" id="reportOverlay">
+  <div class="modal report-modal">
+    <button class="modal-close" id="reportClose" title="Закрыть">×</button>
+
+    <div id="reportPickView">
+      <h2>Выберите недели для отчёта</h2>
+      <p class="hint">Можно отметить любое количество недель, не обязательно подряд идущих.</p>
+      <div class="weeks-list" id="pickWeeksList"></div>
+      <p class="error-msg" id="pickError"></p>
+      <div class="report-actions">
+        <button class="btn btn-primary" id="showReportBtn">Показать отчёт</button>
+        <button class="btn" id="archiveManagerBtn" style="display:none;">🗄 Архивировать недели...</button>
+      </div>
+    </div>
+
+    <div id="reportArchiveView" style="display:none;">
+      <h2>Архивация недель</h2>
+      <p class="hint">Заархивированные недели прячутся из списка выбора выше — данные никуда не пропадают.</p>
+      <div class="weeks-list" id="archiveWeeksList"></div>
+      <div class="report-actions">
+        <button class="btn" id="archiveBackBtn">← Назад к выбору недель</button>
+      </div>
+    </div>
+
+    <div id="reportResultView" style="display:none;">
+      <h2>Отчёт по налогам</h2>
+      <div class="sort-row">
+        <label class="hint" for="reportSort">Сортировка:</label>
+        <select id="reportSort">
+          <option value="paid_desc">Оплата: сначала оплатившие</option>
+          <option value="paid_asc">Оплата: сначала должники</option>
+          <option value="name_asc">Имя: А → Я</option>
+          <option value="name_desc">Имя: Я → А</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="report-table">
+          <thead>
+            <tr><th>Никнейм</th><th>Оплаты</th><th>%</th><th>Статус</th></tr>
+          </thead>
+          <tbody id="reportBody"></tbody>
+        </table>
+      </div>
+      <div class="legend" id="reportLegend"></div>
+      <div class="report-actions">
+        <button class="btn" id="reportBackBtn">← Назад к выбору недель</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="help-btn" id="helpBtn" title="Как пользоваться">?</button>
+<div class="modal-overlay" id="helpOverlay">
+  <div class="modal">
+    <button class="modal-close" id="helpClose" title="Закрыть">×</button>
+    <h2>Как пользоваться налогами</h2>
+    <p>Каждая календарная неделя — свой отдельный список заплативших. Переключайтесь между неделями стрелками ◀/▶ или кнопкой «Сегодня», загружайте скрины так же, как в «Переписи клана».</p>
+    <p><b>Отчёт.</b> Кнопка «📊 Отчёт по налогам» — выберите любые недели галочками и нажмите «Показать отчёт». Для каждого ника посчитается, сколько раз из выбранных недель он платил, и статус:</p>
+    <ul>
+      <li><b>Новый</b> — этот ник впервые встретился в самой свежей «Переписи клана» (или его там ещё вообще нет).</li>
+      <li><b>Старый</b> — ник встречался в переписи и раньше, до самой свежей.</li>
+    </ul>
+    <p>«🗄 Архивировать недели...» прячет старые недели из списка выбора, чтобы он не разрастался — данные при этом никуда не удаляются.</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/week-roster.js"></script>
+<script>
+(async function(){
+  const session = await L2Cabinet.requireSession();
+  if(!session) return;
+
+  const profile = await L2Cabinet.getProfile();
+  if(!profile){
+    document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
+      '<h1>⚠ Профиль не найден</h1><p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+    return;
+  }
+
+  const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
+  const db = L2Cabinet.client;
+
+  document.getElementById("wrap").style.display = "";
+  document.getElementById("archiveManagerBtn").style.display = isAdmin ? "" : "none";
+
+  initWeekRoster({
+    tableName: "tax_payments",
+    profile, isAdmin, db,
+    addBtnIdleLabel: "+ Добавить оплаты",
+    addBtnOpenLabel: "Скрыть загрузку",
+  });
+
+  // ---- справка ----
+  document.getElementById("helpBtn").addEventListener("click", () => {
+    document.getElementById("helpOverlay").classList.add("show");
+  });
+  document.getElementById("helpClose").addEventListener("click", () => {
+    document.getElementById("helpOverlay").classList.remove("show");
+  });
+  document.getElementById("helpOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "helpOverlay") e.currentTarget.classList.remove("show");
+  });
+
+  // ---- отчёт по налогам ----
+  function pad2(n){ return String(n).padStart(2, "0"); }
+  function weekRangeLabel(weekStartStr){
+    const monday = new Date(weekStartStr + "T00:00:00");
+    const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6);
+    return `${pad2(monday.getDate())}.${pad2(monday.getMonth()+1)} – ${pad2(sunday.getDate())}.${pad2(sunday.getMonth()+1)}.${sunday.getFullYear()}`;
+  }
+
+  const reportOverlay = document.getElementById("reportOverlay");
+  const pickView = document.getElementById("reportPickView");
+  const archiveView = document.getElementById("reportArchiveView");
+  const resultView = document.getElementById("reportResultView");
+
+  function showView(view){
+    pickView.style.display = view === "pick" ? "" : "none";
+    archiveView.style.display = view === "archive" ? "" : "none";
+    resultView.style.display = view === "result" ? "" : "none";
+  }
+
+  async function distinctTaxWeeks(){
+    const { data, error } = await db.from("tax_payments").select("week_start").order("week_start", { ascending: false });
+    if(error){ console.error(error); return []; }
+    return [...new Set((data || []).map(r => r.week_start))];
+  }
+  async function archivedWeeksSet(){
+    const { data, error } = await db.from("tax_archived_weeks").select("week_start");
+    if(error){ console.error(error); return new Set(); }
+    return new Set((data || []).map(r => r.week_start));
+  }
+
+  async function openReportPicker(){
+    document.getElementById("pickError").textContent = "";
+    const [allWeeks, archived] = await Promise.all([distinctTaxWeeks(), archivedWeeksSet()]);
+    const visible = allWeeks.filter(w => !archived.has(w));
+    const list = document.getElementById("pickWeeksList");
+    list.innerHTML = "";
+    if(!visible.length){
+      list.innerHTML = '<p class="hint">Ещё нет ни одной недели с оплатами.</p>';
+    }
+    visible.forEach(w => {
+      const label = document.createElement("label");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.value = w;
+      label.append(cb, document.createTextNode(weekRangeLabel(w)));
+      list.appendChild(label);
+    });
+    showView("pick");
+    reportOverlay.classList.add("show");
+  }
+
+  async function openArchiveManager(){
+    const [allWeeks, archived] = await Promise.all([distinctTaxWeeks(), archivedWeeksSet()]);
+    const list = document.getElementById("archiveWeeksList");
+    list.innerHTML = "";
+    if(!allWeeks.length){
+      list.innerHTML = '<p class="hint">Ещё нет ни одной недели с оплатами.</p>';
+    }
+    allWeeks.forEach(w => {
+      const label = document.createElement("label");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = archived.has(w);
+      cb.addEventListener("change", async () => {
+        cb.disabled = true;
+        if(cb.checked){
+          await db.from("tax_archived_weeks").insert({ clan_id: profile.clan_id, week_start: w });
+        } else {
+          await db.from("tax_archived_weeks").delete().eq("clan_id", profile.clan_id).eq("week_start", w);
+        }
+        cb.disabled = false;
+      });
+      label.append(cb, document.createTextNode(weekRangeLabel(w)));
+      list.appendChild(label);
+    });
+    showView("archive");
+  }
+
+  document.getElementById("openReportBtn").addEventListener("click", openReportPicker);
+  document.getElementById("reportClose").addEventListener("click", () => reportOverlay.classList.remove("show"));
+  reportOverlay.addEventListener("click", (e) => { if(e.target === reportOverlay) reportOverlay.classList.remove("show"); });
+  document.getElementById("archiveManagerBtn").addEventListener("click", openArchiveManager);
+  document.getElementById("archiveBackBtn").addEventListener("click", openReportPicker);
+  document.getElementById("reportBackBtn").addEventListener("click", openReportPicker);
+
+  const COLORS = {
+    newZero:   "#F3C9A0",
+    newSome:   "#F0E3A8",
+    oldZero:   "#D9C2CE",
+    oldSome:   "#E8C46A",
+    oldFull:   "#B9D9AE",
+  };
+  const DARK_TEXT = "#2c2314";
+
+  function statusAndColor(paid, total, isOld){
+    if(!isOld){
+      return { status: "Новый", color: paid === 0 ? COLORS.newZero : COLORS.newSome };
+    }
+    if(paid === 0) return { status: "Старый", color: COLORS.oldZero };
+    if(paid === total) return { status: "Старый", color: COLORS.oldFull };
+    return { status: "Старый", color: COLORS.oldSome };
+  }
+
+  let lastReportRows = [];
+
+  async function buildReport(selectedWeeks){
+    const [{ data: census, error: censusErr }, { data: payments, error: payErr }] = await Promise.all([
+      db.from("census_entries").select("nickname, week_start"),
+      db.from("tax_payments").select("nickname, week_start").in("week_start", selectedWeeks),
+    ]);
+    if(censusErr) console.error(censusErr);
+    if(payErr) console.error(payErr);
+
+    const firstSeen = new Map();
+    let latestCensusWeek = null;
+    (census || []).forEach(row => {
+      if(!latestCensusWeek || row.week_start > latestCensusWeek) latestCensusWeek = row.week_start;
+      const cur = firstSeen.get(row.nickname);
+      if(!cur || row.week_start < cur) firstSeen.set(row.nickname, row.week_start);
+    });
+
+    const latestRoster = new Set(
+      (census || []).filter(r => r.week_start === latestCensusWeek).map(r => r.nickname)
+    );
+
+    const paidCount = new Map();
+    (payments || []).forEach(row => {
+      paidCount.set(row.nickname, (paidCount.get(row.nickname) || 0) + 1);
+    });
+
+    const allNicks = new Set([...latestRoster, ...paidCount.keys()]);
+    const total = selectedWeeks.length;
+
+    const rows = [...allNicks].map(nickname => {
+      const paid = paidCount.get(nickname) || 0;
+      const fs = firstSeen.get(nickname);
+      const isOld = fs !== undefined && fs !== latestCensusWeek;
+      const { status, color } = statusAndColor(paid, total, isOld);
+      const percent = total ? Math.round((paid / total) * 100) : 0;
+      return { nickname, paid, total, percent, status, color };
+    });
+
+    return rows;
+  }
+
+  function sortRows(rows, mode){
+    const copy = rows.slice();
+    copy.sort((a, b) => {
+      if(mode === "paid_desc") return b.paid - a.paid || a.nickname.localeCompare(b.nickname);
+      if(mode === "paid_asc") return a.paid - b.paid || a.nickname.localeCompare(b.nickname);
+      if(mode === "name_desc") return b.nickname.localeCompare(a.nickname);
+      return a.nickname.localeCompare(b.nickname); // name_asc
+    });
+    return copy;
+  }
+
+  function renderReport(){
+    const mode = document.getElementById("reportSort").value;
+    const rows = sortRows(lastReportRows, mode);
+    const body = document.getElementById("reportBody");
+    body.innerHTML = "";
+    rows.forEach(r => {
+      const tr = document.createElement("tr");
+      tr.style.background = r.color;
+      tr.style.color = DARK_TEXT;
+      const tdNick = document.createElement("td"); tdNick.textContent = r.nickname;
+      const tdPaid = document.createElement("td"); tdPaid.textContent = `${r.paid}/${r.total}`;
+      const tdPct = document.createElement("td"); tdPct.textContent = `${r.percent}%`;
+      const tdStatus = document.createElement("td"); tdStatus.textContent = r.status;
+      tr.append(tdNick, tdPaid, tdPct, tdStatus);
+      body.appendChild(tr);
+    });
+  }
+
+  function renderLegend(){
+    const items = [
+      [COLORS.newZero, "Новый, 0 оплат"],
+      [COLORS.newSome, "Новый, есть оплаты"],
+      [COLORS.oldZero, "Старый, 0 оплат"],
+      [COLORS.oldSome, "Старый, частично"],
+      [COLORS.oldFull, "Старый, оплатил всё"],
+    ];
+    const el = document.getElementById("reportLegend");
+    el.innerHTML = items.map(([color, label]) =>
+      `<span><span class="swatch" style="background:${color}"></span>${label}</span>`
+    ).join("");
+  }
+  renderLegend();
+
+  document.getElementById("reportSort").addEventListener("change", renderReport);
+
+  document.getElementById("showReportBtn").addEventListener("click", async () => {
+    const checked = Array.from(document.querySelectorAll("#pickWeeksList input:checked")).map(cb => cb.value);
+    if(!checked.length){
+      document.getElementById("pickError").textContent = "Выберите хотя бы одну неделю.";
+      return;
+    }
+    document.getElementById("pickError").textContent = "";
+    lastReportRows = await buildReport(checked);
+    renderReport();
+    showView("result");
+  });
+})();
+</script>
+</body>
+</html>

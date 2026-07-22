@@ -203,6 +203,62 @@ table.data-table tr:hover td{ background: rgba(255,255,255,.02); }
 
 .matrix-table{ border-collapse:collapse; font-size:12.5px; }
 
+/* ---- недельный список (перепись клана / налоги) — переиспользуется несколькими страницами ---- */
+.roster-wrap{ max-width:960px; margin:0 auto; display:flex; flex-direction:column; gap:20px; padding:8px 0 40px; }
+.roster-wrap.expanded{ max-width:none; }
+.roster-wrap.expanded .upload-card{ display:none; }
+.page-head{ display:flex; align-items:center; justify-content:space-between; }
+
+.week-nav{ display:flex; align-items:center; justify-content:center; gap:16px; }
+.week-label{ min-width:200px; text-align:center; font-size:14px; color: var(--gold); }
+
+.chip-row{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
+.chip{
+  display:flex; align-items:center; gap:6px;
+  padding:5px 6px 5px 12px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background: var(--panel-2);
+  font-size:12.5px;
+}
+.chip button{
+  width:18px; height:18px;
+  border-radius:50%;
+  border:none;
+  background: var(--danger);
+  color:#fff;
+  font-size:11px;
+  line-height:18px;
+  text-align:center;
+  padding:0;
+  cursor:pointer;
+}
+.chip button:hover{ background: var(--danger-lit); }
+
+.manual-add{ display:flex; gap:8px; margin:10px 0; max-width:320px; }
+.manual-add input{ flex:1; }
+
+.upload-status{ font-size:12.5px; color: var(--text-dim); min-height:1.4em; }
+
+.table-head-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.table-head-row .tools{ display:flex; gap:8px; }
+
+.roster-row{ margin-top:14px; gap:18px; align-items:flex-start; }
+.roster-col{ display:flex; flex-direction:column; gap:8px; }
+.roster-chip{
+  min-width:170px;
+  padding:8px 10px 8px 16px;
+  font-size:14px;
+  font-weight:600;
+  letter-spacing:.02em;
+  color: var(--text);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.3);
+}
+.roster-chip input[type="checkbox"]{ margin-right:2px; }
+
+.empty-hint{ font-size:13px; color: var(--text-dim); padding:10px 0; }
+
 /* ---- справка «?» (переиспользуется на страницах разделов: перепись, налоги и т.п.) ---- */
 .help-btn{
   position:fixed;

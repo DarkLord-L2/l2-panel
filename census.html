@@ -5,65 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Перепись клана — Кабинет клана</title>
 <link rel="stylesheet" href="js/theme.css" />
-<style>
-  .census-wrap{ max-width:960px; margin:0 auto; display:flex; flex-direction:column; gap:20px; padding:8px 0 40px; }
-  .census-wrap.expanded{ max-width:none; }
-  .census-wrap.expanded .upload-card{ display:none; }
-  .census-head{ display:flex; align-items:center; justify-content:space-between; }
-
-  .week-nav{ display:flex; align-items:center; justify-content:center; gap:16px; }
-  .week-label{ min-width:200px; text-align:center; font-size:14px; color: var(--gold); }
-
-  .chip-row{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
-  .chip{
-    display:flex; align-items:center; gap:6px;
-    padding:5px 6px 5px 12px;
-    border-radius:999px;
-    border:1px solid var(--border);
-    background: var(--panel-2);
-    font-size:12.5px;
-  }
-  .chip button{
-    width:18px; height:18px;
-    border-radius:50%;
-    border:none;
-    background: var(--danger);
-    color:#fff;
-    font-size:11px;
-    line-height:18px;
-    text-align:center;
-    padding:0;
-    cursor:pointer;
-  }
-  .chip button:hover{ background: var(--danger-lit); }
-
-  .manual-add{ display:flex; gap:8px; margin:10px 0; max-width:320px; }
-  .manual-add input{ flex:1; }
-
-  .upload-status{ font-size:12.5px; color: var(--text-dim); min-height:1.4em; }
-
-  .table-head-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
-  .table-head-row .tools{ display:flex; gap:8px; }
-
-  .roster-row{ margin-top:14px; gap:10px; }
-  .roster-chip{
-    padding:8px 10px 8px 16px;
-    font-size:14px;
-    font-weight:600;
-    letter-spacing:.02em;
-    color: var(--text);
-    background: linear-gradient(180deg, var(--panel-2), var(--panel));
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,.3);
-  }
-  .roster-chip input[type="checkbox"]{ margin-right:2px; }
-
-  .empty-hint{ font-size:13px; color: var(--text-dim); padding:10px 0; }
-</style>
 </head>
 <body>
 
-<div class="census-wrap" id="wrap" style="display:none;">
-  <div class="census-head">
+<div class="roster-wrap" id="wrap" style="display:none;">
+  <div class="page-head">
     <h1>⚔ Перепись клана</h1>
     <a class="btn btn-ghost" href="index.html" target="_top">← Кабинет</a>
   </div>
@@ -79,7 +25,7 @@
     <div class="table-head-row">
       <h2>Ники недели (<span id="weekCount">0</span>)</h2>
       <div class="tools">
-        <button class="btn btn-primary" id="addCensusBtn" style="display:none;">+ Добавить перепись</button>
+        <button class="btn btn-primary" id="addEntryBtn" style="display:none;">+ Добавить перепись</button>
         <button class="btn" id="expandBtn" title="Развернуть на весь экран">⤢</button>
         <button class="btn" id="trashModeBtn" title="Режим удаления списком" style="display:none;">🗑</button>
       </div>
@@ -133,6 +79,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js"></script>
+<script src="js/week-roster.js"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -149,251 +96,12 @@
   const db = L2Cabinet.client;
 
   document.getElementById("wrap").style.display = "";
-  document.getElementById("addCensusBtn").style.display = isAdmin ? "" : "none";
-  document.getElementById("trashModeBtn").style.display = isAdmin ? "" : "none";
 
-  document.getElementById("addCensusBtn").addEventListener("click", () => {
-    const card = document.getElementById("uploadCard");
-    const btn = document.getElementById("addCensusBtn");
-    const show = card.style.display === "none";
-    card.style.display = show ? "" : "none";
-    btn.textContent = show ? "Скрыть загрузку" : "+ Добавить перепись";
-  });
-
-  // ---- недели ----
-  function mondayOf(d){
-    const x = new Date(d);
-    const day = x.getDay(); // 0=вс..6=сб
-    const diff = day === 0 ? -6 : 1 - day;
-    x.setDate(x.getDate() + diff);
-    x.setHours(0,0,0,0);
-    return x;
-  }
-  function pad2(n){ return String(n).padStart(2, "0"); }
-  function isoDate(d){ return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate()); }
-  function weekLabel(monday){
-    const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6);
-    return `${pad2(monday.getDate())}.${pad2(monday.getMonth()+1)} – ${pad2(sunday.getDate())}.${pad2(sunday.getMonth()+1)}.${sunday.getFullYear()}`;
-  }
-
-  let currentWeek = mondayOf(new Date());
-  let weekEntries = []; // {id, nickname}
-  let pendingChips = []; // строки, ещё не сохранённые
-  let selectMode = false;
-  let selectedIds = new Set();
-
-  function renderWeekLabel(){
-    document.getElementById("weekLabel").textContent = weekLabel(currentWeek);
-  }
-
-  function resetUploadPreview(){
-    pendingChips = [];
-    document.getElementById("fileInput").value = "";
-    document.getElementById("uploadStatus").textContent = "";
-    document.getElementById("uploadError").textContent = "";
-    renderChips();
-  }
-
-  function closeUploadCard(){
-    document.getElementById("uploadCard").style.display = "none";
-    document.getElementById("addCensusBtn").textContent = "+ Добавить перепись";
-  }
-
-  function renderChips(){
-    const row = document.getElementById("chipRow");
-    row.innerHTML = "";
-    pendingChips.forEach((nick, i) => {
-      const chip = document.createElement("div");
-      chip.className = "chip";
-      const span = document.createElement("span");
-      span.textContent = nick;
-      const btn = document.createElement("button");
-      btn.textContent = "×";
-      btn.addEventListener("click", () => { pendingChips.splice(i, 1); renderChips(); });
-      chip.append(span, btn);
-      row.appendChild(chip);
-    });
-  }
-
-  async function loadWeek(){
-    const { data, error } = await db
-      .from("census_entries")
-      .select("id, nickname")
-      .eq("week_start", isoDate(currentWeek))
-      .order("nickname");
-    if(error){ console.error(error); weekEntries = []; }
-    else weekEntries = data || [];
-    selectedIds = new Set();
-    renderTable();
-  }
-
-  function renderTable(){
-    const body = document.getElementById("weekBody");
-    body.innerHTML = "";
-    document.getElementById("weekCount").textContent = weekEntries.length;
-    document.getElementById("emptyHint").style.display = weekEntries.length ? "none" : "";
-
-    weekEntries.forEach(entry => {
-      const chip = document.createElement("div");
-      chip.className = "chip roster-chip";
-
-      if(selectMode){
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.checked = selectedIds.has(entry.id);
-        cb.addEventListener("change", () => {
-          if(cb.checked) selectedIds.add(entry.id); else selectedIds.delete(entry.id);
-          updateDeleteSelectedLabel();
-        });
-        chip.appendChild(cb);
-      }
-
-      const span = document.createElement("span");
-      span.textContent = entry.nickname;
-      chip.appendChild(span);
-
-      if(isAdmin && !selectMode){
-        const x = document.createElement("button");
-        x.textContent = "×";
-        x.title = "Удалить";
-        x.addEventListener("click", async () => {
-          const { error } = await db.from("census_entries").delete().eq("id", entry.id);
-          if(!error) await loadWeek();
-        });
-        chip.appendChild(x);
-      }
-
-      body.appendChild(chip);
-    });
-  }
-
-  function updateDeleteSelectedLabel(){
-    document.getElementById("deleteSelectedBtn").textContent = `Удалить выбранных (${selectedIds.size})`;
-  }
-
-  async function goToWeek(monday){
-    currentWeek = monday;
-    renderWeekLabel();
-    resetUploadPreview();
-    closeUploadCard();
-    await loadWeek();
-  }
-
-  document.getElementById("prevWeekBtn").addEventListener("click", () => {
-    const d = new Date(currentWeek); d.setDate(d.getDate() - 7); goToWeek(d);
-  });
-  document.getElementById("nextWeekBtn").addEventListener("click", () => {
-    const d = new Date(currentWeek); d.setDate(d.getDate() + 7); goToWeek(d);
-  });
-  document.getElementById("todayBtn").addEventListener("click", () => goToWeek(mondayOf(new Date())));
-
-  document.getElementById("expandBtn").addEventListener("click", () => {
-    document.getElementById("wrap").classList.toggle("expanded");
-  });
-
-  document.getElementById("trashModeBtn").addEventListener("click", () => {
-    selectMode = !selectMode;
-    selectedIds = new Set();
-    document.getElementById("bulkTools").style.display = selectMode ? "" : "none";
-    updateDeleteSelectedLabel();
-    renderTable();
-  });
-
-  document.getElementById("selectAllBtn").addEventListener("click", () => {
-    selectedIds = new Set(weekEntries.map(e => e.id));
-    updateDeleteSelectedLabel();
-    renderTable();
-  });
-
-  document.getElementById("deleteSelectedBtn").addEventListener("click", async () => {
-    if(!selectedIds.size) return;
-    if(!confirm(`Удалить выбранных ников: ${selectedIds.size}?`)) return;
-    const { error } = await db.from("census_entries").delete().in("id", Array.from(selectedIds));
-    if(!error){
-      selectMode = false;
-      document.getElementById("bulkTools").style.display = "none";
-      await loadWeek();
-    }
-  });
-
-  // ---- загрузка и OCR ----
-  function fileToDataUrl(file){
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-
-  document.getElementById("filePickBtn").addEventListener("click", () => {
-    document.getElementById("fileInput").click();
-  });
-
-  document.getElementById("fileInput").addEventListener("change", async () => {
-    let files = Array.from(document.getElementById("fileInput").files);
-    const statusEl = document.getElementById("uploadStatus");
-    const errEl = document.getElementById("uploadError");
-    errEl.textContent = "";
-    if(!files.length) return;
-    if(files.length > 9){
-      files = files.slice(0, 9);
-      statusEl.textContent = "Взяты только первые 9 файлов.";
-    }
-
-    for(let i = 0; i < files.length; i++){
-      statusEl.textContent = `Распознаю скрин ${i + 1} из ${files.length}…`;
-      try{
-        const dataUrl = await fileToDataUrl(files[i]);
-        const nicknames = await L2Cabinet.adminOcrNicknames(dataUrl);
-        nicknames.forEach(n => {
-          if(n && !pendingChips.includes(n)) pendingChips.push(n);
-        });
-        renderChips();
-      }catch(err){
-        errEl.textContent = `Скрин ${i + 1}: ${err.message}`;
-      }
-    }
-    statusEl.textContent = `Готово, распознано ${pendingChips.length} ник(ов) — проверьте перед сохранением.`;
-  });
-
-  document.getElementById("manualAddBtn").addEventListener("click", () => {
-    const input = document.getElementById("manualNick");
-    const val = input.value.trim();
-    if(val && !pendingChips.includes(val)) pendingChips.push(val);
-    input.value = "";
-    renderChips();
-  });
-  document.getElementById("manualNick").addEventListener("keydown", (e) => {
-    if(e.key === "Enter"){ e.preventDefault(); document.getElementById("manualAddBtn").click(); }
-  });
-
-  document.getElementById("cancelUploadBtn").addEventListener("click", () => {
-    resetUploadPreview();
-    closeUploadCard();
-  });
-
-  document.getElementById("saveWeekBtn").addEventListener("click", async () => {
-    const errEl = document.getElementById("uploadError");
-    errEl.textContent = "";
-    const existing = new Set(weekEntries.map(e => e.nickname));
-    const toInsert = pendingChips.filter(n => !existing.has(n));
-    if(!toInsert.length){
-      resetUploadPreview();
-      closeUploadCard();
-      return;
-    }
-    const rows = toInsert.map(nickname => ({
-      clan_id: profile.clan_id,
-      week_start: isoDate(currentWeek),
-      nickname,
-      created_by: profile.id,
-    }));
-    const { error } = await db.from("census_entries").insert(rows);
-    if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
-    resetUploadPreview();
-    closeUploadCard();
-    await loadWeek();
+  initWeekRoster({
+    tableName: "census_entries",
+    profile, isAdmin, db,
+    addBtnIdleLabel: "+ Добавить перепись",
+    addBtnOpenLabel: "Скрыть загрузку",
   });
 
   document.getElementById("helpBtn").addEventListener("click", () => {
@@ -408,9 +116,6 @@
   window.addEventListener("keydown", (e) => {
     if(e.key === "Escape") document.getElementById("helpOverlay").classList.remove("show");
   });
-
-  renderWeekLabel();
-  await loadWeek();
 })();
 </script>
 </body>
