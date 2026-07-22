@@ -52,10 +52,11 @@
     <h2>Пользователи</h2>
     <table class="data-table" id="usersTable">
       <thead>
-        <tr><th>Логин</th><th>Роль</th><th>Пати</th><th>Создан</th></tr>
+        <tr><th>Логин</th><th>Роль</th><th>Пати</th><th>Создан</th><th></th></tr>
       </thead>
       <tbody id="usersBody"></tbody>
     </table>
+    <p class="error-msg" id="usersError"></p>
   </section>
 
   <section class="card">
@@ -122,17 +123,73 @@
   async function loadUsers(){
     const { data, error } = await db
       .from("profiles")
-      .select("id, username, created_at, roles(label), parties(name)")
+      .select("id, username, role_id, created_at, roles(label), parties(name)")
       .order("created_at", { ascending: false });
     if(error){ console.error(error); return; }
+
     const body = document.getElementById("usersBody");
-    body.innerHTML = data.map(u => `
-      <tr>
-        <td>${escapeHtml(u.username)}</td>
-        <td>${escapeHtml(u.roles?.label || "—")}</td>
-        <td>${escapeHtml(u.parties?.name || "—")}</td>
-        <td>${new Date(u.created_at).toLocaleDateString("ru-RU")}</td>
-      </tr>`).join("");
+    body.innerHTML = "";
+
+    data.forEach(u => {
+      const isSelf = u.id === profile.id;
+      const tr = document.createElement("tr");
+
+      const tdUsername = document.createElement("td");
+      tdUsername.textContent = u.username;
+
+      const tdRole = document.createElement("td");
+      if(isSelf){
+        tdRole.textContent = u.roles?.label || "—";
+      } else {
+        const sel = document.createElement("select");
+        roles.forEach(r => {
+          const opt = document.createElement("option");
+          opt.value = r.id;
+          opt.textContent = r.label;
+          if(r.id === u.role_id) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        sel.addEventListener("change", async () => {
+          sel.disabled = true;
+          const errEl = document.getElementById("usersError");
+          errEl.textContent = "";
+          const { error } = await db.from("profiles").update({ role_id: sel.value }).eq("id", u.id);
+          if(error) errEl.textContent = "Не удалось изменить роль: " + error.message;
+          sel.disabled = false;
+        });
+        tdRole.appendChild(sel);
+      }
+
+      const tdParty = document.createElement("td");
+      tdParty.textContent = u.parties?.name || "—";
+
+      const tdCreated = document.createElement("td");
+      tdCreated.textContent = new Date(u.created_at).toLocaleDateString("ru-RU");
+
+      const tdActions = document.createElement("td");
+      if(!isSelf){
+        const delBtn = document.createElement("button");
+        delBtn.className = "btn btn-danger";
+        delBtn.textContent = "Удалить";
+        delBtn.addEventListener("click", async () => {
+          if(!confirm(`Удалить пользователя «${u.username}»? Это необратимо.`)) return;
+          delBtn.disabled = true;
+          const errEl = document.getElementById("usersError");
+          errEl.textContent = "";
+          try{
+            await L2Cabinet.adminDeleteUser(u.id);
+            await loadUsers();
+          }catch(err){
+            errEl.textContent = "Не удалось удалить: " + err.message;
+            delBtn.disabled = false;
+          }
+        });
+        tdActions.appendChild(delBtn);
+      }
+
+      tr.append(tdUsername, tdRole, tdParty, tdCreated, tdActions);
+      body.appendChild(tr);
+    });
   }
 
   function escapeHtml(s){
