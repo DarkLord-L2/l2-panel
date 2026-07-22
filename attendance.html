@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Журнал посещаемости — Кабинет клана</title>
+<link rel="stylesheet" href="js/theme.css" />
+<style>
+  #daysContainer{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap:12px;
+  }
+  .day-card{ padding:12px 14px; cursor:pointer; }
+  .day-card:hover{ border-color: var(--border-lit); }
+  .day-card h2{ font-size:12.5px; margin:0 0 8px; text-transform:uppercase; letter-spacing:.04em; color: var(--gold-dim); }
+  .day-event-preview-list{ display:flex; flex-direction:column; gap:4px; margin:0 0 6px; }
+  .day-event-preview{
+    font-size:12px;
+    padding:5px 8px;
+    border-radius:4px;
+    background: var(--panel-2);
+    color: var(--text);
+  }
+  .event-block{
+    border:1px solid var(--border);
+    border-radius:5px;
+    padding:8px 10px;
+    margin:0 0 8px;
+    background: var(--panel-2);
+  }
+  .event-block-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+  .event-block-head h3{ margin:0; font-size:12.5px; color: var(--gold); font-weight:600; }
+  .event-block-head .btn-danger{ padding:1px 6px; font-size:11px; line-height:1.6; }
+  .day-empty{ font-size:11.5px; color: var(--text-dim); margin:0 0 6px; }
+  .remember-status{ font-size:12px; color: var(--text-dim); }
+
+  .day-add-toggle{
+    width:22px; height:22px;
+    border-radius:5px;
+    border:1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--gold-dim);
+    font-size:14px;
+    line-height:1;
+    padding:0;
+    cursor:pointer;
+  }
+  .day-add-toggle:hover{ color: var(--gold); border-color: var(--border-lit); }
+  .day-add-row{ display:none; gap:6px; margin-top:6px; }
+  .day-add-row.open{ display:flex; }
+  .day-add-row input{ flex:1; font-size:12px; padding:6px 8px; }
+  .day-add-row button.confirm{ font-size:11.5px; padding:6px 9px; flex:none; }
+
+  .settings-btn{
+    position:fixed;
+    top:14px; right:16px;
+    width:34px; height:34px;
+    border-radius:50%;
+    border:1px solid var(--border);
+    background: var(--panel);
+    color: var(--gold);
+    font-size:16px;
+    font-family:inherit;
+    cursor:pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,.4);
+    z-index:56;
+  }
+  .settings-btn:hover{ border-color: var(--border-lit); }
+  .settings-subhead{ margin:16px 0 6px; font-size:11.5px; text-transform:uppercase; letter-spacing:.07em; color: var(--gold-dim); }
+  .day-visibility-list{ display:flex; flex-direction:column; gap:6px; margin:8px 0; }
+  .day-visibility-list label{ display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; }
+  .template-preview{ font-size:12.5px; color: var(--text-dim); margin:8px 0; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<div class="roster-wrap" id="wrap" style="display:none;">
+  <div class="page-head">
+    <h1>⚔ Журнал посещаемости</h1>
+    <a class="btn btn-ghost" href="index.html" target="_top">← Кабинет</a>
+  </div>
+
+  <section class="card week-nav">
+    <button class="btn" id="prevWeekBtn">◀</button>
+    <div class="week-label" id="weekLabel"></div>
+    <button class="btn" id="nextWeekBtn">▶</button>
+    <button class="btn" id="todayBtn">Сегодня</button>
+    <button class="btn" id="pullPrevWeekBtn" style="display:none;">⬅ Подтянуть из прошлой недели</button>
+  </section>
+  <p class="remember-status" id="rememberStatus" style="text-align:center;"></p>
+
+  <div id="daysContainer"></div>
+</div>
+
+<button class="settings-btn" id="settingsBtn" title="Настройки" style="display:none;">⚙</button>
+<div class="modal-overlay" id="settingsOverlay">
+  <div class="modal">
+    <button class="modal-close" id="settingsClose" title="Закрыть">×</button>
+    <h2>Настройки посещаемости</h2>
+
+    <div class="settings-subhead">Дни недели</div>
+    <p class="hint">Скрытые дни не показываются в списке — включайте только те, что реально нужны.</p>
+    <div class="day-visibility-list" id="dayVisibilityList"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="dayModalOverlay">
+  <div class="modal">
+    <button class="modal-close" id="dayModalClose" title="Закрыть">×</button>
+    <h2 id="dayModalTitle"></h2>
+    <div id="dayModalBody"></div>
+  </div>
+</div>
+
+<button class="help-btn" id="helpBtn" title="Как пользоваться">?</button>
+<div class="modal-overlay" id="helpOverlay">
+  <div class="modal">
+    <button class="modal-close" id="helpClose" title="Закрыть">×</button>
+    <h2>Как пользоваться журналом посещаемости</h2>
+    <p>Каждая календарная неделя показывает семь карточек-дней. Переключайтесь между неделями стрелками ◀/▶ или кнопкой «Сегодня».</p>
+    <p><b>Мероприятия.</b> Клик по карточке дня открывает окно со всеми мероприятиями этого дня и списками явки. Кнопка «+» на карточке добавляет новое мероприятие на этот день (только у главного админа/админа).</p>
+    <p><b>Явка.</b> Внутри мероприятия — «+ Добавить явку»: загрузите до 9 скринов со списком пришедших, распознавание сработает так же, как в переписи и налогах. Крестик у ника убирает его из явки.</p>
+    <p><b>Шестерёнка ⚙ (сверху справа, только у админа).</b></p>
+    <ul>
+      <li>Скрыть/показать дни недели, на которые у клана никогда ничего не происходит.</li>
+    </ul>
+    <p><b>«⬅ Подтянуть из прошлой недели»</b> (в шапке рядом с «Сегодня») — копирует мероприятия из предыдущей недели в текущую (по тем же дням). Можно нажимать и на непустую неделю — старые мероприятия этой недели заменятся.</p>
+    <p>Удаление мероприятия (✕ в открытом окне дня) удаляет и всю явку по нему.</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/event-roster.js"></script>
+<script>
+(async function(){
+  const session = await L2Cabinet.requireSession();
+  if(!session) return;
+
+  const profile = await L2Cabinet.getProfile();
+  if(!profile){
+    document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
+      '<h1>⚠ Профиль не найден</h1><p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+    return;
+  }
+
+  const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
+  const db = L2Cabinet.client;
+
+  document.getElementById("wrap").style.display = "";
+  document.getElementById("pullPrevWeekBtn").style.display = isAdmin ? "" : "none";
+  document.getElementById("settingsBtn").style.display = isAdmin ? "" : "none";
+
+  const DAY_NAMES = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"];
+
+  function mondayOf(d){
+    const x = new Date(d);
+    const day = x.getDay(); // 0=вс..6=сб
+    const diff = day === 0 ? -6 : 1 - day;
+    x.setDate(x.getDate() + diff);
+    x.setHours(0,0,0,0);
+    return x;
+  }
+  function pad2(n){ return String(n).padStart(2, "0"); }
+  function isoDate(d){ return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate()); }
+  function weekLabel(monday){
+    const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6);
+    return `${pad2(monday.getDate())}.${pad2(monday.getMonth()+1)} – ${pad2(sunday.getDate())}.${pad2(sunday.getMonth()+1)}.${sunday.getFullYear()}`;
+  }
+
+  let currentWeek = mondayOf(new Date());
+  let events = [];
+  let dayVisibility = {}; // day_offset -> boolean; отсутствие ключа = видимый (по умолчанию)
+
+  function isDayVisible(offset){ return dayVisibility[offset] !== false; }
+
+  async function loadDayVisibility(){
+    const { data, error } = await db
+      .from("attendance_day_visibility")
+      .select("day_offset, visible")
+      .eq("clan_id", profile.clan_id);
+    dayVisibility = {};
+    if(!error) (data || []).forEach(r => { dayVisibility[r.day_offset] = r.visible; });
+  }
+
+  function renderWeekLabel(){
+    document.getElementById("weekLabel").textContent = weekLabel(currentWeek);
+  }
+
+  async function pullFromPreviousWeek(){
+    const prevMonday = new Date(currentWeek); prevMonday.setDate(prevMonday.getDate() - 7);
+    const { data: prevEvents, error: prevErr } = await db
+      .from("attendance_events")
+      .select("event_date, event_name, sort_order")
+      .eq("week_start", isoDate(prevMonday));
+    if(prevErr){ alert("Не удалось прочитать прошлую неделю: " + prevErr.message); return; }
+    if(!prevEvents || !prevEvents.length){
+      alert("На прошлой неделе тоже нет мероприятий.");
+      return;
+    }
+    if(!confirm("Заменить мероприятия этой недели на мероприятия из прошлой недели? Уже отмеченная явка на этой неделе будет удалена вместе с мероприятиями.")) return;
+
+    const { error: delErr } = await db.from("attendance_events").delete().eq("clan_id", profile.clan_id).eq("week_start", isoDate(currentWeek));
+    if(delErr){ alert("Не удалось очистить текущую неделю: " + delErr.message); return; }
+
+    const rows = prevEvents.map(e => {
+      const prevDate = new Date(e.event_date + "T00:00:00");
+      const dayOffset = Math.round((prevDate - prevMonday) / 86400000);
+      const d = new Date(currentWeek); d.setDate(d.getDate() + dayOffset);
+      return {
+        clan_id: profile.clan_id,
+        week_start: isoDate(currentWeek),
+        event_date: isoDate(d),
+        event_name: e.event_name,
+        sort_order: e.sort_order,
+        created_by: profile.id,
+      };
+    });
+    const { error: insErr } = await db.from("attendance_events").insert(rows);
+    if(insErr){ alert("Не удалось скопировать мероприятия: " + insErr.message); return; }
+
+    document.getElementById("rememberStatus").textContent = `Подтянуто мероприятий: ${rows.length}.`;
+    await loadWeek();
+  }
+
+  async function loadWeek(){
+    const { data, error } = await db
+      .from("attendance_events")
+      .select("id, event_date, event_name, sort_order")
+      .eq("week_start", isoDate(currentWeek))
+      .order("event_date")
+      .order("sort_order");
+    events = error ? [] : (data || []);
+    renderDays();
+  }
+
+  function renderDays(){
+    const container = document.getElementById("daysContainer");
+    container.innerHTML = "";
+
+    for(let i = 0; i < 7; i++){
+      if(!isDayVisible(i)) continue;
+      const d = new Date(currentWeek); d.setDate(d.getDate() + i);
+      const dateStr = isoDate(d);
+      const dayEvents = events.filter(e => e.event_date === dateStr);
+      const dayLabel = `${DAY_NAMES[i]}, ${pad2(d.getDate())}.${pad2(d.getMonth()+1)}`;
+
+      const dayCard = document.createElement("section");
+      dayCard.className = "card day-card";
+      dayCard.addEventListener("click", () => openDayModal(dayLabel, dateStr));
+
+      const heading = document.createElement("h2");
+      heading.textContent = dayLabel;
+      dayCard.appendChild(heading);
+
+      if(!dayEvents.length){
+        const hint = document.createElement("p");
+        hint.className = "day-empty";
+        hint.textContent = "Мероприятий нет.";
+        dayCard.appendChild(hint);
+      } else {
+        const list = document.createElement("div");
+        list.className = "day-event-preview-list";
+        dayEvents.forEach(ev => {
+          const item = document.createElement("div");
+          item.className = "day-event-preview";
+          item.textContent = ev.event_name;
+          list.appendChild(item);
+        });
+        dayCard.appendChild(list);
+      }
+
+      if(isAdmin){
+        const toggle = document.createElement("button");
+        toggle.className = "day-add-toggle";
+        toggle.title = "Добавить мероприятие";
+        toggle.textContent = "+";
+        toggle.addEventListener("click", (e) => e.stopPropagation());
+
+        const addRow = document.createElement("div");
+        addRow.className = "day-add-row";
+        addRow.addEventListener("click", (e) => e.stopPropagation());
+        const input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = "Название мероприятия";
+        input.maxLength = 60;
+        const btn = document.createElement("button");
+        btn.className = "btn confirm";
+        btn.textContent = "Добавить";
+        btn.addEventListener("click", async () => {
+          const name = input.value.trim();
+          if(!name) return;
+          const maxSort = dayEvents.length ? Math.max(...dayEvents.map(e => e.sort_order)) : -1;
+          const { error } = await db.from("attendance_events").insert({
+            clan_id: profile.clan_id,
+            week_start: isoDate(currentWeek),
+            event_date: dateStr,
+            event_name: name,
+            sort_order: maxSort + 1,
+            created_by: profile.id,
+          });
+          if(!error){ input.value = ""; await loadWeek(); }
+        });
+        input.addEventListener("keydown", (e) => { if(e.key === "Enter"){ e.preventDefault(); btn.click(); } });
+        addRow.append(input, btn);
+
+        toggle.addEventListener("click", (e) => {
+          addRow.classList.toggle("open");
+          if(addRow.classList.contains("open")) input.focus();
+        });
+
+        dayCard.append(toggle, addRow);
+      }
+
+      container.appendChild(dayCard);
+    }
+  }
+
+  function renderEventBlock(container, ev){
+    const evBlock = document.createElement("div");
+    evBlock.className = "event-block";
+
+    const evHead = document.createElement("div");
+    evHead.className = "event-block-head";
+    const evTitle = document.createElement("h3");
+    evTitle.textContent = ev.event_name;
+    evHead.appendChild(evTitle);
+
+    if(isAdmin){
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn btn-danger";
+      delBtn.textContent = "✕";
+      delBtn.title = "Удалить мероприятие";
+      delBtn.addEventListener("click", async () => {
+        if(!confirm(`Удалить мероприятие «${ev.event_name}»? Явка по нему тоже удалится.`)) return;
+        const { data, error } = await db.from("attendance_events").delete().eq("id", ev.id).select();
+        if(error){
+          console.error("delete attendance_events failed:", error);
+          alert("Не удалось удалить: " + error.message);
+          return;
+        }
+        if(!data || !data.length){
+          alert("Строка не удалилась — не хватает прав.");
+          return;
+        }
+        closeDayModal();
+        await loadWeek();
+      });
+      evHead.appendChild(delBtn);
+    }
+    evBlock.appendChild(evHead);
+
+    const rosterRoot = document.createElement("div");
+    evBlock.appendChild(rosterRoot);
+    initEventRoster({ root: rosterRoot, eventId: ev.id, profile, isAdmin, db });
+
+    container.appendChild(evBlock);
+  }
+
+  function openDayModal(dayLabel, dateStr){
+    document.getElementById("dayModalTitle").textContent = dayLabel;
+    const body = document.getElementById("dayModalBody");
+    body.innerHTML = "";
+    const dayEvents = events.filter(e => e.event_date === dateStr);
+    if(!dayEvents.length){
+      body.innerHTML = '<p class="hint">Мероприятий нет.</p>';
+    } else {
+      dayEvents.forEach(ev => renderEventBlock(body, ev));
+    }
+    document.getElementById("dayModalOverlay").classList.add("show");
+  }
+  function closeDayModal(){
+    document.getElementById("dayModalOverlay").classList.remove("show");
+  }
+  document.getElementById("dayModalClose").addEventListener("click", closeDayModal);
+  document.getElementById("dayModalOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "dayModalOverlay") closeDayModal();
+  });
+
+  async function goToWeek(monday){
+    currentWeek = monday;
+    renderWeekLabel();
+    document.getElementById("rememberStatus").textContent = "";
+    await loadWeek();
+  }
+
+  document.getElementById("prevWeekBtn").addEventListener("click", () => {
+    const d = new Date(currentWeek); d.setDate(d.getDate() - 7); goToWeek(d);
+  });
+  document.getElementById("nextWeekBtn").addEventListener("click", () => {
+    const d = new Date(currentWeek); d.setDate(d.getDate() + 7); goToWeek(d);
+  });
+  document.getElementById("todayBtn").addEventListener("click", () => goToWeek(mondayOf(new Date())));
+
+  document.getElementById("pullPrevWeekBtn").addEventListener("click", pullFromPreviousWeek);
+
+  // ---- настройки (шестерёнка) ----
+  async function renderDayVisibilityCheckboxes(){
+    await loadDayVisibility();
+    const list = document.getElementById("dayVisibilityList");
+    list.innerHTML = "";
+    for(let i = 0; i < 7; i++){
+      const label = document.createElement("label");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = isDayVisible(i);
+      cb.addEventListener("change", async () => {
+        cb.disabled = true;
+        await db.from("attendance_day_visibility").upsert(
+          { clan_id: profile.clan_id, day_offset: i, visible: cb.checked },
+          { onConflict: "clan_id,day_offset" }
+        );
+        dayVisibility[i] = cb.checked;
+        cb.disabled = false;
+        renderDays();
+      });
+      label.append(cb, document.createTextNode(DAY_NAMES[i]));
+      list.appendChild(label);
+    }
+  }
+
+  document.getElementById("settingsBtn").addEventListener("click", async () => {
+    await renderDayVisibilityCheckboxes();
+    document.getElementById("settingsOverlay").classList.add("show");
+  });
+  document.getElementById("settingsClose").addEventListener("click", () => {
+    document.getElementById("settingsOverlay").classList.remove("show");
+  });
+  document.getElementById("settingsOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "settingsOverlay") e.currentTarget.classList.remove("show");
+  });
+
+  document.getElementById("helpBtn").addEventListener("click", () => {
+    document.getElementById("helpOverlay").classList.add("show");
+  });
+  document.getElementById("helpClose").addEventListener("click", () => {
+    document.getElementById("helpOverlay").classList.remove("show");
+  });
+  document.getElementById("helpOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "helpOverlay") e.currentTarget.classList.remove("show");
+  });
+
+  await loadDayVisibility();
+  renderWeekLabel();
+  await loadWeek();
+})();
+</script>
+</body>
+</html>
