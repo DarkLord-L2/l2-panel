@@ -60,19 +60,6 @@
   </section>
 
   <section class="card">
-    <h2>Пати</h2>
-    <div class="form-row">
-      <div class="field">
-        <label for="newPartyName">Название новой пати</label>
-        <input type="text" id="newPartyName" />
-      </div>
-      <button class="btn" id="addPartyBtn">Добавить</button>
-    </div>
-    <p class="error-msg" id="partyError"></p>
-    <ul id="partiesList" style="margin:10px 0 0; padding-left:18px; font-size:13px;"></ul>
-  </section>
-
-  <section class="card">
     <h2>Какие разделы видит каждая роль</h2>
     <p class="hint">Снимите галочку — раздел исчезнет из навигации у всех с этой ролью. Админ-панель всегда видна только главному админу.</p>
     <div style="overflow-x:auto;">
@@ -196,11 +183,6 @@
     return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
   }
 
-  async function loadParties(){
-    const list = document.getElementById("partiesList");
-    list.innerHTML = parties.map(p => `<li>${escapeHtml(p.name)}</li>`).join("") || "<li>Пати ещё не созданы</li>";
-  }
-
   async function loadMatrix(){
     const { data, error } = await db.from("role_sections").select("role_id, section_key, visible");
     if(error){ console.error(error); return; }
@@ -258,24 +240,10 @@
     }
   });
 
-  document.getElementById("addPartyBtn").addEventListener("click", async () => {
-    const input = document.getElementById("newPartyName");
-    const name = input.value.trim();
-    const errEl = document.getElementById("partyError");
-    errEl.textContent = "";
-    if(!name) return;
-    const { error } = await db.from("parties").insert({ clan_id: profile.clan_id, name });
-    if(error){ errEl.textContent = error.message; return; }
-    input.value = "";
-    await loadLookups();
-    fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
-    await loadParties();
-  });
-
   await loadLookups();
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(r.label), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
-  await Promise.all([loadUsers(), loadParties(), loadMatrix()]);
+  await Promise.all([loadUsers(), loadMatrix()]);
 })();
 </script>
 </body>
