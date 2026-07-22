@@ -1,0 +1,204 @@
+/* Общий стиль кабинета — тот же язык, что и у панели скилов (тёмное фэнтези-золото) */
+
+:root{
+  --bg: #14110c;
+  --bg-vignette: #0c0a07;
+  --panel: #211a11;
+  --panel-2: #291f14;
+  --border: #5a4423;
+  --border-lit: #8a6a2c;
+  --gold: #d4a340;
+  --gold-dim: #a9822f;
+  --text: #e9dfc4;
+  --text-dim: #9c8f74;
+  --danger: #b3503f;
+  --danger-lit: #d66a55;
+  --ok: #6a9c5a;
+  --focus: #e8c874;
+}
+:root[data-theme="light"]{
+  --bg: #cdbe9c;
+  --bg-vignette: #b7a67f;
+  --panel: #e4d6b3;
+  --panel-2: #ecdfbe;
+  --border: #9c8352;
+  --border-lit: #7a6132;
+  --gold: #8a6113;
+  --gold-dim: #6e4d10;
+  --text: #2c2314;
+  --text-dim: #5c4d31;
+  --danger: #a13d2c;
+  --danger-lit: #7f2f21;
+  --ok: #3f6e33;
+  --focus: #8a6113;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg: #cdbe9c; --bg-vignette: #b7a67f; --panel: #e4d6b3; --panel-2: #ecdfbe;
+    --border: #9c8352; --border-lit: #7a6132; --gold: #8a6113; --gold-dim: #6e4d10;
+    --text: #2c2314; --text-dim: #5c4d31; --danger: #a13d2c; --danger-lit: #7f2f21;
+    --ok: #3f6e33; --focus: #8a6113;
+  }
+}
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+
+html{ scrollbar-width:thin; scrollbar-color: var(--border-lit) var(--panel); }
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-track{ background: var(--panel); }
+::-webkit-scrollbar-thumb{
+  background: linear-gradient(180deg, var(--border-lit), var(--border));
+  border-radius:6px;
+  border:2px solid var(--panel);
+}
+::-webkit-scrollbar-thumb:hover{ background: var(--gold-dim); }
+body{
+  margin:0;
+  min-height:100vh;
+  background: radial-gradient(ellipse at 50% 30%, var(--bg) 0%, var(--bg-vignette) 100%);
+  font-family: "Bahnschrift", "Segoe UI Semibold", "Trebuchet MS", sans-serif;
+  color: var(--text);
+}
+h1,h2,h3{
+  font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+  color: var(--gold);
+  letter-spacing:.03em;
+  margin:0 0 8px;
+}
+
+a{ color: var(--gold); }
+
+.btn{
+  font-family:inherit;
+  font-size:13px;
+  letter-spacing:.03em;
+  padding:9px 16px;
+  border-radius:5px;
+  border:1px solid var(--border);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  color: var(--gold);
+  cursor:pointer;
+}
+.btn:hover{ border-color: var(--border-lit); }
+.btn:disabled{ opacity:.5; cursor:default; }
+.btn-primary{ border-color: var(--gold-dim); box-shadow: 0 0 0 1px var(--gold-dim) inset; }
+.btn-danger{ color: var(--danger-lit); border-color: var(--danger); }
+.btn-danger:hover{ background: var(--danger); color:#fff; }
+.btn-ghost{ background:none; border-color:transparent; color: var(--text-dim); }
+.btn-ghost:hover{ color: var(--gold); }
+
+.field{ display:flex; flex-direction:column; gap:5px; margin:10px 0; }
+.field label{ font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color: var(--gold-dim); }
+input[type="text"], input[type="password"], input[type="email"], select, textarea{
+  font-family:inherit;
+  font-size:13.5px;
+  padding:9px 11px;
+  border-radius:5px;
+  border:1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible{
+  outline:2px solid var(--focus); outline-offset:1px;
+}
+.checkbox-row{ display:flex; align-items:center; gap:8px; font-size:13px; margin:10px 0; }
+.checkbox-row input{ cursor:pointer; }
+
+.card{
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border:1px solid var(--border);
+  border-radius:8px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.35), 0 10px 30px rgba(0,0,0,.35);
+  padding:20px 24px;
+}
+
+.hint{ font-size:12px; color: var(--text-dim); line-height:1.5; }
+.error-msg{ font-size:12.5px; color: var(--danger-lit); min-height:1.4em; }
+.ok-msg{ font-size:12.5px; color: var(--ok); min-height:1.4em; }
+
+.badge{
+  display:inline-block;
+  font-size:10.5px;
+  padding:2px 8px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  color: var(--gold-dim);
+  letter-spacing:.03em;
+}
+
+/* ---- login.html ---- */
+.login-wrap{
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:18px;
+  padding:24px;
+}
+.login-card{ width:100%; max-width:340px; text-align:center; }
+.login-card h1{ font-size:22px; }
+.login-card .field{ text-align:left; }
+.login-footnote{
+  font-size:12px;
+  color: var(--text-dim);
+  text-align:center;
+  max-width:340px;
+  line-height:1.6;
+}
+
+/* ---- app shell (index.html) ---- */
+.app-shell{ min-height:100vh; display:flex; flex-direction:column; }
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 20px;
+  border-bottom:1px solid var(--border);
+  background: var(--panel);
+}
+.topbar .brand{ font-family: Georgia, serif; color: var(--gold); font-size:17px; letter-spacing:.04em; }
+.topbar .who{ display:flex; align-items:center; gap:12px; font-size:12.5px; color: var(--text-dim); }
+.topbar .who .name{ color: var(--text); }
+
+.app-body{ flex:1; display:flex; min-height:0; }
+.sidebar-nav{
+  width:220px;
+  flex:none;
+  background: var(--panel);
+  border-right:1px solid var(--border);
+  padding:14px 0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.sidebar-nav a{
+  display:block;
+  padding:10px 20px;
+  color: var(--text-dim);
+  text-decoration:none;
+  font-size:13px;
+  letter-spacing:.02em;
+  border-left:2px solid transparent;
+}
+.sidebar-nav a:hover{ color: var(--gold); background: var(--panel-2); }
+.sidebar-nav a.active{ color: var(--gold); border-left-color: var(--gold); background: var(--panel-2); }
+.sidebar-nav .soon{ opacity:.5; cursor:default; pointer-events:none; }
+
+.content{ flex:1; min-width:0; overflow:auto; padding:24px; }
+.content-frame{ width:100%; height:100%; border:none; }
+
+/* ---- admin.html tables ---- */
+table.data-table{ width:100%; border-collapse:collapse; font-size:13px; }
+table.data-table th, table.data-table td{
+  text-align:left;
+  padding:8px 10px;
+  border-bottom:1px solid var(--border);
+}
+table.data-table th{ color: var(--gold-dim); font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+table.data-table tr:hover td{ background: rgba(255,255,255,.02); }
+
+.matrix-table{ border-collapse:collapse; font-size:12.5px; }
+.matrix-table th, .matrix-table td{ padding:6px 10px; border:1px solid var(--border); text-align:center; }
+.matrix-table th:first-child, .matrix-table td:first-child{ text-align:left; }

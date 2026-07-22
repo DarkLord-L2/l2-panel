@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Вход — Кабинет клана</title>
+<link rel="stylesheet" href="js/theme.css" />
+</head>
+<body>
+
+<div class="login-wrap">
+  <form class="card login-card" id="loginForm" autocomplete="on">
+    <h1>⚔ Кабинет клана</h1>
+    <p class="hint">Войдите под логином и паролем, которые вам выдал клан-лидер.</p>
+
+    <div class="field">
+      <label for="username">Логин</label>
+      <input type="text" id="username" name="username" autocomplete="username" required autofocus />
+    </div>
+    <div class="field">
+      <label for="password">Пароль</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" required />
+    </div>
+
+    <label class="checkbox-row">
+      <input type="checkbox" id="remember" checked />
+      Запомнить меня на этом устройстве
+    </label>
+
+    <p class="error-msg" id="loginError"></p>
+
+    <button type="submit" class="btn btn-primary" id="loginSubmit" style="width:100%;">Войти</button>
+  </form>
+
+  <p class="login-footnote">Нет логина и пароля? Обратитесь к клан-лидеру.</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-client.js"></script>
+<script>
+(async function(){
+  // уже вошли — сразу в кабинет
+  const { data: { session } } = await L2Cabinet.client.auth.getSession();
+  if(session){ location.href = "index.html"; return; }
+
+  const form = document.getElementById("loginForm");
+  const errorEl = document.getElementById("loginError");
+  const submitBtn = document.getElementById("loginSubmit");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorEl.textContent = "";
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Входим…";
+
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
+    const remember = document.getElementById("remember").checked;
+
+    try{
+      const { error } = await L2Cabinet.login(username, password, remember);
+      if(error) throw error;
+      location.href = "index.html";
+    }catch(err){
+      errorEl.textContent = "Неверный логин или пароль";
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Войти";
+    }
+  });
+})();
+</script>
+</body>
+</html>

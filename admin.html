@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Админ-панель — Кабинет клана</title>
+<link rel="stylesheet" href="js/theme.css" />
+<style>
+  .admin-wrap{ max-width:920px; margin:0 auto; display:flex; flex-direction:column; gap:20px; padding:8px 0 40px; }
+  .admin-head{ display:flex; align-items:center; justify-content:space-between; }
+  .form-row{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+  .form-row .field{ margin:0; min-width:160px; flex:1; }
+  select{ width:100%; }
+</style>
+</head>
+<body>
+
+<div class="admin-wrap" id="adminWrap" style="display:none;">
+  <div class="admin-head">
+    <h1>⚔ Админ-панель</h1>
+    <a class="btn btn-ghost" href="index.html">← Кабинет</a>
+  </div>
+
+  <section class="card">
+    <h2>Новый пользователь</h2>
+    <form id="createUserForm">
+      <div class="form-row">
+        <div class="field">
+          <label for="newUsername">Логин</label>
+          <input type="text" id="newUsername" required pattern="[a-zA-Z0-9_\-]{3,32}" title="3–32 символа: латиница, цифры, - и _" />
+        </div>
+        <div class="field">
+          <label for="newPassword">Пароль</label>
+          <input type="text" id="newPassword" required minlength="6" />
+        </div>
+        <div class="field">
+          <label for="newRole">Роль</label>
+          <select id="newRole"></select>
+        </div>
+        <div class="field">
+          <label for="newParty">Пати (необязательно)</label>
+          <select id="newParty"><option value="">—</option></select>
+        </div>
+        <button type="submit" class="btn btn-primary" id="createUserBtn">Создать</button>
+      </div>
+      <p class="error-msg" id="createUserError"></p>
+      <p class="ok-msg" id="createUserOk"></p>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Пользователи</h2>
+    <table class="data-table" id="usersTable">
+      <thead>
+        <tr><th>Логин</th><th>Роль</th><th>Пати</th><th>Создан</th></tr>
+      </thead>
+      <tbody id="usersBody"></tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>Пати</h2>
+    <div class="form-row">
+      <div class="field">
+        <label for="newPartyName">Название новой пати</label>
+        <input type="text" id="newPartyName" />
+      </div>
+      <button class="btn" id="addPartyBtn">Добавить</button>
+    </div>
+    <p class="error-msg" id="partyError"></p>
+    <ul id="partiesList" style="margin:10px 0 0; padding-left:18px; font-size:13px;"></ul>
+  </section>
+
+  <section class="card">
+    <h2>Какие разделы видит каждая роль</h2>
+    <p class="hint">Снимите галочку — раздел исчезнет из навигации у всех с этой ролью. Админ-панель всегда видна только главному админу.</p>
+    <div style="overflow-x:auto;">
+      <table class="matrix-table" id="permMatrix"></table>
+    </div>
+  </section>
+</div>
+
+<div class="login-wrap" id="deniedWrap" style="display:none;">
+  <div class="card login-card">
+    <h1>⛔ Нет доступа</h1>
+    <p class="hint">Эта страница только для главного админа.</p>
+    <a class="btn" href="index.html">← Кабинет</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-client.js"></script>
+<script>
+(async function(){
+  const session = await L2Cabinet.requireSession();
+  if(!session) return;
+
+  const profile = await L2Cabinet.getProfile();
+  if(!profile || profile.roles?.key !== "glavadmin"){
+    document.getElementById("deniedWrap").style.display = "";
+    return;
+  }
+  document.getElementById("adminWrap").style.display = "";
+
+  const db = L2Cabinet.client;
+  let roles = [], parties = [], sections = [];
+
+  async function loadLookups(){
+    const [{ data: r }, { data: p }, { data: s }] = await Promise.all([
+      db.from("roles").select("id, key, label, rank").order("rank", { ascending: false }),
+      db.from("parties").select("id, name").order("name"),
+      db.from("sections").select("key, label, sort").order("sort"),
+    ]);
+    roles = r || []; parties = p || []; sections = s || [];
+  }
+
+  function fillSelect(sel, items, labelFn, withEmpty){
+    sel.innerHTML = (withEmpty ? '<option value="">—</option>' : "") +
+      items.map(it => `<option value="${it.id}">${labelFn(it)}</option>`).join("");
+  }
+
+  async function loadUsers(){
+    const { data, error } = await db
+      .from("profiles")
+      .select("id, username, created_at, roles(label), parties(name)")
+      .order("created_at", { ascending: false });
+    if(error){ console.error(error); return; }
+    const body = document.getElementById("usersBody");
+    body.innerHTML = data.map(u => `
+      <tr>
+        <td>${escapeHtml(u.username)}</td>
+        <td>${escapeHtml(u.roles?.label || "—")}</td>
+        <td>${escapeHtml(u.parties?.name || "—")}</td>
+        <td>${new Date(u.created_at).toLocaleDateString("ru-RU")}</td>
+      </tr>`).join("");
+  }
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  }
+
+  async function loadParties(){
+    const list = document.getElementById("partiesList");
+    list.innerHTML = parties.map(p => `<li>${escapeHtml(p.name)}</li>`).join("") || "<li>Пати ещё не созданы</li>";
+  }
+
+  async function loadMatrix(){
+    const { data, error } = await db.from("role_sections").select("role_id, section_key, visible");
+    if(error){ console.error(error); return; }
+    const map = new Map(data.map(row => [row.role_id + "|" + row.section_key, row]));
+
+    const table = document.getElementById("permMatrix");
+    let html = "<tr><th>Роль</th>" + sections.map(s => `<th>${escapeHtml(s.label)}</th>`).join("") + "</tr>";
+    roles.forEach(role => {
+      html += `<tr><td>${escapeHtml(role.label)}</td>`;
+      sections.forEach(sec => {
+        const row = map.get(role.id + "|" + sec.key);
+        const visible = row ? row.visible : false;
+        const disabled = (sec.key === "admin" && role.key !== "glavadmin") ? "disabled" : "";
+        html += `<td><input type="checkbox" data-role="${role.id}" data-section="${sec.key}" ${visible ? "checked" : ""} ${disabled} /></td>`;
+      });
+      html += "</tr>";
+    });
+    table.innerHTML = html;
+
+    table.querySelectorAll("input[type=checkbox]").forEach(cb => {
+      cb.addEventListener("change", async () => {
+        const roleId = cb.dataset.role, sectionKey = cb.dataset.section;
+        cb.disabled = true;
+        const { error } = await db.from("role_sections")
+          .upsert({ role_id: roleId, section_key: sectionKey, visible: cb.checked }, { onConflict: "role_id,section_key" });
+        if(error) console.error(error);
+        cb.disabled = false;
+      });
+    });
+  }
+
+  document.getElementById("createUserForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById("createUserError");
+    const okEl = document.getElementById("createUserOk");
+    const btn = document.getElementById("createUserBtn");
+    errEl.textContent = ""; okEl.textContent = "";
+    btn.disabled = true;
+
+    const username = document.getElementById("newUsername").value.trim();
+    const password = document.getElementById("newPassword").value;
+    const roleId = document.getElementById("newRole").value;
+    const partyId = document.getElementById("newParty").value;
+    const role = roles.find(r => r.id === roleId);
+
+    try{
+      await L2Cabinet.adminCreateUser({ username, password, role_key: role?.key, party_id: partyId || null });
+      okEl.textContent = `Пользователь «${username}» создан.`;
+      document.getElementById("createUserForm").reset();
+      await loadUsers();
+    }catch(err){
+      errEl.textContent = "Не удалось создать: " + err.message;
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById("addPartyBtn").addEventListener("click", async () => {
+    const input = document.getElementById("newPartyName");
+    const name = input.value.trim();
+    const errEl = document.getElementById("partyError");
+    errEl.textContent = "";
+    if(!name) return;
+    const { error } = await db.from("parties").insert({ clan_id: profile.clan_id, name });
+    if(error){ errEl.textContent = error.message; return; }
+    input.value = "";
+    await loadLookups();
+    fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
+    await loadParties();
+  });
+
+  await loadLookups();
+  fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(r.label), false);
+  fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
+  await Promise.all([loadUsers(), loadParties(), loadMatrix()]);
+})();
+</script>
+</body>
+</html>
