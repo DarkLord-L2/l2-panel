@@ -42,18 +42,20 @@
 
   .upload-status{ font-size:12.5px; color: var(--text-dim); min-height:1.4em; }
 
-  .table-head-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .table-head-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
   .table-head-row .tools{ display:flex; gap:8px; }
 
-  .week-table{ width:100%; border-collapse:collapse; font-size:13px; }
-  .week-table td{ padding:7px 10px; border-bottom:1px solid var(--border); }
-  .week-table td.nick{ width:100%; }
-  .week-table td.chk{ width:24px; }
-  .week-table td.del{ width:28px; text-align:right; }
-  .week-table .row-x{
-    background:none; border:none; color: var(--text-dim); font-size:15px; cursor:pointer; padding:0 4px;
+  .roster-row{ margin-top:14px; gap:10px; }
+  .roster-chip{
+    padding:8px 10px 8px 16px;
+    font-size:14px;
+    font-weight:600;
+    letter-spacing:.02em;
+    color: var(--text);
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.3);
   }
-  .week-table .row-x:hover{ color: var(--danger-lit); }
+  .roster-chip input[type="checkbox"]{ margin-right:2px; }
 
   .empty-hint{ font-size:13px; color: var(--text-dim); padding:10px 0; }
 </style>
@@ -63,7 +65,7 @@
 <div class="census-wrap" id="wrap" style="display:none;">
   <div class="census-head">
     <h1>⚔ Перепись клана</h1>
-    <a class="btn btn-ghost" href="index.html">← Кабинет</a>
+    <a class="btn btn-ghost" href="index.html" target="_top">← Кабинет</a>
   </div>
 
   <section class="card week-nav">
@@ -73,7 +75,28 @@
     <button class="btn" id="todayBtn">Сегодня</button>
   </section>
 
-  <section class="card upload-card" id="uploadCard">
+  <section class="card">
+    <div class="table-head-row">
+      <h2>Ники недели (<span id="weekCount">0</span>)</h2>
+      <div class="tools">
+        <button class="btn btn-primary" id="addCensusBtn" style="display:none;">+ Добавить перепись</button>
+        <button class="btn" id="expandBtn" title="Развернуть на весь экран">⤢</button>
+        <button class="btn" id="trashModeBtn" title="Режим удаления списком" style="display:none;">🗑</button>
+      </div>
+    </div>
+
+    <div class="table-head-row" id="bulkTools" style="display:none; margin-top:8px;">
+      <div class="tools">
+        <button class="btn" id="selectAllBtn">Выбрать всех</button>
+        <button class="btn btn-danger" id="deleteSelectedBtn">Удалить выбранных (0)</button>
+      </div>
+    </div>
+
+    <div class="chip-row roster-row" id="weekBody"></div>
+    <p class="empty-hint" id="emptyHint" style="display:none;">На этой неделе ещё никто не загружен.</p>
+  </section>
+
+  <section class="card upload-card" id="uploadCard" style="display:none;">
     <h2>Загрузить скрины переписи</h2>
     <p class="hint">До 9 скриншотов со списком ников. Каждый распознаётся отдельно — если один собьётся, остальные не пострадают.</p>
     <input type="file" id="fileInput" accept="image/*" multiple style="display:none;" />
@@ -93,28 +116,19 @@
       <button class="btn btn-ghost" id="cancelUploadBtn">Отмена</button>
     </div>
   </section>
+</div>
 
-  <section class="card">
-    <div class="table-head-row">
-      <h2>Ники недели (<span id="weekCount">0</span>)</h2>
-      <div class="tools">
-        <button class="btn" id="expandBtn" title="Развернуть на весь экран">⤢</button>
-        <button class="btn" id="trashModeBtn" title="Режим удаления списком" style="display:none;">🗑</button>
-      </div>
-    </div>
-
-    <div class="table-head-row" id="bulkTools" style="display:none; margin-top:8px;">
-      <div class="tools">
-        <button class="btn" id="selectAllBtn">Выбрать всех</button>
-        <button class="btn btn-danger" id="deleteSelectedBtn">Удалить выбранных (0)</button>
-      </div>
-    </div>
-
-    <table class="week-table" id="weekTable">
-      <tbody id="weekBody"></tbody>
-    </table>
-    <p class="empty-hint" id="emptyHint" style="display:none;">На этой неделе ещё никто не загружен.</p>
-  </section>
+<button class="help-btn" id="helpBtn" title="Как пользоваться">?</button>
+<div class="modal-overlay" id="helpOverlay">
+  <div class="modal">
+    <button class="modal-close" id="helpClose" title="Закрыть">×</button>
+    <h2>Как пользоваться переписью</h2>
+    <p>Каждая календарная неделя (понедельник–воскресенье) — свой отдельный список участников клана. Переключайтесь между неделями стрелками ◀/▶ или кнопкой «Сегодня».</p>
+    <p><b>Загрузка.</b> Нажмите «+ Добавить перепись», выберите до 9 скриншотов со списком участников — подойдёт, например, скрин окна группы клана с никами, классами и статистикой. Распознавание само вычленит только ники, остальное (иконки, урон, киллы) игнорирует.</p>
+    <img src="assets/census-example.png" alt="Пример подходящего скриншота — окно группы клана со списком участников" />
+    <p>Перед сохранением проверьте распознанные ники — чипы с крестиком можно убрать, если что-то распозналось неверно, или дописать ник вручную. Затем нажмите «Сохранить перепись».</p>
+    <p><b>Правки.</b> Крестик у ника в списке недели убирает его. Кнопка 🗑 включает выбор сразу нескольких ников для удаления. Кнопка ⤢ разворачивает список на весь экран.</p>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -135,8 +149,16 @@
   const db = L2Cabinet.client;
 
   document.getElementById("wrap").style.display = "";
-  document.getElementById("uploadCard").style.display = isAdmin ? "" : "none";
+  document.getElementById("addCensusBtn").style.display = isAdmin ? "" : "none";
   document.getElementById("trashModeBtn").style.display = isAdmin ? "" : "none";
+
+  document.getElementById("addCensusBtn").addEventListener("click", () => {
+    const card = document.getElementById("uploadCard");
+    const btn = document.getElementById("addCensusBtn");
+    const show = card.style.display === "none";
+    card.style.display = show ? "" : "none";
+    btn.textContent = show ? "Скрыть загрузку" : "+ Добавить перепись";
+  });
 
   // ---- недели ----
   function mondayOf(d){
@@ -170,6 +192,11 @@
     document.getElementById("uploadStatus").textContent = "";
     document.getElementById("uploadError").textContent = "";
     renderChips();
+  }
+
+  function closeUploadCard(){
+    document.getElementById("uploadCard").style.display = "none";
+    document.getElementById("addCensusBtn").textContent = "+ Добавить перепись";
   }
 
   function renderChips(){
@@ -207,11 +234,10 @@
     document.getElementById("emptyHint").style.display = weekEntries.length ? "none" : "";
 
     weekEntries.forEach(entry => {
-      const tr = document.createElement("tr");
+      const chip = document.createElement("div");
+      chip.className = "chip roster-chip";
 
       if(selectMode){
-        const tdChk = document.createElement("td");
-        tdChk.className = "chk";
         const cb = document.createElement("input");
         cb.type = "checkbox";
         cb.checked = selectedIds.has(entry.id);
@@ -219,31 +245,25 @@
           if(cb.checked) selectedIds.add(entry.id); else selectedIds.delete(entry.id);
           updateDeleteSelectedLabel();
         });
-        tdChk.appendChild(cb);
-        tr.appendChild(tdChk);
+        chip.appendChild(cb);
       }
 
-      const tdNick = document.createElement("td");
-      tdNick.className = "nick";
-      tdNick.textContent = entry.nickname;
-      tr.appendChild(tdNick);
+      const span = document.createElement("span");
+      span.textContent = entry.nickname;
+      chip.appendChild(span);
 
-      const tdDel = document.createElement("td");
-      tdDel.className = "del";
-      if(isAdmin){
+      if(isAdmin && !selectMode){
         const x = document.createElement("button");
-        x.className = "row-x";
         x.textContent = "×";
         x.title = "Удалить";
         x.addEventListener("click", async () => {
           const { error } = await db.from("census_entries").delete().eq("id", entry.id);
           if(!error) await loadWeek();
         });
-        tdDel.appendChild(x);
+        chip.appendChild(x);
       }
-      tr.appendChild(tdDel);
 
-      body.appendChild(tr);
+      body.appendChild(chip);
     });
   }
 
@@ -255,6 +275,7 @@
     currentWeek = monday;
     renderWeekLabel();
     resetUploadPreview();
+    closeUploadCard();
     await loadWeek();
   }
 
@@ -347,7 +368,10 @@
     if(e.key === "Enter"){ e.preventDefault(); document.getElementById("manualAddBtn").click(); }
   });
 
-  document.getElementById("cancelUploadBtn").addEventListener("click", resetUploadPreview);
+  document.getElementById("cancelUploadBtn").addEventListener("click", () => {
+    resetUploadPreview();
+    closeUploadCard();
+  });
 
   document.getElementById("saveWeekBtn").addEventListener("click", async () => {
     const errEl = document.getElementById("uploadError");
@@ -356,6 +380,7 @@
     const toInsert = pendingChips.filter(n => !existing.has(n));
     if(!toInsert.length){
       resetUploadPreview();
+      closeUploadCard();
       return;
     }
     const rows = toInsert.map(nickname => ({
@@ -367,7 +392,21 @@
     const { error } = await db.from("census_entries").insert(rows);
     if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
     resetUploadPreview();
+    closeUploadCard();
     await loadWeek();
+  });
+
+  document.getElementById("helpBtn").addEventListener("click", () => {
+    document.getElementById("helpOverlay").classList.add("show");
+  });
+  document.getElementById("helpClose").addEventListener("click", () => {
+    document.getElementById("helpOverlay").classList.remove("show");
+  });
+  document.getElementById("helpOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "helpOverlay") e.currentTarget.classList.remove("show");
+  });
+  window.addEventListener("keydown", (e) => {
+    if(e.key === "Escape") document.getElementById("helpOverlay").classList.remove("show");
   });
 
   renderWeekLabel();
