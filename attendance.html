@@ -126,26 +126,29 @@
   .nick-click:hover{ color: var(--gold); }
   #nickInfoStatus a{ cursor:pointer; }
   #nickInfoStatus a:hover{ color: var(--focus); }
-  .att-mark-yes{
-    background: color-mix(in srgb, var(--ok) 24%, transparent);
-    color: var(--ok); font-weight:700; text-align:center;
-  }
-  .att-mark-no{
-    background: color-mix(in srgb, var(--danger) 15%, transparent);
-    text-align:center;
-  }
-  .att-tier-high{
-    background: color-mix(in srgb, var(--gold) 30%, transparent);
-    color: var(--gold); font-weight:700; text-align:center;
-  }
-  .att-tier-mid{
-    background: color-mix(in srgb, var(--border-lit) 32%, transparent);
-    text-align:center;
-  }
-  .att-tier-low{
-    background: color-mix(in srgb, var(--danger) 26%, transparent);
-    color: var(--danger-lit); font-weight:600; text-align:center;
-  }
+  .att-mark-yes{ text-align:center; }
+  .att-mark-no{ text-align:center; }
+  .att-tier-high{ text-align:center; }
+  .att-tier-mid{ text-align:center; }
+  .att-tier-low{ text-align:center; }
+  #attReportHead th{ background: var(--panel); }
+
+  /* матрица «Посещаемость» — светлая табличная палитра 1:1 как в референсе
+     (белый фон, чёрный текст, зелёные/розовые ячейки явки, тир-цвета
+     жёлтый/голубой/коричневый), отдельно от тёмной темы всего остального сайта */
+  #attTableWrap.matrix-mode table{ background:#ffffff; color:#1a1a1a; }
+  #attTableWrap.matrix-mode th, #attTableWrap.matrix-mode td{ border-color:#c4c4c4; padding:4px 8px; font-size:12px; }
+  #attTableWrap.matrix-mode #attReportHead th{ background:#dce6f5; color:#1b3a5c; }
+  #attTableWrap.matrix-mode #attReportHead th:first-child{ border-left:4px solid #4a86e8; }
+  #attTableWrap.matrix-mode .week-start{ border-left:2px solid #4a86e8 !important; }
+  #attTableWrap.matrix-mode #attReportHead tr:first-child th[colspan]{ border-bottom:2px solid #4a86e8; }
+  #attTableWrap.matrix-mode #attReportBody td{ border-bottom:1px solid #c4c4c4; }
+  #attTableWrap.matrix-mode .att-mark-yes{ background:#d9ead3; color:#274e13; font-weight:700; }
+  #attTableWrap.matrix-mode .att-mark-no{ background:#f4cccc; }
+  #attTableWrap.matrix-mode .att-tier-high{ background:#f1c232; color:#4a3200; font-weight:700; }
+  #attTableWrap.matrix-mode .att-tier-mid{ background:#76a5af; color:#0b2b30; font-weight:600; }
+  #attTableWrap.matrix-mode .att-tier-low{ background:#a0522d; color:#fff; font-weight:600; }
+  #attTableWrap.matrix-mode .nick-click:hover{ color:#1156a3; }
   .day-columns{ display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; margin-top:14px; }
   .day-columns .roster-col{ flex:1; min-width:220px; }
   .day-columns h3{ font-size:13px; margin:0 0 10px; }
@@ -175,7 +178,13 @@
   <div id="attReportView" style="display:none;">
     <section class="card">
       <div class="table-head-row">
-        <h2 style="margin:0;">📊 Посещаемость</h2>
+        <div class="date-range-row" style="margin:0;">
+          <div class="field">
+            <label for="attNickSearch">Поиск по нику</label>
+            <input type="text" id="attNickSearch" placeholder="Ник" />
+          </div>
+          <button class="btn" id="attNickSearchBtn">Поиск</button>
+        </div>
         <div class="tools">
           <button class="btn" id="attEditBtn" style="display:none;">✎ Изменить период</button>
           <button class="btn" id="attBackBtn">← К дням недели</button>
@@ -206,16 +215,9 @@
         <button class="btn btn-primary" id="attShowDayBtn">Показать</button>
       </div>
 
-      <div class="date-range-row">
-        <div class="field">
-          <label for="attNickSearch">Поиск по нику</label>
-          <input type="text" id="attNickSearch" placeholder="Ник" />
-        </div>
-        <button class="btn" id="attNickSearchBtn">Поиск</button>
-      </div>
-      <p class="error-msg" id="attReportError"></p>
+      <p class="error-msg" id="attReportError" style="margin:2px 0;"></p>
 
-      <div class="filter-tabs" id="attFilterTabs"></div>
+      <div class="filter-tabs" id="attFilterTabs" style="margin:6px 0 8px;"></div>
 
       <div class="matrix-scroll" id="attTableWrap">
         <table class="report-table">
@@ -757,12 +759,12 @@
     headEl.style.position = "sticky";
     headEl.style.top = "0";
     headEl.style.zIndex = "5";
-    Array.from(headEl.querySelectorAll("th")).forEach(th => {
-      th.style.background = "var(--panel)";
-    });
+    // фон задаётся в CSS (#attReportHead th) — там же переопределяется
+    // светлой палитрой матрицы через #attTableWrap.matrix-mode
   }
 
   function resetFlatHead(){
+    document.getElementById("attTableWrap").classList.remove("matrix-mode");
     document.getElementById("attReportHead").innerHTML =
       "<tr><th>Никнейм</th><th>Посещено</th><th>%</th><th>В клане с</th></tr>";
     applyStickyHead();
@@ -813,6 +815,7 @@
   }
 
   function renderAttTableMatrix(filterKey){
+    document.getElementById("attTableWrap").classList.add("matrix-mode");
     const filter = REPORT_FILTERS.find(f => f.key === filterKey);
     const rows = (filter ? attReportRows.filter(filter.test) : [])
       .filter(r => !attNickFilter || r.nickname.toLowerCase().includes(attNickFilter))
