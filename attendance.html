@@ -103,6 +103,25 @@
      считается один раз для всей таблицы и не поспевает за сдвигом шапки при скролле,
      из-за чего золотая линия-разделитель выглядит "отклеенной". separate чинит это. */
   #attTableWrap table{ border-collapse:separate; border-spacing:0; }
+  body.hide-chrome .page-head,
+  body.hide-chrome .week-nav{ display:none; }
+  body.hide-controls #reportModeTabs,
+  body.hide-controls #periodInputsRow,
+  body.hide-controls #dayInputRow{ display:none !important; }
+  /* фикс-режим отчёта: документ во фрейме сам не скроллится (иначе поверх
+     внутреннего скролла таблицы появляется ещё и внешний скролл страницы,
+     а ⚙/? "уезжают" вместе с ним) — скроллится только сама таблица. */
+  body.report-focus{ height:100vh; overflow:hidden; }
+  body.report-focus #wrap.roster-wrap{ max-width:none; height:100vh; overflow:hidden; padding:6px 12px; gap:8px; }
+  body.report-focus #rememberStatus{ display:none; }
+  body.report-focus #attReportView{ flex:1; min-height:0; display:flex; flex-direction:column; }
+  body.report-focus #attReportView > section.card{ flex:1; min-height:0; display:flex; flex-direction:column; padding:10px 14px; }
+  body.report-focus .matrix-scroll{ flex:1; min-height:0; max-height:none; padding-bottom:40px; }
+  body.report-focus .day-columns{ flex:1; min-height:0; overflow:auto; padding-bottom:40px; }
+  /* шестерня/справка — в самые углы, таблица под них не заезжает (запас снизу
+     у .matrix-scroll/.day-columns уже есть, сверху шапка отчёта короткая) */
+  body.report-focus .settings-btn{ top:6px; right:6px; }
+  body.report-focus .help-btn{ bottom:6px; right:6px; }
   .nick-click{ cursor:pointer; }
   .nick-click:hover{ color: var(--gold); }
   #nickInfoStatus a{ cursor:pointer; }
@@ -157,7 +176,10 @@
     <section class="card">
       <div class="table-head-row">
         <h2 style="margin:0;">📊 Посещаемость</h2>
-        <button class="btn" id="attBackBtn">← К дням недели</button>
+        <div class="tools">
+          <button class="btn" id="attEditBtn" style="display:none;">✎ Изменить период</button>
+          <button class="btn" id="attBackBtn">← К дням недели</button>
+        </div>
       </div>
 
       <div class="report-mode-tabs" id="reportModeTabs" style="display:none;">
@@ -953,11 +975,26 @@
     setReportMode("period");
     document.getElementById("daysContainer").style.display = "none";
     document.getElementById("attReportView").style.display = "";
+    document.body.classList.add("report-focus");
+    expandReportControls();
   });
   document.getElementById("attBackBtn").addEventListener("click", () => {
     document.getElementById("attReportView").style.display = "none";
     document.getElementById("daysContainer").style.display = "";
+    document.body.classList.remove("report-focus", "hide-chrome", "hide-controls");
   });
+
+  // сворачивает шапку сайта и панель управления отчётом (даты/переключатель режима),
+  // оставляя поиск по нику, вкладки-фильтры и саму таблицу на весь экран
+  function collapseReportControls(){
+    document.body.classList.add("hide-chrome", "hide-controls");
+    document.getElementById("attEditBtn").style.display = "";
+  }
+  function expandReportControls(){
+    document.body.classList.remove("hide-chrome", "hide-controls");
+    document.getElementById("attEditBtn").style.display = "none";
+  }
+  document.getElementById("attEditBtn").addEventListener("click", expandReportControls);
 
   document.getElementById("attShowBtn").addEventListener("click", async () => {
     const from = document.getElementById("attFrom").value;
@@ -971,6 +1008,7 @@
     attReportDays = result.days;
     attReportNickDays = result.nickDays;
     renderFilterTabs();
+    collapseReportControls();
   });
 
   document.getElementById("attShowDayBtn").addEventListener("click", async () => {
@@ -983,6 +1021,7 @@
     attReportDays = result.days;
     attReportNickDays = result.nickDays;
     renderFilterTabs();
+    collapseReportControls();
   });
 
   // ---- настройки (шестерёнка) ----
