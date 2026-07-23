@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Группы — Кабинет клана</title>
+<link rel="stylesheet" href="js/theme.css" />
+<style>
+  .groups-wrap{ max-width:1100px; margin:0 auto; padding:8px 0 40px; }
+  .groups-toolbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+  .groups-toolbar .search{ min-width:220px; flex:1; max-width:320px; }
+
+  .group-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px; }
+  .group-card{
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:16px 18px;
+    cursor:pointer;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.35), 0 6px 18px rgba(0,0,0,.3);
+    transition: border-color .12s, transform .12s;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .group-card:hover{ border-color: var(--border-lit); transform:translateY(-2px); }
+  .group-card-head{ display:flex; align-items:center; gap:10px; }
+  .group-icon{
+    width:38px; height:38px; flex:none;
+    border-radius:6px;
+    border:1px solid var(--border-lit);
+    background: linear-gradient(180deg, var(--gold-dim), var(--border));
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px; color: var(--bg);
+  }
+  .group-card-name{ font-size:15px; font-weight:600; color: var(--text); letter-spacing:.02em; }
+  .group-card-members{ font-size:12px; color: var(--text-dim); line-height:1.5; min-height:2.2em; }
+  .group-card-foot{ display:flex; align-items:center; justify-content:space-between; }
+
+  .group-detail-head{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:space-between; }
+  .group-name-row{ display:flex; align-items:center; gap:10px; flex:1; min-width:200px; }
+  .group-name-row input{ font-size:18px; padding:8px 12px; flex:1; max-width:360px; }
+  .group-detail-tools{ display:flex; gap:8px; }
+</style>
+</head>
+<body>
+
+<div class="groups-wrap" id="wrap" style="display:none;">
+
+  <div id="listView">
+    <div class="page-head">
+      <h1>⚔ Все группы</h1>
+      <a class="btn btn-ghost" href="index.html" target="_top">← Кабинет</a>
+    </div>
+    <div class="groups-toolbar">
+      <input type="text" class="search" id="groupSearch" placeholder="Поиск групп..." />
+      <button class="btn btn-primary" id="createGroupBtn" style="display:none;">+ Создать группу</button>
+    </div>
+    <div class="group-grid" id="groupGrid"></div>
+    <p class="empty-hint" id="groupsEmpty" style="display:none;">Групп ещё нет.</p>
+  </div>
+
+  <div id="detailView" style="display:none;">
+    <div class="group-detail-head">
+      <div class="group-name-row">
+        <button class="btn btn-ghost" id="groupBackBtn">← Все группы</button>
+        <h2 id="groupNameView" style="margin:0;"></h2>
+        <input type="text" id="groupNameEdit" style="display:none;" />
+      </div>
+      <div class="group-detail-tools" id="groupDetailTools" style="display:none;">
+        <button class="btn" id="groupRenameBtn">Переименовать</button>
+        <button class="btn btn-primary" id="groupSaveNameBtn" style="display:none;">Сохранить</button>
+        <button class="btn btn-danger" id="groupDeleteBtn">Удалить группу</button>
+      </div>
+    </div>
+
+    <section class="card" style="margin-top:16px;">
+      <h2>Участники <span class="badge" id="groupMemberCount"></span></h2>
+      <div class="chip-row" id="groupMembers"></div>
+      <p class="hint" id="groupMembersEmpty" style="display:none;">В группе пока никого нет.</p>
+
+      <div class="manual-add" id="addMemberRow" style="display:none;">
+        <input type="text" id="newMemberNick" list="nickList" placeholder="Ник участника" />
+        <datalist id="nickList"></datalist>
+        <button class="btn" id="addMemberBtn">Добавить</button>
+      </div>
+      <p class="error-msg" id="groupError"></p>
+    </section>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="createOverlay">
+  <div class="modal">
+    <button class="modal-close" id="createClose" title="Закрыть">×</button>
+    <h2>Новая группа</h2>
+    <div class="field">
+      <label for="createGroupName">Название</label>
+      <input type="text" id="createGroupName" />
+    </div>
+    <p class="error-msg" id="createGroupError"></p>
+    <button class="btn btn-primary" id="createGroupConfirm">Создать</button>
+  </div>
+</div>
+
+<button class="help-btn" id="helpBtn" title="Как пользоваться">?</button>
+<div class="modal-overlay" id="helpOverlay">
+  <div class="modal">
+    <button class="modal-close" id="helpClose" title="Закрыть">×</button>
+    <h2>Как пользоваться группами</h2>
+    <p>Карточки — это группы клана (например, под ивенты). Клик по карточке открывает список участников.</p>
+    <p><b>Главный админ и админ</b> могут создавать группы («+ Создать группу»), переименовывать их, удалять и добавлять/убирать участников по нику (с подсказками из последней переписи).</p>
+    <p>Остальным группы видны только для просмотра.</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-client.js"></script>
+<script>
+(async function(){
+  const session = await L2Cabinet.requireSession();
+  if(!session) return;
+
+  const profile = await L2Cabinet.getProfile();
+  if(!profile){
+    document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
+      '<h1>⚠ Профиль не найден</h1><p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+    return;
+  }
+
+  const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
+  const db = L2Cabinet.client;
+  document.getElementById("wrap").style.display = "";
+  document.getElementById("createGroupBtn").style.display = isAdmin ? "" : "none";
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  }
+
+  let groups = [];               // [{id, name, sort_order}]
+  let membersByGroup = new Map(); // group_id -> [nickname, ...]
+  let currentGroupId = null;
+
+  async function loadNickOptions(){
+    const { data } = await db.from("census_entries").select("nickname, week_start");
+    let latest = null;
+    (data || []).forEach(r => { if(!latest || r.week_start > latest) latest = r.week_start; });
+    const nicks = [...new Set((data || []).filter(r => r.week_start === latest).map(r => r.nickname))].sort();
+    document.getElementById("nickList").innerHTML = nicks.map(n => `<option value="${escapeHtml(n)}">`).join("");
+  }
+
+  async function loadGroups(){
+    const [{ data: g, error: gErr }, { data: m, error: mErr }] = await Promise.all([
+      db.from("clan_groups").select("id, name, sort_order").order("sort_order").order("name"),
+      db.from("clan_group_members").select("group_id, nickname").order("nickname"),
+    ]);
+    if(gErr) console.error(gErr);
+    if(mErr) console.error(mErr);
+    groups = g || [];
+    membersByGroup = new Map();
+    (m || []).forEach(row => {
+      if(!membersByGroup.has(row.group_id)) membersByGroup.set(row.group_id, []);
+      membersByGroup.get(row.group_id).push(row.nickname);
+    });
+  }
+
+  function renderGrid(filterText){
+    const grid = document.getElementById("groupGrid");
+    grid.innerHTML = "";
+    const q = (filterText || "").trim().toLowerCase();
+    const shown = groups.filter(g => !q || g.name.toLowerCase().includes(q));
+    document.getElementById("groupsEmpty").style.display = groups.length ? "none" : "";
+    shown.forEach(g => {
+      const nicks = membersByGroup.get(g.id) || [];
+      const preview = nicks.slice(0, 4).join(", ") + (nicks.length > 4 ? `, +${nicks.length - 4}` : "");
+      const card = document.createElement("div");
+      card.className = "group-card";
+      card.innerHTML = `
+        <div class="group-card-head">
+          <div class="group-icon">⚔</div>
+          <div class="group-card-name">${escapeHtml(g.name)}</div>
+        </div>
+        <div class="group-card-members">${nicks.length ? escapeHtml(preview) : "Пока никого нет"}</div>
+        <div class="group-card-foot"><span class="badge">${nicks.length} участников</span></div>
+      `;
+      card.addEventListener("click", () => openDetail(g.id));
+      grid.appendChild(card);
+    });
+  }
+
+  function renderMembers(){
+    const nicks = (membersByGroup.get(currentGroupId) || []).slice().sort((a, b) => a.localeCompare(b));
+    const wrap = document.getElementById("groupMembers");
+    wrap.innerHTML = "";
+    document.getElementById("groupMembersEmpty").style.display = nicks.length ? "none" : "";
+    document.getElementById("groupMemberCount").textContent = nicks.length;
+    nicks.forEach(nick => {
+      const chip = document.createElement("div");
+      chip.className = "chip";
+      chip.appendChild(document.createTextNode(nick));
+      if(isAdmin){
+        const btn = document.createElement("button");
+        btn.textContent = "×";
+        btn.title = "Убрать из группы";
+        btn.addEventListener("click", async () => {
+          await db.from("clan_group_members").delete().eq("group_id", currentGroupId).eq("nickname", nick);
+          membersByGroup.set(currentGroupId, (membersByGroup.get(currentGroupId) || []).filter(n => n !== nick));
+          renderMembers();
+        });
+        chip.appendChild(btn);
+      }
+      wrap.appendChild(chip);
+    });
+  }
+
+  function openDetail(groupId){
+    currentGroupId = groupId;
+    const g = groups.find(x => x.id === groupId);
+    document.getElementById("groupNameView").textContent = g.name;
+    document.getElementById("groupNameEdit").style.display = "none";
+    document.getElementById("groupNameView").style.display = "";
+    document.getElementById("groupSaveNameBtn").style.display = "none";
+    document.getElementById("groupRenameBtn").style.display = isAdmin ? "" : "none";
+    document.getElementById("groupDetailTools").style.display = isAdmin ? "" : "none";
+    document.getElementById("addMemberRow").style.display = isAdmin ? "" : "none";
+    document.getElementById("groupError").textContent = "";
+    renderMembers();
+    document.getElementById("listView").style.display = "none";
+    document.getElementById("detailView").style.display = "";
+  }
+
+  document.getElementById("groupBackBtn").addEventListener("click", async () => {
+    document.getElementById("detailView").style.display = "none";
+    document.getElementById("listView").style.display = "";
+    await loadGroups();
+    renderGrid(document.getElementById("groupSearch").value);
+  });
+
+  document.getElementById("groupSearch").addEventListener("input", (e) => renderGrid(e.target.value));
+
+  // ---- создание группы ----
+  document.getElementById("createGroupBtn").addEventListener("click", () => {
+    document.getElementById("createGroupName").value = "";
+    document.getElementById("createGroupError").textContent = "";
+    document.getElementById("createOverlay").classList.add("show");
+  });
+  document.getElementById("createClose").addEventListener("click", () => {
+    document.getElementById("createOverlay").classList.remove("show");
+  });
+  document.getElementById("createOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "createOverlay") e.currentTarget.classList.remove("show");
+  });
+  document.getElementById("createGroupConfirm").addEventListener("click", async () => {
+    const name = document.getElementById("createGroupName").value.trim();
+    const errEl = document.getElementById("createGroupError");
+    if(!name){ errEl.textContent = "Введите название."; return; }
+    const { error } = await db.from("clan_groups").insert({ clan_id: profile.clan_id, name, created_by: profile.id });
+    if(error){ errEl.textContent = error.message; return; }
+    document.getElementById("createOverlay").classList.remove("show");
+    await loadGroups();
+    renderGrid(document.getElementById("groupSearch").value);
+  });
+
+  // ---- переименование ----
+  document.getElementById("groupRenameBtn").addEventListener("click", () => {
+    document.getElementById("groupNameEdit").value = document.getElementById("groupNameView").textContent;
+    document.getElementById("groupNameView").style.display = "none";
+    document.getElementById("groupNameEdit").style.display = "";
+    document.getElementById("groupSaveNameBtn").style.display = "";
+    document.getElementById("groupRenameBtn").style.display = "none";
+  });
+  document.getElementById("groupSaveNameBtn").addEventListener("click", async () => {
+    const name = document.getElementById("groupNameEdit").value.trim();
+    const errEl = document.getElementById("groupError");
+    if(!name){ errEl.textContent = "Название не может быть пустым."; return; }
+    const { error } = await db.from("clan_groups").update({ name }).eq("id", currentGroupId);
+    if(error){ errEl.textContent = error.message; return; }
+    errEl.textContent = "";
+    const g = groups.find(x => x.id === currentGroupId);
+    if(g) g.name = name;
+    document.getElementById("groupNameView").textContent = name;
+    document.getElementById("groupNameView").style.display = "";
+    document.getElementById("groupNameEdit").style.display = "none";
+    document.getElementById("groupSaveNameBtn").style.display = "none";
+    document.getElementById("groupRenameBtn").style.display = "";
+  });
+
+  // ---- удаление группы ----
+  document.getElementById("groupDeleteBtn").addEventListener("click", async () => {
+    const g = groups.find(x => x.id === currentGroupId);
+    if(!confirm(`Удалить группу «${g?.name}»? Участники не удалятся из клана, только группа перестанет существовать.`)) return;
+    await db.from("clan_groups").delete().eq("id", currentGroupId);
+    document.getElementById("detailView").style.display = "none";
+    document.getElementById("listView").style.display = "";
+    await loadGroups();
+    renderGrid(document.getElementById("groupSearch").value);
+  });
+
+  // ---- добавление участника ----
+  document.getElementById("addMemberBtn").addEventListener("click", async () => {
+    const input = document.getElementById("newMemberNick");
+    const nick = input.value.trim();
+    const errEl = document.getElementById("groupError");
+    errEl.textContent = "";
+    if(!nick) return;
+    const existing = membersByGroup.get(currentGroupId) || [];
+    if(existing.includes(nick)){ errEl.textContent = "Этот ник уже в группе."; return; }
+    const { error } = await db.from("clan_group_members").insert({ group_id: currentGroupId, nickname: nick });
+    if(error){ errEl.textContent = error.message; return; }
+    membersByGroup.set(currentGroupId, [...existing, nick]);
+    input.value = "";
+    renderMembers();
+  });
+  document.getElementById("newMemberNick").addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){ e.preventDefault(); document.getElementById("addMemberBtn").click(); }
+  });
+
+  document.getElementById("helpBtn").addEventListener("click", () => {
+    document.getElementById("helpOverlay").classList.add("show");
+  });
+  document.getElementById("helpClose").addEventListener("click", () => {
+    document.getElementById("helpOverlay").classList.remove("show");
+  });
+  document.getElementById("helpOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "helpOverlay") e.currentTarget.classList.remove("show");
+  });
+
+  await loadNickOptions();
+  await loadGroups();
+  renderGrid("");
+})();
+</script>
+</body>
+</html>
