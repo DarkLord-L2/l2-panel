@@ -71,6 +71,25 @@
   .day-visibility-list{ display:flex; flex-direction:column; gap:6px; margin:8px 0; }
   .day-visibility-list label{ display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; }
   .template-preview{ font-size:12.5px; color: var(--text-dim); margin:8px 0; line-height:1.6; }
+
+  .date-range-row{ display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; margin:10px 0; }
+  .date-range-row .field{ margin:0; }
+  .date-range-row input[type="date"]{ width:auto; }
+  .filter-tabs{ display:flex; flex-wrap:wrap; gap:6px; margin:14px 0 10px; }
+  .filter-tab{
+    font-family:inherit;
+    font-size:12px;
+    padding:6px 12px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text-dim);
+    cursor:pointer;
+  }
+  .filter-tab:hover{ border-color: var(--border-lit); color: var(--text); }
+  .filter-tab.active{ border-color: var(--gold-dim); color: var(--gold); box-shadow: 0 0 0 1px var(--gold-dim) inset; }
+  .filter-list{ display:flex; flex-direction:column; gap:6px; margin:8px 0; max-height:220px; overflow-y:auto; }
+  .filter-list label{ display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -87,10 +106,45 @@
     <button class="btn" id="nextWeekBtn">▶</button>
     <button class="btn" id="todayBtn">Сегодня</button>
     <button class="btn" id="pullPrevWeekBtn" style="display:none;">⬅ Подтянуть из прошлой недели</button>
+    <button class="btn btn-primary" id="openAttReportBtn">📊 Посещаемость</button>
   </section>
   <p class="remember-status" id="rememberStatus" style="text-align:center;"></p>
 
   <div id="daysContainer"></div>
+
+  <div id="attReportView" style="display:none;">
+    <section class="card">
+      <div class="table-head-row">
+        <h2 style="margin:0;">📊 Посещаемость</h2>
+        <button class="btn" id="attBackBtn">← К дням недели</button>
+      </div>
+
+      <div class="date-range-row">
+        <div class="field">
+          <label for="attFrom">С</label>
+          <input type="date" id="attFrom" />
+        </div>
+        <div class="field">
+          <label for="attTo">По</label>
+          <input type="date" id="attTo" />
+        </div>
+        <button class="btn btn-primary" id="attShowBtn">Показать</button>
+      </div>
+      <p class="error-msg" id="attReportError"></p>
+
+      <div class="filter-tabs" id="attFilterTabs"></div>
+
+      <div style="overflow-x:auto;">
+        <table class="report-table">
+          <thead>
+            <tr><th>Никнейм</th><th>Посещено</th><th>%</th><th>В клане с</th></tr>
+          </thead>
+          <tbody id="attReportBody"></tbody>
+        </table>
+      </div>
+      <p class="hint" id="attReportEmpty" style="display:none;">Никого нет под этим фильтром за выбранный период.</p>
+    </section>
+  </div>
 </div>
 
 <button class="settings-btn" id="settingsBtn" title="Настройки" style="display:none;">⚙</button>
@@ -102,6 +156,10 @@
     <div class="settings-subhead">Дни недели</div>
     <p class="hint">Скрытые дни не показываются в списке — включайте только те, что реально нужны.</p>
     <div class="day-visibility-list" id="dayVisibilityList"></div>
+
+    <div class="settings-subhead">Вкладки отчёта «Посещаемость»</div>
+    <p class="hint">Выключенные вкладки не показываются в отчёте.</p>
+    <div class="filter-list" id="filterVisibilityList"></div>
   </div>
 </div>
 
@@ -124,9 +182,11 @@
     <p><b>Шестерёнка ⚙ (сверху справа, только у админа).</b></p>
     <ul>
       <li>Скрыть/показать дни недели, на которые у клана никогда ничего не происходит.</li>
+      <li>Включить/выключить вкладки в отчёте «Посещаемость» — какие из них вообще нужны.</li>
     </ul>
     <p><b>«⬅ Подтянуть из прошлой недели»</b> (в шапке рядом с «Сегодня») — копирует мероприятия из предыдущей недели в текущую (по тем же дням). Можно нажимать и на непустую неделю — старые мероприятия этой недели заменятся.</p>
     <p>Удаление мероприятия (✕ в открытом окне дня) удаляет и всю явку по нему.</p>
+    <p><b>«📊 Посещаемость»</b> — отчёт за произвольный период (даты «с»/«по», а не недели). Вкладки над таблицей сужают список: ходил/не ходил, новый/старый участник (по дате первого появления в переписи — «новый», если она в последние 7 дней), и сверка с налогами (кто не платит и не ходит / кто платит и ходит).</p>
   </div>
 </div>
 
@@ -153,6 +213,17 @@
   document.getElementById("settingsBtn").style.display = isAdmin ? "" : "none";
 
   const DAY_NAMES = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"];
+
+  const REPORT_FILTERS = [
+    { key: "attended", label: "Ходил", test: r => r.attended },
+    { key: "not_attended", label: "Не ходил", test: r => !r.attended },
+    { key: "new_attended", label: "Новый + ходил", test: r => !r.isOld && r.attended },
+    { key: "new_not_attended", label: "Новый + не ходил", test: r => !r.isOld && !r.attended },
+    { key: "old_attended", label: "Старый + ходил", test: r => r.isOld && r.attended },
+    { key: "old_not_attended", label: "Старый + не ходил", test: r => r.isOld && !r.attended },
+    { key: "no_tax_no_attend", label: "Не платит и не ходит", test: r => !r.paid && !r.attended },
+    { key: "pays_and_attends", label: "Платит и ходит", test: r => r.paid && r.attended },
+  ];
 
   function mondayOf(d){
     const x = new Date(d);
@@ -395,6 +466,150 @@
 
   document.getElementById("pullPrevWeekBtn").addEventListener("click", pullFromPreviousWeek);
 
+  // ---- отчёт «Посещаемость» ----
+  let attReportRows = [];
+  let attFilterVisibility = {};
+
+  function isFilterVisible(key){ return attFilterVisibility[key] !== false; }
+
+  async function loadFilterVisibility(){
+    const { data, error } = await db
+      .from("attendance_report_filters")
+      .select("filter_key, visible")
+      .eq("clan_id", profile.clan_id);
+    attFilterVisibility = {};
+    if(!error) (data || []).forEach(r => { attFilterVisibility[r.filter_key] = r.visible; });
+  }
+
+  async function buildAttendanceReport(fromStr, toStr){
+    const [{ data: census, error: censusErr }, { data: evs, error: evErr }] = await Promise.all([
+      db.from("census_entries").select("nickname, week_start"),
+      db.from("attendance_events").select("id, event_date").gte("event_date", fromStr).lte("event_date", toStr),
+    ]);
+    if(censusErr) console.error(censusErr);
+    if(evErr) console.error(evErr);
+
+    const firstSeen = new Map();
+    let latestCensusWeek = null;
+    (census || []).forEach(row => {
+      if(!latestCensusWeek || row.week_start > latestCensusWeek) latestCensusWeek = row.week_start;
+      const cur = firstSeen.get(row.nickname);
+      if(!cur || row.week_start < cur) firstSeen.set(row.nickname, row.week_start);
+    });
+    const latestRoster = new Set((census || []).filter(r => r.week_start === latestCensusWeek).map(r => r.nickname));
+
+    const eventIds = (evs || []).map(e => e.id);
+    const totalEvents = eventIds.length;
+
+    const attendedCount = new Map();
+    if(eventIds.length){
+      const { data: entries, error: entErr } = await db
+        .from("attendance_entries")
+        .select("nickname, event_id")
+        .in("event_id", eventIds);
+      if(entErr) console.error(entErr);
+      (entries || []).forEach(row => {
+        attendedCount.set(row.nickname, (attendedCount.get(row.nickname) || 0) + 1);
+      });
+    }
+
+    const { data: payments, error: payErr } = await db
+      .from("tax_payments")
+      .select("nickname")
+      .gte("week_start", fromStr)
+      .lte("week_start", toStr);
+    if(payErr) console.error(payErr);
+    const paidSet = new Set((payments || []).map(r => r.nickname));
+
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+    const cutoffStr = isoDate(cutoff);
+
+    const allNicks = new Set([...latestRoster, ...attendedCount.keys(), ...paidSet]);
+    return [...allNicks].map(nickname => {
+      const attendedN = attendedCount.get(nickname) || 0;
+      const fs = firstSeen.get(nickname);
+      const isOld = fs !== undefined && fs <= cutoffStr;
+      return {
+        nickname,
+        attended: attendedCount.has(nickname),
+        attendedN,
+        total: totalEvents,
+        percent: totalEvents ? Math.round((attendedN / totalEvents) * 100) : 0,
+        isOld,
+        paid: paidSet.has(nickname),
+        since: fs || null,
+      };
+    });
+  }
+
+  function renderAttTable(filterKey){
+    const filter = REPORT_FILTERS.find(f => f.key === filterKey);
+    const rows = (filter ? attReportRows.filter(filter.test) : [])
+      .slice()
+      .sort((a, b) => b.attendedN - a.attendedN || a.nickname.localeCompare(b.nickname));
+    const body = document.getElementById("attReportBody");
+    body.innerHTML = "";
+    document.getElementById("attReportEmpty").style.display = rows.length ? "none" : "";
+    rows.forEach(r => {
+      const tr = document.createElement("tr");
+      const tdNick = document.createElement("td"); tdNick.textContent = r.nickname;
+      const tdAtt = document.createElement("td"); tdAtt.textContent = `${r.attendedN}/${r.total}`;
+      const tdPct = document.createElement("td"); tdPct.textContent = `${r.percent}%`;
+      const tdSince = document.createElement("td"); tdSince.textContent = r.since || "Новый";
+      tr.append(tdNick, tdAtt, tdPct, tdSince);
+      body.appendChild(tr);
+    });
+  }
+
+  function renderFilterTabs(){
+    const wrap = document.getElementById("attFilterTabs");
+    wrap.innerHTML = "";
+    const visible = REPORT_FILTERS.filter(f => isFilterVisible(f.key));
+    visible.forEach((f, i) => {
+      const btn = document.createElement("button");
+      btn.className = "filter-tab" + (i === 0 ? " active" : "");
+      btn.textContent = f.label;
+      btn.addEventListener("click", () => {
+        wrap.querySelectorAll(".filter-tab").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        renderAttTable(f.key);
+      });
+      wrap.appendChild(btn);
+    });
+    if(visible.length) renderAttTable(visible[0].key);
+    else document.getElementById("attReportBody").innerHTML = "";
+  }
+
+  document.getElementById("openAttReportBtn").addEventListener("click", async () => {
+    const fromEl = document.getElementById("attFrom");
+    const toEl = document.getElementById("attTo");
+    if(!fromEl.value || !toEl.value){
+      const today = new Date();
+      const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 6);
+      toEl.value = isoDate(today);
+      fromEl.value = isoDate(weekAgo);
+    }
+    document.getElementById("attReportError").textContent = "";
+    await loadFilterVisibility();
+    document.getElementById("daysContainer").style.display = "none";
+    document.getElementById("attReportView").style.display = "";
+  });
+  document.getElementById("attBackBtn").addEventListener("click", () => {
+    document.getElementById("attReportView").style.display = "none";
+    document.getElementById("daysContainer").style.display = "";
+  });
+
+  document.getElementById("attShowBtn").addEventListener("click", async () => {
+    const from = document.getElementById("attFrom").value;
+    const to = document.getElementById("attTo").value;
+    const errEl = document.getElementById("attReportError");
+    errEl.textContent = "";
+    if(!from || !to){ errEl.textContent = "Заполните обе даты."; return; }
+    if(from > to){ errEl.textContent = "Дата «с» позже даты «по»."; return; }
+    attReportRows = await buildAttendanceReport(from, to);
+    renderFilterTabs();
+  });
+
   // ---- настройки (шестерёнка) ----
   async function renderDayVisibilityCheckboxes(){
     await loadDayVisibility();
@@ -420,8 +635,32 @@
     }
   }
 
+  async function renderFilterVisibilityCheckboxes(){
+    await loadFilterVisibility();
+    const list = document.getElementById("filterVisibilityList");
+    list.innerHTML = "";
+    REPORT_FILTERS.forEach(f => {
+      const label = document.createElement("label");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = isFilterVisible(f.key);
+      cb.addEventListener("change", async () => {
+        cb.disabled = true;
+        await db.from("attendance_report_filters").upsert(
+          { clan_id: profile.clan_id, filter_key: f.key, visible: cb.checked },
+          { onConflict: "clan_id,filter_key" }
+        );
+        attFilterVisibility[f.key] = cb.checked;
+        cb.disabled = false;
+      });
+      label.append(cb, document.createTextNode(f.label));
+      list.appendChild(label);
+    });
+  }
+
   document.getElementById("settingsBtn").addEventListener("click", async () => {
     await renderDayVisibilityCheckboxes();
+    await renderFilterVisibilityCheckboxes();
     document.getElementById("settingsOverlay").classList.add("show");
   });
   document.getElementById("settingsClose").addEventListener("click", () => {
