@@ -136,8 +136,9 @@
   /* матрица «Посещаемость» — светлая табличная палитра 1:1 как в референсе
      (белый фон, чёрный текст, зелёные/розовые ячейки явки, тир-цвета
      жёлтый/голубой/коричневый), отдельно от тёмной темы всего остального сайта */
-  #attTableWrap.matrix-mode table{ background:#ffffff; color:#1a1a1a; }
+  #attTableWrap.matrix-mode table{ background:#ffffff; color:#1a1a1a; width:auto; }
   #attTableWrap.matrix-mode th, #attTableWrap.matrix-mode td{ border-color:#c4c4c4; padding:4px 8px; font-size:12px; }
+  #attTableWrap.matrix-mode th:first-child, #attTableWrap.matrix-mode td:first-child{ padding-right:28px; }
   #attTableWrap.matrix-mode #attReportHead th{ background:#dce6f5; color:#1b3a5c; }
   #attTableWrap.matrix-mode #attReportHead th:first-child{ border-left:4px solid #4a86e8; }
   #attTableWrap.matrix-mode .week-start{ border-left:2px solid #4a86e8 !important; }
