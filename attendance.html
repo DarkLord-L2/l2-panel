@@ -94,9 +94,39 @@
   .report-mode-tabs{ display:flex; gap:8px; margin:4px 0 14px; }
   .single-day-row{ display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; margin:10px 0; }
   .single-day-row .field{ margin:0; }
-  .matrix-scroll{ overflow-x:auto; }
-  .att-mark-yes{ color: var(--ok); font-weight:700; text-align:center; }
-  .att-mark-no{ color: var(--text-dim); text-align:center; }
+  .matrix-scroll{ overflow:auto; max-height:64vh; }
+  .report-table th[colspan], .report-table .weekday-head th{ text-align:center; }
+  .week-start{ border-left:2px solid var(--gold-dim) !important; }
+  #attReportBody td{ border-bottom:1px solid var(--border); }
+  #attReportHead tr:first-child th[colspan]{ border-bottom:2px solid var(--gold-dim); }
+  /* border-collapse ломает границы у "прилипшей" (position:sticky) шапки — грид границ
+     считается один раз для всей таблицы и не поспевает за сдвигом шапки при скролле,
+     из-за чего золотая линия-разделитель выглядит "отклеенной". separate чинит это. */
+  #attTableWrap table{ border-collapse:separate; border-spacing:0; }
+  .nick-click{ cursor:pointer; }
+  .nick-click:hover{ color: var(--gold); }
+  #nickInfoStatus a{ cursor:pointer; }
+  #nickInfoStatus a:hover{ color: var(--focus); }
+  .att-mark-yes{
+    background: color-mix(in srgb, var(--ok) 24%, transparent);
+    color: var(--ok); font-weight:700; text-align:center;
+  }
+  .att-mark-no{
+    background: color-mix(in srgb, var(--danger) 15%, transparent);
+    text-align:center;
+  }
+  .att-tier-high{
+    background: color-mix(in srgb, var(--gold) 30%, transparent);
+    color: var(--gold); font-weight:700; text-align:center;
+  }
+  .att-tier-mid{
+    background: color-mix(in srgb, var(--border-lit) 32%, transparent);
+    text-align:center;
+  }
+  .att-tier-low{
+    background: color-mix(in srgb, var(--danger) 26%, transparent);
+    color: var(--danger-lit); font-weight:600; text-align:center;
+  }
   .day-columns{ display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; margin-top:14px; }
   .day-columns .roster-col{ flex:1; min-width:220px; }
   .day-columns h3{ font-size:13px; margin:0 0 10px; }
@@ -152,6 +182,14 @@
           <input type="date" id="attDay" />
         </div>
         <button class="btn btn-primary" id="attShowDayBtn">Показать</button>
+      </div>
+
+      <div class="date-range-row">
+        <div class="field">
+          <label for="attNickSearch">Поиск по нику</label>
+          <input type="text" id="attNickSearch" placeholder="Ник" />
+        </div>
+        <button class="btn" id="attNickSearchBtn">Поиск</button>
       </div>
       <p class="error-msg" id="attReportError"></p>
 
@@ -210,23 +248,67 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="nickInfoOverlay">
+  <div class="modal" style="max-width:320px;">
+    <button class="modal-close" id="nickInfoClose" title="Закрыть">×</button>
+    <h2 id="nickInfoTitle"></h2>
+    <p id="nickInfoStatus"></p>
+  </div>
+</div>
+
 <button class="help-btn" id="helpBtn" title="Как пользоваться">?</button>
 <div class="modal-overlay" id="helpOverlay">
   <div class="modal">
     <button class="modal-close" id="helpClose" title="Закрыть">×</button>
     <h2>Как пользоваться журналом посещаемости</h2>
-    <p>Каждая календарная неделя показывает семь карточек-дней. Переключайтесь между неделями стрелками ◀/▶ или кнопкой «Сегодня».</p>
-    <p><b>Мероприятия.</b> Клик по карточке дня открывает окно со всеми мероприятиями этого дня и списками явки. Кнопка «+» на карточке добавляет новое мероприятие на этот день (только у главного админа/админа).</p>
-    <p><b>Явка.</b> Внутри мероприятия — «+ Добавить явку»: загрузите до 9 скринов со списком пришедших, распознавание сработает так же, как в переписи и налогах. Крестик у ника убирает его из явки.</p>
-    <p><b>Шестерёнка ⚙ (сверху справа, только у админа).</b></p>
-    <ul>
-      <li>Скрыть/показать дни недели, на которые у клана никогда ничего не происходит.</li>
-      <li>Включить/выключить вкладки в отчёте «Посещаемость» — какие из них вообще нужны.</li>
-    </ul>
-    <p><b>«⬅ Подтянуть из прошлой недели»</b> (в шапке рядом с «Сегодня») — копирует мероприятия из предыдущей недели в текущую (по тем же дням). Можно нажимать и на непустую неделю — старые мероприятия этой недели заменятся.</p>
-    <p>Удаление мероприятия (✕ в открытом окне дня) удаляет и всю явку по нему.</p>
-    <p><b>«📊 Посещаемость»</b> — отчёт за произвольный период (даты «с»/«по», а не недели). Вкладки над таблицей сужают список: ходил/не ходил, новый/старый участник (по дате первого появления в переписи — «новый», если она в последние 7 дней), и сверка с налогами (кто не платит и не ходит / кто платит и ходит).</p>
-    <p><b>Новый вид отчёта</b> (включается в ⚙ настройках). Добавляет переключатель «Период / Один день»: в «Периоде» таблица становится матрицей — по колонке на каждый день с мероприятием, ✓ если был; в «Одном дне» — два списка «Пришли» / «Не пришли» за выбранную дату. Пока новый вид выключен, отчёт выглядит как раньше — обычной таблицей.</p>
+
+    <details class="help-section">
+      <summary>Недели и дни</summary>
+      <div class="help-body">
+        <p>Каждая календарная неделя показывает семь карточек-дней. Переключайтесь между неделями стрелками ◀/▶ или кнопкой «Сегодня».</p>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary>Мероприятия и явка</summary>
+      <div class="help-body">
+        <p><b>Мероприятия.</b> Клик по карточке дня открывает окно со всеми мероприятиями этого дня и списками явки. Кнопка «+» на карточке добавляет новое мероприятие на этот день (только у главного админа/админа).</p>
+        <p><b>Явка.</b> Внутри мероприятия — «+ Добавить явку»: загрузите до 9 скринов со списком пришедших, распознавание сработает так же, как в переписи и налогах. Крестик у ника убирает его из явки.</p>
+        <p>Удаление мероприятия (✕ в открытом окне дня) удаляет и всю явку по нему.</p>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary>Шестерёнка ⚙ (только у админа)</summary>
+      <div class="help-body">
+        <ul>
+          <li>Скрыть/показать дни недели, на которые у клана никогда ничего не происходит.</li>
+          <li>Включить/выключить вкладки в отчёте «Посещаемость» — какие из них вообще нужны.</li>
+          <li>Включить новый вид отчёта «Посещаемость» (матрица по дням + режим «один день»).</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary>Подтянуть из прошлой недели</summary>
+      <div class="help-body">
+        <p><b>«⬅ Подтянуть из прошлой недели»</b> (в шапке рядом с «Сегодня») — копирует мероприятия из предыдущей недели в текущую (по тем же дням). Можно нажимать и на непустую неделю — старые мероприятия этой недели заменятся.</p>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary>Отчёт «Посещаемость»</summary>
+      <div class="help-body">
+        <p>Отчёт за произвольный период (даты «с»/«по», а не недели). Вкладки над таблицей сужают список: ходил/не ходил, новый/старый участник (по дате первого появления в переписи — «новый», если она в последние 7 дней), и сверка с налогами (кто не платит и не ходит / кто платит и ходит).</p>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary>Новый вид отчёта</summary>
+      <div class="help-body">
+        <p>Включается в ⚙ настройках. Добавляет переключатель «Период / Один день»: в «Периоде» таблица становится матрицей — по колонке на каждый день с мероприятием, ✓ если был; в «Одном дне» — два списка «Пришли» / «Не пришли» за выбранную дату. Пока новый вид выключен, отчёт выглядит как раньше — обычной таблицей.</p>
+      </div>
+    </details>
   </div>
 </div>
 
@@ -253,6 +335,7 @@
   document.getElementById("settingsBtn").style.display = isAdmin ? "" : "none";
 
   const DAY_NAMES = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"];
+  const DAY_SHORT = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
   const REPORT_FILTERS = [
     { key: "attended", label: "Ходил", test: r => r.attended },
@@ -288,6 +371,52 @@
   let reportMode = "period";         // "period" | "day"
   let attReportDays = [];            // ISO-даты мероприятий в диапазоне (для матрицы)
   let attReportNickDays = new Map(); // nickname -> Set(ISO-дата), для матрицы
+  let attNickFilter = "";            // поиск по нику (подстрока, без регистра)
+  let activeFilterKey = null;        // текущая активная вкладка-фильтр
+  let nickGroupsMap = new Map();     // nickname -> [{id, name}] групп из раздела «Группы»
+
+  async function loadNickGroups(){
+    const { data, error } = await db
+      .from("clan_group_members")
+      .select("group_id, nickname, clan_groups(name)");
+    if(error){ console.error(error); return; }
+    nickGroupsMap = new Map();
+    (data || []).forEach(row => {
+      if(!nickGroupsMap.has(row.nickname)) nickGroupsMap.set(row.nickname, []);
+      nickGroupsMap.get(row.nickname).push({ id: row.group_id, name: row.clan_groups?.name || "?" });
+    });
+  }
+
+  function showNickInfo(nickname){
+    document.getElementById("nickInfoTitle").textContent = nickname;
+    const statusEl = document.getElementById("nickInfoStatus");
+    statusEl.innerHTML = "";
+    const groups = nickGroupsMap.get(nickname) || [];
+    if(!groups.length){
+      statusEl.textContent = "Соло";
+    } else {
+      statusEl.appendChild(document.createTextNode("Группа: "));
+      groups.forEach((g, i) => {
+        const a = document.createElement("a");
+        a.href = "#";
+        a.textContent = g.name;
+        a.addEventListener("click", (e) => {
+          e.preventDefault();
+          if(window.top && window.top.L2Nav) window.top.L2Nav.openGroup(g.id);
+        });
+        statusEl.appendChild(a);
+        if(i < groups.length - 1) statusEl.appendChild(document.createTextNode(", "));
+      });
+    }
+    document.getElementById("nickInfoOverlay").classList.add("show");
+  }
+
+  document.getElementById("nickInfoClose").addEventListener("click", () => {
+    document.getElementById("nickInfoOverlay").classList.remove("show");
+  });
+  document.getElementById("nickInfoOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "nickInfoOverlay") e.currentTarget.classList.remove("show");
+  });
 
   function isDayVisible(offset){ return dayVisibility[offset] !== false; }
 
@@ -595,15 +724,33 @@
     return { rows, days, nickDays };
   }
 
+  // «заморозка» шапки таблицы при вертикальной прокрутке (как в Google Таблицах) —
+  // каждая строка шапки получает position:sticky с накопленным отступом сверху.
+  function applyStickyHead(){
+    // весь <thead> «примагничивается» как один блок (обе строки шапки разом) —
+    // так между строками шапки нет шва: раньше каждая строка липла отдельно
+    // со своим отступом сверху, посчитанным в JS, и на границе между ними
+    // при скролле на долю пикселя проступали цвета таблицы под шапкой.
+    const headEl = document.getElementById("attReportHead");
+    headEl.style.position = "sticky";
+    headEl.style.top = "0";
+    headEl.style.zIndex = "5";
+    Array.from(headEl.querySelectorAll("th")).forEach(th => {
+      th.style.background = "var(--panel)";
+    });
+  }
+
   function resetFlatHead(){
     document.getElementById("attReportHead").innerHTML =
       "<tr><th>Никнейм</th><th>Посещено</th><th>%</th><th>В клане с</th></tr>";
+    applyStickyHead();
   }
 
   function renderAttTableFlat(filterKey){
     resetFlatHead();
     const filter = REPORT_FILTERS.find(f => f.key === filterKey);
     const rows = (filter ? attReportRows.filter(filter.test) : [])
+      .filter(r => !attNickFilter || r.nickname.toLowerCase().includes(attNickFilter))
       .slice()
       .sort((a, b) => b.attendedN - a.attendedN || a.nickname.localeCompare(b.nickname));
     const body = document.getElementById("attReportBody");
@@ -612,6 +759,8 @@
     rows.forEach(r => {
       const tr = document.createElement("tr");
       const tdNick = document.createElement("td"); tdNick.textContent = r.nickname;
+      tdNick.className = "nick-click";
+      tdNick.addEventListener("click", () => showNickInfo(r.nickname));
       const tdAtt = document.createElement("td"); tdAtt.textContent = `${r.attendedN}/${r.total}`;
       const tdPct = document.createElement("td"); tdPct.textContent = `${r.percent}%`;
       const tdSince = document.createElement("td"); tdSince.textContent = r.since || "Новый";
@@ -620,18 +769,49 @@
     });
   }
 
+  function groupDaysByWeek(days){
+    const groups = [];
+    days.forEach(d => {
+      const monday = mondayOf(new Date(d + "T00:00:00"));
+      const key = isoDate(monday);
+      let group = groups[groups.length - 1];
+      if(!group || group.key !== key){
+        group = { key, label: weekLabel(monday), days: [] };
+        groups.push(group);
+      }
+      group.days.push(d);
+    });
+    return groups;
+  }
+
+  function percentTierClass(percent){
+    if(percent >= 75) return "att-tier-high";
+    if(percent >= 40) return "att-tier-mid";
+    return "att-tier-low";
+  }
+
   function renderAttTableMatrix(filterKey){
     const filter = REPORT_FILTERS.find(f => f.key === filterKey);
     const rows = (filter ? attReportRows.filter(filter.test) : [])
+      .filter(r => !attNickFilter || r.nickname.toLowerCase().includes(attNickFilter))
       .slice()
       .sort((a, b) => b.attendedN - a.attendedN || a.nickname.localeCompare(b.nickname));
 
-    const dayHeadCells = attReportDays.map(d => {
+    const weekGroups = groupDaysByWeek(attReportDays);
+    // первый день каждой недели, кроме самой первой — граница-разделитель между блоками недель
+    const weekStartDays = new Set(weekGroups.slice(1).map(g => g.days[0]));
+
+    const weekHeadCells = weekGroups.map((g, i) => `<th colspan="${g.days.length}"${i > 0 ? ' class="week-start"' : ""}>${g.label}</th>`).join("");
+    const dayHeadCells = weekGroups.flatMap(g => g.days).map(d => {
       const dt = new Date(d + "T00:00:00");
-      return `<th title="${d}">${pad2(dt.getDate())}.${pad2(dt.getMonth() + 1)}</th>`;
+      const wd = DAY_SHORT[(dt.getDay() + 6) % 7];
+      const cls = weekStartDays.has(d) ? ' class="week-start"' : "";
+      return `<th title="${d}"${cls}>${wd}</th>`;
     }).join("");
     document.getElementById("attReportHead").innerHTML =
-      `<tr><th>Никнейм</th>${dayHeadCells}<th>Всего</th><th>%</th></tr>`;
+      `<tr><th rowspan="2">Никнейм</th>${weekHeadCells}<th rowspan="2">Итого</th><th rowspan="2">%</th></tr>` +
+      `<tr class="weekday-head">${dayHeadCells}</tr>`;
+    applyStickyHead();
 
     const body = document.getElementById("attReportBody");
     body.innerHTML = "";
@@ -639,17 +819,20 @@
     rows.forEach(r => {
       const tr = document.createElement("tr");
       const tdNick = document.createElement("td"); tdNick.textContent = r.nickname;
+      tdNick.className = "nick-click";
+      tdNick.addEventListener("click", () => showNickInfo(r.nickname));
       tr.appendChild(tdNick);
       const nickDaySet = attReportNickDays.get(r.nickname) || new Set();
       attReportDays.forEach(d => {
         const td = document.createElement("td");
         const was = nickDaySet.has(d);
-        td.className = was ? "att-mark-yes" : "att-mark-no";
-        td.textContent = was ? "✓" : "·";
+        td.className = (was ? "att-mark-yes" : "att-mark-no") + (weekStartDays.has(d) ? " week-start" : "");
+        td.textContent = was ? "✓" : "";
         tr.appendChild(td);
       });
-      const tdTotal = document.createElement("td"); tdTotal.textContent = `${r.attendedN}/${r.total}`;
-      const tdPct = document.createElement("td"); tdPct.textContent = `${r.percent}%`;
+      const tier = percentTierClass(r.percent);
+      const tdTotal = document.createElement("td"); tdTotal.className = tier; tdTotal.textContent = `${r.attendedN}/${r.total}`;
+      const tdPct = document.createElement("td"); tdPct.className = tier; tdPct.textContent = `${r.percent}%`;
       tr.append(tdTotal, tdPct);
       body.appendChild(tr);
     });
@@ -658,6 +841,7 @@
   function renderDayColumns(filterKey){
     const filter = REPORT_FILTERS.find(f => f.key === filterKey);
     const rows = (filter ? attReportRows.filter(filter.test) : [])
+      .filter(r => !attNickFilter || r.nickname.toLowerCase().includes(attNickFilter))
       .slice()
       .sort((a, b) => a.nickname.localeCompare(b.nickname));
     const yes = rows.filter(r => r.attended);
@@ -670,8 +854,9 @@
       el.innerHTML = "";
       list.forEach(r => {
         const chip = document.createElement("div");
-        chip.className = "chip roster-chip";
+        chip.className = "chip roster-chip nick-click";
         chip.textContent = r.nickname + (r.isOld ? "" : " · новый");
+        chip.addEventListener("click", () => showNickInfo(r.nickname));
         el.appendChild(chip);
       });
     }
@@ -713,13 +898,28 @@
       btn.addEventListener("click", () => {
         wrap.querySelectorAll(".filter-tab").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
+        activeFilterKey = f.key;
         renderReportTable(f.key);
       });
       wrap.appendChild(btn);
     });
-    if(visible.length) renderReportTable(visible[0].key);
-    else document.getElementById("attReportBody").innerHTML = "";
+    if(visible.length){
+      activeFilterKey = visible[0].key;
+      renderReportTable(visible[0].key);
+    } else {
+      activeFilterKey = null;
+      document.getElementById("attReportBody").innerHTML = "";
+    }
   }
+
+  function applyNickSearch(){
+    attNickFilter = document.getElementById("attNickSearch").value.trim().toLowerCase();
+    if(activeFilterKey) renderReportTable(activeFilterKey);
+  }
+  document.getElementById("attNickSearchBtn").addEventListener("click", applyNickSearch);
+  document.getElementById("attNickSearch").addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){ e.preventDefault(); applyNickSearch(); }
+  });
 
   function setReportMode(mode){
     reportMode = mode;
@@ -744,8 +944,11 @@
       document.getElementById("attDay").value = isoDate(new Date());
     }
     document.getElementById("attReportError").textContent = "";
+    attNickFilter = "";
+    document.getElementById("attNickSearch").value = "";
     await loadFilterVisibility();
     await loadReportStyle();
+    await loadNickGroups();
     document.getElementById("reportModeTabs").style.display = advancedView ? "" : "none";
     setReportMode("period");
     document.getElementById("daysContainer").style.display = "none";
@@ -869,6 +1072,14 @@
   document.getElementById("helpOverlay").addEventListener("click", (e) => {
     if(e.target.id === "helpOverlay") e.currentTarget.classList.remove("show");
   });
+
+  // матрица по дням может быть шире экрана — крутим её колесом мыши без Shift
+  const attTableWrapEl = document.getElementById("attTableWrap");
+  attTableWrapEl.addEventListener("wheel", (e) => {
+    if(attTableWrapEl.scrollWidth <= attTableWrapEl.clientWidth) return;
+    e.preventDefault();
+    attTableWrapEl.scrollLeft += e.deltaY;
+  }, { passive: false });
 
   await loadDayVisibility();
   renderWeekLabel();

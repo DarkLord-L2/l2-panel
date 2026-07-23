@@ -363,5 +363,42 @@ table.data-table tr:hover td{ background: rgba(255,255,255,.02); }
   cursor:pointer;
 }
 .modal-close:hover{ color: var(--gold); }
+.help-section{
+  border:1px solid var(--border);
+  border-radius:6px;
+  margin:8px 0;
+  overflow:hidden;
+  background: var(--panel-2);
+}
+.help-section summary{
+  cursor:pointer;
+  padding:10px 14px;
+  font-size:12px;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  color: var(--gold-dim);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  user-select:none;
+  list-style:none;
+}
+.help-section summary::-webkit-details-marker{ display:none; }
+.help-section summary::marker{ content:""; }
+.help-section summary::after{
+  content:"▸";
+  flex:none;
+  font-size:11px;
+  color: var(--text-dim);
+  transition: transform .15s;
+}
+.help-section[open] summary::after{ transform: rotate(90deg); }
+.help-section summary:hover{ color: var(--gold); }
+.help-section summary:hover::after{ color: var(--gold); }
+.help-section .help-body{ padding:2px 14px 12px; }
+.help-section .help-body p:first-child,
+.help-section .help-body ul:first-child{ margin-top:0; }
 .matrix-table th, .matrix-table td{ padding:6px 10px; border:1px solid var(--border); text-align:center; }
 .matrix-table th:first-child, .matrix-table td:first-child{ text-align:left; }

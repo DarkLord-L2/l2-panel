@@ -70,7 +70,7 @@
   const nav = document.getElementById("sidebarNav");
   const content = document.getElementById("content");
 
-  function renderSection(key){
+  function renderSection(key, extra){
     const view = SECTION_VIEWS[key];
     content.innerHTML = "";
     if(!view){ content.innerHTML = '<p class="hint">Раздел не найден.</p>'; return; }
@@ -79,7 +79,9 @@
       const frame = document.createElement("iframe");
       frame.className = "content-frame";
       // ?v= — не даёт браузеру подсунуть закэшированную старую версию раздела
-      frame.src = view.src + "?v=" + Date.now();
+      let src = view.src + "?v=" + Date.now();
+      if(extra) Object.keys(extra).forEach(k => { src += "&" + k + "=" + encodeURIComponent(extra[k]); });
+      frame.src = src;
       content.appendChild(frame);
     } else {
       const label = sections.find(s => s.key === key)?.label || key;
@@ -104,6 +106,12 @@
     a.addEventListener("click", (e) => { e.preventDefault(); renderSection(s.key); });
     return a;
   }
+
+  // вызывается из вложенных iframe-разделов для перехода в другой раздел с параметрами
+  // (например, клик на «Группа» в отчёте посещаемости открывает конкретную группу)
+  window.L2Nav = {
+    openGroup(groupId){ renderSection("groups", { group: groupId }); },
+  };
 
   const wanted = location.hash.replace("#", "");
   const startKey = sections.find(s => s.key === wanted)?.key || sections[0]?.key;
