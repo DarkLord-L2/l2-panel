@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Проверка буста — Кабинет клана</title>
+<link rel="stylesheet" href="js/theme.css?v=2" />
+<style>
+  .gc-wrap{ padding:0 0 32px; }
+  .gc-avg{ display:inline-flex; align-items:center; gap:8px; font-size:13px; color: var(--text-dim); margin:2px 0 14px; }
+  .gc-avg b{ color: var(--gold); font-size:15px; }
+
+  .gc-table-scroll{ overflow-x:auto; }
+  table.gc-table{ border-collapse:separate; border-spacing:0; width:100%; font-size:13px; }
+  table.gc-table th, table.gc-table td{ padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  table.gc-table thead th{
+    position:sticky; top:0; z-index:2;
+    background: var(--panel);
+    color: var(--text-dim); font-size:12px; font-weight:500; letter-spacing:0;
+    vertical-align:bottom; text-align:center;
+  }
+  table.gc-table thead th.gc-col-nick{ text-align:left; }
+  table.gc-table tbody tr{ cursor:pointer; }
+  table.gc-table tbody tr:hover td{ background: rgba(255,255,255,.03); }
+  .gc-nick{ display:flex; align-items:center; gap:10px; }
+  .gc-nick .name{ color: var(--text); font-weight:600; }
+  .gc-score{ text-align:center; color: var(--gold); font-weight:700; }
+  .gc-percent{ text-align:center; font-weight:700; }
+  .gc-cell{ text-align:center; color: var(--text-dim); }
+  .gc-cell.on{ color: var(--ok); }
+  .gc-item-head{ display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .gc-item-head .ic{ width:26px; height:26px; border-radius:5px; object-fit:cover; border:1px solid var(--border); background: var(--panel-2); }
+  .gc-item-head .wt{ font-size:10px; color: var(--text-dim); background: var(--panel-2); border:1px solid var(--border); border-radius:4px; padding:0 6px; }
+
+  /* правая выезжающая панель */
+  .gc-drawer-overlay{ position:fixed; inset:0; background: rgba(0,0,0,.5); display:none; z-index:80; }
+  .gc-drawer-overlay.show{ display:block; }
+  .gc-drawer{
+    position:fixed; top:0; right:0; bottom:0;
+    width:460px; max-width:94vw;
+    background: var(--panel);
+    border-left:1px solid var(--border);
+    box-shadow: -14px 0 40px rgba(0,0,0,.45);
+    transform: translateX(100%); transition: transform .22s ease;
+    z-index:81; display:flex; flex-direction:column;
+  }
+  .gc-drawer.show{ transform: translateX(0); }
+  .gc-drawer-head{ display:flex; align-items:center; gap:12px; padding:16px 18px; border-bottom:1px solid var(--border); }
+  .gc-drawer-head img{ width:38px; height:38px; border-radius:8px; object-fit:cover; border:1px solid var(--border-lit); }
+  .gc-drawer-head h2{ margin:0; font-size:17px; }
+  .gc-drawer-body{ flex:1; overflow-y:auto; padding:14px 18px; }
+  .gc-drawer-foot{ display:flex; justify-content:flex-end; gap:10px; padding:12px 18px; border-top:1px solid var(--border); }
+
+  .gc-sec-title{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background: var(--panel); border:1px solid var(--border); border-radius:6px;
+    padding:9px 14px; margin:14px 0 8px;
+    font-size:13px; font-weight:500; color: var(--gold);
+  }
+  .gc-sec-title .sec-tools{ display:flex; gap:6px; }
+  .gc-item-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .gc-item-card{
+    display:flex; align-items:center; gap:10px;
+    background: var(--panel-2); border:1px solid var(--border); border-radius:8px;
+    padding:8px 10px; min-height:52px;
+  }
+  .gc-item-card img{ width:34px; height:34px; border-radius:7px; object-fit:cover; border:1px solid var(--border); flex:none; background: var(--panel); }
+  .gc-item-card .meta{ flex:1; min-width:0; }
+  .gc-item-card .meta .nm{ font-size:12.5px; color: var(--text); overflow:hidden; text-overflow:ellipsis; }
+  .gc-item-card .meta .sub{ font-size:10.5px; color: var(--text-dim); }
+  .gc-item-card.full{ grid-column:1 / -1; }
+
+  /* тумблер */
+  .gc-switch{ position:relative; width:40px; height:22px; flex:none; }
+  .gc-switch input{ opacity:0; width:0; height:0; position:absolute; }
+  .gc-switch .track{
+    position:absolute; inset:0; border-radius:999px;
+    background: var(--panel); border:1px solid var(--border); transition:.15s;
+  }
+  .gc-switch .track::before{
+    content:""; position:absolute; left:2px; top:1px;
+    width:16px; height:16px; border-radius:50%;
+    background: var(--text-dim); transition:.15s;
+  }
+  .gc-switch input:checked + .track{ background: color-mix(in srgb, var(--ok) 40%, var(--panel)); border-color: var(--ok); }
+  .gc-switch input:checked + .track::before{ transform: translateX(18px); background: var(--ok); }
+  .gc-switch input:disabled + .track{ opacity:.5; }
+
+  .icon-mini-btn{ width:24px; height:24px; padding:0; font-size:12px; line-height:1; border-radius:5px; }
+  .gc-add-row{ margin:12px 0; }
+</style>
+</head>
+<body>
+
+<div class="gc-wrap" id="wrap" style="display:none;">
+  <div class="page-head">
+    <h1>Проверка буста</h1>
+  </div>
+
+  <p class="gc-avg">Средний процент буста: <b id="avgPercent">—</b></p>
+
+  <section class="card">
+    <div class="gc-table-scroll">
+      <table class="gc-table">
+        <thead id="gcHead"></thead>
+        <tbody id="gcBody"></tbody>
+      </table>
+    </div>
+    <p class="empty-hint" id="gcEmpty" style="display:none;">В последней переписи нет участников — сначала заполните «Перепись клана».</p>
+  </section>
+</div>
+
+<div class="gc-drawer-overlay" id="drawerOverlay"></div>
+<div class="gc-drawer" id="drawer">
+  <div class="gc-drawer-head">
+    <img id="drawerAvatar" alt="" style="display:none;" />
+    <h2 id="drawerTitle"></h2>
+  </div>
+  <div class="gc-drawer-body" id="drawerBody"></div>
+  <div class="gc-drawer-foot">
+    <button class="btn btn-primary" id="addSectionBtn" style="display:none;">+ Раздел</button>
+    <button class="btn" id="drawerClose">Закрыть</button>
+  </div>
+</div>
+
+<button class="help-btn" id="helpBtn" title="Как пользоваться">?</button>
+<div class="modal-overlay" id="helpOverlay">
+  <div class="modal">
+    <button class="modal-close" id="helpClose" title="Закрыть">×</button>
+    <h2>Как пользоваться проверкой буста</h2>
+    <details class="help-section">
+      <summary>Таблица</summary>
+      <div class="help-body">
+        <p>Участники берутся из последней «Переписи клана». Столбцы — пункты буста (Бафф, Зілля и т.д.), у каждого свой вес (число-бейдж в шапке). «Общие баллы» — сумма веса включённых пунктов, «Процент буста» — эти баллы от максимума по всем пунктам.</p>
+      </div>
+    </details>
+    <details class="help-section">
+      <summary>Карточка участника (клик по строке)</summary>
+      <div class="help-body">
+        <p>Открывает панель справа: тумблеры включают/выключают пункты у этого участника. Баллы и процент пересчитываются сразу.</p>
+      </div>
+    </details>
+    <details class="help-section">
+      <summary>Настройка (главный админ и админ)</summary>
+      <div class="help-body">
+        <p>В панели справа: «+ Раздел» создаёт раздел, «+ Пункт» — пункт внутри раздела (имя, вес, фото). У каждого пункта — карандаш (изменить имя/вес/фото) и крестик (удалить). Изменения общие для всего клана; тумблеры — свои у каждого участника.</p>
+      </div>
+    </details>
+  </div>
+</div>
+
+<input type="file" id="iconPicker" accept="image/*" style="display:none;" />
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-client.js?v=2"></script>
+<script>
+(async function(){
+  const session = await L2Cabinet.requireSession();
+  if(!session) return;
+
+  const profile = await L2Cabinet.getProfile();
+  if(!profile){
+    document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
+      '<h1>⚠ Профиль не найден</h1><p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+    return;
+  }
+
+  const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
+  const db = L2Cabinet.client;
+  document.getElementById("wrap").style.display = "";
+  document.getElementById("addSectionBtn").style.display = isAdmin ? "" : "none";
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  }
+
+  let nicks = [];
+  let sections = [];     // [{id, name, sort_order}]
+  let items = [];        // [{id, section_id, name, icon, weight, sort_order}]
+  let valueSet = new Set(); // `${nickname}|${item_id}` — включённые
+  let currentNick = null;
+
+  function keyOf(nick, itemId){ return nick + "|" + itemId; }
+
+  async function loadNicks(){
+    const { data } = await db.from("census_entries").select("nickname, week_start");
+    let latest = null;
+    (data || []).forEach(r => { if(!latest || r.week_start > latest) latest = r.week_start; });
+    nicks = [...new Set((data || []).filter(r => r.week_start === latest).map(r => r.nickname))].sort((a,b)=>a.localeCompare(b));
+  }
+
+  async function loadStructure(){
+    const [{ data: s }, { data: it }] = await Promise.all([
+      db.from("boost_sections").select("id, name, sort_order").order("sort_order").order("name"),
+      db.from("boost_items").select("id, section_id, name, icon, weight, sort_order").order("sort_order"),
+    ]);
+    sections = s || [];
+    items = (it || []).map(x => ({ ...x, weight: Number(x.weight) }));
+  }
+
+  async function loadValues(){
+    const { data } = await db.from("boost_member_values").select("nickname, item_id, enabled");
+    valueSet = new Set();
+    (data || []).forEach(r => { if(r.enabled) valueSet.add(keyOf(r.nickname, r.item_id)); });
+  }
+
+  function itemsOfSection(secId){
+    return items.filter(i => i.section_id === secId).sort((a,b)=> a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+  }
+  function orderedItems(){
+    // все пункты в порядке разделов → внутри раздела по sort
+    return sections.flatMap(s => itemsOfSection(s.id));
+  }
+  function maxScore(){ return orderedItems().reduce((s,i)=> s + i.weight, 0); }
+  function scoreOf(nick){
+    return orderedItems().reduce((s,i)=> s + (valueSet.has(keyOf(nick,i.id)) ? i.weight : 0), 0);
+  }
+  function percentOf(nick){
+    const mx = maxScore();
+    return mx ? (scoreOf(nick) / mx) * 100 : 0;
+  }
+
+  function renderTable(){
+    const cols = orderedItems();
+    const head = document.getElementById("gcHead");
+    const body = document.getElementById("gcBody");
+    document.getElementById("gcEmpty").style.display = nicks.length ? "none" : "";
+
+    let h = '<tr><th class="gc-col-nick">Участники</th><th>Общие баллы</th><th>Процент буста</th>';
+    cols.forEach(i => {
+      const ic = i.icon ? `<img class="ic" src="${i.icon}" alt="" />` : `<span class="ic" style="display:inline-block;"></span>`;
+      h += `<th title="${escapeHtml(i.name)}"><div class="gc-item-head">${ic}<span class="wt">${i.weight}</span></div></th>`;
+    });
+    h += "</tr>";
+    head.innerHTML = h;
+
+    body.innerHTML = "";
+    nicks.forEach(nick => {
+      const tr = document.createElement("tr");
+      const score = scoreOf(nick);
+      const pct = percentOf(nick);
+      let row = `<td><div class="gc-nick"><span class="name">${escapeHtml(nick)}</span></div></td>`;
+      row += `<td class="gc-score">${score.toFixed(2)}</td>`;
+      row += `<td class="gc-percent" style="color:${pctColor(pct)}">${pct.toFixed(2)}%</td>`;
+      cols.forEach(i => {
+        const on = valueSet.has(keyOf(nick, i.id));
+        row += `<td class="gc-cell${on ? " on" : ""}">${on ? i.weight.toFixed(2) : "0.00"}</td>`;
+      });
+      tr.innerHTML = row;
+      tr.addEventListener("click", () => openDrawer(nick));
+      body.appendChild(tr);
+    });
+
+    renderAvg();
+  }
+
+  function pctColor(p){
+    if(p >= 90) return "var(--ok)";
+    if(p >= 60) return "var(--gold)";
+    return "var(--danger-lit)";
+  }
+
+  function renderAvg(){
+    if(!nicks.length){ document.getElementById("avgPercent").textContent = "—"; return; }
+    const avg = nicks.reduce((s,n)=> s + percentOf(n), 0) / nicks.length;
+    document.getElementById("avgPercent").textContent = avg.toFixed(2) + "%";
+  }
+
+  // ---------- правая панель ----------
+  function openDrawer(nick){
+    currentNick = nick;
+    document.getElementById("drawerTitle").textContent = "Проверка буста — " + nick;
+    document.getElementById("drawerAvatar").style.display = "none";
+    renderDrawerBody();
+    document.getElementById("drawerOverlay").classList.add("show");
+    document.getElementById("drawer").classList.add("show");
+  }
+  function closeDrawer(){
+    document.getElementById("drawerOverlay").classList.remove("show");
+    document.getElementById("drawer").classList.remove("show");
+    currentNick = null;
+  }
+  document.getElementById("drawerClose").addEventListener("click", closeDrawer);
+  document.getElementById("drawerOverlay").addEventListener("click", closeDrawer);
+
+  function renderDrawerBody(){
+    const body = document.getElementById("drawerBody");
+    body.innerHTML = "";
+    if(!sections.length){
+      body.innerHTML = '<p class="hint">' + (isAdmin ? "Разделов ещё нет — нажмите «+ Раздел» внизу." : "Разделы ещё не настроены.") + "</p>";
+      return;
+    }
+    sections.forEach(sec => {
+      const secEl = document.createElement("div");
+
+      const title = document.createElement("div");
+      title.className = "gc-sec-title";
+      const nameSpan = document.createElement("span");
+      nameSpan.textContent = sec.name;
+      title.appendChild(nameSpan);
+      if(isAdmin){
+        const tools = document.createElement("div");
+        tools.className = "sec-tools";
+        const addItemBtn = document.createElement("button");
+        addItemBtn.className = "btn icon-mini-btn"; addItemBtn.textContent = "+"; addItemBtn.title = "Добавить пункт";
+        addItemBtn.addEventListener("click", () => addItem(sec.id));
+        const renSec = document.createElement("button");
+        renSec.className = "btn icon-mini-btn"; renSec.textContent = "✎"; renSec.title = "Переименовать раздел";
+        renSec.addEventListener("click", () => renameSection(sec));
+        const delSec = document.createElement("button");
+        delSec.className = "btn btn-danger icon-mini-btn"; delSec.textContent = "×"; delSec.title = "Удалить раздел";
+        delSec.addEventListener("click", () => deleteSection(sec));
+        tools.append(addItemBtn, renSec, delSec);
+        title.appendChild(tools);
+      }
+      secEl.appendChild(title);
+
+      const grid = document.createElement("div");
+      grid.className = "gc-item-grid";
+      const secItems = itemsOfSection(sec.id);
+      if(!secItems.length){
+        const empty = document.createElement("p");
+        empty.className = "hint"; empty.style.gridColumn = "1 / -1"; empty.textContent = "Пунктов нет.";
+        grid.appendChild(empty);
+      }
+      secItems.forEach(item => grid.appendChild(makeItemCard(item)));
+      secEl.appendChild(grid);
+      body.appendChild(secEl);
+    });
+  }
+
+  function makeItemCard(item){
+    const card = document.createElement("div");
+    card.className = "gc-item-card";
+
+    const img = document.createElement("img");
+    img.alt = "";
+    img.src = item.icon || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34'></svg>";
+    card.appendChild(img);
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.innerHTML = `<div class="nm">${escapeHtml(item.name)}</div><div class="sub">вес ${item.weight}</div>`;
+    card.appendChild(meta);
+
+    if(isAdmin){
+      const tools = document.createElement("div");
+      tools.style.display = "flex"; tools.style.gap = "4px";
+      const edit = document.createElement("button");
+      edit.className = "btn icon-mini-btn"; edit.textContent = "✎"; edit.title = "Изменить";
+      edit.addEventListener("click", (e) => { e.stopPropagation(); editItem(item); });
+      const del = document.createElement("button");
+      del.className = "btn btn-danger icon-mini-btn"; del.textContent = "×"; del.title = "Удалить";
+      del.addEventListener("click", (e) => { e.stopPropagation(); deleteItem(item); });
+      tools.append(edit, del);
+      card.appendChild(tools);
+    }
+
+    const sw = document.createElement("label");
+    sw.className = "gc-switch";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = valueSet.has(keyOf(currentNick, item.id));
+    cb.disabled = !isAdmin;
+    cb.addEventListener("change", () => toggleValue(item.id, cb.checked));
+    const track = document.createElement("span"); track.className = "track";
+    sw.append(cb, track);
+    card.appendChild(sw);
+
+    return card;
+  }
+
+  async function toggleValue(itemId, on){
+    const { error } = await db.from("boost_member_values").upsert(
+      { clan_id: profile.clan_id, nickname: currentNick, item_id: itemId, enabled: on },
+      { onConflict: "nickname,item_id" }
+    );
+    if(error){ alert("Не удалось сохранить: " + error.message); return; }
+    const k = keyOf(currentNick, itemId);
+    if(on) valueSet.add(k); else valueSet.delete(k);
+    renderTable();
+  }
+
+  // ---------- конструктор (только админ) ----------
+  async function addSection(){
+    const name = prompt("Название раздела:");
+    if(!name || !name.trim()) return;
+    const sort = sections.length ? Math.max(...sections.map(s=>s.sort_order)) + 1 : 0;
+    const { error } = await db.from("boost_sections").insert({ clan_id: profile.clan_id, name: name.trim(), sort_order: sort });
+    if(error){ alert(error.message); return; }
+    await loadStructure(); renderDrawerBody(); renderTable();
+  }
+  document.getElementById("addSectionBtn").addEventListener("click", addSection);
+
+  async function renameSection(sec){
+    const name = prompt("Новое название раздела:", sec.name);
+    if(!name || !name.trim()) return;
+    const { error } = await db.from("boost_sections").update({ name: name.trim() }).eq("id", sec.id);
+    if(error){ alert(error.message); return; }
+    await loadStructure(); renderDrawerBody(); renderTable();
+  }
+
+  async function deleteSection(sec){
+    if(!confirm(`Удалить раздел «${sec.name}» со всеми его пунктами?`)) return;
+    const { error } = await db.from("boost_sections").delete().eq("id", sec.id);
+    if(error){ alert(error.message); return; }
+    await loadStructure(); await loadValues(); renderDrawerBody(); renderTable();
+  }
+
+  async function addItem(sectionId){
+    const name = prompt("Название пункта:");
+    if(!name || !name.trim()) return;
+    const wRaw = prompt("Вес (число баллов), например 1 или 2:", "1");
+    const weight = Number((wRaw || "1").replace(",", "."));
+    if(!isFinite(weight)){ alert("Вес должен быть числом."); return; }
+    const secItems = itemsOfSection(sectionId);
+    const sort = secItems.length ? Math.max(...secItems.map(i=>i.sort_order)) + 1 : 0;
+    const { error } = await db.from("boost_items").insert({
+      clan_id: profile.clan_id, section_id: sectionId, name: name.trim(), weight, sort_order: sort,
+    });
+    if(error){ alert(error.message); return; }
+    await loadStructure(); renderDrawerBody(); renderTable();
+  }
+
+  async function editItem(item){
+    const name = prompt("Название пункта:", item.name);
+    if(name === null) return;
+    const wRaw = prompt("Вес (число баллов):", String(item.weight));
+    if(wRaw === null) return;
+    const weight = Number((wRaw || "1").replace(",", "."));
+    if(!name.trim() || !isFinite(weight)){ alert("Проверьте имя и вес."); return; }
+    const { error } = await db.from("boost_items").update({ name: name.trim(), weight }).eq("id", item.id);
+    if(error){ alert(error.message); return; }
+    if(confirm("Загрузить/заменить фото для этого пункта?")) { pickIconFor(item.id); return; }
+    await loadStructure(); renderDrawerBody(); renderTable();
+  }
+
+  async function deleteItem(item){
+    if(!confirm(`Удалить пункт «${item.name}»?`)) return;
+    const { error } = await db.from("boost_items").delete().eq("id", item.id);
+    if(error){ alert(error.message); return; }
+    await loadStructure(); await loadValues(); renderDrawerBody(); renderTable();
+  }
+
+  // ---------- загрузка/уменьшение фото ----------
+  let pendingIconItemId = null;
+  const iconPicker = document.getElementById("iconPicker");
+  function pickIconFor(itemId){ pendingIconItemId = itemId; iconPicker.value = ""; iconPicker.click(); }
+  iconPicker.addEventListener("change", async () => {
+    const file = iconPicker.files[0];
+    if(!file || !pendingIconItemId) return;
+    const dataUrl = await downscaleImage(file, 96);
+    const { error } = await db.from("boost_items").update({ icon: dataUrl }).eq("id", pendingIconItemId);
+    pendingIconItemId = null;
+    if(error){ alert(error.message); return; }
+    await loadStructure(); renderDrawerBody(); renderTable();
+  });
+
+  function downscaleImage(file, maxSize){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = () => { img.src = reader.result; };
+      reader.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ---------- справка ----------
+  document.getElementById("helpBtn").addEventListener("click", () => document.getElementById("helpOverlay").classList.add("show"));
+  document.getElementById("helpClose").addEventListener("click", () => document.getElementById("helpOverlay").classList.remove("show"));
+  document.getElementById("helpOverlay").addEventListener("click", (e) => { if(e.target.id === "helpOverlay") e.currentTarget.classList.remove("show"); });
+
+  await Promise.all([loadNicks(), loadStructure(), loadValues()]);
+  renderTable();
+})();
+</script>
+</body>
+</html>

@@ -4,34 +4,25 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Группы — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css" />
+<link rel="stylesheet" href="js/theme.css?v=2" />
 <style>
-  .groups-wrap{ max-width:1100px; margin:0 auto; padding:8px 0 40px; }
-  .groups-toolbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+  .groups-wrap{ padding:0 0 32px; }
+  .groups-toolbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:10px 0 14px; }
   .groups-toolbar .search{ min-width:220px; flex:1; max-width:320px; }
 
   .group-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px; }
   .group-card{
-    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    background: var(--panel);
     border:1px solid var(--border);
     border-radius:8px;
     padding:16px 18px;
     cursor:pointer;
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,.35), 0 6px 18px rgba(0,0,0,.3);
-    transition: border-color .12s, transform .12s;
+    transition: border-color .12s;
     display:flex; flex-direction:column; gap:10px;
   }
-  .group-card:hover{ border-color: var(--border-lit); transform:translateY(-2px); }
+  .group-card:hover{ border-color: var(--border-lit); }
   .group-card-head{ display:flex; align-items:center; gap:10px; }
-  .group-icon{
-    width:38px; height:38px; flex:none;
-    border-radius:6px;
-    border:1px solid var(--border-lit);
-    background: linear-gradient(180deg, var(--gold-dim), var(--border));
-    display:flex; align-items:center; justify-content:center;
-    font-size:16px; color: var(--bg);
-  }
-  .group-card-name{ font-size:15px; font-weight:600; color: var(--text); letter-spacing:.02em; }
+  .group-card-name{ font-size:14px; font-weight:500; color: var(--text); letter-spacing:0; }
   .group-card-members{ font-size:12px; color: var(--text-dim); line-height:1.5; min-height:2.2em; }
   .group-card-foot{ display:flex; align-items:center; justify-content:space-between; }
 
@@ -47,8 +38,7 @@
 
   <div id="listView">
     <div class="page-head">
-      <h1>⚔ Все группы</h1>
-      <a class="btn btn-ghost" href="index.html" target="_top">← Кабинет</a>
+      <h1>Все группы</h1>
     </div>
     <div class="groups-toolbar">
       <input type="text" class="search" id="groupSearch" placeholder="Поиск групп..." />
@@ -61,6 +51,7 @@
   <div id="detailView" style="display:none;">
     <div class="group-detail-head">
       <div class="group-name-row">
+        <button class="btn" id="backToJournalBtn" style="display:none;">← Вернуться в журнал</button>
         <button class="btn btn-ghost" id="groupBackBtn">← Все группы</button>
         <h2 id="groupNameView" style="margin:0;"></h2>
         <input type="text" id="groupNameEdit" style="display:none;" />
@@ -125,7 +116,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js"></script>
+<script src="js/supabase-client.js?v=2"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -187,7 +178,6 @@
       card.className = "group-card";
       card.innerHTML = `
         <div class="group-card-head">
-          <div class="group-icon">⚔</div>
           <div class="group-card-name">${escapeHtml(g.name)}</div>
         </div>
         <div class="group-card-members">${nicks.length ? escapeHtml(preview) : "Пока никого нет"}</div>
@@ -242,8 +232,14 @@
   document.getElementById("groupBackBtn").addEventListener("click", async () => {
     document.getElementById("detailView").style.display = "none";
     document.getElementById("listView").style.display = "";
+    document.getElementById("backToJournalBtn").style.display = "none";
     await loadGroups();
     renderGrid(document.getElementById("groupSearch").value);
+  });
+
+  // сюда попали кликом по «Группа» в журнале посещаемости — даём дорогу назад
+  document.getElementById("backToJournalBtn").addEventListener("click", () => {
+    if(window.top && window.top.L2Nav) window.top.L2Nav.openSection("attendance");
   });
 
   document.getElementById("groupSearch").addEventListener("input", (e) => renderGrid(e.target.value));
@@ -340,8 +336,14 @@
   renderGrid("");
 
   // открыть конкретную группу сразу, если сюда перешли по ссылке из другого раздела
-  const wantGroupId = new URLSearchParams(location.search).get("group");
-  if(wantGroupId && groups.some(g => g.id === wantGroupId)) openDetail(wantGroupId);
+  const params = new URLSearchParams(location.search);
+  const wantGroupId = params.get("group");
+  if(wantGroupId && groups.some(g => g.id === wantGroupId)){
+    openDetail(wantGroupId);
+    if(params.get("from") === "attendance"){
+      document.getElementById("backToJournalBtn").style.display = "";
+    }
+  }
 })();
 </script>
 </body>

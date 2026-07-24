@@ -4,13 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css" />
+<link rel="stylesheet" href="js/theme.css?v=2" />
 </head>
 <body>
 
 <div class="app-shell" id="appShell" style="display:none;">
   <div class="topbar">
-    <div class="brand">⚔ Кабинет клана</div>
+    <div class="brand">Кабинет клана</div>
     <div class="who">
       <span class="name" id="whoName"></span>
       <span class="badge" id="whoRole"></span>
@@ -24,7 +24,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js"></script>
+<script src="js/supabase-client.js?v=2"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -40,7 +40,7 @@
     attendance:  { type: "iframe", src: "attendance.html" },
     taxes:       { type: "iframe", src: "taxes.html" },
     reports:     { type: "stub" },
-    gear_check:  { type: "stub" },
+    gear_check:  { type: "iframe", src: "gear-check.html" },
   };
 
   // Чисто визуальная группировка пунктов меню — на права доступа не влияет,
@@ -110,7 +110,9 @@
   // вызывается из вложенных iframe-разделов для перехода в другой раздел с параметрами
   // (например, клик на «Группа» в отчёте посещаемости открывает конкретную группу)
   window.L2Nav = {
-    openGroup(groupId){ renderSection("groups", { group: groupId }); },
+    // from=attendance — чтобы в группе показалась кнопка «Вернуться в журнал»
+    openGroup(groupId){ renderSection("groups", { group: groupId, from: "attendance" }); },
+    openSection(key){ renderSection(key); },
   };
 
   const wanted = location.hash.replace("#", "");

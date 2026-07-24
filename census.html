@@ -4,14 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Перепись клана — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css" />
+<link rel="stylesheet" href="js/theme.css?v=2" />
 </head>
 <body>
 
 <div class="roster-wrap" id="wrap" style="display:none;">
   <div class="page-head">
-    <h1>⚔ Перепись клана</h1>
-    <a class="btn btn-ghost" href="index.html" target="_top">← Кабинет</a>
+    <h1>Перепись клана</h1>
   </div>
 
   <section class="card week-nav">
@@ -26,8 +25,8 @@
       <h2>Ники недели (<span id="weekCount">0</span>)</h2>
       <div class="tools">
         <button class="btn btn-primary" id="addEntryBtn" style="display:none;">+ Добавить перепись</button>
-        <button class="btn" id="expandBtn" title="Развернуть на весь экран">⤢</button>
-        <button class="btn" id="trashModeBtn" title="Режим удаления списком" style="display:none;">🗑</button>
+        <button class="btn" id="expandBtn" title="Развернуть на весь экран">Развернуть</button>
+        <button class="btn" id="trashModeBtn" title="Режим удаления списком" style="display:none;">Удалить списком</button>
       </div>
     </div>
 
@@ -89,15 +88,15 @@
     <details class="help-section">
       <summary>Правки</summary>
       <div class="help-body">
-        <p>Крестик у ника в списке недели убирает его. Кнопка 🗑 включает выбор сразу нескольких ников для удаления. Кнопка ⤢ разворачивает список на весь экран.</p>
+        <p>Крестик у ника в списке недели убирает его. Кнопка «Удалить списком» включает выбор сразу нескольких ников для удаления. Кнопка «Развернуть» разворачивает список на весь экран.</p>
       </div>
     </details>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js"></script>
-<script src="js/week-roster.js"></script>
+<script src="js/supabase-client.js?v=2"></script>
+<script src="js/week-roster.js?v=2"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();

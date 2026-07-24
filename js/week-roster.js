@@ -18,6 +18,9 @@ function initWeekRoster(config){
     db,
     addBtnIdleLabel = "+ Добавить",
     addBtnOpenLabel = "Скрыть загрузку",
+    // если задан — ник в списке становится кликабельным (крестик удаления не рисуется,
+    // удаление остаётся через «Удалить списком»). Используется налогами.
+    onNickClick = null,
   } = config;
 
   const addEntryBtn = document.getElementById("addEntryBtn");
@@ -133,7 +136,12 @@ function initWeekRoster(config){
       span.textContent = entry.nickname;
       chip.appendChild(span);
 
-      if(isAdmin && !selectMode){
+      if(onNickClick){
+        if(!selectMode){
+          chip.style.cursor = "pointer";
+          chip.addEventListener("click", () => onNickClick(entry.nickname));
+        }
+      } else if(isAdmin && !selectMode){
         const x = document.createElement("button");
         x.textContent = "×";
         x.title = "Удалить";

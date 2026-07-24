@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Налоги — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css" />
+<link rel="stylesheet" href="js/theme.css?v=2" />
 <style>
   .weeks-list{ display:flex; flex-direction:column; gap:6px; max-height:320px; overflow-y:auto; margin:10px 0; }
   .weeks-list label{ display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; }
@@ -18,8 +18,7 @@
 
 <div class="roster-wrap" id="wrap" style="display:none;">
   <div class="page-head">
-    <h1>⚔ Налоги</h1>
-    <a class="btn btn-ghost" href="index.html" target="_top">← Кабинет</a>
+    <h1>Налоги</h1>
   </div>
 
   <section class="card week-nav">
@@ -27,7 +26,7 @@
     <div class="week-label" id="weekLabel"></div>
     <button class="btn" id="nextWeekBtn">▶</button>
     <button class="btn" id="todayBtn">Сегодня</button>
-    <button class="btn btn-primary" id="openReportBtn">📊 Отчёт по налогам</button>
+    <button class="btn btn-primary" id="openReportBtn">Отчёт по налогам</button>
   </section>
 
   <section class="card">
@@ -35,8 +34,8 @@
       <h2>Заплатили на этой неделе (<span id="weekCount">0</span>)</h2>
       <div class="tools">
         <button class="btn btn-primary" id="addEntryBtn" style="display:none;">+ Добавить оплаты</button>
-        <button class="btn" id="expandBtn" title="Развернуть на весь экран">⤢</button>
-        <button class="btn" id="trashModeBtn" title="Режим удаления списком" style="display:none;">🗑</button>
+        <button class="btn" id="expandBtn" title="Развернуть на весь экран">Развернуть</button>
+        <button class="btn" id="trashModeBtn" title="Режим удаления списком" style="display:none;">Удалить списком</button>
       </div>
     </div>
 
@@ -73,6 +72,30 @@
   </section>
 </div>
 
+<!-- Клик по нику в списке недели: отметить оплату вперёд или погашение долга -->
+<div class="modal-overlay" id="nickOverlay">
+  <div class="modal" style="max-width:360px;">
+    <button class="modal-close" id="nickClose" title="Закрыть">×</button>
+    <h2 id="nickTitle"></h2>
+
+    <div class="field">
+      <label>Что отметить</label>
+      <label class="checkbox-row"><input type="radio" name="taxAction" value="ahead" checked /> Заплатил наперёд</label>
+      <label class="checkbox-row"><input type="radio" name="taxAction" value="debt" /> Погасил долг</label>
+    </div>
+
+    <div class="field">
+      <label for="nickWeeks">На сколько недель</label>
+      <input type="number" id="nickWeeks" min="1" max="52" value="1" />
+    </div>
+
+    <p class="hint" id="nickHint"></p>
+    <p class="error-msg" id="nickError"></p>
+    <p class="ok-msg" id="nickOk"></p>
+    <button class="btn btn-primary" id="nickApplyBtn">Отметить</button>
+  </div>
+</div>
+
 <!-- Отчёт по налогам: три под-экрана в одной модалке -->
 <div class="modal-overlay" id="reportOverlay">
   <div class="modal report-modal">
@@ -85,7 +108,7 @@
       <p class="error-msg" id="pickError"></p>
       <div class="report-actions">
         <button class="btn btn-primary" id="showReportBtn">Показать отчёт</button>
-        <button class="btn" id="archiveManagerBtn" style="display:none;">🗄 Архивировать недели...</button>
+        <button class="btn" id="archiveManagerBtn" style="display:none;">Архивировать недели...</button>
       </div>
     </div>
 
@@ -139,9 +162,17 @@
     </details>
 
     <details class="help-section">
+      <summary>Клик по нику</summary>
+      <div class="help-body">
+        <p>Открывает окно, где можно отметить <b>«Заплатил наперёд»</b> или <b>«Погасил долг»</b> и указать, на сколько недель. Ник добавится в списки следующих недель (наперёд) или предыдущих (долг) — под окном сразу видно, какие именно недели затронет.</p>
+        <p>Удалить ник из недели можно кнопкой «Удалить списком».</p>
+      </div>
+    </details>
+
+    <details class="help-section">
       <summary>Отчёт по налогам</summary>
       <div class="help-body">
-        <p>Кнопка «📊 Отчёт по налогам» — выберите любые недели галочками и нажмите «Показать отчёт». Для каждого ника посчитается, сколько раз из выбранных недель он платил, и статус:</p>
+        <p>Кнопка «Отчёт по налогам» — выберите любые недели галочками и нажмите «Показать отчёт». Для каждого ника посчитается, сколько раз из выбранных недель он платил, и статус:</p>
         <ul>
           <li><b>Новый</b> — этот ник впервые встретился в самой свежей «Переписи клана» (или его там ещё вообще нет).</li>
           <li><b>Старый</b> — ник встречался в переписи и раньше, до самой свежей.</li>
@@ -152,15 +183,15 @@
     <details class="help-section">
       <summary>Архив недель</summary>
       <div class="help-body">
-        <p>«🗄 Архивировать недели...» прячет старые недели из списка выбора, чтобы он не разрастался — данные при этом никуда не удаляются.</p>
+        <p>«Архивировать недели...» прячет старые недели из списка выбора, чтобы он не разрастался — данные при этом никуда не удаляются.</p>
       </div>
     </details>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js"></script>
-<script src="js/week-roster.js"></script>
+<script src="js/supabase-client.js?v=2"></script>
+<script src="js/week-roster.js?v=2"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -179,11 +210,103 @@
   document.getElementById("wrap").style.display = "";
   document.getElementById("archiveManagerBtn").style.display = isAdmin ? "" : "none";
 
-  initWeekRoster({
+  const roster = initWeekRoster({
     tableName: "tax_payments",
     profile, isAdmin, db,
     addBtnIdleLabel: "+ Добавить оплаты",
     addBtnOpenLabel: "Скрыть загрузку",
+    onNickClick: openNickModal,
+  });
+
+  // ---- клик по нику: оплата наперёд / погашение долга ----
+  let nickModalNick = null;
+
+  function mondayOfDate(d){
+    const x = new Date(d);
+    const day = x.getDay();
+    x.setDate(x.getDate() + (day === 0 ? -6 : 1 - day));
+    x.setHours(0,0,0,0);
+    return x;
+  }
+  function isoOf(d){ return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate()); }
+
+  // недели, на которые ляжет отметка: вперёд — следующие N, долг — предыдущие N
+  function targetWeeks(action, count){
+    const base = mondayOfDate(roster.getCurrentWeek());
+    const out = [];
+    for(let i = 1; i <= count; i++){
+      const d = new Date(base);
+      d.setDate(d.getDate() + (action === "ahead" ? 7 * i : -7 * i));
+      out.push(isoOf(d));
+    }
+    return out;
+  }
+
+  function currentAction(){
+    return document.querySelector('input[name="taxAction"]:checked')?.value || "ahead";
+  }
+
+  function refreshNickHint(){
+    const count = Math.max(1, Number(document.getElementById("nickWeeks").value) || 1);
+    const weeks = targetWeeks(currentAction(), count);
+    document.getElementById("nickHint").textContent =
+      "Недели: " + weeks.map(w => weekRangeLabel(w)).join(", ");
+  }
+
+  function openNickModal(nickname){
+    nickModalNick = nickname;
+    document.getElementById("nickTitle").textContent = nickname;
+    document.getElementById("nickError").textContent = "";
+    document.getElementById("nickOk").textContent = "";
+    document.getElementById("nickWeeks").value = "1";
+    document.querySelector('input[name="taxAction"][value="ahead"]').checked = true;
+    document.getElementById("nickApplyBtn").style.display = isAdmin ? "" : "none";
+    refreshNickHint();
+    document.getElementById("nickOverlay").classList.add("show");
+  }
+
+  document.getElementById("nickWeeks").addEventListener("input", refreshNickHint);
+  Array.from(document.querySelectorAll('input[name="taxAction"]')).forEach(r => {
+    r.addEventListener("change", refreshNickHint);
+  });
+
+  document.getElementById("nickClose").addEventListener("click", () => {
+    document.getElementById("nickOverlay").classList.remove("show");
+  });
+  document.getElementById("nickOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "nickOverlay") e.currentTarget.classList.remove("show");
+  });
+
+  document.getElementById("nickApplyBtn").addEventListener("click", async () => {
+    const errEl = document.getElementById("nickError");
+    const okEl = document.getElementById("nickOk");
+    errEl.textContent = ""; okEl.textContent = "";
+
+    const count = Math.max(1, Number(document.getElementById("nickWeeks").value) || 1);
+    const weeks = targetWeeks(currentAction(), count);
+
+    // не плодим дубли: смотрим, где этот ник за эти недели уже отмечен
+    const { data: existing, error: exErr } = await db
+      .from("tax_payments")
+      .select("week_start")
+      .eq("nickname", nickModalNick)
+      .in("week_start", weeks);
+    if(exErr){ errEl.textContent = exErr.message; return; }
+
+    const already = new Set((existing || []).map(r => r.week_start));
+    const rows = weeks.filter(w => !already.has(w)).map(week_start => ({
+      clan_id: profile.clan_id,
+      week_start,
+      nickname: nickModalNick,
+      created_by: profile.id,
+    }));
+
+    if(!rows.length){ okEl.textContent = "Уже отмечено на все эти недели."; return; }
+
+    const { error } = await db.from("tax_payments").insert(rows);
+    if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
+    okEl.textContent = `Отмечено недель: ${rows.length}.`;
+    await roster.reloadWeek();
   });
 
   // ---- справка ----
