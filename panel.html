@@ -763,15 +763,8 @@
   }
   .gh-input:focus-visible{ outline:2px solid var(--focus); outline-offset:1px; }
   .gh-hint{ font-size:11.5px; color: var(--text-dim); margin-top:6px; }
-  .gh-gistline{
-    font-family: "Bahnschrift", monospace;
-    font-size:12px;
-    color: var(--gold-dim);
-    word-break: break-all;
-  }
   .gh-row{ display:flex; gap:8px; }
   .gh-row .action-btn{ flex:1; margin-top:0; }
-  .gh-status{ min-height:1.4em; font-size:12px; color: var(--text-dim); }
 
   .scope-row{
     display:flex;
@@ -908,38 +901,12 @@
 <div class="menu-panel" id="menuPanel">
   <button id="menuAddIcons">Добавить иконки</button>
   <button id="menuAddMacro">➕ Добавить макрос</button>
-  <button id="menuGithub">🌐 Общий доступ (GitHub)</button>
   <hr />
   <button id="btnExport">Экспорт в файл</button>
   <button id="btnImport">Импорт из файла</button>
   <hr />
   <button class="danger" id="btnClearAll">Очистить панель класса</button>
   <input type="file" id="importFile" accept="application/json" />
-</div>
-
-<div class="modal-overlay" id="ghOverlay">
-  <div class="modal">
-    <button class="modal-close" id="ghClose" title="Закрыть">×</button>
-    <h2>Общий доступ к иконкам</h2>
-    <p>Ваши картинки публикуются в публичный GitHub Gist. Любой, кто откроет ссылку на эту панель, увидит их автоматически — но добавлять и менять их может только тот, у кого есть токен.</p>
-
-    <h3>Токен (только на этом устройстве)</h3>
-    <input type="password" id="ghTokenInput" class="gh-input" placeholder="ghp_..." autocomplete="off" spellcheck="false" />
-    <p class="gh-hint">Создаётся на github.com → Settings → Developer settings → Personal access tokens (classic), scope «gist». Никогда никому не пересылайте его.</p>
-
-    <h3>Общее хранилище</h3>
-    <p class="gh-gistline" id="ghGistLine">—</p>
-    <div class="gh-row">
-      <button class="action-btn" id="ghGistCopy">Скопировать ID</button>
-    </div>
-
-    <div class="gh-row">
-      <button class="action-btn" id="ghPublishBtn">📤 Опубликовать все классы</button>
-      <button class="action-btn" id="ghPullBtn">🔄 Обновить из общего доступа</button>
-    </div>
-    <button class="action-btn" id="ghForgetBtn">Забыть токен на этом устройстве</button>
-    <p class="gh-status" id="ghStatus"></p>
-  </div>
 </div>
 
 <header>
@@ -1027,7 +994,7 @@
     <div class="gh-row">
       <button class="action-btn" id="macroAddIconBtn">+ Добавить иконку для макросов</button>
     </div>
-    <p class="gh-hint">Опубликованными для всех эти иконки станут, только если их добавит и опубликует владелец панели через «🌐 Общий доступ».</p>
+    <p class="gh-hint">Пополнить этот набор может только владелец панели — если нужной иконки нет, обратитесь к нему.</p>
     <input type="file" id="macroIconFile" accept="image/*" multiple />
 
     <h3>Название</h3>
@@ -1095,7 +1062,7 @@
           <li>Файл из проводника можно бросить и сразу на ячейку — он попадёт и туда, и в группу «Иконки» текущего класса.</li>
           <li>Иконку можно перетащить с одной ячейки на другую: пустая ячейка её примет, а если там уже есть иконка — они поменяются местами.</li>
           <li>Перетащите иконку с ячейки в пустое место страницы — она уберётся с панели (в группе останется).</li>
-          <li>Крестик на иконке убирает её из группы, крестик у названия группы — удаляет всю группу (на уже расставленные ячейки это не влияет). Эти крестики, как и само добавление иконок, доступны только владельцу — тому, у кого в этом браузере сохранён токен из «🌐 Общий доступ». У остальных их нет вообще.</li>
+          <li>Крестик на иконке убирает её из группы, крестик у названия группы — удаляет всю группу (на уже расставленные ячейки это не влияет). Эти крестики, как и само добавление иконок, доступны только владельцу панели. У остальных их нет вообще.</li>
           <li>У владельца внизу колонки с иконками есть кнопка 🗑 — по умолчанию крестики удаления скрыты, чтобы не мешали смотреть иконки; кнопка их показывает и прячет обратно.</li>
           <li>Кнопка «‹» вверху колонки сворачивает её в узкую полоску (нажмите «›», чтобы развернуть обратно) — иконки при этом никуда не пропадают, просто скрыты из вида. Браузер запоминает, свёрнута она или нет.</li>
         </ul>
@@ -1107,7 +1074,7 @@
       <div class="help-body">
         <ul>
           <li>☰ → «➕ Добавить макрос» — доступно каждому, кто открыл панель, и хранится только в его браузере.</li>
-          <li>Иконку для макроса выбираете из набора, который выдаёт владелец панели (кнопка «+ Добавить иконку для макросов» пополняет этот набор — общим для всех он станет, только если владелец опубликует его через «🌐 Общий доступ»).</li>
+          <li>Иконку для макроса выбираете из набора, который выдаёт владелец панели (кнопка «+ Добавить иконку для макросов» пополняет этот набор).</li>
           <li>В самом макросе — до 12 строк текста, в каждой до 25 символов.</li>
           <li>Готовые макросы показываются полоской «Мои макросы» под иконками — перетаскиваются на ячейки панели так же, как обычные иконки.</li>
           <li>Клик по ячейке с макросом (не перетаскивание) показывает его текст.</li>
@@ -1210,13 +1177,6 @@
   const STORAGE_KEY = "l2SkillPanelData";
   const THEME_KEY = "l2SkillPanelTheme";
 
-  // ---- общее хранилище картинок (GitHub Gist) ----
-  const GH_API = "https://api.github.com";
-  const GH_FILE = "l2-panel-data.json";
-  const DEFAULT_GIST_ID = "c8a765028aa827750de49bc472cbd0a2";
-  const GH_TOKEN_KEY = "l2GhToken";
-  const GH_GIST_KEY = "l2GhGistId";
-
   const CLASSES = {
     "Human Fighter": ["Dreadnought","Duelist","Phoenix Knight","Hell Knight","Adventurer","Sagittarius"],
     "Human Mystic": ["Archmage","Soultaker","Arcana Lord","Cardinal","Hierophant"],
@@ -1237,7 +1197,6 @@
   }
 
   let state = loadState();
-  const isFreshInstall = Object.keys(state.profiles).length === 0;
   let prof = activeProfile();
 
   function emptyProfile(){
@@ -2190,11 +2149,10 @@
   // ---- hamburger menu ----
   const menuBtn = document.getElementById("menuBtn");
   const menuPanel = document.getElementById("menuPanel");
-  // «Добавить иконки» и «Общий доступ» видит только владелец (у кого сохранён токен)
+  // «Добавить иконки» видит только владелец панели (см. isOwner())
   function refreshOwnerUI(){
     const owner = isOwner();
     document.getElementById("menuAddIcons").style.display = owner ? "" : "none";
-    // «Общий доступ» остаётся видимым всем — иначе некуда вставить токен и стать владельцем
   }
   menuBtn.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -2222,7 +2180,6 @@
       helpOverlay.classList.remove("show");
       menuPanel.classList.remove("show");
       addIconsOverlay.classList.remove("show");
-      ghOverlay.classList.remove("show");
       macroOverlay.classList.remove("show");
       macroViewOverlay.classList.remove("show");
       confirmOverlay.classList.remove("show");
@@ -2447,214 +2404,16 @@
     history.replaceState(null, "", location.pathname + location.search);
   }
 
-  // ---- общее хранилище картинок (GitHub Gist) ----
-  function ghToken(){ return localStorage.getItem(GH_TOKEN_KEY) || ""; }
-  // владелец — тот, у кого в этом браузере сохранён токен публикации;
-  // только он видит крестики удаления групп/иконок
-  function isOwner(){ return !!ghToken(); }
-  function ghGistId(){ return localStorage.getItem(GH_GIST_KEY) || DEFAULT_GIST_ID; }
-
-  // собираем картинки всех классов + общий набор иконок для макросов — бинды клавиш и сами макросы остаются личными
-  function buildSharedPayload(){
-    const profiles = {};
-    const groups = {};
-    Object.keys(state.profiles).forEach(key => {
-      const p = state.profiles[key];
-      const cells = p.cells || {};
-      const imgs = {};
-      Object.keys(cells).forEach(ck => {
-        if(cells[ck] && cells[ck].img) imgs[ck] = cells[ck].img;
-      });
-      if(Object.keys(imgs).length) profiles[key] = imgs;
-      if(Array.isArray(p.groups) && p.groups.length) groups[key] = p.groups;
-    });
-    return {
-      updatedAt: Date.now(),
-      profiles,
-      groups,
-      globalGroups: state.globalGroups,
-      macroIcons: state.macroIcons
-    };
-  }
-
-  async function ghPublish(){
-    const token = ghToken();
-    if(!token){
-      ghStatus("Сначала вставьте токен.", true);
-      return;
-    }
-    ghStatus("Публикую…");
-    const payload = JSON.stringify(buildSharedPayload(), null, 0);
-    const gistId = ghGistId();
-    try{
-      let res;
-      if(gistId){
-        res = await fetch(GH_API + "/gists/" + gistId, {
-          method: "PATCH",
-          headers: { "Authorization": "token " + token, "Content-Type": "application/json" },
-          body: JSON.stringify({ files: { [GH_FILE]: { content: payload } } })
-        });
-      } else {
-        res = await fetch(GH_API + "/gists", {
-          method: "POST",
-          headers: { "Authorization": "token " + token, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            description: "L2 Skill Panel — общие иконки",
-            public: true,
-            files: { [GH_FILE]: { content: payload } }
-          })
-        });
-      }
-      if(!res.ok) throw new Error("HTTP " + res.status);
-      const data = await res.json();
-      localStorage.setItem(GH_GIST_KEY, data.id);
-      renderGhModal();
-      ghStatus("Опубликовано ✓ (" + new Date().toLocaleTimeString() + ")");
-      showToast("Иконки опубликованы для всех");
-    }catch(err){
-      ghStatus("Ошибка публикации: проверьте токен (нужен scope «gist»).", true);
-    }
-  }
-
-  async function ghFetchShared(){
-    const gistId = ghGistId();
-    if(!gistId) return null;
-    const res = await fetch(GH_API + "/gists/" + gistId);
-    if(!res.ok) return null;
-    const data = await res.json();
-    const file = data.files && data.files[GH_FILE];
-    if(!file) return null;
-    const raw = await fetch(file.raw_url);
-    if(!raw.ok) return null;
-    try{ return JSON.parse(await raw.text()); }catch(e){ return null; }
-  }
-
-  // добавляет недостающие группы/иконки в список, ничего не удаляя (безопасное объединение)
-  function mergeGroupList(targetList, incomingGroups){
-    let changed = 0;
-    (incomingGroups || []).forEach(ig => {
-      let g = targetList.find(x => x.id === ig.id);
-      if(!g){
-        g = { id: ig.id, name: ig.name || "Группа", icons: [] };
-        targetList.push(g);
-        changed++;
-      }
-      (ig.icons || []).forEach(src => {
-        if(!g.icons.includes(src)){ g.icons.push(src); changed++; }
-      });
-    });
-    return changed;
-  }
-
-  function mergeSharedInto(shared, force){
-    if(!shared) return 0;
-    let changed = 0;
-    if(shared.profiles){
-      Object.keys(shared.profiles).forEach(key => {
-        if(!state.profiles[key]) state.profiles[key] = emptyProfile();
-        const p = state.profiles[key];
-        if(!p.cells) p.cells = {};
-        Object.keys(shared.profiles[key]).forEach(ck => {
-          const already = p.cells[ck] && p.cells[ck].img;
-          if(force || !already){
-            if(!p.cells[ck]) p.cells[ck] = {};
-            p.cells[ck].img = shared.profiles[key][ck];
-            changed++;
-          }
-        });
-      });
-    }
-    if(shared.groups){
-      Object.keys(shared.groups).forEach(key => {
-        if(!state.profiles[key]) state.profiles[key] = emptyProfile();
-        const p = state.profiles[key];
-        if(!Array.isArray(p.groups)) p.groups = [];
-        changed += mergeGroupList(p.groups, shared.groups[key]);
-      });
-    }
-    if(Array.isArray(shared.globalGroups)){
-      changed += mergeGroupList(state.globalGroups, shared.globalGroups);
-    }
-    if(Array.isArray(shared.macroIcons)){
-      shared.macroIcons.forEach(src => {
-        if(!state.macroIcons.includes(src)){ state.macroIcons.push(src); changed++; }
-      });
-    }
-    return changed;
-  }
-
-  async function ghPullLatest(force){
-    ghStatus("Загружаю из общего доступа…");
-    const shared = await ghFetchShared();
-    if(!shared){
-      ghStatus("Общее хранилище пока пустое или недоступно.", true);
-      return;
-    }
-    const changed = mergeSharedInto(shared, force);
-    if(changed){
-      switchProfile();
-      renderAllCells();
-      saveState();
-    }
-    ghStatus(changed ? "Обновлено: " + changed + " иконок." : "Уже всё актуально.");
-    showToast("Общие иконки обновлены");
-  }
-
-  async function ghAutoAdoptOnFirstVisit(isFreshInstall){
-    if(!ghGistId()) return;
-    const shared = await ghFetchShared();
-    if(!shared) return;
-    const changed = mergeSharedInto(shared, isFreshInstall);
-    if(changed){
-      switchProfile();
-      renderAllCells();
-      saveState();
-    }
-  }
-
-  // ---- GitHub modal ----
-  const ghOverlay = document.getElementById("ghOverlay");
-  const ghTokenInput = document.getElementById("ghTokenInput");
-  const ghGistLine = document.getElementById("ghGistLine");
-  const ghStatusEl = document.getElementById("ghStatus");
-  function ghStatus(msg, isErr){
-    ghStatusEl.textContent = msg;
-    ghStatusEl.style.color = isErr ? "var(--danger-lit)" : "var(--text-dim)";
-  }
-  function renderGhModal(){
-    ghTokenInput.value = ghToken();
-    const id = ghGistId();
-    ghGistLine.textContent = id ? ("ID: " + id) : "Ещё не публиковалось на этом устройстве.";
-  }
-  document.getElementById("menuGithub").addEventListener("click", () => {
-    renderGhModal();
-    ghStatus("");
-    ghOverlay.classList.add("show");
-  });
-  ghTokenInput.addEventListener("change", () => {
-    localStorage.setItem(GH_TOKEN_KEY, ghTokenInput.value.trim());
-    renderLibrary();
+  // владелец панели — единственный конкретный аккаунт кабинета; только ему видны
+  // добавление иконок и крестики удаления групп/иконок, у всех остальных их нет вообще
+  const PANEL_OWNER_USERNAME = "МрачныйЛорд";
+  let ownerProfile = null;
+  function isOwner(){ return ownerProfile?.username === PANEL_OWNER_USERNAME; }
+  L2Cabinet.getProfile().then(p => {
+    ownerProfile = p;
     refreshOwnerUI();
-  });
-  document.getElementById("ghPublishBtn").addEventListener("click", ghPublish);
-  document.getElementById("ghPullBtn").addEventListener("click", async () => {
-    const ok = await showConfirm("Заменить локальные картинки на те, что в общем хранилище (там, где они есть)?", { yesLabel: "Заменить" });
-    if(ok) ghPullLatest(true);
-  });
-  document.getElementById("ghForgetBtn").addEventListener("click", () => {
-    localStorage.removeItem(GH_TOKEN_KEY);
-    renderGhModal();
     renderLibrary();
-    refreshOwnerUI();
-    ghStatus("Токен забыт на этом устройстве.");
-  });
-  document.getElementById("ghGistCopy").addEventListener("click", async () => {
-    const id = ghGistId();
-    if(!id) return;
-    await copyOrShow(id, "ID общего хранилища");
-  });
-  document.getElementById("ghClose").addEventListener("click", () => ghOverlay.classList.remove("show"));
-  ghOverlay.addEventListener("click", (e) => { if(e.target === ghOverlay) ghOverlay.classList.remove("show"); });
+  }).catch(() => {});
 
   // ---- макросы ----
   const macroOverlay = document.getElementById("macroOverlay");
@@ -2793,7 +2552,6 @@
   applyMainPos();
   refreshOwnerUI();
   tryLoadShared();
-  ghAutoAdoptOnFirstVisit(isFreshInstall);
 })();
 </script>
 </body>
