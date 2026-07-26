@@ -196,6 +196,10 @@
             <label for="attNickSearch">Поиск по нику</label>
             <input type="text" id="attNickSearch" placeholder="Ник" />
           </div>
+          <div class="field">
+            <label for="attGroupFilter">Пати</label>
+            <select id="attGroupFilter"><option value="">Все</option></select>
+          </div>
           <button class="btn" id="attNickSearchBtn">Поиск</button>
         </div>
         <div class="tools">
@@ -411,6 +415,8 @@
   let attNickFilter = "";            // поиск по нику (подстрока, без регистра)
   let activeFilterKey = null;        // текущая активная вкладка-фильтр
   let nickGroupsMap = new Map();     // nickname -> [{id, name}] групп из раздела «Группы»
+  let groupsList = [];               // [{id, name}] — для выпадающего списка «Пати»
+  let activeGroupFilterId = "";      // "" — все, иначе id выбранной группы/пати
 
   async function loadNickGroups(){
     const { data, error } = await db
@@ -423,6 +429,37 @@
       nickGroupsMap.get(row.nickname).push({ id: row.group_id, name: row.clan_groups?.name || "?" });
     });
   }
+
+  async function loadGroupsList(){
+    const { data, error } = await db.from("clan_groups").select("id, name").order("name");
+    if(error){ console.error(error); return; }
+    groupsList = data || [];
+  }
+
+  function renderGroupFilterOptions(){
+    const sel = document.getElementById("attGroupFilter");
+    sel.innerHTML = "";
+    const allOpt = document.createElement("option");
+    allOpt.value = ""; allOpt.textContent = "Все";
+    sel.appendChild(allOpt);
+    groupsList.forEach(g => {
+      const opt = document.createElement("option");
+      opt.value = g.id; opt.textContent = g.name;
+      sel.appendChild(opt);
+    });
+    sel.value = "";
+  }
+
+  // ник попадает в отчёт, только если либо «Пати» = «Все», либо он состоит в выбранной группе
+  function passesGroupFilter(nickname){
+    if(!activeGroupFilterId) return true;
+    return (nickGroupsMap.get(nickname) || []).some(g => g.id === activeGroupFilterId);
+  }
+
+  document.getElementById("attGroupFilter").addEventListener("change", (e) => {
+    activeGroupFilterId = e.target.value;
+    if(activeFilterKey) renderReportTable(activeFilterKey);
+  });
 
   function showNickInfo(nickname){
     document.getElementById("nickInfoTitle").textContent = nickname;
@@ -790,6 +827,7 @@
     const filter = REPORT_FILTERS.find(f => f.key === filterKey);
     const rows = (filter ? attReportRows.filter(filter.test) : [])
       .filter(r => !attNickFilter || r.nickname.toLowerCase().includes(attNickFilter))
+      .filter(r => passesGroupFilter(r.nickname))
       .slice()
       .sort((a, b) => b.attendedN - a.attendedN || a.nickname.localeCompare(b.nickname));
     const body = document.getElementById("attReportBody");
@@ -834,6 +872,7 @@
     const filter = REPORT_FILTERS.find(f => f.key === filterKey);
     const rows = (filter ? attReportRows.filter(filter.test) : [])
       .filter(r => !attNickFilter || r.nickname.toLowerCase().includes(attNickFilter))
+      .filter(r => passesGroupFilter(r.nickname))
       .slice()
       .sort((a, b) => b.attendedN - a.attendedN || a.nickname.localeCompare(b.nickname));
 
@@ -882,6 +921,7 @@
     const filter = REPORT_FILTERS.find(f => f.key === filterKey);
     const rows = (filter ? attReportRows.filter(filter.test) : [])
       .filter(r => !attNickFilter || r.nickname.toLowerCase().includes(attNickFilter))
+      .filter(r => passesGroupFilter(r.nickname))
       .slice()
       .sort((a, b) => a.nickname.localeCompare(b.nickname));
     const yes = rows.filter(r => r.attended);
@@ -985,10 +1025,12 @@
     }
     document.getElementById("attReportError").textContent = "";
     attNickFilter = "";
+    activeGroupFilterId = "";
     document.getElementById("attNickSearch").value = "";
     await loadFilterVisibility();
     await loadReportStyle();
-    await loadNickGroups();
+    await Promise.all([loadNickGroups(), loadGroupsList()]);
+    renderGroupFilterOptions();
     document.getElementById("reportModeTabs").style.display = advancedView ? "" : "none";
     setReportMode("period");
     document.getElementById("daysContainer").style.display = "none";
@@ -1180,6 +1222,7 @@
       day: document.getElementById("attDay").value,
       filter: activeFilterKey,
       nick: document.getElementById("attNickSearch").value,
+      group: activeGroupFilterId,
       collapsed: document.body.classList.contains("hide-controls"),
     }));
   }
@@ -1199,7 +1242,10 @@
 
     await loadFilterVisibility();
     await loadReportStyle();
-    await loadNickGroups();
+    await Promise.all([loadNickGroups(), loadGroupsList()]);
+    renderGroupFilterOptions();
+    activeGroupFilterId = st.group || "";
+    document.getElementById("attGroupFilter").value = activeGroupFilterId;
     document.getElementById("reportModeTabs").style.display = advancedView ? "" : "none";
     setReportMode(st.mode === "day" ? "day" : "period");
     document.getElementById("daysContainer").style.display = "none";
