@@ -21,6 +21,14 @@ function initWeekRoster(config){
     // если задан — ник в списке становится кликабельным (крестик удаления не рисуется,
     // удаление остаётся через «Удалить списком»). Используется налогами.
     onNickClick = null,
+    // доп. колонки в select строк недели, например ", kind" (используется налогами
+    // для различения обычной оплаты / оплаты наперёд / погашения долга)
+    extraSelect = "",
+    // (entry) => доп. css-класс(ы) для чипа этого ника, или "" — красит чип по entry.*
+    chipClass = null,
+    // (nickname) => доп. поля, подмешиваемые в строку при обычном сохранении списка
+    // недели (saveWeekBtn) — например { kind: "normal" }
+    extraInsertFields = () => ({}),
   } = config;
 
   const addEntryBtn = document.getElementById("addEntryBtn");
@@ -92,7 +100,7 @@ function initWeekRoster(config){
   async function loadWeek(){
     const { data, error } = await db
       .from(tableName)
-      .select("id, nickname")
+      .select("id, nickname" + extraSelect)
       .eq("week_start", isoDate(currentWeek))
       .order("nickname");
     if(error){ console.error(error); weekEntries = []; }
@@ -120,6 +128,10 @@ function initWeekRoster(config){
 
       const chip = document.createElement("div");
       chip.className = "chip roster-chip";
+      if(chipClass){
+        const extra = chipClass(entry);
+        if(extra) chip.classList.add(...extra.split(" ").filter(Boolean));
+      }
 
       if(selectMode){
         const cb = document.createElement("input");
@@ -277,6 +289,7 @@ function initWeekRoster(config){
       week_start: isoDate(currentWeek),
       nickname,
       created_by: profile.id,
+      ...extraInsertFields(nickname),
     }));
     const { error } = await db.from(tableName).insert(rows);
     if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }

@@ -12,6 +12,22 @@
   .sort-row select{ flex:none; width:auto; }
   .legend{ display:flex; flex-wrap:wrap; gap:14px; margin-top:16px; font-size:12px; color: var(--text-dim); }
   .legend .swatch{ display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+  /* заплатил наперёд — зелёный, погасил долг — оранжевый (см. helpBody «Клик по нику») */
+  .tax-chip-ahead{ border-color: var(--ok); color: var(--ok); }
+  .tax-chip-debt{ border-color:#d98a3d; color:#d98a3d; }
+
+  /* отчёт по налогам матрицей (недели колонками) — тот же sticky-паттерн, что в
+     отчёте «Посещаемость»: overflow:auto + max-height на обёртке, position:sticky на шапке */
+  #taxReportTableWrap{ overflow:auto; max-height:70vh; }
+  #taxReportHead th{
+    position:sticky; top:0; z-index:2;
+    background: var(--panel); color: var(--text-dim);
+    font-size:12px; font-weight:500; text-align:center;
+    padding:6px 10px; border-bottom:1px solid var(--border);
+  }
+  #taxReportHead th:first-child{ text-align:left; }
+  #taxReportBody td{ padding:6px 10px; text-align:center; }
+  #taxReportBody td:first-child{ text-align:left; }
 </style>
 </head>
 <body>
@@ -27,6 +43,7 @@
     <button class="btn" id="nextWeekBtn">▶</button>
     <button class="btn" id="todayBtn">Сегодня</button>
     <button class="btn btn-primary" id="openReportBtn">Отчёт по налогам</button>
+    <button class="btn" id="openDonationsBtn">Донаты</button>
   </section>
 
   <section class="card">
@@ -82,11 +99,17 @@
       <label>Что отметить</label>
       <label class="checkbox-row"><input type="radio" name="taxAction" value="ahead" checked /> Заплатил наперёд</label>
       <label class="checkbox-row"><input type="radio" name="taxAction" value="debt" /> Погасил долг</label>
+      <label class="checkbox-row"><input type="radio" name="taxAction" value="donate" /> Задонатил</label>
     </div>
 
-    <div class="field">
+    <div class="field" id="nickWeeksField">
       <label for="nickWeeks">На сколько недель</label>
       <input type="number" id="nickWeeks" min="1" max="52" value="1" />
+    </div>
+
+    <div class="field" id="nickDonateField" style="display:none;">
+      <label for="nickDonateAmount">Сколько задонатил</label>
+      <input type="number" id="nickDonateAmount" min="0" step="0.01" placeholder="Сумма" />
     </div>
 
     <p class="hint" id="nickHint"></p>
@@ -121,30 +144,63 @@
       </div>
     </div>
 
-    <div id="reportResultView" style="display:none;">
-      <h2>Отчёт по налогам</h2>
-      <div class="sort-row">
-        <label class="hint" for="reportSort">Сортировка:</label>
-        <select id="reportSort">
-          <option value="paid_desc">Оплата: сначала оплатившие</option>
-          <option value="paid_asc">Оплата: сначала должники</option>
-          <option value="name_asc">Имя: А → Я</option>
-          <option value="name_desc">Имя: Я → А</option>
-        </select>
+  </div>
+</div>
+
+<!-- Полноэкранный отчёт по налогам: недели матрицей (как в отчёте «Посещаемость») -->
+<div id="taxReportView" style="display:none;">
+  <section class="card">
+    <div class="table-head-row">
+      <div class="date-range-row" style="margin:0;">
+        <div class="field">
+          <label for="taxReportNickSearch">Поиск по нику</label>
+          <input type="text" id="taxReportNickSearch" placeholder="Ник" />
+        </div>
+        <div class="field">
+          <label for="taxReportGroupFilter">Пати</label>
+          <select id="taxReportGroupFilter"><option value="">Все</option></select>
+        </div>
+        <div class="field">
+          <label for="taxReportSort">Сортировка</label>
+          <select id="taxReportSort">
+            <option value="paid_desc">Оплата: сначала оплатившие</option>
+            <option value="paid_asc">Оплата: сначала должники</option>
+            <option value="name_asc">Имя: А → Я</option>
+            <option value="name_desc">Имя: Я → А</option>
+          </select>
+        </div>
       </div>
-      <div style="overflow-x:auto;">
-        <table class="report-table">
-          <thead>
-            <tr><th>Никнейм</th><th>Оплаты</th><th>%</th><th>Статус</th></tr>
-          </thead>
-          <tbody id="reportBody"></tbody>
-        </table>
-      </div>
-      <div class="legend" id="reportLegend"></div>
-      <div class="report-actions">
-        <button class="btn" id="reportBackBtn">← Назад к выбору недель</button>
+      <div class="tools">
+        <button class="btn" id="taxReportBackBtn">← Назад к выбору недель</button>
       </div>
     </div>
+
+    <div class="matrix-scroll" id="taxReportTableWrap">
+      <table class="matrix-table">
+        <thead id="taxReportHead"></thead>
+        <tbody id="taxReportBody"></tbody>
+      </table>
+    </div>
+    <p class="empty-hint" id="taxReportEmpty" style="display:none;">Нет данных за выбранные недели.</p>
+    <div class="legend" id="taxReportLegend"></div>
+  </section>
+</div>
+
+<!-- Список всех донатов -->
+<div class="modal-overlay" id="donationsOverlay">
+  <div class="modal report-modal">
+    <button class="modal-close" id="donationsClose" title="Закрыть">×</button>
+    <h2>Донаты</h2>
+    <div style="overflow-x:auto;">
+      <table class="report-table">
+        <thead>
+          <tr><th>Никнейм</th><th>Сумма</th><th>Дата</th><th></th></tr>
+        </thead>
+        <tbody id="donationsBody"></tbody>
+      </table>
+    </div>
+    <p class="hint" id="donationsEmpty" style="display:none;">Донатов ещё не было.</p>
+    <p class="error-msg" id="donationsError"></p>
   </div>
 </div>
 
@@ -164,7 +220,8 @@
     <details class="help-section">
       <summary>Клик по нику</summary>
       <div class="help-body">
-        <p>Открывает окно, где можно отметить <b>«Заплатил наперёд»</b> или <b>«Погасил долг»</b> и указать, на сколько недель. Ник добавится в списки следующих недель (наперёд) или предыдущих (долг) — под окном сразу видно, какие именно недели затронет.</p>
+        <p>Открывает окно, где можно отметить <b>«Заплатил наперёд»</b> или <b>«Погасил долг»</b> и указать, на сколько недель. Ник добавится в списки следующих недель (наперёд) или предыдущих (долг) — под окном сразу видно, какие именно недели затронет. В списке недели такие ники подсвечиваются: наперёд — зелёным, долг — оранжевым.</p>
+        <p><b>«Задонатил»</b> — отдельно от недель: впишите сумму, запись попадёт в общий список донатов (кнопка «Донаты»).</p>
         <p>Удалить ник из недели можно кнопкой «Удалить списком».</p>
       </div>
     </details>
@@ -172,11 +229,18 @@
     <details class="help-section">
       <summary>Отчёт по налогам</summary>
       <div class="help-body">
-        <p>Кнопка «Отчёт по налогам» — выберите любые недели галочками и нажмите «Показать отчёт». Для каждого ника посчитается, сколько раз из выбранных недель он платил, и статус:</p>
+        <p>Кнопка «Отчёт по налогам» — выберите любые недели галочками и нажмите «Показать отчёт». Откроется таблица-матрица (как в отчёте «Посещаемость»): по колонке на каждую выбранную неделю, ✓ если оплачена, плюс поиск по нику и фильтр «Пати». Для каждого ника посчитается, сколько раз из выбранных недель он платил, и статус:</p>
         <ul>
           <li><b>Новый</b> — этот ник впервые встретился в самой свежей «Переписи клана» (или его там ещё вообще нет).</li>
           <li><b>Старый</b> — ник встречался в переписи и раньше, до самой свежей.</li>
         </ul>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary>Донаты</summary>
+      <div class="help-body">
+        <p>Кнопка «Донаты» открывает список всех записанных донатов (ник, сумма, дата). Добавляются они через клик по нику → «Задонатил» → сумма.</p>
       </div>
     </details>
 
@@ -216,6 +280,10 @@
     addBtnIdleLabel: "+ Добавить оплаты",
     addBtnOpenLabel: "Скрыть загрузку",
     onNickClick: openNickModal,
+    extraSelect: ", kind",
+    // наперёд — зелёный, долг — оранжевый; обычная оплата за саму неделю — как раньше
+    chipClass: (entry) => entry.kind === "ahead" ? "tax-chip-ahead" : entry.kind === "debt" ? "tax-chip-debt" : "",
+    extraInsertFields: () => ({ kind: "normal" }),
   });
 
   // ---- клик по нику: оплата наперёд / погашение долга ----
@@ -247,8 +315,15 @@
   }
 
   function refreshNickHint(){
+    const action = currentAction();
+    document.getElementById("nickWeeksField").style.display = action === "donate" ? "none" : "";
+    document.getElementById("nickDonateField").style.display = action === "donate" ? "" : "none";
+    if(action === "donate"){
+      document.getElementById("nickHint").textContent = "";
+      return;
+    }
     const count = Math.max(1, Number(document.getElementById("nickWeeks").value) || 1);
-    const weeks = targetWeeks(currentAction(), count);
+    const weeks = targetWeeks(action, count);
     document.getElementById("nickHint").textContent =
       "Недели: " + weeks.map(w => weekRangeLabel(w)).join(", ");
   }
@@ -259,6 +334,7 @@
     document.getElementById("nickError").textContent = "";
     document.getElementById("nickOk").textContent = "";
     document.getElementById("nickWeeks").value = "1";
+    document.getElementById("nickDonateAmount").value = "";
     document.querySelector('input[name="taxAction"][value="ahead"]').checked = true;
     document.getElementById("nickApplyBtn").style.display = isAdmin ? "" : "none";
     refreshNickHint();
@@ -282,8 +358,25 @@
     const okEl = document.getElementById("nickOk");
     errEl.textContent = ""; okEl.textContent = "";
 
+    const action = currentAction();
+
+    if(action === "donate"){
+      const amount = Number(document.getElementById("nickDonateAmount").value);
+      if(!isFinite(amount) || amount <= 0){ errEl.textContent = "Впишите сумму доната."; return; }
+      const { error } = await db.from("tax_donations").insert({
+        clan_id: profile.clan_id,
+        nickname: nickModalNick,
+        amount,
+        created_by: profile.id,
+      });
+      if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
+      okEl.textContent = "Донат записан.";
+      document.getElementById("nickDonateAmount").value = "";
+      return;
+    }
+
     const count = Math.max(1, Number(document.getElementById("nickWeeks").value) || 1);
-    const weeks = targetWeeks(currentAction(), count);
+    const weeks = targetWeeks(action, count);
 
     // не плодим дубли: смотрим, где этот ник за эти недели уже отмечен
     const { data: existing, error: exErr } = await db
@@ -299,6 +392,7 @@
       week_start,
       nickname: nickModalNick,
       created_by: profile.id,
+      kind: action, // "ahead" | "debt" — красит ник в списке недели (зелёный/оранжевый)
     }));
 
     if(!rows.length){ okEl.textContent = "Уже отмечено на все эти недели."; return; }
@@ -331,12 +425,10 @@
   const reportOverlay = document.getElementById("reportOverlay");
   const pickView = document.getElementById("reportPickView");
   const archiveView = document.getElementById("reportArchiveView");
-  const resultView = document.getElementById("reportResultView");
 
   function showView(view){
     pickView.style.display = view === "pick" ? "" : "none";
     archiveView.style.display = view === "archive" ? "" : "none";
-    resultView.style.display = view === "result" ? "" : "none";
   }
 
   async function distinctTaxWeeks(){
@@ -403,7 +495,52 @@
   reportOverlay.addEventListener("click", (e) => { if(e.target === reportOverlay) reportOverlay.classList.remove("show"); });
   document.getElementById("archiveManagerBtn").addEventListener("click", openArchiveManager);
   document.getElementById("archiveBackBtn").addEventListener("click", openReportPicker);
-  document.getElementById("reportBackBtn").addEventListener("click", openReportPicker);
+
+  // ---- донаты ----
+  async function loadDonations(){
+    const errEl = document.getElementById("donationsError");
+    errEl.textContent = "";
+    const { data, error } = await db
+      .from("tax_donations")
+      .select("id, nickname, amount, created_at")
+      .order("created_at", { ascending: false });
+    if(error){ errEl.textContent = error.message; return; }
+
+    const body = document.getElementById("donationsBody");
+    body.innerHTML = "";
+    document.getElementById("donationsEmpty").style.display = (data || []).length ? "none" : "";
+    (data || []).forEach(r => {
+      const tr = document.createElement("tr");
+      const tdNick = document.createElement("td"); tdNick.textContent = r.nickname;
+      const tdAmount = document.createElement("td"); tdAmount.textContent = r.amount;
+      const tdDate = document.createElement("td"); tdDate.textContent = new Date(r.created_at).toLocaleDateString("ru-RU");
+      const tdActions = document.createElement("td");
+      if(isAdmin){
+        const del = document.createElement("button");
+        del.className = "btn btn-danger";
+        del.textContent = "×";
+        del.title = "Удалить";
+        del.addEventListener("click", async () => {
+          if(!confirm(`Удалить донат «${r.nickname}» на ${r.amount}?`)) return;
+          await db.from("tax_donations").delete().eq("id", r.id);
+          await loadDonations();
+        });
+        tdActions.appendChild(del);
+      }
+      tr.append(tdNick, tdAmount, tdDate, tdActions);
+      body.appendChild(tr);
+    });
+  }
+  document.getElementById("openDonationsBtn").addEventListener("click", async () => {
+    await loadDonations();
+    document.getElementById("donationsOverlay").classList.add("show");
+  });
+  document.getElementById("donationsClose").addEventListener("click", () => {
+    document.getElementById("donationsOverlay").classList.remove("show");
+  });
+  document.getElementById("donationsOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "donationsOverlay") e.currentTarget.classList.remove("show");
+  });
 
   const COLORS = {
     newZero:   "#F3C9A0",
@@ -423,7 +560,13 @@
     return { status: "Старый", color: COLORS.oldSome };
   }
 
-  let lastReportRows = [];
+  let taxReportRows = [];
+  let taxReportWeeksSorted = [];       // выбранные недели по возрастанию — колонки матрицы
+  let taxReportNickWeeks = new Map();  // nickname -> Set(week_start), какие недели оплачены
+  let taxNickFilter = "";              // поиск по нику (подстрока, без регистра)
+  let taxGroupsList = [];              // [{id, name}] — для «Пати»
+  let taxNickGroupsMap = new Map();    // nickname -> [{id, name}] групп из раздела «Группы»
+  let activeTaxGroupFilterId = "";     // "" — все, иначе id выбранной группы/пати
 
   async function buildReport(selectedWeeks){
     const [{ data: census, error: censusErr }, { data: payments, error: payErr }] = await Promise.all([
@@ -446,8 +589,11 @@
     );
 
     const paidCount = new Map();
+    const nickWeeks = new Map(); // nickname -> Set(week_start), для матрицы
     (payments || []).forEach(row => {
       paidCount.set(row.nickname, (paidCount.get(row.nickname) || 0) + 1);
+      if(!nickWeeks.has(row.nickname)) nickWeeks.set(row.nickname, new Set());
+      nickWeeks.get(row.nickname).add(row.week_start);
     });
 
     const allNicks = new Set([...latestRoster, ...paidCount.keys()]);
@@ -462,7 +608,7 @@
       return { nickname, paid, total, percent, status, color };
     });
 
-    return rows;
+    return { rows, nickWeeks };
   }
 
   function sortRows(rows, mode){
@@ -476,20 +622,90 @@
     return copy;
   }
 
-  function renderReport(){
-    const mode = document.getElementById("reportSort").value;
-    const rows = sortRows(lastReportRows, mode);
-    const body = document.getElementById("reportBody");
+  async function loadTaxNickGroups(){
+    const { data, error } = await db
+      .from("clan_group_members")
+      .select("group_id, nickname, clan_groups(name)");
+    if(error){ console.error(error); return; }
+    taxNickGroupsMap = new Map();
+    (data || []).forEach(row => {
+      if(!taxNickGroupsMap.has(row.nickname)) taxNickGroupsMap.set(row.nickname, []);
+      taxNickGroupsMap.get(row.nickname).push({ id: row.group_id, name: row.clan_groups?.name || "?" });
+    });
+  }
+
+  async function loadTaxGroupsList(){
+    const { data, error } = await db.from("clan_groups").select("id, name").order("name");
+    if(error){ console.error(error); return; }
+    taxGroupsList = data || [];
+  }
+
+  function renderTaxGroupFilterOptions(){
+    const sel = document.getElementById("taxReportGroupFilter");
+    sel.innerHTML = "";
+    const allOpt = document.createElement("option");
+    allOpt.value = ""; allOpt.textContent = "Все";
+    sel.appendChild(allOpt);
+    taxGroupsList.forEach(g => {
+      const opt = document.createElement("option");
+      opt.value = g.id; opt.textContent = g.name;
+      sel.appendChild(opt);
+    });
+    sel.value = "";
+  }
+
+  function passesTaxGroupFilter(nickname){
+    if(!activeTaxGroupFilterId) return true;
+    return (taxNickGroupsMap.get(nickname) || []).some(g => g.id === activeTaxGroupFilterId);
+  }
+
+  function weekShortLabel(weekStartStr){
+    const monday = new Date(weekStartStr + "T00:00:00");
+    return `${pad2(monday.getDate())}.${pad2(monday.getMonth()+1)}`;
+  }
+
+  // «заморозка» шапки матрицы при вертикальной прокрутке — тот же приём, что в отчёте «Посещаемость»
+  function applyTaxStickyHead(){
+    const headEl = document.getElementById("taxReportHead");
+    headEl.style.position = "sticky";
+    headEl.style.top = "0";
+  }
+
+  function renderTaxReportMatrix(){
+    const mode = document.getElementById("taxReportSort").value;
+    const rows = sortRows(
+      taxReportRows
+        .filter(r => !taxNickFilter || r.nickname.toLowerCase().includes(taxNickFilter))
+        .filter(r => passesTaxGroupFilter(r.nickname)),
+      mode
+    );
+
+    const head = document.getElementById("taxReportHead");
+    const weekCells = taxReportWeeksSorted.map(w => `<th title="${weekRangeLabel(w)}">${weekShortLabel(w)}</th>`).join("");
+    head.innerHTML = `<tr><th>Никнейм</th>${weekCells}<th>Итого</th><th>%</th><th>Статус</th></tr>`;
+    applyTaxStickyHead();
+
+    const body = document.getElementById("taxReportBody");
     body.innerHTML = "";
+    document.getElementById("taxReportEmpty").style.display = rows.length ? "none" : "";
     rows.forEach(r => {
       const tr = document.createElement("tr");
       tr.style.background = r.color;
       tr.style.color = DARK_TEXT;
       const tdNick = document.createElement("td"); tdNick.textContent = r.nickname;
+      tr.appendChild(tdNick);
+
+      const nickWeekSet = taxReportNickWeeks.get(r.nickname) || new Set();
+      taxReportWeeksSorted.forEach(w => {
+        const td = document.createElement("td");
+        td.textContent = nickWeekSet.has(w) ? "✓" : "";
+        tr.appendChild(td);
+      });
+
       const tdPaid = document.createElement("td"); tdPaid.textContent = `${r.paid}/${r.total}`;
       const tdPct = document.createElement("td"); tdPct.textContent = `${r.percent}%`;
       const tdStatus = document.createElement("td"); tdStatus.textContent = r.status;
-      tr.append(tdNick, tdPaid, tdPct, tdStatus);
+      tr.append(tdPaid, tdPct, tdStatus);
       body.appendChild(tr);
     });
   }
@@ -502,14 +718,28 @@
       [COLORS.oldSome, "Старый, частично"],
       [COLORS.oldFull, "Старый, оплатил всё"],
     ];
-    const el = document.getElementById("reportLegend");
+    const el = document.getElementById("taxReportLegend");
     el.innerHTML = items.map(([color, label]) =>
       `<span><span class="swatch" style="background:${color}"></span>${label}</span>`
     ).join("");
   }
   renderLegend();
 
-  document.getElementById("reportSort").addEventListener("change", renderReport);
+  document.getElementById("taxReportSort").addEventListener("change", renderTaxReportMatrix);
+  document.getElementById("taxReportGroupFilter").addEventListener("change", (e) => {
+    activeTaxGroupFilterId = e.target.value;
+    renderTaxReportMatrix();
+  });
+  function applyTaxNickSearch(){
+    taxNickFilter = document.getElementById("taxReportNickSearch").value.trim().toLowerCase();
+    renderTaxReportMatrix();
+  }
+  document.getElementById("taxReportNickSearch").addEventListener("input", applyTaxNickSearch);
+
+  document.getElementById("taxReportBackBtn").addEventListener("click", () => {
+    document.getElementById("taxReportView").style.display = "none";
+    openReportPicker();
+  });
 
   document.getElementById("showReportBtn").addEventListener("click", async () => {
     const checked = Array.from(document.querySelectorAll("#pickWeeksList input:checked")).map(cb => cb.value);
@@ -518,9 +748,20 @@
       return;
     }
     document.getElementById("pickError").textContent = "";
-    lastReportRows = await buildReport(checked);
-    renderReport();
-    showView("result");
+    taxReportWeeksSorted = checked.slice().sort();
+    const result = await buildReport(checked);
+    taxReportRows = result.rows;
+    taxReportNickWeeks = result.nickWeeks;
+
+    taxNickFilter = "";
+    document.getElementById("taxReportNickSearch").value = "";
+    activeTaxGroupFilterId = "";
+    await Promise.all([loadTaxNickGroups(), loadTaxGroupsList()]);
+    renderTaxGroupFilterOptions();
+
+    reportOverlay.classList.remove("show");
+    document.getElementById("taxReportView").style.display = "";
+    renderTaxReportMatrix();
   });
 })();
 </script>
