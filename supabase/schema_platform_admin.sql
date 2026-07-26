@@ -13,7 +13,7 @@
 -- НИ ОДНУ существующую clan-scoped RLS-политику (все они читают clan_id через profiles,
 -- а у него такой строки нет) — то есть физически не может увидеть данные ни одного клана.
 
-create table public.platform_admins (
+create table if not exists public.platform_admins (
   id uuid primary key references auth.users(id) on delete cascade
 );
 alter table public.platform_admins enable row level security;
@@ -22,6 +22,7 @@ alter table public.platform_admins enable row level security;
 -- Write-политик нет вообще ни одной — значит добавить сюда строку через обычный API-запрос
 -- нельзя никому, включая самого супер-админа; только вручную через SQL Editor / service-role.
 -- Это и гарантирует «максимум один аккаунт» и невозможность самоэскалации.
+drop policy if exists "platform_admins_select_self" on public.platform_admins;
 create policy "platform_admins_select_self" on public.platform_admins for select
   using (id = auth.uid());
 
@@ -75,6 +76,9 @@ $$;
 
 drop policy if exists "clans_select" on public.clans;
 drop policy if exists "clans_write_glavadmin" on public.clans;
+drop policy if exists "clans_select_own" on public.clans;
+drop policy if exists "clans_select_platform_admin" on public.clans;
+drop policy if exists "clans_write_platform_admin" on public.clans;
 
 -- свой клан читает любой залогиненный БЕЗ учёта access_enabled — иначе при отключённом
 -- доступе не на чем будет показать пользователю понятный экран «клан отключён» (замкнутый круг).
@@ -94,10 +98,12 @@ create policy "profiles_write_glavadmin" on public.profiles for all
   with check (public.is_glavadmin() and clan_id = public.current_clan_id());
 
 drop policy if exists "roles_write_glavadmin" on public.roles;
+drop policy if exists "roles_write_platform_admin" on public.roles;
 create policy "roles_write_platform_admin" on public.roles for all
   using (public.is_platform_admin()) with check (public.is_platform_admin());
 
 drop policy if exists "sections_write_glavadmin" on public.sections;
+drop policy if exists "sections_write_platform_admin" on public.sections;
 create policy "sections_write_platform_admin" on public.sections for all
   using (public.is_platform_admin()) with check (public.is_platform_admin());
 

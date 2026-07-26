@@ -51,6 +51,10 @@ async function requireSession(){
 }
 
 // Профиль текущего пользователя вместе с ролью и пати.
+// .maybeSingle(), не .single() — у платформенного супер-админа (и у любой учётки без
+// строки в profiles, например незавершённо созданной) 0 строк — это ожидаемый случай,
+// а не ошибка: .single() в такой ситуации бросает PGRST116 и рвёт всю страницу вместо
+// того, чтобы дать index.html показать «Профиль не найден».
 async function getProfile(){
   const { data: { user } } = await client.auth.getUser();
   if(!user) return null;
@@ -58,7 +62,7 @@ async function getProfile(){
     .from("profiles")
     .select("id, username, clan_id, party_id, must_change_password, roles(key, label, rank), parties(name), clans(access_enabled, name)")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
   if(error) throw error;
   return data;
 }

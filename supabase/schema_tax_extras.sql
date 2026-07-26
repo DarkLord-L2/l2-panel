@@ -7,7 +7,7 @@
 -- Нужно, чтобы в списке недели красить ник в зелёный (наперёд) / оранжевый (долг).
 alter table public.tax_payments add column if not exists kind text not null default 'normal';
 
-create table public.tax_donations (
+create table if not exists public.tax_donations (
   id uuid primary key default gen_random_uuid(),
   clan_id uuid not null references public.clans(id) on delete cascade,
   nickname text not null,
@@ -18,9 +18,11 @@ create table public.tax_donations (
 
 alter table public.tax_donations enable row level security;
 
+drop policy if exists "tax_donations_select" on public.tax_donations;
 create policy "tax_donations_select" on public.tax_donations for select
   using (clan_id in (select clan_id from public.profiles where id = auth.uid()));
 
+drop policy if exists "tax_donations_write_admins" on public.tax_donations;
 create policy "tax_donations_write_admins" on public.tax_donations for all
   using (
     public.current_role_key() in ('glavadmin','admin')
