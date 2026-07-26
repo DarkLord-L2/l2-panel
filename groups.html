@@ -30,6 +30,43 @@
   .group-name-row{ display:flex; align-items:center; gap:10px; flex:1; min-width:200px; }
   .group-name-row input{ font-size:18px; padding:8px 12px; flex:1; max-width:360px; }
   .group-detail-tools{ display:flex; gap:8px; }
+
+  /* карточки участников группы — фото/иконка класса подтягивается из «Проверки буста»,
+     как аватарка в самой gear-check.html (своя фотка → иконка класса → заглушка) */
+  .gm-member-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:12px; margin:10px 0; }
+  .gm-member-card{
+    position:relative;
+    display:flex; align-items:center; gap:10px;
+    background: var(--panel-2); border:1px solid var(--border); border-radius:8px;
+    padding:10px 12px;
+  }
+  .gm-member-card .avatar{
+    width:38px; height:38px; border-radius:50%; object-fit:cover; flex:none;
+    border:1px solid var(--border); background: var(--panel);
+  }
+  .gm-member-card .who{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+  .gm-member-card .name{ font-weight:600; color: var(--text); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .gm-member-card .cls{ font-size:11px; color: var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .gm-member-menu-btn{
+    margin-left:auto; flex:none;
+    width:22px; height:22px; padding:0;
+    border-radius:5px; border:1px solid transparent;
+    background:none; color: var(--text-dim); font-size:14px; line-height:1; cursor:pointer;
+  }
+  .gm-member-menu-btn:hover{ border-color: var(--border); color: var(--text); }
+  .gm-member-menu{
+    position:absolute; top:calc(100% + 4px); right:8px; z-index:10;
+    background: var(--panel); border:1px solid var(--border-lit); border-radius:8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4); padding:6px; min-width:170px;
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .gm-member-menu button{
+    display:block; width:100%; text-align:left;
+    padding:7px 10px; border-radius:5px; border:none; background:none;
+    color: var(--text); font-size:12.5px; cursor:pointer;
+  }
+  .gm-member-menu button:hover{ background: var(--panel); }
+  .gm-member-menu button.danger{ color: var(--danger-lit); }
 </style>
 </head>
 <body>
@@ -65,7 +102,7 @@
 
     <section class="card" style="margin-top:16px;">
       <h2>Участники <span class="badge" id="groupMemberCount"></span></h2>
-      <div class="chip-row" id="groupMembers"></div>
+      <div class="gm-member-grid" id="groupMembers"></div>
       <p class="hint" id="groupMembersEmpty" style="display:none;">В группе пока никого нет.</p>
 
       <div class="manual-add" id="addMemberRow" style="display:none;">
@@ -117,6 +154,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=3"></script>
+<script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -140,7 +178,17 @@
 
   let groups = [];               // [{id, name, sort_order}]
   let membersByGroup = new Map(); // group_id -> [nickname, ...]
+  let memberInfo = new Map();    // nickname -> {class_name, icon} — то же самое, что в «Проверке буста»
   let currentGroupId = null;
+
+  const BLANK_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34'></svg>";
+  function classIcon(name){ return (window.L2_CLASS_ICON && name) ? window.L2_CLASS_ICON(name) : null; }
+
+  async function loadMemberInfo(){
+    const { data } = await db.from("member_classes").select("nickname, class_name, icon");
+    memberInfo = new Map();
+    (data || []).forEach(r => memberInfo.set(r.nickname, { class_name: r.class_name, icon: r.icon }));
+  }
 
   async function loadNickOptions(){
     const { data } = await db.from("census_entries").select("nickname, week_start");
@@ -188,6 +236,44 @@
     });
   }
 
+  // меню «⋮» у карточки участника — открыто максимум одно за раз
+  function closeMemberMenu(){
+    document.querySelectorAll(".gm-member-menu").forEach(m => m.remove());
+  }
+  document.addEventListener("click", closeMemberMenu);
+
+  function toggleMemberMenu(card, nick){
+    const already = card.querySelector(".gm-member-menu");
+    closeMemberMenu();
+    if(already) return; // клик по той же карточке второй раз — просто закрыть
+
+    const menu = document.createElement("div");
+    menu.className = "gm-member-menu";
+
+    const boostBtn = document.createElement("button");
+    boostBtn.textContent = "Показать буст";
+    boostBtn.addEventListener("click", () => {
+      closeMemberMenu();
+      if(window.top && window.top.L2Nav) window.top.L2Nav.openGearCheck(currentGroupId);
+    });
+    menu.appendChild(boostBtn);
+
+    if(isAdmin){
+      const delBtn = document.createElement("button");
+      delBtn.className = "danger";
+      delBtn.textContent = "Убрать из группы";
+      delBtn.addEventListener("click", async () => {
+        closeMemberMenu();
+        await db.from("clan_group_members").delete().eq("group_id", currentGroupId).eq("nickname", nick);
+        membersByGroup.set(currentGroupId, (membersByGroup.get(currentGroupId) || []).filter(n => n !== nick));
+        renderMembers();
+      });
+      menu.appendChild(delBtn);
+    }
+
+    card.appendChild(menu);
+  }
+
   function renderMembers(){
     const nicks = (membersByGroup.get(currentGroupId) || []).slice().sort((a, b) => a.localeCompare(b));
     const wrap = document.getElementById("groupMembers");
@@ -195,21 +281,21 @@
     document.getElementById("groupMembersEmpty").style.display = nicks.length ? "none" : "";
     document.getElementById("groupMemberCount").textContent = nicks.length;
     nicks.forEach(nick => {
-      const chip = document.createElement("div");
-      chip.className = "chip";
-      chip.appendChild(document.createTextNode(nick));
-      if(isAdmin){
-        const btn = document.createElement("button");
-        btn.textContent = "×";
-        btn.title = "Убрать из группы";
-        btn.addEventListener("click", async () => {
-          await db.from("clan_group_members").delete().eq("group_id", currentGroupId).eq("nickname", nick);
-          membersByGroup.set(currentGroupId, (membersByGroup.get(currentGroupId) || []).filter(n => n !== nick));
-          renderMembers();
-        });
-        chip.appendChild(btn);
-      }
-      wrap.appendChild(chip);
+      const info = memberInfo.get(nick) || {};
+      const avatarSrc = info.icon || classIcon(info.class_name) || BLANK_IMG;
+      const card = document.createElement("div");
+      card.className = "gm-member-card";
+      card.innerHTML =
+        `<img class="avatar" src="${avatarSrc}" alt="" />` +
+        `<span class="who"><span class="name">${escapeHtml(nick)}</span>` +
+        `<span class="cls">${escapeHtml(info.class_name || "")}</span></span>`;
+      const menuBtn = document.createElement("button");
+      menuBtn.className = "gm-member-menu-btn";
+      menuBtn.textContent = "⋮";
+      menuBtn.title = "Действия";
+      menuBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleMemberMenu(card, nick); });
+      card.appendChild(menuBtn);
+      wrap.appendChild(card);
     });
   }
 
@@ -332,7 +418,7 @@
   });
 
   await loadNickOptions();
-  await loadGroups();
+  await Promise.all([loadGroups(), loadMemberInfo()]);
   renderGrid("");
 
   // открыть конкретную группу сразу, если сюда перешли по ссылке из другого раздела
