@@ -109,6 +109,7 @@
     const { data, error } = await db
       .from("profiles")
       .select("id, username, role_id, created_at, roles(label), parties(name)")
+      .eq("clan_id", profile.clan_id)
       .order("created_at", { ascending: false });
     if(error){ console.error(error); return; }
 
@@ -182,7 +183,9 @@
   }
 
   async function loadMatrix(){
-    const { data, error } = await db.from("role_sections").select("role_id, section_key, visible");
+    const { data, error } = await db.from("role_sections")
+      .select("role_id, section_key, visible")
+      .eq("clan_id", profile.clan_id);
     if(error){ console.error(error); return; }
     const map = new Map(data.map(row => [row.role_id + "|" + row.section_key, row]));
 
@@ -205,7 +208,10 @@
         const roleId = cb.dataset.role, sectionKey = cb.dataset.section;
         cb.disabled = true;
         const { error } = await db.from("role_sections")
-          .upsert({ role_id: roleId, section_key: sectionKey, visible: cb.checked }, { onConflict: "role_id,section_key" });
+          .upsert(
+            { clan_id: profile.clan_id, role_id: roleId, section_key: sectionKey, visible: cb.checked },
+            { onConflict: "clan_id,role_id,section_key" }
+          );
         if(error) console.error(error);
         cb.disabled = false;
       });

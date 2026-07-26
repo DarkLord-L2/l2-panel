@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
 
   const { data: callerProfile, error: profileErr } = await callerClient
     .from("profiles")
-    .select("roles(key)")
+    .select("clan_id, roles(key)")
     .eq("id", userData.user.id)
     .single();
 
@@ -68,6 +68,19 @@ Deno.serve(async (req) => {
   }
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+  // проверяем клан удаляемого через service-role (обычный клиент вызывающего не увидит
+  // чужой профиль по RLS) — без этой проверки лидер любого клана мог удалить
+  // пользователя ЛЮБОГО другого клана по одному только UID.
+  const { data: targetProfile, error: targetErr } = await admin
+    .from("profiles")
+    .select("clan_id")
+    .eq("id", targetId)
+    .single();
+  if (targetErr || !targetProfile || targetProfile.clan_id !== (callerProfile as { clan_id: string }).clan_id) {
+    return json({ error: "forbidden" }, 403);
+  }
+
   const { error: deleteErr } = await admin.auth.admin.deleteUser(targetId);
   if (deleteErr) {
     return json({ error: deleteErr.message }, 400);

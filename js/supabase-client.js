@@ -56,7 +56,7 @@ async function getProfile(){
   if(!user) return null;
   const { data, error } = await client
     .from("profiles")
-    .select("id, username, clan_id, party_id, roles(key, label, rank), parties(name)")
+    .select("id, username, clan_id, party_id, must_change_password, roles(key, label, rank), parties(name), clans(access_enabled, name)")
     .eq("id", user.id)
     .single();
   if(error) throw error;
@@ -139,6 +139,14 @@ async function adminOcrNicknames(imageDataUrl){
   return body.nicknames || [];
 }
 
+// Снимает флаг «нужно сменить пароль» у своей же строки после успешной смены
+// (узкая RPC — общий self-write на profiles запрещён специально, чтобы никто
+// не мог поменять себе роль/клан).
+async function clearMustChangePassword(){
+  const { error } = await client.rpc("clear_must_change_password");
+  if(error) throw error;
+}
+
 window.L2Cabinet = {
   client,
   login,
@@ -149,4 +157,5 @@ window.L2Cabinet = {
   adminCreateUser,
   adminDeleteUser,
   adminOcrNicknames,
+  clearMustChangePassword,
 };

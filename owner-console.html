@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Консоль</title>
+<link rel="stylesheet" href="js/theme.css?v=3" />
+<style>
+  .oc-wrap{ display:flex; flex-direction:column; gap:14px; padding:0 0 32px; max-width:900px; margin:0 auto; }
+  .form-row{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+  .form-row .field{ margin:0; min-width:200px; flex:1; }
+  .oc-access-on{ color: var(--ok); font-weight:600; }
+  .oc-access-off{ color: var(--danger-lit); font-weight:600; }
+  .oc-temp-pass{
+    display:flex; align-items:center; gap:10px; margin-top:10px;
+    background: var(--panel-2); border:1px solid var(--border-lit); border-radius:8px;
+    padding:10px 14px; font-size:13px;
+  }
+  .oc-temp-pass code{ font-size:14px; color: var(--gold); user-select:all; }
+</style>
+</head>
+<body>
+
+<div class="login-wrap" id="loginView" style="display:none;">
+  <form class="card login-card" id="loginForm" autocomplete="on">
+    <h1>Консоль</h1>
+    <div class="field">
+      <label for="ownerEmail">Email</label>
+      <input type="email" id="ownerEmail" name="email" autocomplete="email" required autofocus />
+    </div>
+    <div class="field">
+      <label for="password">Пароль</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" required />
+    </div>
+    <p class="error-msg" id="loginError"></p>
+    <button type="submit" class="btn btn-primary" id="loginSubmit" style="width:100%;">Войти</button>
+  </form>
+</div>
+
+<div class="login-wrap" id="deniedView" style="display:none;">
+  <div class="card login-card">
+    <h1>⛔ Нет доступа</h1>
+    <p class="hint">Эта страница недоступна с этим аккаунтом.</p>
+    <button class="btn" id="deniedBackBtn">Назад ко входу</button>
+  </div>
+</div>
+
+<div class="oc-wrap" id="panelWrap" style="display:none;">
+  <div class="admin-head" style="display:flex; align-items:center; justify-content:space-between;">
+    <h1>Консоль</h1>
+    <button class="btn btn-ghost" id="signOutBtn">Выйти</button>
+  </div>
+
+  <section class="card">
+    <h2>Новый клан</h2>
+    <form id="createClanForm">
+      <div class="form-row">
+        <div class="field">
+          <label for="clanName">Название клана</label>
+          <input type="text" id="clanName" required maxlength="80" />
+        </div>
+        <div class="field">
+          <label for="leaderUsername">Логин клан-лидера</label>
+          <input type="text" id="leaderUsername" required pattern="[a-zA-Z0-9_\-]{3,32}" title="3–32 символа: латиница, цифры, - и _" />
+        </div>
+        <button type="submit" class="btn btn-primary" id="createClanBtn">Создать</button>
+      </div>
+      <p class="error-msg" id="createClanError"></p>
+    </form>
+    <div class="oc-temp-pass" id="tempPassBox" style="display:none;">
+      <span>Логин <b id="tempPassUsername"></b>, временный пароль: <code id="tempPassValue"></code></span>
+      <button class="btn" id="tempPassCopyBtn" type="button">Скопировать</button>
+    </div>
+    <p class="hint" id="tempPassHint" style="display:none;">Передайте это клан-лидеру — больше пароль нигде не покажется. При первом входе он сменит его сам.</p>
+  </section>
+
+  <section class="card">
+    <h2>Кланы</h2>
+    <table class="data-table" id="clansTable">
+      <thead>
+        <tr><th>Название</th><th>Логин лидера</th><th>Доступ</th><th></th></tr>
+      </thead>
+      <tbody id="clansBody"></tbody>
+    </table>
+    <p class="error-msg" id="clansError"></p>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-client.js?v=3"></script>
+<script>
+(async function(){
+  // тот же публичный URL проекта, что и в js/supabase-client.js — не тянем его оттуда,
+  // чтобы не добавлять в общий файл ничего, указывающего на существование этой страницы
+  const SUPABASE_URL = "https://owacpvydbqxdhrxxitlj.supabase.co";
+  const client = L2Cabinet.client;
+
+  function showView(id){
+    ["loginView", "deniedView", "panelWrap"].forEach(v => {
+      document.getElementById(v).style.display = (v === id) ? "" : "none";
+    });
+  }
+
+  async function loadClans(){
+    const errEl = document.getElementById("clansError");
+    errEl.textContent = "";
+    const { data, error } = await client
+      .from("clans")
+      .select("id, name, leader_username, access_enabled")
+      .order("name");
+    if(error){ errEl.textContent = error.message; return; }
+
+    const body = document.getElementById("clansBody");
+    body.innerHTML = "";
+    (data || []).forEach(c => {
+      const tr = document.createElement("tr");
+      const tdName = document.createElement("td");
+      tdName.textContent = c.name;
+      const tdLeader = document.createElement("td");
+      tdLeader.textContent = c.leader_username || "—";
+      const tdAccess = document.createElement("td");
+      tdAccess.innerHTML = c.access_enabled
+        ? '<span class="oc-access-on">Да</span>'
+        : '<span class="oc-access-off">Нет</span>';
+      const tdToggle = document.createElement("td");
+      tdToggle.style.display = "flex";
+      tdToggle.style.gap = "8px";
+      const toggleBtn = document.createElement("button");
+      toggleBtn.className = c.access_enabled ? "btn btn-danger" : "btn btn-primary";
+      toggleBtn.textContent = c.access_enabled ? "Отключить доступ" : "Включить доступ";
+      toggleBtn.addEventListener("click", async () => {
+        toggleBtn.disabled = true;
+        const { error: updErr } = await client
+          .from("clans")
+          .update({ access_enabled: !c.access_enabled })
+          .eq("id", c.id);
+        if(updErr){ errEl.textContent = updErr.message; toggleBtn.disabled = false; return; }
+        await loadClans();
+      });
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "btn btn-danger";
+      deleteBtn.textContent = "Удалить клан";
+      deleteBtn.addEventListener("click", () => deleteClan(c, deleteBtn));
+      tdToggle.append(toggleBtn, deleteBtn);
+      tr.append(tdName, tdLeader, tdAccess, tdToggle);
+      body.appendChild(tr);
+    });
+  }
+
+  // необратимо: сносит всех участников клана (их логины) и весь клан целиком —
+  // требуем набрать точное название, обычного confirm() тут мало для такой цены ошибки
+  async function deleteClan(c, btn){
+    const errEl = document.getElementById("clansError");
+    errEl.textContent = "";
+    const typed = prompt(
+      `Это НЕОБРАТИМО удалит клан «${c.name}» целиком: всех участников и их логины, ` +
+      `всю перепись, группы, буст, налоги, посещаемость. Чтобы подтвердить, ` +
+      `введите точное название клана:`
+    );
+    if(typed === null) return;
+    if(typed !== c.name){ alert("Название не совпало — отменено."); return; }
+
+    btn.disabled = true;
+    try{
+      const { data: { session } } = await client.auth.getSession();
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-clan`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ clan_id: c.id }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if(!res.ok) throw new Error(body.error || "request_failed");
+      await loadClans();
+    }catch(err){
+      errEl.textContent = "Не удалось удалить: " + err.message;
+      btn.disabled = false;
+    }
+  }
+
+  async function checkAndShow(){
+    // успешный вход сам по себе ничего не значит — авторизация как супер-админ
+    // отдельная обязательная проверка (любой валидный email/пароль в системе
+    // способен успешно войти, включая аккаунты кланов).
+    const { data: isAdmin, error } = await client.rpc("is_platform_admin");
+    if(error || !isAdmin){
+      await client.auth.signOut();
+      showView("deniedView");
+      return;
+    }
+    showView("panelWrap");
+    await loadClans();
+  }
+
+  document.getElementById("deniedBackBtn").addEventListener("click", () => showView("loginView"));
+  document.getElementById("signOutBtn").addEventListener("click", async () => {
+    await client.auth.signOut();
+    showView("loginView");
+  });
+
+  document.getElementById("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errorEl = document.getElementById("loginError");
+    const submitBtn = document.getElementById("loginSubmit");
+    errorEl.textContent = "";
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Входим…";
+
+    const email = document.getElementById("ownerEmail").value;
+    const password = document.getElementById("password").value;
+    try{
+      // напрямую signInWithPassword с email как есть — в отличие от обычного логина
+      // клана (login.html), тут нет username→"@l2clan.local" превращения: у супер-админа
+      // свой настоящий email, заданный при создании аккаунта в Supabase Dashboard.
+      const { error } = await client.auth.signInWithPassword({ email, password });
+      if(error) throw error;
+      await checkAndShow();
+    }catch(err){
+      errorEl.textContent = "Неверный email или пароль";
+    }finally{
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Войти";
+    }
+  });
+
+  document.getElementById("createClanForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById("createClanError");
+    const btn = document.getElementById("createClanBtn");
+    errEl.textContent = "";
+    document.getElementById("tempPassBox").style.display = "none";
+    document.getElementById("tempPassHint").style.display = "none";
+    btn.disabled = true;
+
+    const clanName = document.getElementById("clanName").value.trim();
+    const leaderUsername = document.getElementById("leaderUsername").value.trim();
+
+    try{
+      const { data: { session } } = await client.auth.getSession();
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/create-clan`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ clan_name: clanName, leader_username: leaderUsername }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if(!res.ok) throw new Error(body.error || "request_failed");
+
+      document.getElementById("tempPassUsername").textContent = body.username;
+      document.getElementById("tempPassValue").textContent = body.temp_password;
+      document.getElementById("tempPassBox").style.display = "";
+      document.getElementById("tempPassHint").style.display = "";
+      document.getElementById("createClanForm").reset();
+      await loadClans();
+    }catch(err){
+      errEl.textContent = "Не удалось создать: " + err.message;
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById("tempPassCopyBtn").addEventListener("click", () => {
+    const val = document.getElementById("tempPassValue").textContent;
+    navigator.clipboard?.writeText(val).catch(() => {});
+  });
+
+  const { data: { session } } = await client.auth.getSession();
+  if(session){
+    await checkAndShow();
+  } else {
+    showView("loginView");
+  }
+})();
+</script>
+</body>
+</html>

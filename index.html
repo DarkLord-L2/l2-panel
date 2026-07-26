@@ -60,6 +60,22 @@
     return;
   }
 
+  if(profile.clans?.access_enabled === false){
+    // клан отключён супер-админом (например, не оплачен) — данные всё равно
+    // не отдадутся ни по одному запросу (RLS), но так у человека есть понятное
+    // сообщение вместо пустого зависшего интерфейса
+    document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
+      '<h1>⛔ Доступ приостановлен</h1>' +
+      '<p class="hint">Доступ к кабинету клана временно отключён. Обратитесь к клан-лидеру.</p>' +
+      '<button class="btn" onclick="L2Cabinet.signOut()">Выйти</button>' +
+      "</div></div>";
+    return;
+  }
+  if(profile.must_change_password){
+    location.href = "change-password.html";
+    return;
+  }
+
   const roleKey = profile.roles?.key || "obychniy";
   const roleLabel = profile.roles?.label || roleKey;
   document.getElementById("whoName").textContent = profile.username;
@@ -112,6 +128,8 @@
   window.L2Nav = {
     // from=attendance — чтобы в группе показалась кнопка «Вернуться в журнал»
     openGroup(groupId){ renderSection("groups", { group: groupId, from: "attendance" }); },
+    // из карточки участника в группе — сразу открыть таблицу буста для этой группы
+    openGearCheck(groupId){ renderSection("gear_check", { group: groupId }); },
     openSection(key){ renderSection(key); },
   };
 
