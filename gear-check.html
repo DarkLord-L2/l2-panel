@@ -10,7 +10,11 @@
   .gc-avg{ display:inline-flex; align-items:center; gap:8px; font-size:13px; color: var(--text-dim); margin:2px 0 14px; }
   .gc-avg b{ color: var(--gold); font-size:15px; }
 
-  .gc-table-scroll{ overflow-x:auto; }
+  /* overflow-x:auto без overflow-y превращает контейнер в скролл-контейнер и по вертикали
+     (браузерное правило пары overflow-x/overflow-y), из-за чего sticky-шапка ниже
+     "прилипает" к границам этого контейнера, а не к видимой области при скролле —
+     явно задаём overflow:auto + ограничение по высоте, как в matrix-scroll (attendance.html) */
+  .gc-table-scroll{ overflow:auto; max-height:75vh; }
   /* без width:100% — таблица растёт по содержимому вправо (много пунктов = шире
      таблица + горизонтальный скролл), а не сплющивает все колонки в экран */
   table.gc-table{ border-collapse:separate; border-spacing:0; width:auto; font-size:13px; }
@@ -173,6 +177,49 @@
 
   .icon-mini-btn{ width:24px; height:24px; padding:0; font-size:12px; line-height:1; border-radius:5px; }
   .gc-add-row{ margin:12px 0; }
+
+  /* экран выбора группы перед таблицей — та же карточная вёрстка, что в group-grid (groups.html) */
+  .gc-group-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px; margin-bottom:16px; }
+  .gc-group-card{
+    background: var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:16px 18px;
+    cursor:pointer;
+    transition: border-color .12s;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .gc-group-card:hover{ border-color: var(--border-lit); }
+  .gc-group-card-name{ font-size:14px; font-weight:500; color: var(--text); }
+  .gc-group-card-members{ font-size:12px; color: var(--text-dim); line-height:1.5; min-height:2.2em; }
+  .gc-group-card-foot{ display:flex; align-items:center; justify-content:space-between; }
+  .gc-table-topbar{ display:flex; align-items:center; gap:14px; margin:2px 0 14px; }
+  .gc-current-label{ font-size:13px; color: var(--text-dim); }
+
+  /* выбор класса в карточке участника — кнопка с текущей иконкой + выпадающий список с поиском */
+  .gc-class-picker{ position:relative; }
+  .gc-class-picker-btn{
+    display:flex; align-items:center; gap:8px; width:100%;
+    padding:8px 12px; border-radius:6px; border:1px solid var(--border);
+    background: var(--panel-2); color: var(--text); cursor:pointer; font-size:13px;
+    text-align:left;
+  }
+  .gc-class-picker-btn:hover{ border-color: var(--border-lit); }
+  .gc-class-picker-icon{ width:22px; height:22px; border-radius:4px; object-fit:cover; flex:none; }
+  .gc-class-dropdown{
+    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:10;
+    background: var(--panel); border:1px solid var(--border-lit); border-radius:8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4); padding:8px;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .gc-class-dropdown input{ width:100%; }
+  .gc-class-list{ overflow-y:auto; max-height:220px; display:flex; flex-direction:column; gap:2px; }
+  .gc-class-option{
+    display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:5px; cursor:pointer; font-size:13px;
+  }
+  .gc-class-option:hover{ background: var(--panel-2); }
+  .gc-class-option img{ width:22px; height:22px; border-radius:4px; object-fit:cover; flex:none; }
+  .gc-class-option.gc-class-clear{ color: var(--text-dim); font-style:italic; }
 </style>
 </head>
 <body>
@@ -182,17 +229,30 @@
     <h1>Проверка буста</h1>
   </div>
 
-  <p class="gc-avg">Средний процент буста: <b id="avgPercent">—</b></p>
+  <div id="gcPickView">
+    <p class="hint" style="margin:2px 0 16px;">Выберите группу, чтобы проверить буст только её участников, либо посмотрите тех, кто не состоит ни в одной группе.</p>
+    <div class="gc-group-grid" id="gcGroupGrid"></div>
+    <button class="btn" id="gcSoloBtn">Соло — участники без группы</button>
+  </div>
 
-  <section class="card">
-    <div class="gc-table-scroll">
-      <table class="gc-table">
-        <thead id="gcHead"></thead>
-        <tbody id="gcBody"></tbody>
-      </table>
+  <div id="gcTableView" style="display:none;">
+    <div class="gc-table-topbar" id="gcTableTopbar" style="display:none;">
+      <button class="btn btn-ghost" id="gcBackBtn">← Выбрать другую группу</button>
+      <span class="gc-current-label" id="gcCurrentLabel"></span>
     </div>
-    <p class="empty-hint" id="gcEmpty" style="display:none;">В последней переписи нет участников — сначала заполните «Перепись клана».</p>
-  </section>
+
+    <p class="gc-avg">Средний процент буста: <b id="avgPercent">—</b></p>
+
+    <section class="card">
+      <div class="gc-table-scroll">
+        <table class="gc-table">
+          <thead id="gcHead"></thead>
+          <tbody id="gcBody"></tbody>
+        </table>
+      </div>
+      <p class="empty-hint" id="gcEmpty" style="display:none;">В последней переписи нет участников — сначала заполните «Перепись клана».</p>
+    </section>
+  </div>
 </div>
 
 <div class="gc-drawer-overlay" id="drawerOverlay"></div>
@@ -218,6 +278,12 @@
   <div class="modal">
     <button class="modal-close" id="helpClose" title="Закрыть">×</button>
     <h2>Как пользоваться проверкой буста</h2>
+    <details class="help-section">
+      <summary>Выбор группы</summary>
+      <div class="help-body">
+        <p>Если в разделе «Группы» есть хотя бы одна группа, при входе сначала показывается выбор: карточка группы открывает таблицу только для её участников, кнопка «Соло» — для тех, кто не состоит ни в одной группе. Кнопка «← Выбрать другую группу» над таблицей возвращает к выбору. Если групп нет вообще, таблица сразу показывает всех.</p>
+      </div>
+    </details>
     <details class="help-section">
       <summary>Таблица</summary>
       <div class="help-body">
@@ -326,8 +392,17 @@
     <h2 id="memberTitle"></h2>
 
     <div class="field">
-      <label for="memberClassName">Класс</label>
-      <input type="text" id="memberClassName" placeholder="Например, Storm Screamer" />
+      <label>Класс</label>
+      <div class="gc-class-picker" id="classPicker">
+        <button type="button" class="gc-class-picker-btn" id="classPickerBtn">
+          <img id="classPickerIcon" class="gc-class-picker-icon" alt="" style="display:none;" />
+          <span id="classPickerLabel">Не выбран</span>
+        </button>
+        <div class="gc-class-dropdown" id="classDropdown" style="display:none;">
+          <input type="text" id="classSearchInput" placeholder="Поиск класса..." />
+          <div class="gc-class-list" id="classDropdownList"></div>
+        </div>
+      </div>
     </div>
 
     <div class="field">
@@ -348,6 +423,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=3"></script>
+<script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -364,6 +440,8 @@
   const db = L2Cabinet.client;
   document.getElementById("wrap").style.display = "";
   document.getElementById("addSectionBtn").style.display = isAdmin ? "" : "none";
+  document.getElementById("gcSoloBtn").addEventListener("click", () => { selectedGroupId = SOLO_KEY; showTableView("Соло"); });
+  document.getElementById("gcBackBtn").addEventListener("click", showPickerView);
 
   function escapeHtml(s){
     return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
@@ -374,6 +452,10 @@
   let items = [];        // [{id, section_id, name, icon, weight, sort_order}]
   let valueSet = new Set(); // `${nickname}|${item_id}` — включённые
   let memberInfo = new Map();  // nickname -> {class_name, icon}
+  let groups = [];             // [{id, name, sort_order}]
+  let membersByGroup = new Map(); // group_id -> [nickname, ...]
+  let selectedGroupId = null;  // id группы, SOLO_KEY, или null (экран выбора)
+  const SOLO_KEY = "__solo__";
   let classValues = new Map(); // `${item_id}|${class_name}` -> текст подписи
   let extraClasses = [];       // профессии, добавленные в настройках вручную
   let currentNick = null;
@@ -400,6 +482,76 @@
     let latest = null;
     (data || []).forEach(r => { if(!latest || r.week_start > latest) latest = r.week_start; });
     nicks = [...new Set((data || []).filter(r => r.week_start === latest).map(r => r.nickname))].sort((a,b)=>a.localeCompare(b));
+  }
+
+  async function loadGroups(){
+    const [{ data: g }, { data: m }] = await Promise.all([
+      db.from("clan_groups").select("id, name, sort_order").order("sort_order").order("name"),
+      db.from("clan_group_members").select("group_id, nickname").order("nickname"),
+    ]);
+    groups = g || [];
+    membersByGroup = new Map();
+    (m || []).forEach(row => {
+      if(!membersByGroup.has(row.group_id)) membersByGroup.set(row.group_id, []);
+      membersByGroup.get(row.group_id).push(row.nickname);
+    });
+  }
+
+  // список ников, которые сейчас должны попасть в таблицу — зависит от выбранной группы/«Соло»
+  function currentNicks(){
+    if(!groups.length) return nicks;
+    if(selectedGroupId === SOLO_KEY){
+      const grouped = new Set();
+      membersByGroup.forEach(list => list.forEach(n => grouped.add(n)));
+      return nicks.filter(n => !grouped.has(n));
+    }
+    if(selectedGroupId){
+      const set = new Set(membersByGroup.get(selectedGroupId) || []);
+      return nicks.filter(n => set.has(n));
+    }
+    return [];
+  }
+
+  function renderPicker(){
+    const grid = document.getElementById("gcGroupGrid");
+    grid.innerHTML = "";
+    const nickSet = new Set(nicks);
+    groups.forEach(g => {
+      const members = (membersByGroup.get(g.id) || []).filter(n => nickSet.has(n));
+      const preview = members.slice(0, 4).join(", ") + (members.length > 4 ? `, +${members.length - 4}` : "");
+      const card = document.createElement("div");
+      card.className = "gc-group-card";
+      card.innerHTML =
+        `<div class="gc-group-card-name">${escapeHtml(g.name)}</div>` +
+        `<div class="gc-group-card-members">${members.length ? escapeHtml(preview) : "Пока никого нет"}</div>` +
+        `<div class="gc-group-card-foot"><span class="badge">${members.length} участников</span></div>`;
+      card.addEventListener("click", () => { selectedGroupId = g.id; showTableView(g.name); });
+      grid.appendChild(card);
+    });
+    const grouped = new Set();
+    membersByGroup.forEach(list => list.forEach(n => grouped.add(n)));
+    const soloCount = nicks.filter(n => !grouped.has(n)).length;
+    document.getElementById("gcSoloBtn").textContent = `Соло — участники без группы (${soloCount})`;
+  }
+
+  function showPickerView(){
+    selectedGroupId = null;
+    document.getElementById("gcTableView").style.display = "none";
+    document.getElementById("gcPickView").style.display = "";
+    renderPicker();
+  }
+
+  function showTableView(label){
+    document.getElementById("gcPickView").style.display = "none";
+    document.getElementById("gcTableView").style.display = "";
+    const topbar = document.getElementById("gcTableTopbar");
+    if(groups.length){
+      topbar.style.display = "";
+      document.getElementById("gcCurrentLabel").textContent = label != null ? label : (selectedGroupId === SOLO_KEY ? "Соло" : "");
+    } else {
+      topbar.style.display = "none";
+    }
+    renderTable();
   }
 
   async function loadStructure(){
@@ -463,7 +615,19 @@
     const cols = orderedItems();
     const head = document.getElementById("gcHead");
     const body = document.getElementById("gcBody");
-    document.getElementById("gcEmpty").style.display = nicks.length ? "none" : "";
+    const list = currentNicks();
+    const emptyEl = document.getElementById("gcEmpty");
+    if(!nicks.length){
+      emptyEl.textContent = "В последней переписи нет участников — сначала заполните «Перепись клана».";
+      emptyEl.style.display = "";
+    } else if(!list.length){
+      emptyEl.textContent = selectedGroupId === SOLO_KEY
+        ? "Участников без группы нет — все состоят в группах."
+        : "В этой группе нет участников из последней переписи.";
+      emptyEl.style.display = "";
+    } else {
+      emptyEl.style.display = "none";
+    }
 
     let h = '<tr><th class="gc-col-nick">Участники</th><th>Общие баллы</th><th>Процент буста</th>';
     cols.forEach(i => {
@@ -479,7 +643,7 @@
     if(isAdmin) document.getElementById("addColBtn").addEventListener("click", addColumn);
 
     body.innerHTML = "";
-    nicks.forEach(nick => {
+    list.forEach(nick => {
       const tr = document.createElement("tr");
       const score = scoreOf(nick);
       const pct = percentOf(nick);
@@ -489,8 +653,11 @@
       tdNick.className = "gc-col-nick";
       const wrap = document.createElement("div");
       wrap.className = "gc-nick";
+      // своя загруженная аватарка в приоритете; если её нет — вместо пустого кружка
+      // показываем иконку класса (если класс выбран из списка), и только потом заглушку
+      const avatarSrc = info.icon || classIcon(info.class_name) || BLANK_IMG;
       wrap.innerHTML =
-        `<img class="avatar" src="${info.icon || BLANK_IMG}" alt="" />` +
+        `<img class="avatar" src="${avatarSrc}" alt="" />` +
         `<span class="who"><span class="name">${escapeHtml(nick)}</span>` +
         `<span class="cls">${escapeHtml(info.class_name || "")}</span></span>`;
       if(isAdmin){
@@ -527,8 +694,9 @@
   }
 
   function renderAvg(){
-    if(!nicks.length){ document.getElementById("avgPercent").textContent = "—"; return; }
-    const avg = nicks.reduce((s,n)=> s + percentOf(n), 0) / nicks.length;
+    const list = currentNicks();
+    if(!list.length){ document.getElementById("avgPercent").textContent = "—"; return; }
+    const avg = list.reduce((s,n)=> s + percentOf(n), 0) / list.length;
     document.getElementById("avgPercent").textContent = avg.toFixed(2) + "%";
   }
 
@@ -538,7 +706,7 @@
     const info = memberInfo.get(nick) || {};
     document.getElementById("drawerTitle").textContent = nick + (info.class_name ? " — " + info.class_name : "");
     const avatar = document.getElementById("drawerAvatar");
-    avatar.src = info.icon || BLANK_IMG;
+    avatar.src = info.icon || classIcon(info.class_name) || BLANK_IMG;
     avatar.style.display = "";
     document.getElementById("classValuesBtn").style.display = isAdmin ? "" : "none";
     document.getElementById("editModeBtn").style.display = isAdmin ? "" : "none";
@@ -886,19 +1054,64 @@
 
   // ---------- класс и аватарка участника ----------
   let memberModalNick = null;
+  let memberModalClassName = ""; // выбранный в пикере класс (имя из L2_CLASSES или "")
   let memberPendingIcon = null; // null — не меняли, "" — убрать, dataURL — новая
+
+  function classIcon(name){ return (window.L2_CLASS_ICON && name) ? window.L2_CLASS_ICON(name) : null; }
+
+  // ---- пикер класса: кнопка с текущей иконкой + выпадающий список с поиском ----
+  function renderClassPickerButton(){
+    const icon = classIcon(memberModalClassName);
+    const iconEl = document.getElementById("classPickerIcon");
+    if(icon){ iconEl.src = icon; iconEl.style.display = ""; } else { iconEl.style.display = "none"; }
+    document.getElementById("classPickerLabel").textContent = memberModalClassName || "Не выбран";
+  }
+  function renderClassDropdownList(filterText){
+    const list = document.getElementById("classDropdownList");
+    const q = (filterText || "").trim().toLowerCase();
+    list.innerHTML = "";
+    const clearOpt = document.createElement("div");
+    clearOpt.className = "gc-class-option gc-class-clear";
+    clearOpt.textContent = "Не выбран";
+    clearOpt.addEventListener("click", () => { memberModalClassName = ""; renderClassPickerButton(); closeClassDropdown(); });
+    list.appendChild(clearOpt);
+    (window.L2_CLASSES || []).filter(c => !q || c.name.toLowerCase().includes(q)).forEach(c => {
+      const opt = document.createElement("div");
+      opt.className = "gc-class-option";
+      opt.innerHTML = `<img src="${c.icon}" alt="" /><span>${escapeHtml(c.name)}</span>`;
+      opt.addEventListener("click", () => { memberModalClassName = c.name; renderClassPickerButton(); closeClassDropdown(); });
+      list.appendChild(opt);
+    });
+  }
+  function openClassDropdown(){
+    document.getElementById("classDropdown").style.display = "";
+    document.getElementById("classSearchInput").value = "";
+    renderClassDropdownList("");
+    setTimeout(() => document.getElementById("classSearchInput").focus(), 0);
+  }
+  function closeClassDropdown(){ document.getElementById("classDropdown").style.display = "none"; }
+  document.getElementById("classPickerBtn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = document.getElementById("classDropdown").style.display !== "none";
+    if(isOpen) closeClassDropdown(); else openClassDropdown();
+  });
+  document.getElementById("classSearchInput").addEventListener("input", (e) => renderClassDropdownList(e.target.value));
+  document.addEventListener("click", (e) => {
+    if(!document.getElementById("classPicker").contains(e.target)) closeClassDropdown();
+  });
 
   function openMemberModal(nick){
     memberModalNick = nick;
     memberPendingIcon = null;
     const info = memberInfo.get(nick) || {};
     document.getElementById("memberTitle").textContent = nick;
-    document.getElementById("memberClassName").value = info.class_name || "";
+    memberModalClassName = info.class_name || "";
+    renderClassPickerButton();
+    closeClassDropdown();
     document.getElementById("memberIconPreview").src = info.icon || BLANK_IMG;
     document.getElementById("memberError").textContent = "";
     document.getElementById("memberOverlay").classList.add("show");
     lockScroll();
-    setTimeout(() => document.getElementById("memberClassName").focus(), 0);
   }
   document.getElementById("memberClose").addEventListener("click", () => {
     document.getElementById("memberOverlay").classList.remove("show");
@@ -918,7 +1131,7 @@
     const row = {
       clan_id: profile.clan_id,
       nickname: memberModalNick,
-      class_name: document.getElementById("memberClassName").value.trim() || null,
+      class_name: memberModalClassName || null,
     };
     if(memberPendingIcon !== null) row.icon = memberPendingIcon || null;
     const { error } = await db.from("member_classes").upsert(row, { onConflict: "clan_id,nickname" });
@@ -1057,8 +1270,20 @@
   document.getElementById("helpClose").addEventListener("click", () => { document.getElementById("helpOverlay").classList.remove("show"); unlockScroll(); });
   document.getElementById("helpOverlay").addEventListener("click", (e) => { if(e.target.id === "helpOverlay"){ e.currentTarget.classList.remove("show"); unlockScroll(); } });
 
-  await Promise.all([loadNicks(), loadStructure(), loadValues(), loadMemberInfo(), loadClassValues()]);
-  renderTable();
+  await Promise.all([loadNicks(), loadStructure(), loadValues(), loadMemberInfo(), loadClassValues(), loadGroups()]);
+
+  // сюда попали кликом по «Показать буст» на карточке участника в группе — сразу открыть её таблицу
+  const params = new URLSearchParams(location.search);
+  const wantGroupId = params.get("group");
+  const wantGroup = wantGroupId && groups.find(g => g.id === wantGroupId);
+  if(wantGroup){
+    selectedGroupId = wantGroup.id;
+    showTableView(wantGroup.name);
+  } else if(groups.length){
+    showPickerView();
+  } else {
+    showTableView();
+  }
 })();
 </script>
 </body>
