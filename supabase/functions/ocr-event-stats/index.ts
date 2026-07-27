@@ -31,13 +31,15 @@ function json(body: unknown, status = 200) {
 const PROMPT = [
   "This is a screenshot from a game client showing a party member stats table.",
   "Columns typically include, in some order: member/nickname, kills, deaths, K/D ratio, PvP damage, PvE damage.",
-  "For every row, extract: the nickname exactly as written (preserving original case), the kills count,",
-  "the deaths count, the PvP damage number, and the PvE damage number.",
+  "For every row, extract: the nickname, the kills count, the deaths count, the PvP damage number, and the PvE damage number.",
+  "The nickname must be copied EXACTLY as written, character-for-character — preserve original case, and keep every digit, hyphen, underscore or other symbol that is part of the nickname text itself.",
+  "Nicknames often include a numeric prefix or suffix, e.g. \"3-Echo\", \"RastaDwarf420\" — these numbers/hyphens are part of the name and must NEVER be dropped or confused with the row's stat columns.",
+  "If you are unsure whether a character belongs to the nickname, KEEP it rather than drop it — do not silently normalize or shorten names.",
   "Ignore any K/D or ratio column entirely — do not return it, it will be computed separately.",
   "Damage numbers may contain thousands separators (commas or spaces) — return them as plain integers without separators.",
   "If a numeric cell is empty or unreadable, use 0.",
   "Respond with ONLY a JSON array of objects — no markdown, no code fences, no explanation.",
-  'Example response: [{"nickname":"NickOne","kills":21,"deaths":18,"pvp_damage":814,"pve_damage":253}]',
+  'Example response: [{"nickname":"3-NickOne","kills":21,"deaths":18,"pvp_damage":814,"pve_damage":253}]',
 ].join(" ");
 
 function parseDataUrl(dataUrl: string){

@@ -54,6 +54,12 @@
     border-radius:4px; padding:0 5px; margin-left:6px; white-space:nowrap;
   }
   .rep-col-actions .btn{ padding:1px 7px; font-size:11px; line-height:1.6; }
+  /* кнопка удаления видна только при наведении на строку, чтобы не мозолить глаза
+     постоянно горящей красной кнопкой у каждого ника; кнопка восстановления —
+     наоборот, всегда видна, раз строка уже помечена удалённой */
+  .rep-col-actions .btn-danger{ opacity:0; transition: opacity .12s; }
+  table.rep-table tbody tr:hover .rep-col-actions .btn-danger,
+  table.rep-table tbody tr:focus-within .rep-col-actions .btn-danger{ opacity:1; }
 
   .rep-filters{ display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; }
   .rep-filters .field{ margin:0; min-width:200px; }
@@ -418,6 +424,18 @@
     refreshReport();
   }
 
+  // безвозвратно стирает строки event_stats — доступно только для ника, уже
+  // помеченного removed (второй шаг после «Удалить»), чтобы случайный клик по
+  // мягкому удалению не мог тут же обернуться потерей данных без возможности отмены
+  async function deleteNicknamePermanently(nickname, eventIds){
+    const { error } = await db.from("event_stats")
+      .delete()
+      .eq("nickname", nickname).in("event_id", eventIds);
+    if(error){ console.error(error); alert("Не удалось удалить: " + error.message); return; }
+    await loadAllStats();
+    refreshReport();
+  }
+
   function renderReportTable(rows){
     const head = document.getElementById("repHead");
     head.innerHTML = '<tr>' +
@@ -454,17 +472,33 @@
       if(isAdmin){
         const tdActions = document.createElement("td");
         tdActions.className = "rep-col-actions";
-        const btn = document.createElement("button");
-        btn.className = "btn " + (r.removed ? "btn-ghost" : "btn-danger");
-        btn.textContent = r.removed ? "Восстановить" : "Удалить";
-        btn.addEventListener("click", () => {
-          if(r.removed){
-            setNicknameRemoved(r.nickname, r.eventIds, false);
-            return;
-          }
-          if(confirm(`Удалить ${r.nickname} из этого отчёта?`)) setNicknameRemoved(r.nickname, r.eventIds, true);
-        });
-        tdActions.appendChild(btn);
+
+        if(r.removed){
+          const restoreBtn = document.createElement("button");
+          restoreBtn.className = "btn btn-ghost";
+          restoreBtn.textContent = "Восстановить";
+          restoreBtn.addEventListener("click", () => setNicknameRemoved(r.nickname, r.eventIds, false));
+          tdActions.appendChild(restoreBtn);
+
+          const purgeBtn = document.createElement("button");
+          purgeBtn.className = "btn btn-danger";
+          purgeBtn.textContent = "Удалить навсегда";
+          purgeBtn.addEventListener("click", () => {
+            if(confirm(`Удалить ${r.nickname} навсегда? Статистика будет стёрта без возможности восстановления.`)){
+              deleteNicknamePermanently(r.nickname, r.eventIds);
+            }
+          });
+          tdActions.appendChild(purgeBtn);
+        } else {
+          const btn = document.createElement("button");
+          btn.className = "btn btn-danger";
+          btn.textContent = "Удалить";
+          btn.addEventListener("click", () => {
+            if(confirm(`Удалить ${r.nickname} из этого отчёта?`)) setNicknameRemoved(r.nickname, r.eventIds, true);
+          });
+          tdActions.appendChild(btn);
+        }
+
         tr.appendChild(tdActions);
       }
 
