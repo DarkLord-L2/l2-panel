@@ -143,6 +143,25 @@ async function adminOcrNicknames(imageDataUrl){
   return body.nicknames || [];
 }
 
+// Распознавание таблицы боевой статистики (килы/смерти/PvP/PvE урон) на одном
+// скриншоте (Отчёты по мероприятиям) через Gemini. Доступно только glavadmin/admin.
+async function adminOcrEventStats(imageDataUrl){
+  const { data: { session } } = await client.auth.getSession();
+  if(!session) throw new Error("no_session");
+
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/ocr-event-stats`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ image: imageDataUrl }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if(!res.ok) throw new Error((body.error || "request_failed") + (body.detail ? ": " + body.detail : ""));
+  return body.stats || [];
+}
+
 // Снимает флаг «нужно сменить пароль» у своей же строки после успешной смены
 // (узкая RPC — общий self-write на profiles запрещён специально, чтобы никто
 // не мог поменять себе роль/клан).
@@ -161,5 +180,6 @@ window.L2Cabinet = {
   adminCreateUser,
   adminDeleteUser,
   adminOcrNicknames,
+  adminOcrEventStats,
   clearMustChangePassword,
 };

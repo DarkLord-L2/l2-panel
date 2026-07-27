@@ -3,6 +3,12 @@
 // переданного root-элемента, поэтому на одной странице можно создать сколько
 // угодно копий (по одной на мероприятие). Строит свою разметку сам — вызывающему
 // коду достаточно передать пустой контейнер.
+//
+// Те же скрины, что отмечают явку, заодно читаются на боевую статистику (килы/
+// смерти/PvP/PvE урон — L2Cabinet.adminOcrEventStats) и при сохранении явки
+// автоматически попадают в event_stats. Отдельного шага «добавить статистику»
+// в «Отчётах по мероприятиям» больше нет — эта страница лишь показывает то,
+// что уже посчиталось здесь.
 
 function initEventRoster({ root, eventId, profile, isAdmin, db }){
   root.innerHTML = `
@@ -31,6 +37,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
 
   let entries = [];
   let pending = [];
+  let pendingStats = new Map(); // nickname -> {kills, deaths, pvp_damage, pve_damage}, из тех же скринов
 
   async function load(){
     const { data, error } = await db
@@ -57,6 +64,11 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
         x.textContent = "×";
         x.title = "Убрать из явки";
         x.addEventListener("click", async () => {
+          // явку убираем, а статистику не стираем — только помечаем removed=true,
+          // чтобы килы/смерти не терялись из истории; в «Отчётах» такая строка
+          // помечается и уходит в самый низ, а не пропадает молча
+          await db.from("event_stats").update({ removed: true, updated_at: new Date().toISOString() })
+            .eq("event_id", eventId).eq("nickname", entry.nickname);
           const { error } = await db.from("attendance_entries").delete().eq("id", entry.id);
           if(!error) await load();
         });
@@ -85,6 +97,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
 
     function resetUpload(){
       pending = [];
+      pendingStats = new Map();
       q("file-input").value = "";
       q("status").textContent = "";
       q("error").textContent = "";
@@ -121,16 +134,21 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
         statusEl.textContent = `Распознаю скрин ${i + 1} из ${files.length}…`;
         try{
           const dataUrl = await fileToDataUrl(files[i]);
-          const nicknames = await L2Cabinet.adminOcrNicknames(dataUrl);
-          nicknames.forEach(n => {
-            if(n && !pending.includes(n)) pending.push(n);
+          const rows = await L2Cabinet.adminOcrEventStats(dataUrl);
+          rows.forEach(r => {
+            if(!r.nickname) return;
+            if(!pending.includes(r.nickname)) pending.push(r.nickname);
+            pendingStats.set(r.nickname, {
+              kills: r.kills, deaths: r.deaths,
+              pvp_damage: r.pvp_damage, pve_damage: r.pve_damage,
+            });
           });
           renderChips();
         }catch(err){
           errEl.textContent = `Скрин ${i + 1}: ${err.message}`;
         }
       }
-      statusEl.textContent = `Готово, распознано ${pending.length} ник(ов) — проверьте перед сохранением.`;
+      statusEl.textContent = `Готово, распознано ${pending.length} ник(ов) со статистикой — проверьте перед сохранением.`;
     });
 
     q("manual-btn").addEventListener("click", () => {
@@ -164,6 +182,32 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
         const { error } = await db.from("attendance_entries").insert(rows);
         if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
       }
+
+      // те же ники, для которых скрин дал цифры — сразу в event_stats, без
+      // отдельного шага в «Отчётах»; повторная загрузка скрина с поправленными
+      // цифрами просто перезапишет старые значения (upsert по event_id+nickname)
+      if(pendingStats.size){
+        const statRows = pending
+          .filter(n => pendingStats.has(n))
+          .map(n => {
+            const s = pendingStats.get(n);
+            return {
+              clan_id: profile.clan_id,
+              event_id: eventId,
+              nickname: n,
+              kills: s.kills,
+              deaths: s.deaths,
+              pvp_damage: s.pvp_damage,
+              pve_damage: s.pve_damage,
+              removed: false, // если ник раньше был помечен «удалён» — новое распознавание снимает пометку
+              created_by: profile.id,
+              updated_at: new Date().toISOString(),
+            };
+          });
+        const { error: statsErr } = await db.from("event_stats").upsert(statRows, { onConflict: "event_id,nickname" });
+        if(statsErr){ errEl.textContent = "Явка сохранена, но статистика — нет: " + statsErr.message; return; }
+      }
+
       resetUpload();
       q("upload").style.display = "none";
       await load();
