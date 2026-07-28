@@ -72,6 +72,32 @@
   .gm-member-menu button.danger{ color: var(--danger-lit); }
   .gm-member-menu .move-list{ overflow-y:auto; max-height:220px; display:flex; flex-direction:column; gap:2px; }
   .gm-member-menu .move-back{ color: var(--text-dim); }
+
+  /* пикер класса в карточке участника — один в один как в «Проверке буста»:
+     кнопка с текущей иконкой + выпадающий список с поиском */
+  .gc-class-picker{ position:relative; }
+  .gc-class-picker-btn{
+    display:flex; align-items:center; gap:8px; width:100%;
+    padding:8px 12px; border-radius:6px; border:1px solid var(--border);
+    background: var(--panel-2); color: var(--text); cursor:pointer; font-size:13px;
+    text-align:left;
+  }
+  .gc-class-picker-btn:hover{ border-color: var(--border-lit); }
+  .gc-class-picker-icon{ width:22px; height:22px; border-radius:4px; object-fit:cover; flex:none; }
+  .gc-class-dropdown{
+    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:10;
+    background: var(--panel); border:1px solid var(--border-lit); border-radius:8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4); padding:8px;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .gc-class-dropdown input{ width:100%; }
+  .gc-class-list{ overflow-y:auto; max-height:220px; display:flex; flex-direction:column; gap:2px; }
+  .gc-class-option{
+    display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:5px; cursor:pointer; font-size:13px;
+  }
+  .gc-class-option:hover{ background: var(--panel-2); }
+  .gc-class-option img{ width:22px; height:22px; border-radius:4px; object-fit:cover; flex:none; }
+  .gc-class-option.gc-class-clear{ color: var(--text-dim); font-style:italic; }
 </style>
 </head>
 <body>
@@ -134,6 +160,41 @@
   </div>
 </div>
 
+<!-- Класс и аватарка участника — то же самое окно, что в «Проверке буста» -->
+<div class="modal-overlay" id="memberOverlay">
+  <div class="modal" style="max-width:360px;">
+    <button class="modal-close" id="memberClose" title="Закрыть">×</button>
+    <h2 id="memberTitle"></h2>
+
+    <div class="field">
+      <label>Класс</label>
+      <div class="gc-class-picker" id="classPicker">
+        <button type="button" class="gc-class-picker-btn" id="classPickerBtn">
+          <img id="classPickerIcon" class="gc-class-picker-icon" alt="" style="display:none;" />
+          <span id="classPickerLabel">Не выбран</span>
+        </button>
+        <div class="gc-class-dropdown" id="classDropdown" style="display:none;">
+          <input type="text" id="classSearchInput" placeholder="Поиск класса..." />
+          <div class="gc-class-list" id="classDropdownList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Аватарка</label>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <img id="memberIconPreview" alt="" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:1px solid var(--border); background: var(--panel-2);" />
+        <button class="btn" id="memberIconBtn">Загрузить фото</button>
+        <button class="btn btn-danger" id="memberIconClearBtn">Убрать</button>
+      </div>
+    </div>
+
+    <p class="error-msg" id="memberError"></p>
+    <button class="btn btn-primary" id="memberSaveBtn">Сохранить</button>
+  </div>
+</div>
+<input type="file" id="memberIconPicker" accept="image/*" style="display:none;" />
+
 <button class="help-btn" id="helpBtn" title="Как пользоваться">?</button>
 <div class="modal-overlay" id="helpOverlay">
   <div class="modal">
@@ -188,6 +249,9 @@
   let memberOrderMap = new Map(); // group_id -> Map(nickname -> sort_order) — ручной порядок иконок
   let memberInfo = new Map();    // nickname -> {class_name, icon} — то же самое, что в «Проверке буста»
   let currentGroupId = null;
+  let memberModalNick = null;
+  let memberModalClassName = ""; // выбранный в пикере класс (имя из L2_CLASSES или "")
+  let memberPendingIcon = null;  // null — не меняли, "" — убрать, dataURL — новая
 
   const BLANK_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34'></svg>";
   function classIcon(name){ return (window.L2_CLASS_ICON && name) ? window.L2_CLASS_ICON(name) : null; }
@@ -304,6 +368,14 @@
     menu.appendChild(boostBtn);
 
     if(isAdmin){
+      const classBtn = document.createElement("button");
+      classBtn.textContent = "Класс/аватарка…";
+      classBtn.addEventListener("click", () => {
+        closeMemberMenu();
+        openMemberModal(nick);
+      });
+      menu.appendChild(classBtn);
+
       const moveBtn = document.createElement("button");
       moveBtn.textContent = "Переместить в группу…";
       moveBtn.addEventListener("click", (e) => {
@@ -325,6 +397,115 @@
     }
 
     card.appendChild(menu);
+  }
+
+  // ---------- класс и аватарка участника (то же самое окно, что в «Проверке буста») ----------
+  function renderClassPickerButton(){
+    const icon = classIcon(memberModalClassName);
+    const iconEl = document.getElementById("classPickerIcon");
+    if(icon){ iconEl.src = icon; iconEl.style.display = ""; } else { iconEl.style.display = "none"; }
+    document.getElementById("classPickerLabel").textContent = memberModalClassName || "Не выбран";
+  }
+  function renderClassDropdownList(filterText){
+    const list = document.getElementById("classDropdownList");
+    const q = (filterText || "").trim().toLowerCase();
+    list.innerHTML = "";
+    const clearOpt = document.createElement("div");
+    clearOpt.className = "gc-class-option gc-class-clear";
+    clearOpt.textContent = "Не выбран";
+    clearOpt.addEventListener("click", () => { memberModalClassName = ""; renderClassPickerButton(); closeClassDropdown(); });
+    list.appendChild(clearOpt);
+    (window.L2_CLASSES || []).filter(c => !q || c.name.toLowerCase().includes(q)).forEach(c => {
+      const opt = document.createElement("div");
+      opt.className = "gc-class-option";
+      opt.innerHTML = `<img src="${c.icon}" alt="" /><span>${escapeHtml(c.name)}</span>`;
+      opt.addEventListener("click", () => { memberModalClassName = c.name; renderClassPickerButton(); closeClassDropdown(); });
+      list.appendChild(opt);
+    });
+  }
+  function openClassDropdown(){
+    document.getElementById("classDropdown").style.display = "";
+    document.getElementById("classSearchInput").value = "";
+    renderClassDropdownList("");
+    setTimeout(() => document.getElementById("classSearchInput").focus(), 0);
+  }
+  function closeClassDropdown(){ document.getElementById("classDropdown").style.display = "none"; }
+  document.getElementById("classPickerBtn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = document.getElementById("classDropdown").style.display !== "none";
+    if(isOpen) closeClassDropdown(); else openClassDropdown();
+  });
+  document.getElementById("classSearchInput").addEventListener("input", (e) => renderClassDropdownList(e.target.value));
+  document.addEventListener("click", (e) => {
+    if(!document.getElementById("classPicker").contains(e.target)) closeClassDropdown();
+  });
+
+  function openMemberModal(nick){
+    memberModalNick = nick;
+    memberPendingIcon = null;
+    const info = memberInfo.get(nick) || {};
+    document.getElementById("memberTitle").textContent = nick;
+    memberModalClassName = info.class_name || "";
+    renderClassPickerButton();
+    closeClassDropdown();
+    document.getElementById("memberIconPreview").src = info.icon || BLANK_IMG;
+    document.getElementById("memberError").textContent = "";
+    document.getElementById("memberOverlay").classList.add("show");
+  }
+  document.getElementById("memberClose").addEventListener("click", () => {
+    document.getElementById("memberOverlay").classList.remove("show");
+  });
+  document.getElementById("memberOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "memberOverlay") e.currentTarget.classList.remove("show");
+  });
+  document.getElementById("memberIconBtn").addEventListener("click", () => {
+    document.getElementById("memberIconPicker").value = "";
+    document.getElementById("memberIconPicker").click();
+  });
+  document.getElementById("memberIconClearBtn").addEventListener("click", () => {
+    memberPendingIcon = "";
+    document.getElementById("memberIconPreview").src = BLANK_IMG;
+  });
+  document.getElementById("memberIconPicker").addEventListener("change", async () => {
+    const file = document.getElementById("memberIconPicker").files[0];
+    if(!file) return;
+    const dataUrl = await downscaleImage(file, 96);
+    memberPendingIcon = dataUrl;
+    document.getElementById("memberIconPreview").src = dataUrl;
+  });
+  document.getElementById("memberSaveBtn").addEventListener("click", async () => {
+    const errEl = document.getElementById("memberError");
+    errEl.textContent = "";
+    const row = {
+      clan_id: profile.clan_id,
+      nickname: memberModalNick,
+      class_name: memberModalClassName || null,
+    };
+    if(memberPendingIcon !== null) row.icon = memberPendingIcon || null;
+    const { error } = await db.from("member_classes").upsert(row, { onConflict: "clan_id,nickname" });
+    if(error){ errEl.textContent = error.message; return; }
+    document.getElementById("memberOverlay").classList.remove("show");
+    await loadMemberInfo();
+    renderMembers();
+  });
+
+  function downscaleImage(file, maxSize){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = () => { img.src = reader.result; };
+      reader.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   }
 
   // подменяет содержимое уже открытого меню на список остальных групп — второй
