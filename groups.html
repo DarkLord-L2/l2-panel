@@ -33,23 +33,29 @@
 
   /* карточки участников группы — фото/иконка класса подтягивается из «Проверки буста»,
      как аватарка в самой gear-check.html (своя фотка → иконка класса → заглушка) */
-  .gm-member-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:12px; margin:10px 0; }
+  .gm-member-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:14px; margin:10px 0; }
   .gm-member-card{
     position:relative;
-    display:flex; align-items:center; gap:10px;
+    display:flex; align-items:center; gap:12px;
     background: var(--panel-2); border:1px solid var(--border); border-radius:8px;
-    padding:10px 12px;
+    padding:16px 18px;
   }
   .gm-member-card.draggable{ cursor:grab; }
   .gm-member-card.dragging{ opacity:.4; }
   .gm-member-card.drag-over{ border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
+  .gm-member-card .avatar-wrap{ position:relative; flex:none; }
   .gm-member-card .avatar{
-    width:38px; height:38px; border-radius:50%; object-fit:cover; flex:none;
+    width:38px; height:38px; border-radius:50%; object-fit:cover; display:block;
     border:1px solid var(--border); background: var(--panel);
   }
+  .gm-member-card .sub-avatar{
+    position:absolute; right:-3px; bottom:-3px;
+    width:18px; height:18px; border-radius:50%; object-fit:cover;
+    border:2px solid var(--panel-2); background: var(--panel);
+  }
   .gm-member-card .who{ display:flex; flex-direction:column; gap:1px; min-width:0; }
-  .gm-member-card .name{ font-weight:600; color: var(--text); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .gm-member-card .cls{ font-size:11px; color: var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .gm-member-card .name{ font-weight:600; color: var(--text); font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .gm-member-card .cls{ font-size:11.5px; color: var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .gm-member-menu-btn{
     margin-left:auto; flex:none;
     width:22px; height:22px; padding:0;
@@ -218,6 +224,20 @@
     </div>
 
     <div class="field">
+      <label>Вторая профессия (необязательно)</label>
+      <div class="gc-class-picker" id="classPicker2">
+        <button type="button" class="gc-class-picker-btn" id="classPickerBtn2">
+          <img id="classPickerIcon2" class="gc-class-picker-icon" alt="" style="display:none;" />
+          <span id="classPickerLabel2">Не выбрана</span>
+        </button>
+        <div class="gc-class-dropdown" id="classDropdown2" style="display:none;">
+          <input type="text" id="classSearchInput2" placeholder="Поиск класса..." />
+          <div class="gc-class-list" id="classDropdownList2"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
       <label>Аватарка</label>
       <div style="display:flex; align-items:center; gap:10px;">
         <img id="memberIconPreview" alt="" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:1px solid var(--border); background: var(--panel-2);" />
@@ -288,16 +308,17 @@
   let memberInfo = new Map();    // nickname -> {class_name, icon} — то же самое, что в «Проверке буста»
   let currentGroupId = null;
   let memberModalNick = null;
-  let memberModalClassName = ""; // выбранный в пикере класс (имя из L2_CLASSES или "")
+  let memberModalClassName = "";  // выбранный в пикере класс (имя из L2_CLASSES или "")
+  let memberModalClassName2 = ""; // вторая профессия (необязательно), тот же список классов
   let memberPendingIcon = null;  // null — не меняли, "" — убрать, dataURL — новая
 
   const BLANK_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34'></svg>";
   function classIcon(name){ return (window.L2_CLASS_ICON && name) ? window.L2_CLASS_ICON(name) : null; }
 
   async function loadMemberInfo(){
-    const { data } = await db.from("member_classes").select("nickname, class_name, icon");
+    const { data } = await db.from("member_classes").select("nickname, class_name, class_name_2, icon");
     memberInfo = new Map();
-    (data || []).forEach(r => memberInfo.set(r.nickname, { class_name: r.class_name, icon: r.icon }));
+    (data || []).forEach(r => memberInfo.set(r.nickname, { class_name: r.class_name, class_name_2: r.class_name_2, icon: r.icon }));
   }
 
   async function loadNickOptions(){
@@ -479,14 +500,58 @@
     if(!document.getElementById("classPicker").contains(e.target)) closeClassDropdown();
   });
 
+  // ---- та же логика, но для второй профессии ----
+  function renderClassPickerButton2(){
+    const icon = classIcon(memberModalClassName2);
+    const iconEl = document.getElementById("classPickerIcon2");
+    if(icon){ iconEl.src = icon; iconEl.style.display = ""; } else { iconEl.style.display = "none"; }
+    document.getElementById("classPickerLabel2").textContent = memberModalClassName2 || "Не выбрана";
+  }
+  function renderClassDropdownList2(filterText){
+    const list = document.getElementById("classDropdownList2");
+    const q = (filterText || "").trim().toLowerCase();
+    list.innerHTML = "";
+    const clearOpt = document.createElement("div");
+    clearOpt.className = "gc-class-option gc-class-clear";
+    clearOpt.textContent = "Не выбрана";
+    clearOpt.addEventListener("click", () => { memberModalClassName2 = ""; renderClassPickerButton2(); closeClassDropdown2(); });
+    list.appendChild(clearOpt);
+    (window.L2_CLASSES || []).filter(c => !q || c.name.toLowerCase().includes(q)).forEach(c => {
+      const opt = document.createElement("div");
+      opt.className = "gc-class-option";
+      opt.innerHTML = `<img src="${c.icon}" alt="" /><span>${escapeHtml(c.name)}</span>`;
+      opt.addEventListener("click", () => { memberModalClassName2 = c.name; renderClassPickerButton2(); closeClassDropdown2(); });
+      list.appendChild(opt);
+    });
+  }
+  function openClassDropdown2(){
+    document.getElementById("classDropdown2").style.display = "";
+    document.getElementById("classSearchInput2").value = "";
+    renderClassDropdownList2("");
+    setTimeout(() => document.getElementById("classSearchInput2").focus(), 0);
+  }
+  function closeClassDropdown2(){ document.getElementById("classDropdown2").style.display = "none"; }
+  document.getElementById("classPickerBtn2").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = document.getElementById("classDropdown2").style.display !== "none";
+    if(isOpen) closeClassDropdown2(); else openClassDropdown2();
+  });
+  document.getElementById("classSearchInput2").addEventListener("input", (e) => renderClassDropdownList2(e.target.value));
+  document.addEventListener("click", (e) => {
+    if(!document.getElementById("classPicker2").contains(e.target)) closeClassDropdown2();
+  });
+
   function openMemberModal(nick){
     memberModalNick = nick;
     memberPendingIcon = null;
     const info = memberInfo.get(nick) || {};
     document.getElementById("memberTitle").textContent = nick;
     memberModalClassName = info.class_name || "";
+    memberModalClassName2 = info.class_name_2 || "";
     renderClassPickerButton();
+    renderClassPickerButton2();
     closeClassDropdown();
+    closeClassDropdown2();
     document.getElementById("memberIconPreview").src = info.icon || BLANK_IMG;
     document.getElementById("memberError").textContent = "";
     document.getElementById("memberOverlay").classList.add("show");
@@ -519,6 +584,7 @@
       clan_id: profile.clan_id,
       nickname: memberModalNick,
       class_name: memberModalClassName || null,
+      class_name_2: memberModalClassName2 || null,
     };
     if(memberPendingIcon !== null) row.icon = memberPendingIcon || null;
     const { error } = await db.from("member_classes").upsert(row, { onConflict: "clan_id,nickname" });
@@ -612,12 +678,16 @@
     nicks.forEach(nick => {
       const info = memberInfo.get(nick) || {};
       const avatarSrc = info.icon || classIcon(info.class_name) || BLANK_IMG;
+      const subSrc = classIcon(info.class_name_2);
+      const clsLabel = info.class_name_2 ? `${info.class_name || ""} / ${info.class_name_2}` : (info.class_name || "");
       const card = document.createElement("div");
       card.className = "gm-member-card";
       card.innerHTML =
-        `<img class="avatar" src="${avatarSrc}" alt="" />` +
+        `<div class="avatar-wrap"><img class="avatar" src="${avatarSrc}" alt="" />` +
+        (subSrc ? `<img class="sub-avatar" src="${subSrc}" alt="" title="${escapeHtml(info.class_name_2)}" />` : "") +
+        `</div>` +
         `<span class="who"><span class="name">${escapeHtml(nick)}</span>` +
-        `<span class="cls">${escapeHtml(info.class_name || "")}</span></span>`;
+        `<span class="cls">${escapeHtml(clsLabel)}</span></span>`;
       const menuBtn = document.createElement("button");
       menuBtn.className = "gm-member-menu-btn";
       menuBtn.textContent = "⋮";

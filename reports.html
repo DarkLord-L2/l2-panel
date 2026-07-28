@@ -53,6 +53,10 @@
     font-size:9.5px; color: var(--danger-lit); border:1px solid var(--danger);
     border-radius:4px; padding:0 5px; margin-left:6px; white-space:nowrap;
   }
+  .rep-swap-dot{
+    display:inline-block; width:7px; height:7px; border-radius:50%;
+    background:#e0982a; margin-left:6px; vertical-align:middle;
+  }
   .rep-col-actions .btn{ padding:1px 7px; font-size:11px; line-height:1.6; }
   /* кнопка удаления видна только при наведении на строку, чтобы не мозолить глаза
      постоянно горящей красной кнопкой у каждого ника; кнопка восстановления —
@@ -202,14 +206,45 @@
   }
 
   async function loadMemberInfo(){
-    const { data } = await db.from("member_classes").select("nickname, class_name, icon");
+    const { data } = await db.from("member_classes").select("nickname, class_name, class_name_2, icon");
     memberInfo = new Map();
     memberInfoNorm = new Map();
     (data || []).forEach(r => {
-      const info = { class_name: r.class_name, icon: r.icon };
+      const info = { class_name: r.class_name, class_name_2: r.class_name_2, icon: r.icon };
       memberInfo.set(r.nickname, info);
       memberInfoNorm.set(normalizeNick(r.nickname), info);
     });
+  }
+
+  // ---- вторая профессия: какую из двух показать по числу килов на мероприятии ----
+  let supportClasses = new Set();
+  let killThreshold = 8;
+
+  async function loadDualClassSettings(){
+    const [{ data: sc, error: scErr }, { data: ds, error: dsErr }] = await Promise.all([
+      db.from("support_classes").select("class_name"),
+      db.from("dual_class_settings").select("kill_threshold").maybeSingle(),
+    ]);
+    if(scErr) console.error(scErr);
+    if(dsErr) console.error(dsErr);
+    supportClasses = new Set((sc || []).map(r => r.class_name));
+    killThreshold = ds?.kill_threshold ?? 8;
+  }
+
+  // если задана только одна профессия — как раньше, без всякой логики.
+  // если обе — и одна из них саппорт, а другая нет — выбираем по числу килов:
+  // меньше порога → саппорт, иначе → вторая (боевая). swapped=true, если выбранная
+  // отличается от первой (основной) — по этому флагу рисуется оранжевая точка.
+  function pickDisplayClass(info, kills){
+    const c1 = info.class_name || "", c2 = info.class_name_2 || "";
+    if(!c2) return { name: c1, swapped: false };
+    const c1Support = supportClasses.has(c1);
+    const c2Support = supportClasses.has(c2);
+    if(c1Support === c2Support) return { name: c1, swapped: false };
+    const supportClass = c1Support ? c1 : c2;
+    const ddClass = c1Support ? c2 : c1;
+    const chosen = kills < killThreshold ? supportClass : ddClass;
+    return { name: chosen, swapped: chosen !== c1 };
   }
 
   async function loadGroups(){
@@ -465,15 +500,18 @@
 
     sorted.forEach(r => {
       const info = lookupMemberInfo(r.nickname);
-      const avatarSrc = info.icon || classIcon(info.class_name) || BLANK_IMG;
+      const picked = pickDisplayClass(info, r.kills);
+      const avatarSrc = info.icon || classIcon(picked.name) || BLANK_IMG;
       const tr = document.createElement("tr");
       if(r.removed) tr.className = "rep-row-removed";
 
       const tdNick = document.createElement("td");
       tdNick.className = "rep-col-nick";
       tdNick.innerHTML = `<div class="rep-nick"><img class="avatar" src="${avatarSrc}" alt="" />` +
-        `<span class="who"><span class="name">${escapeHtml(r.nickname)}${r.removed ? ' <span class="rep-removed-badge">удалён</span>' : ""}</span>` +
-        `<span class="cls">${escapeHtml(info.class_name || "")}</span></span></div>`;
+        `<span class="who"><span class="name">${escapeHtml(r.nickname)}` +
+        `${r.removed ? ' <span class="rep-removed-badge">удалён</span>' : ""}` +
+        `${picked.swapped ? ' <span class="rep-swap-dot" title="Профессия подобрана автоматически по числу килов"></span>' : ""}</span>` +
+        `<span class="cls">${escapeHtml(picked.name || "")}</span></span></div>`;
 
       const tdKills = document.createElement("td"); tdKills.textContent = r.kills.toLocaleString("ru-RU");
       const tdDeaths = document.createElement("td"); tdDeaths.textContent = r.deaths.toLocaleString("ru-RU");
@@ -608,7 +646,7 @@
     renderRadar(totals(periodRows), avg);
   }
 
-  await Promise.all([loadMemberInfo(), loadGroups(), loadEvents(), loadAllStats()]);
+  await Promise.all([loadMemberInfo(), loadGroups(), loadEvents(), loadAllStats(), loadDualClassSettings()]);
   renderGroupFilterOptions();
   renderWeekOptions();
   refreshReport();

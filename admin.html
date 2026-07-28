@@ -11,6 +11,8 @@
   .form-row{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
   .form-row .field{ margin:0; min-width:160px; flex:1; }
   select{ width:100%; }
+  .support-class-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:6px 12px; margin-top:8px; }
+  .support-class-grid label{ display:flex; align-items:center; gap:7px; font-size:13px; }
 </style>
 </head>
 <body>
@@ -63,6 +65,17 @@
   </section>
 
   <section class="card">
+    <h2>Вторая профессия: правила показа в отчётах</h2>
+    <p class="hint">У кого в «Группах» указана вторая профессия — в «Отчётах по мероприятиям» иконка на мероприятии подбирается сама: если килов меньше порога, показывается та профессия из двух, что отмечена ниже как саппорт, иначе — вторая (боевая).</p>
+    <div class="field" style="max-width:200px;">
+      <label for="killThresholdInput">Порог килов</label>
+      <input type="number" id="killThresholdInput" min="0" />
+    </div>
+    <p class="hint" style="margin-top:14px;">Саппорт-классы (отметьте нужные):</p>
+    <div class="support-class-grid" id="supportClassGrid"></div>
+  </section>
+
+  <section class="card">
     <h2>Какие разделы видит каждая роль</h2>
     <p class="hint">Снимите галочку — раздел исчезнет из навигации у всех с этой ролью. Админ-панель всегда видна только главному админу.</p>
     <div style="overflow-x:auto;">
@@ -80,6 +93,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=4"></script>
+<script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -290,10 +304,55 @@
     }
   });
 
+  // ---- вторая профессия: саппорт-классы и порог килов ----
+  let supportClasses = new Set();
+
+  async function loadDualClassSettings(){
+    const [{ data: sc, error: scErr }, { data: ds, error: dsErr }] = await Promise.all([
+      db.from("support_classes").select("class_name").eq("clan_id", profile.clan_id),
+      db.from("dual_class_settings").select("kill_threshold").eq("clan_id", profile.clan_id).maybeSingle(),
+    ]);
+    if(scErr) console.error(scErr);
+    if(dsErr) console.error(dsErr);
+    supportClasses = new Set((sc || []).map(r => r.class_name));
+    document.getElementById("killThresholdInput").value = ds?.kill_threshold ?? 8;
+  }
+
+  function renderSupportClassGrid(){
+    const grid = document.getElementById("supportClassGrid");
+    grid.innerHTML = "";
+    (window.L2_CLASSES || []).forEach(c => {
+      const label = document.createElement("label");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = supportClasses.has(c.name);
+      cb.addEventListener("change", async () => {
+        cb.disabled = true;
+        if(cb.checked){
+          supportClasses.add(c.name);
+          await db.from("support_classes").insert({ clan_id: profile.clan_id, class_name: c.name });
+        } else {
+          supportClasses.delete(c.name);
+          await db.from("support_classes").delete().eq("clan_id", profile.clan_id).eq("class_name", c.name);
+        }
+        cb.disabled = false;
+      });
+      label.append(cb, document.createTextNode(" " + c.name));
+      grid.appendChild(label);
+    });
+  }
+
+  document.getElementById("killThresholdInput").addEventListener("change", async (e) => {
+    const val = Math.max(0, parseInt(e.target.value, 10) || 0);
+    e.target.value = val;
+    await db.from("dual_class_settings").upsert({ clan_id: profile.clan_id, kill_threshold: val }, { onConflict: "clan_id" });
+  });
+
   await loadLookups();
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(r.label), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
-  await Promise.all([loadUsers(), loadMatrix()]);
+  await Promise.all([loadUsers(), loadMatrix(), loadDualClassSettings()]);
+  renderSupportClassGrid();
 })();
 </script>
 </body>
