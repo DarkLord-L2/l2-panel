@@ -60,7 +60,7 @@ async function getProfile(){
   if(!user) return null;
   const { data, error } = await client
     .from("profiles")
-    .select("id, username, clan_id, party_id, must_change_password, roles(key, label, rank), clan_groups(name), clans(access_enabled, name)")
+    .select("id, username, nickname, clan_id, party_id, must_change_password, roles(key, label, rank), clan_groups(name), clans(access_enabled, name)")
     .eq("id", user.id)
     .maybeSingle();
   if(error) throw error;
