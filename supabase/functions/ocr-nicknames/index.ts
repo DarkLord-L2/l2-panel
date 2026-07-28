@@ -29,10 +29,13 @@ function json(body: unknown, status = 200) {
 
 const PROMPT = [
   "This is a screenshot from a game client showing a vertical list of player nicknames.",
-  "Extract every nickname exactly as written, preserving original case, one per entry.",
-  "Ignore any UI chrome, icons, numbers, timestamps or text that is not a nickname.",
+  "Extract every nickname EXACTLY as written, character-for-character — preserve original case, and keep every digit, hyphen, underscore or other symbol that is part of the nickname text itself.",
+  "Nicknames often include a numeric prefix or suffix, e.g. \"3-Echo\", \"RastaDwarf420\" — these numbers/hyphens are part of the name and must NEVER be dropped or treated as noise.",
+  "Only ignore elements that are clearly separate UI chrome and NOT part of the nickname string: list bullet/index numbers rendered in their own column, icons, HP/MP/level bars, timestamps.",
+  "If you are unsure whether a character belongs to the nickname, KEEP it rather than drop it — do not silently normalize or shorten names.",
+  "One nickname per entry.",
   "Respond with ONLY a JSON array of strings — no markdown, no code fences, no explanation.",
-  'Example response: ["NickOne","NickTwo","NickThree"]',
+  'Example response: ["NickOne","3-NickTwo","NickThree_99"]',
 ].join(" ");
 
 function parseDataUrl(dataUrl: string){

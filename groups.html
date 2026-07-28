@@ -40,6 +40,9 @@
     background: var(--panel-2); border:1px solid var(--border); border-radius:8px;
     padding:10px 12px;
   }
+  .gm-member-card.draggable{ cursor:grab; }
+  .gm-member-card.dragging{ opacity:.4; }
+  .gm-member-card.drag-over{ border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
   .gm-member-card .avatar{
     width:38px; height:38px; border-radius:50%; object-fit:cover; flex:none;
     border:1px solid var(--border); background: var(--panel);
@@ -67,6 +70,8 @@
   }
   .gm-member-menu button:hover{ background: var(--panel); }
   .gm-member-menu button.danger{ color: var(--danger-lit); }
+  .gm-member-menu .move-list{ overflow-y:auto; max-height:220px; display:flex; flex-direction:column; gap:2px; }
+  .gm-member-menu .move-back{ color: var(--text-dim); }
 </style>
 </head>
 <body>
@@ -178,6 +183,7 @@
 
   let groups = [];               // [{id, name, sort_order}]
   let membersByGroup = new Map(); // group_id -> [nickname, ...]
+  let memberOrderMap = new Map(); // group_id -> Map(nickname -> sort_order) — ручной порядок иконок
   let memberInfo = new Map();    // nickname -> {class_name, icon} — то же самое, что в «Проверке буста»
   let currentGroupId = null;
 
@@ -201,16 +207,53 @@
   async function loadGroups(){
     const [{ data: g, error: gErr }, { data: m, error: mErr }] = await Promise.all([
       db.from("clan_groups").select("id, name, sort_order").order("sort_order").order("name"),
-      db.from("clan_group_members").select("group_id, nickname").order("nickname"),
+      db.from("clan_group_members").select("group_id, nickname, sort_order").order("sort_order").order("nickname"),
     ]);
     if(gErr) console.error(gErr);
     if(mErr) console.error(mErr);
     groups = g || [];
     membersByGroup = new Map();
+    memberOrderMap = new Map();
     (m || []).forEach(row => {
       if(!membersByGroup.has(row.group_id)) membersByGroup.set(row.group_id, []);
       membersByGroup.get(row.group_id).push(row.nickname);
+      if(!memberOrderMap.has(row.group_id)) memberOrderMap.set(row.group_id, new Map());
+      memberOrderMap.get(row.group_id).set(row.nickname, row.sort_order || 0);
     });
+  }
+
+  // текущий порядок карточек группы: по сохранённому sort_order, при равенстве
+  // (например, все ещё 0 — миграция/новые участники) — по алфавиту как раньше
+  function currentOrderedNicks(){
+    const nicks = (membersByGroup.get(currentGroupId) || []).slice();
+    const orderMap = memberOrderMap.get(currentGroupId) || new Map();
+    return nicks.sort((a, b) => {
+      const oa = orderMap.get(a) ?? 0, ob = orderMap.get(b) ?? 0;
+      return oa - ob || a.localeCompare(b);
+    });
+  }
+
+  // перетаскивание иконки на другую — переставляет их местами и переиндексирует
+  // всю группу по видимому порядку, чтобы свап был заметен, даже если у всех
+  // участников до этого был одинаковый sort_order (например, сразу после миграции)
+  async function swapMembers(nickA, nickB){
+    const ordered = currentOrderedNicks();
+    const ia = ordered.indexOf(nickA), ib = ordered.indexOf(nickB);
+    if(ia === -1 || ib === -1 || ia === ib) return;
+    [ordered[ia], ordered[ib]] = [ordered[ib], ordered[ia]];
+
+    const orderMap = new Map();
+    ordered.forEach((n, idx) => orderMap.set(n, idx));
+    memberOrderMap.set(currentGroupId, orderMap);
+    renderMembers();
+
+    const results = await Promise.all(
+      ordered.map((n, idx) =>
+        db.from("clan_group_members").update({ sort_order: idx }).eq("group_id", currentGroupId).eq("nickname", n)
+      )
+    );
+    const failed = results.find(r => r.error);
+    if(failed) console.error(failed.error);
   }
 
   function renderGrid(filterText){
@@ -259,6 +302,14 @@
     menu.appendChild(boostBtn);
 
     if(isAdmin){
+      const moveBtn = document.createElement("button");
+      moveBtn.textContent = "Переместить в группу…";
+      moveBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        renderMoveSubmenu(menu, nick);
+      });
+      menu.appendChild(moveBtn);
+
       const delBtn = document.createElement("button");
       delBtn.className = "danger";
       delBtn.textContent = "Убрать из группы";
@@ -274,8 +325,64 @@
     card.appendChild(menu);
   }
 
+  // подменяет содержимое уже открытого меню на список остальных групп — второй
+  // клик снова открывать меню не нужно, всё происходит в том же попапе
+  function renderMoveSubmenu(menu, nick){
+    const others = groups.filter(g => g.id !== currentGroupId);
+    menu.innerHTML = "";
+
+    const list = document.createElement("div");
+    list.className = "move-list";
+    if(!others.length){
+      const p = document.createElement("p");
+      p.className = "hint";
+      p.style.cssText = "padding:6px 10px; margin:0; font-size:12px;";
+      p.textContent = "Других групп нет.";
+      list.appendChild(p);
+    } else {
+      others.forEach(g => {
+        const btn = document.createElement("button");
+        btn.textContent = g.name;
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          moveMember(nick, g.id);
+        });
+        list.appendChild(btn);
+      });
+    }
+    menu.appendChild(list);
+
+    const backBtn = document.createElement("button");
+    backBtn.className = "move-back";
+    backBtn.textContent = "← Назад";
+    backBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const card = menu.parentElement;
+      menu.remove();
+      toggleMemberMenu(card, nick);
+    });
+    menu.appendChild(backBtn);
+  }
+
+  // вставляем в целевую группу первым шагом — если ник там уже есть (уникальный
+  // индекс group_id+nickname), запись из текущей группы останется на месте
+  // вместо того, чтобы потерять человека из обеих групп разом
+  async function moveMember(nick, targetGroupId){
+    const { error: insErr } = await db.from("clan_group_members").insert({ group_id: targetGroupId, nickname: nick });
+    if(insErr){
+      closeMemberMenu();
+      alert(insErr.code === "23505" ? `«${nick}» уже есть в этой группе.` : ("Не удалось переместить: " + insErr.message));
+      return;
+    }
+    await db.from("clan_group_members").delete().eq("group_id", currentGroupId).eq("nickname", nick);
+    membersByGroup.set(currentGroupId, (membersByGroup.get(currentGroupId) || []).filter(n => n !== nick));
+    membersByGroup.set(targetGroupId, [...(membersByGroup.get(targetGroupId) || []), nick]);
+    closeMemberMenu();
+    renderMembers();
+  }
+
   function renderMembers(){
-    const nicks = (membersByGroup.get(currentGroupId) || []).slice().sort((a, b) => a.localeCompare(b));
+    const nicks = currentOrderedNicks();
     const wrap = document.getElementById("groupMembers");
     wrap.innerHTML = "";
     document.getElementById("groupMembersEmpty").style.display = nicks.length ? "none" : "";
@@ -295,6 +402,31 @@
       menuBtn.title = "Действия";
       menuBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleMemberMenu(card, nick); });
       card.appendChild(menuBtn);
+
+      if(isAdmin){
+        card.classList.add("draggable");
+        card.draggable = true;
+        card.title = "Перетащите на другого участника, чтобы поменять местами";
+        card.addEventListener("dragstart", (e) => {
+          e.dataTransfer.setData("text/plain", nick);
+          e.dataTransfer.effectAllowed = "move";
+          card.classList.add("dragging");
+        });
+        card.addEventListener("dragend", () => card.classList.remove("dragging"));
+        card.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+          card.classList.add("drag-over");
+        });
+        card.addEventListener("dragleave", () => card.classList.remove("drag-over"));
+        card.addEventListener("drop", (e) => {
+          e.preventDefault();
+          card.classList.remove("drag-over");
+          const draggedNick = e.dataTransfer.getData("text/plain");
+          if(draggedNick && draggedNick !== nick) swapMembers(draggedNick, nick);
+        });
+      }
+
       wrap.appendChild(card);
     });
   }

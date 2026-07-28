@@ -18,7 +18,7 @@
 
   /* отчёт по налогам матрицей (недели колонками) — тот же sticky-паттерн, что в
      отчёте «Посещаемость»: overflow:auto + max-height на обёртке, position:sticky на шапке */
-  #taxReportTableWrap{ overflow:auto; max-height:70vh; }
+  #taxReportTableWrap{ overflow:auto; max-height:82vh; }
   #taxReportHead th{
     position:sticky; top:0; z-index:2;
     background: var(--panel); color: var(--text-dim);
@@ -751,6 +751,7 @@
 
   document.getElementById("taxReportBackBtn").addEventListener("click", () => {
     document.getElementById("taxReportView").style.display = "none";
+    document.getElementById("wrap").style.display = "";
     openReportPicker();
   });
 
@@ -773,6 +774,7 @@
     renderTaxGroupFilterOptions();
 
     reportOverlay.classList.remove("show");
+    document.getElementById("wrap").style.display = "none";
     document.getElementById("taxReportView").style.display = "";
     renderTaxReportMatrix();
   });

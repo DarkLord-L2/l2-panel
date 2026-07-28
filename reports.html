@@ -48,10 +48,18 @@
   .rep-nick .cls{ font-size:11px; color: var(--text-dim); }
 
   tr.rep-row-removed td{ opacity:.45; }
+  tr.rep-row-removed .rep-col-actions{ opacity:1; }
   .rep-removed-badge{
     font-size:9.5px; color: var(--danger-lit); border:1px solid var(--danger);
     border-radius:4px; padding:0 5px; margin-left:6px; white-space:nowrap;
   }
+  .rep-col-actions .btn{ padding:1px 7px; font-size:11px; line-height:1.6; }
+  /* кнопка удаления видна только при наведении на строку, чтобы не мозолить глаза
+     постоянно горящей красной кнопкой у каждого ника; кнопка восстановления —
+     наоборот, всегда видна, раз строка уже помечена удалённой */
+  .rep-col-actions .btn-danger{ opacity:0; transition: opacity .12s; }
+  table.rep-table tbody tr:hover .rep-col-actions .btn-danger,
+  table.rep-table tbody tr:focus-within .rep-col-actions .btn-danger{ opacity:1; }
 
   .rep-filters{ display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; }
   .rep-filters .field{ margin:0; min-width:200px; }
@@ -139,8 +147,9 @@
   const db = L2Cabinet.client;
   document.getElementById("wrap").style.display = "";
 
+  const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
   // не-админ с назначенной пати видит только свою группу во всех фильтрах по группе
-  const isPartyRestricted = !["glavadmin", "admin"].includes(profile.roles?.key) && !!profile.party_id;
+  const isPartyRestricted = !isAdmin && !!profile.party_id;
 
   // статистика (килы/смерти/PvP/PvE) заносится в event_stats автоматически при
   // загрузке скринов в «Посещаемости» (js/event-roster.js) — здесь только просмотр.
@@ -352,10 +361,11 @@
   function aggregateByNickname(rows){
     const agg = new Map();
     rows.forEach(r => {
-      const cur = agg.get(r.nickname) || { nickname: r.nickname, kills: 0, deaths: 0, pvp: 0, pve: 0, rowCount: 0, removedCount: 0 };
+      const cur = agg.get(r.nickname) || { nickname: r.nickname, kills: 0, deaths: 0, pvp: 0, pve: 0, rowCount: 0, removedCount: 0, eventIds: [] };
       cur.kills += r.kills; cur.deaths += r.deaths; cur.pvp += r.pvp; cur.pve += r.pve;
       cur.rowCount += 1;
       if(r.removed) cur.removedCount += 1;
+      cur.eventIds.push(r.event_id);
       agg.set(r.nickname, cur);
     });
     // ник считается «удалённым» в этой выборке, только если удалены ВСЕ его записи —
@@ -415,11 +425,36 @@
     head.style.top = "0";
   }
 
+  // помечает/снимает пометку removed у всех строк event_stats этого ника, попавших
+  // в текущую выборку (period + фильтр по пати) — не трогает записи вне периода,
+  // поэтому «удаление» из недельного/общего отчёта не задевает другие недели
+  async function setNicknameRemoved(nickname, eventIds, removed){
+    const { error } = await db.from("event_stats")
+      .update({ removed, updated_at: new Date().toISOString() })
+      .eq("nickname", nickname).in("event_id", eventIds);
+    if(error){ console.error(error); alert("Не удалось сохранить: " + error.message); return; }
+    await loadAllStats();
+    refreshReport();
+  }
+
+  // безвозвратно стирает строки event_stats — доступно только для ника, уже
+  // помеченного removed (второй шаг после «Удалить»), чтобы случайный клик по
+  // мягкому удалению не мог тут же обернуться потерей данных без возможности отмены
+  async function deleteNicknamePermanently(nickname, eventIds){
+    const { error } = await db.from("event_stats")
+      .delete()
+      .eq("nickname", nickname).in("event_id", eventIds);
+    if(error){ console.error(error); alert("Не удалось удалить: " + error.message); return; }
+    await loadAllStats();
+    refreshReport();
+  }
+
   function renderReportTable(rows){
     const head = document.getElementById("repHead");
     head.innerHTML = '<tr>' +
       '<th class="rep-col-nick">Ник</th>' +
       '<th>Килы</th><th>Смерти</th><th>K:D</th><th>PvP урон</th><th>PvE урон</th>' +
+      (isAdmin ? '<th></th>' : '') +
       '</tr>';
     applyStickyHead();
 
@@ -446,6 +481,40 @@
       const tdPvp = document.createElement("td"); tdPvp.textContent = r.pvp.toLocaleString("ru-RU");
       const tdPve = document.createElement("td"); tdPve.textContent = r.pve.toLocaleString("ru-RU");
       tr.append(tdNick, tdKills, tdDeaths, tdKd, tdPvp, tdPve);
+
+      if(isAdmin){
+        const tdActions = document.createElement("td");
+        tdActions.className = "rep-col-actions";
+
+        if(r.removed){
+          const restoreBtn = document.createElement("button");
+          restoreBtn.className = "btn btn-ghost";
+          restoreBtn.textContent = "Восстановить";
+          restoreBtn.addEventListener("click", () => setNicknameRemoved(r.nickname, r.eventIds, false));
+          tdActions.appendChild(restoreBtn);
+
+          const purgeBtn = document.createElement("button");
+          purgeBtn.className = "btn btn-danger";
+          purgeBtn.textContent = "Удалить навсегда";
+          purgeBtn.addEventListener("click", () => {
+            if(confirm(`Удалить ${r.nickname} навсегда? Статистика будет стёрта без возможности восстановления.`)){
+              deleteNicknamePermanently(r.nickname, r.eventIds);
+            }
+          });
+          tdActions.appendChild(purgeBtn);
+        } else {
+          const btn = document.createElement("button");
+          btn.className = "btn btn-danger";
+          btn.textContent = "Удалить";
+          btn.addEventListener("click", () => {
+            if(confirm(`Удалить ${r.nickname} из этого отчёта?`)) setNicknameRemoved(r.nickname, r.eventIds, true);
+          });
+          tdActions.appendChild(btn);
+        }
+
+        tr.appendChild(tdActions);
+      }
+
       body.appendChild(tr);
     });
   }
