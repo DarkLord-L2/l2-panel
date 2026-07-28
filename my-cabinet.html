@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Мой кабинет — Кабинет клана</title>
+<link rel="stylesheet" href="js/theme.css?v=3" />
+<style>
+  .cab-wrap{ padding:0 0 32px; display:flex; flex-direction:column; gap:16px; }
+
+  .cab-head{ display:flex; align-items:center; gap:16px; }
+  .cab-head .avatar-wrap{ position:relative; flex:none; }
+  .cab-head .avatar{
+    width:64px; height:64px; border-radius:50%; object-fit:cover;
+    border:1px solid var(--border); background: var(--panel-2);
+  }
+  .cab-head .sub-avatar{
+    position:absolute; right:-3px; bottom:-3px;
+    width:26px; height:26px; border-radius:50%; object-fit:cover;
+    border:2px solid var(--panel); background: var(--panel-2);
+  }
+  .cab-head .name{ font-size:19px; font-weight:700; color: var(--text); }
+  .cab-head .cls{ font-size:13px; color: var(--text-dim); }
+
+  .rep-filters{ display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; }
+  .rep-filters .field{ margin:0; min-width:220px; }
+  .rep-tiles{ display:grid; grid-template-columns:repeat(auto-fit, minmax(120px,1fr)); gap:8px; }
+  .rep-tile{ background: var(--panel-2); border:1px solid var(--border); border-radius:7px; padding:8px 10px; }
+  .rep-tile .val{ font-size:16px; font-weight:700; color: var(--text); line-height:1.3; }
+  .rep-tile .lbl{ font-size:10.5px; color: var(--text-dim); }
+
+  .cab-history-scroll{ overflow:auto; max-height:50vh; margin-top:14px; }
+  table.cab-history-table{ border-collapse:separate; border-spacing:0; width:100%; font-size:13px; }
+  table.cab-history-table th, table.cab-history-table td{ padding:7px 10px; border-bottom:1px solid var(--border); text-align:center; white-space:nowrap; }
+  table.cab-history-table th:nth-child(2), table.cab-history-table td:nth-child(2){ text-align:left; }
+  table.cab-history-table thead th{
+    position:sticky; top:0; z-index:1; background: var(--panel);
+    color: var(--text-dim); font-size:12px; font-weight:500;
+  }
+
+  .cab-boost-percent{ font-size:13px; color: var(--text-dim); margin:2px 0 14px; }
+  .cab-boost-percent b{ color: var(--gold); font-size:15px; }
+  .cab-boost-section{ margin:14px 0 6px; font-size:13px; font-weight:600; color: var(--text); }
+  .cab-boost-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(160px,1fr)); gap:8px; }
+  .cab-boost-item{
+    display:flex; align-items:center; gap:8px;
+    background: var(--panel-2); border:1px solid var(--border); border-radius:7px;
+    padding:7px 10px; font-size:12.5px;
+  }
+  .cab-boost-item img{ width:22px; height:22px; border-radius:5px; object-fit:cover; flex:none; border:1px solid var(--border); background: var(--panel); }
+  .cab-boost-item .nm{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color: var(--text); }
+  .cab-boost-item .mark{ flex:none; font-size:13px; }
+  .cab-boost-item.on .mark{ color: var(--ok); }
+  .cab-boost-item.off .mark{ color: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<div class="cab-wrap" id="wrap" style="display:none;">
+  <div class="page-head"><h1>Мой кабинет</h1></div>
+
+  <section class="card" id="noNickCard" style="display:none;">
+    <p class="hint">К вашему аккаунту не привязан игровой ник — обратитесь к клан-лидеру, чтобы он указал его в Админ-панели («Пользователи» → «Ник в игре»).</p>
+  </section>
+
+  <div id="cabContent" style="display:none;">
+    <section class="card cab-head">
+      <div class="avatar-wrap">
+        <img class="avatar" id="cabAvatar" alt="" />
+        <img class="sub-avatar" id="cabSubAvatar" alt="" style="display:none;" />
+      </div>
+      <div>
+        <div class="name" id="cabNickname"></div>
+        <div class="cls" id="cabClass"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Статистика по мероприятиям</h2>
+      <div class="rep-filters">
+        <div class="field">
+          <label for="cabPeriodSelect">Период</label>
+          <select id="cabPeriodSelect"></select>
+        </div>
+      </div>
+
+      <div class="rep-tiles" style="margin-top:14px;">
+        <div class="rep-tile"><div class="val" id="cabKills">0</div><div class="lbl">Килы</div></div>
+        <div class="rep-tile"><div class="val" id="cabDeaths">0</div><div class="lbl">Смерти</div></div>
+        <div class="rep-tile"><div class="val" id="cabKd">0.00</div><div class="lbl">K:D</div></div>
+        <div class="rep-tile"><div class="val" id="cabPvp">0</div><div class="lbl">PvP урон</div></div>
+        <div class="rep-tile"><div class="val" id="cabPve">0</div><div class="lbl">PvE урон</div></div>
+      </div>
+
+      <div class="cab-history-scroll">
+        <table class="cab-history-table">
+          <thead><tr><th>Дата</th><th>Мероприятие</th><th>Килы</th><th>Смерти</th><th>K:D</th><th>PvP</th><th>PvE</th></tr></thead>
+          <tbody id="cabHistoryBody"></tbody>
+        </table>
+      </div>
+      <p class="hint" id="cabHistoryEmpty" style="display:none;">За выбранный период данных нет.</p>
+    </section>
+
+    <section class="card">
+      <h2>Проверка буста</h2>
+      <p class="cab-boost-percent">Процент буста: <b id="cabBoostPercent">—</b></p>
+      <div id="cabBoostBody"></div>
+      <p class="hint" id="cabBoostEmpty" style="display:none;">Разделы буста ещё не настроены.</p>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-client.js?v=4"></script>
+<script src="js/classes.js?v=1"></script>
+<script>
+(async function(){
+  const session = await L2Cabinet.requireSession();
+  if(!session) return;
+
+  const profile = await L2Cabinet.getProfile();
+  if(!profile){
+    document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
+      '<h1>⚠ Профиль не найден</h1><p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+    return;
+  }
+
+  const db = L2Cabinet.client;
+  document.getElementById("wrap").style.display = "";
+
+  const myNick = (profile.nickname || "").trim();
+  if(!myNick){
+    document.getElementById("noNickCard").style.display = "";
+    return;
+  }
+  document.getElementById("cabContent").style.display = "";
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  }
+  function pad2(n){ return String(n).padStart(2, "0"); }
+  function weekRangeLabel(weekStartStr){
+    const monday = new Date(weekStartStr + "T00:00:00");
+    const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6);
+    return `${pad2(monday.getDate())}.${pad2(monday.getMonth()+1)} – ${pad2(sunday.getDate())}.${pad2(sunday.getMonth()+1)}.${sunday.getFullYear()}`;
+  }
+  const BLANK_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34'></svg>";
+  function classIcon(name){ return (window.L2_CLASS_ICON && name) ? window.L2_CLASS_ICON(name) : null; }
+
+  // тот же запасной поиск по нику, что и в «Отчётах» — OCR/ручной ввод могут
+  // писать один и тот же ник по-разному (регистр, дефисы, обрезанные суффиксы)
+  function normalizeNick(s){
+    return String(s || "").toLowerCase().replace(/[^a-zа-яё0-9]/gi, "");
+  }
+  const myNorm = normalizeNick(myNick);
+  function isMe(nickname){
+    if(nickname === myNick) return true;
+    const n = normalizeNick(nickname);
+    return n === myNorm || n.startsWith(myNorm) || myNorm.startsWith(n);
+  }
+
+  // ---------- шапка: класс/аватарка ----------
+  async function loadMyMemberInfo(){
+    const { data } = await db.from("member_classes").select("nickname, class_name, class_name_2, icon");
+    return (data || []).find(r => isMe(r.nickname)) || {};
+  }
+
+  function renderHead(info){
+    document.getElementById("cabNickname").textContent = myNick;
+    const clsLabel = info.class_name_2 ? `${info.class_name || ""} / ${info.class_name_2}` : (info.class_name || "Класс не указан");
+    document.getElementById("cabClass").textContent = clsLabel;
+    document.getElementById("cabAvatar").src = info.icon || classIcon(info.class_name) || BLANK_IMG;
+    const subSrc = classIcon(info.class_name_2);
+    const subEl = document.getElementById("cabSubAvatar");
+    if(subSrc){ subEl.src = subSrc; subEl.style.display = ""; } else { subEl.style.display = "none"; }
+  }
+
+  // ---------- статистика по мероприятиям (то же самое, что «Отчёты», но только мои строки) ----------
+  let events = [];
+  let allRawStats = [];
+
+  async function loadEvents(){
+    const { data, error } = await db
+      .from("attendance_events")
+      .select("id, week_start, event_date, event_name")
+      .order("event_date");
+    if(error) console.error(error);
+    events = data || [];
+  }
+
+  async function loadMyStats(){
+    const { data, error } = await db
+      .from("event_stats")
+      .select("nickname, kills, deaths, pvp_damage, pve_damage, event_id, removed, attendance_events!inner(week_start, event_date, event_name)");
+    if(error){ console.error(error); allRawStats = []; return; }
+    allRawStats = (data || [])
+      .filter(r => isMe(r.nickname) && !r.removed)
+      .map(r => ({
+        kills: r.kills, deaths: r.deaths, pvp: r.pvp_damage, pve: r.pve_damage,
+        event_id: r.event_id,
+        week_start: r.attendance_events?.week_start,
+        event_date: r.attendance_events?.event_date,
+        event_name: r.attendance_events?.event_name,
+      }));
+  }
+
+  function renderPeriodOptions(){
+    const sel = document.getElementById("cabPeriodSelect");
+    sel.innerHTML = "";
+    const allOpt = document.createElement("option");
+    allOpt.value = ""; allOpt.textContent = "Всё время";
+    sel.appendChild(allOpt);
+
+    const weeks = [...new Set(allRawStats.map(r => r.week_start))].sort((a, b) => b.localeCompare(a));
+    if(weeks.length){
+      const weekGroup = document.createElement("optgroup");
+      weekGroup.label = "Недели";
+      weeks.forEach(w => {
+        const opt = document.createElement("option");
+        opt.value = "week:" + w; opt.textContent = weekRangeLabel(w);
+        weekGroup.appendChild(opt);
+      });
+      sel.appendChild(weekGroup);
+    }
+
+    const sortedEvents = allRawStats.slice().sort((a, b) => (b.event_date || "").localeCompare(a.event_date || ""));
+    if(sortedEvents.length){
+      const eventGroup = document.createElement("optgroup");
+      eventGroup.label = "Мероприятия";
+      sortedEvents.forEach(e => {
+        const opt = document.createElement("option");
+        opt.value = "event:" + e.event_id;
+        const d = new Date(e.event_date + "T00:00:00");
+        opt.textContent = `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)} — ${e.event_name}`;
+        eventGroup.appendChild(opt);
+      });
+      sel.appendChild(eventGroup);
+    }
+    sel.value = "";
+  }
+
+  function statsForPeriod(period){
+    if(period.startsWith("week:")) return allRawStats.filter(r => r.week_start === period.slice(5));
+    if(period.startsWith("event:")) return allRawStats.filter(r => r.event_id === period.slice(6));
+    return allRawStats;
+  }
+
+  function renderStats(){
+    const period = document.getElementById("cabPeriodSelect").value;
+    const rows = statsForPeriod(period);
+
+    const totals = rows.reduce((acc, r) => {
+      acc.kills += r.kills; acc.deaths += r.deaths; acc.pvp += r.pvp; acc.pve += r.pve;
+      return acc;
+    }, { kills: 0, deaths: 0, pvp: 0, pve: 0 });
+    const kd = totals.deaths > 0 ? totals.kills / totals.deaths : totals.kills;
+
+    document.getElementById("cabKills").textContent = totals.kills.toLocaleString("ru-RU");
+    document.getElementById("cabDeaths").textContent = totals.deaths.toLocaleString("ru-RU");
+    document.getElementById("cabKd").textContent = kd.toFixed(2);
+    document.getElementById("cabPvp").textContent = totals.pvp.toLocaleString("ru-RU");
+    document.getElementById("cabPve").textContent = totals.pve.toLocaleString("ru-RU");
+
+    const sorted = rows.slice().sort((a, b) => (b.event_date || "").localeCompare(a.event_date || ""));
+    const body = document.getElementById("cabHistoryBody");
+    body.innerHTML = "";
+    document.getElementById("cabHistoryEmpty").style.display = sorted.length ? "none" : "";
+    sorted.forEach(r => {
+      const rowKd = r.deaths > 0 ? r.kills / r.deaths : r.kills;
+      const d = r.event_date ? new Date(r.event_date + "T00:00:00") : null;
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        `<td>${d ? pad2(d.getDate()) + "." + pad2(d.getMonth() + 1) : "—"}</td>` +
+        `<td>${escapeHtml(r.event_name || "")}</td>` +
+        `<td>${r.kills.toLocaleString("ru-RU")}</td>` +
+        `<td>${r.deaths.toLocaleString("ru-RU")}</td>` +
+        `<td>${rowKd.toFixed(2)}</td>` +
+        `<td>${r.pvp.toLocaleString("ru-RU")}</td>` +
+        `<td>${r.pve.toLocaleString("ru-RU")}</td>`;
+      body.appendChild(tr);
+    });
+  }
+
+  document.getElementById("cabPeriodSelect").addEventListener("change", renderStats);
+
+  // ---------- проверка буста (только просмотр) ----------
+  async function loadBoost(){
+    const [{ data: s }, { data: it }, { data: mv }] = await Promise.all([
+      db.from("boost_sections").select("id, name, sort_order").order("sort_order").order("name"),
+      db.from("boost_items").select("id, section_id, name, icon, weight, sort_order, hidden").order("sort_order"),
+      db.from("boost_member_values").select("nickname, item_id, enabled"),
+    ]);
+    const sections = s || [];
+    const items = (it || []).filter(i => !i.hidden);
+    const myValues = new Set(
+      (mv || []).filter(r => r.enabled && isMe(r.nickname)).map(r => r.item_id)
+    );
+    return { sections, items, myValues };
+  }
+
+  function renderBoost({ sections, items, myValues }){
+    const body = document.getElementById("cabBoostBody");
+    body.innerHTML = "";
+    document.getElementById("cabBoostEmpty").style.display = sections.length ? "none" : "";
+    if(!sections.length) return;
+
+    const maxScore = items.reduce((s, i) => s + Number(i.weight), 0);
+    const myScore = items.reduce((s, i) => s + (myValues.has(i.id) ? Number(i.weight) : 0), 0);
+    document.getElementById("cabBoostPercent").textContent = maxScore ? ((myScore / maxScore) * 100).toFixed(2) + "%" : "—";
+
+    sections.forEach(sec => {
+      const secItems = items.filter(i => i.section_id === sec.id);
+      if(!secItems.length) return;
+
+      const title = document.createElement("div");
+      title.className = "cab-boost-section";
+      title.textContent = sec.name;
+      body.appendChild(title);
+
+      const grid = document.createElement("div");
+      grid.className = "cab-boost-grid";
+      secItems.forEach(i => {
+        const on = myValues.has(i.id);
+        const el = document.createElement("div");
+        el.className = "cab-boost-item " + (on ? "on" : "off");
+        el.innerHTML =
+          `<img src="${i.icon || BLANK_IMG}" alt="" />` +
+          `<span class="nm">${escapeHtml(i.name)}</span>` +
+          `<span class="mark">${on ? "✓" : "—"}</span>`;
+        grid.appendChild(el);
+      });
+      body.appendChild(grid);
+    });
+  }
+
+  const memberInfo = await loadMyMemberInfo();
+  renderHead(memberInfo);
+
+  await Promise.all([loadEvents(), loadMyStats()]);
+  renderPeriodOptions();
+  renderStats();
+
+  const boostData = await loadBoost();
+  renderBoost(boostData);
+})();
+</script>
+</body>
+</html>
