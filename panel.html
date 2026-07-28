@@ -1141,7 +1141,12 @@
     return crypto.randomUUID ? crypto.randomUUID() : "id" + Date.now() + Math.random().toString(36).slice(2,8);
   }
 
-  let state = loadState();
+  // до того как известно, кто залогинен, читаем/пишем в общий ключ — только для
+  // мгновенной прорисовки при самой первой отрисовке страницы. Как только придёт
+  // профиль, activeStorageKey переключится на личный (STORAGE_KEY+":"+id) и больше
+  // к общему ключу это устройство для этого аккаунта не притронется
+  let activeStorageKey = STORAGE_KEY;
+  let state = loadState(activeStorageKey);
   let prof = activeProfile();
 
   function emptyProfile(){
@@ -1189,9 +1194,9 @@
     if(!Array.isArray(st.macroIcons)) st.macroIcons = [];
     return st;
   }
-  function loadState(){
+  function loadState(key){
     try{
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(key || STORAGE_KEY);
       if(!raw) return defaultState();
       const parsed = JSON.parse(raw);
       if(parsed.profiles){
@@ -1241,7 +1246,7 @@
     return p;
   }
   function saveState(){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(activeStorageKey, JSON.stringify(state));
     scheduleCloudSave();
   }
 
@@ -2366,20 +2371,31 @@
     ownerProfile = p;
     refreshOwnerUI();
 
+    // с этого момента сохраняем только под личным ключом этого аккаунта — общий
+    // ключ (использовался до входа, для мгновенной прорисовки) больше не трогаем
+    const legacySharedKey = activeStorageKey;
+    activeStorageKey = STORAGE_KEY + ":" + p.id;
+
     // подтягиваем личную панель из облака; если её там ещё нет (первый заход этого
-    // аккаунта) — оставляем то, что уже накопилось локально в этом браузере, и сразу
-    // же заливаем это в облако, чтобы не потерять
+    // аккаунта с любого устройства) — берём личный локальный кэш именно этого
+    // устройства, если он уже есть, иначе то, что успело накопиться в общем
+    // (дошедовом) ключе — и сразу заливаем это в облако, чтобы не потерять
     const cloud = await loadCloudState(p.id);
     if(cloud){
       state = normalizeRoot(cloud);
       if(!CLASSES[state.currentRace]) state.currentRace = RACES[0];
       if(!CLASSES[state.currentRace].includes(state.currentClass)) state.currentClass = CLASSES[state.currentRace][0];
-      refreshNav();
-      switchProfile();
-      renderFloats();
-      applyOrient();
-      applyLock();
+    } else if(localStorage.getItem(activeStorageKey)){
+      state = loadState(activeStorageKey);
+    } else if(localStorage.getItem(legacySharedKey)){
+      state = loadState(legacySharedKey);
     }
+    refreshNav();
+    switchProfile();
+    renderFloats();
+    applyOrient();
+    applyLock();
+
     cloudReady = true;
     if(!cloud) scheduleCloudSave();
 
