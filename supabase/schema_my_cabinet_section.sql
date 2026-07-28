@@ -3,7 +3,7 @@
 -- Выполнить в Supabase Dashboard → SQL Editor (после schema.sql)
 
 insert into public.sections (key, label, sort)
-values ('my_cabinet', 'Мой кабинет', 5)
+values ('my_cabinet', 'Мой кабинет', 1)
 on conflict (key) do nothing;
 
 -- виден всем ролям во всех кланах по умолчанию, как и остальные не-админские разделы
