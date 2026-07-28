@@ -94,7 +94,7 @@
   async function loadLookups(){
     const [{ data: r }, { data: p }, { data: s }] = await Promise.all([
       db.from("roles").select("id, key, label, rank").order("rank", { ascending: false }),
-      db.from("clan_groups").select("id, name").order("name"),
+      db.from("clan_groups").select("id, name").eq("hidden", false).order("name"),
       db.from("sections").select("key, label, sort").order("sort"),
     ]);
     roles = r || []; parties = p || []; sections = s || [];

@@ -99,6 +99,11 @@
   .gc-class-option img{ width:22px; height:22px; border-radius:4px; object-fit:cover; flex:none; }
   .gc-class-option.gc-class-clear{ color: var(--text-dim); font-style:italic; }
 
+  .hidden-group-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); }
+  .hidden-group-row:last-child{ border-bottom:none; }
+  .hidden-group-row .name{ font-size:13.5px; color: var(--text); }
+  .hidden-group-row .actions{ display:flex; gap:8px; flex:none; }
+
   /* тот же размер окна «Класс/аватарка», что и в «Проверке буста» */
   .gc-member-modal{ min-height:640px; display:flex; flex-direction:column; }
   .gc-member-modal .field{ margin:24px 0; }
@@ -115,7 +120,10 @@
     </div>
     <div class="groups-toolbar">
       <input type="text" class="search" id="groupSearch" placeholder="Поиск групп..." />
-      <button class="btn btn-primary" id="createGroupBtn" style="display:none;">+ Создать группу</button>
+      <div style="display:flex; gap:8px;">
+        <button class="btn" id="hiddenGroupsBtn" style="display:none;">Скрытые группы</button>
+        <button class="btn btn-primary" id="createGroupBtn" style="display:none;">+ Создать группу</button>
+      </div>
     </div>
     <div class="group-grid" id="groupGrid"></div>
     <p class="empty-hint" id="groupsEmpty" style="display:none;">Групп ещё нет.</p>
@@ -132,7 +140,7 @@
       <div class="group-detail-tools" id="groupDetailTools" style="display:none;">
         <button class="btn" id="groupRenameBtn">Переименовать</button>
         <button class="btn btn-primary" id="groupSaveNameBtn" style="display:none;">Сохранить</button>
-        <button class="btn btn-danger" id="groupDeleteBtn">Удалить группу</button>
+        <button class="btn btn-danger" id="groupHideBtn">Скрыть группу</button>
       </div>
     </div>
 
@@ -162,6 +170,30 @@
     </div>
     <p class="error-msg" id="createGroupError"></p>
     <button class="btn btn-primary" id="createGroupConfirm">Создать</button>
+  </div>
+</div>
+
+<!-- Скрытые группы: вернуть обратно либо удалить навсегда (с подтверждением по имени) -->
+<div class="modal-overlay" id="hiddenGroupsOverlay">
+  <div class="modal">
+    <button class="modal-close" id="hiddenGroupsClose" title="Закрыть">×</button>
+    <h2>Скрытые группы</h2>
+    <p class="hint">Скрытая группа не показывается в общем списке и в фильтрах «Пати» на других страницах, но участники и их данные никуда не деваются. Отсюда можно вернуть группу обратно либо удалить её навсегда.</p>
+    <div id="hiddenGroupsList"></div>
+    <p class="hint" id="hiddenGroupsEmpty" style="display:none;">Скрытых групп нет.</p>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirmDeleteGroupOverlay">
+  <div class="modal" style="max-width:400px;">
+    <button class="modal-close" id="confirmDeleteGroupClose" title="Закрыть">×</button>
+    <h2>Удалить группу навсегда?</h2>
+    <p class="hint">Это необратимо — участники клана никуда не денутся, но сама группа исчезнет без возможности восстановить. Чтобы подтвердить, впишите точное название группы: <b id="confirmDeleteGroupName"></b></p>
+    <div class="field">
+      <input type="text" id="confirmDeleteGroupInput" placeholder="Название группы" />
+    </div>
+    <p class="error-msg" id="confirmDeleteGroupError"></p>
+    <button class="btn btn-danger" id="confirmDeleteGroupBtn" disabled>Удалить навсегда</button>
   </div>
 </div>
 
@@ -244,6 +276,7 @@
   const db = L2Cabinet.client;
   document.getElementById("wrap").style.display = "";
   document.getElementById("createGroupBtn").style.display = isAdmin ? "" : "none";
+  document.getElementById("hiddenGroupsBtn").style.display = isAdmin ? "" : "none";
 
   function escapeHtml(s){
     return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
@@ -277,7 +310,7 @@
 
   async function loadGroups(){
     const [{ data: g, error: gErr }, { data: m, error: mErr }] = await Promise.all([
-      db.from("clan_groups").select("id, name, sort_order").order("sort_order").order("name"),
+      db.from("clan_groups").select("id, name, sort_order, hidden").order("sort_order").order("name"),
       db.from("clan_group_members").select("group_id, nickname, sort_order").order("sort_order").order("nickname"),
     ]);
     if(gErr) console.error(gErr);
@@ -331,8 +364,9 @@
     const grid = document.getElementById("groupGrid");
     grid.innerHTML = "";
     const q = (filterText || "").trim().toLowerCase();
-    const shown = groups.filter(g => !q || g.name.toLowerCase().includes(q));
-    document.getElementById("groupsEmpty").style.display = groups.length ? "none" : "";
+    const visible = groups.filter(g => !g.hidden);
+    const shown = visible.filter(g => !q || g.name.toLowerCase().includes(q));
+    document.getElementById("groupsEmpty").style.display = visible.length ? "none" : "";
     shown.forEach(g => {
       const nicks = membersByGroup.get(g.id) || [];
       const preview = nicks.slice(0, 4).join(", ") + (nicks.length > 4 ? `, +${nicks.length - 4}` : "");
@@ -697,13 +731,92 @@
     document.getElementById("groupRenameBtn").style.display = "";
   });
 
-  // ---- удаление группы ----
-  document.getElementById("groupDeleteBtn").addEventListener("click", async () => {
+  // ---- скрытие группы (удалить навсегда можно только из «Скрытые группы») ----
+  document.getElementById("groupHideBtn").addEventListener("click", async () => {
     const g = groups.find(x => x.id === currentGroupId);
-    if(!confirm(`Удалить группу «${g?.name}»? Участники не удалятся из клана, только группа перестанет существовать.`)) return;
-    await db.from("clan_groups").delete().eq("id", currentGroupId);
+    if(!confirm(`Скрыть группу «${g?.name}»? Она пропадёт из общего списка и фильтров «Пати», но данные участников сохранятся — вернуть или удалить навсегда можно в «Скрытые группы».`)) return;
+    await db.from("clan_groups").update({ hidden: true }).eq("id", currentGroupId);
     document.getElementById("detailView").style.display = "none";
     document.getElementById("listView").style.display = "";
+    await loadGroups();
+    renderGrid(document.getElementById("groupSearch").value);
+  });
+
+  // ---- скрытые группы: вернуть обратно либо удалить навсегда ----
+  function renderHiddenGroupsList(){
+    const wrap = document.getElementById("hiddenGroupsList");
+    wrap.innerHTML = "";
+    const hidden = groups.filter(g => g.hidden);
+    document.getElementById("hiddenGroupsEmpty").style.display = hidden.length ? "none" : "";
+    hidden.forEach(g => {
+      const row = document.createElement("div");
+      row.className = "hidden-group-row";
+
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = g.name;
+
+      const actions = document.createElement("div");
+      actions.className = "actions";
+
+      const showBtn = document.createElement("button");
+      showBtn.className = "btn";
+      showBtn.textContent = "Показать";
+      showBtn.addEventListener("click", async () => {
+        await db.from("clan_groups").update({ hidden: false }).eq("id", g.id);
+        await loadGroups();
+        renderHiddenGroupsList();
+        renderGrid(document.getElementById("groupSearch").value);
+      });
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn btn-danger";
+      delBtn.textContent = "Удалить навсегда";
+      delBtn.addEventListener("click", () => openConfirmDeleteGroup(g));
+
+      actions.append(showBtn, delBtn);
+      row.append(name, actions);
+      wrap.appendChild(row);
+    });
+  }
+
+  document.getElementById("hiddenGroupsBtn").addEventListener("click", () => {
+    renderHiddenGroupsList();
+    document.getElementById("hiddenGroupsOverlay").classList.add("show");
+  });
+  document.getElementById("hiddenGroupsClose").addEventListener("click", () => {
+    document.getElementById("hiddenGroupsOverlay").classList.remove("show");
+  });
+  document.getElementById("hiddenGroupsOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "hiddenGroupsOverlay") e.currentTarget.classList.remove("show");
+  });
+
+  let pendingDeleteGroupId = null;
+  function openConfirmDeleteGroup(g){
+    pendingDeleteGroupId = g.id;
+    document.getElementById("confirmDeleteGroupName").textContent = g.name;
+    document.getElementById("confirmDeleteGroupInput").value = "";
+    document.getElementById("confirmDeleteGroupError").textContent = "";
+    document.getElementById("confirmDeleteGroupBtn").disabled = true;
+    document.getElementById("confirmDeleteGroupOverlay").classList.add("show");
+  }
+  document.getElementById("confirmDeleteGroupClose").addEventListener("click", () => {
+    document.getElementById("confirmDeleteGroupOverlay").classList.remove("show");
+  });
+  document.getElementById("confirmDeleteGroupOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "confirmDeleteGroupOverlay") e.currentTarget.classList.remove("show");
+  });
+  document.getElementById("confirmDeleteGroupInput").addEventListener("input", (e) => {
+    const g = groups.find(x => x.id === pendingDeleteGroupId);
+    document.getElementById("confirmDeleteGroupBtn").disabled = !(g && e.target.value === g.name);
+  });
+  document.getElementById("confirmDeleteGroupBtn").addEventListener("click", async () => {
+    const errEl = document.getElementById("confirmDeleteGroupError");
+    errEl.textContent = "";
+    const { error } = await db.from("clan_groups").delete().eq("id", pendingDeleteGroupId);
+    if(error){ errEl.textContent = error.message; return; }
+    document.getElementById("confirmDeleteGroupOverlay").classList.remove("show");
+    document.getElementById("hiddenGroupsOverlay").classList.remove("show");
     await loadGroups();
     renderGrid(document.getElementById("groupSearch").value);
   });

@@ -433,7 +433,7 @@
   }
 
   async function loadGroupsList(){
-    const { data, error } = await db.from("clan_groups").select("id, name").order("name");
+    const { data, error } = await db.from("clan_groups").select("id, name").eq("hidden", false).order("name");
     if(error){ console.error(error); return; }
     groupsList = data || [];
   }

@@ -214,7 +214,7 @@
 
   async function loadGroups(){
     const [{ data: g }, { data: m }] = await Promise.all([
-      db.from("clan_groups").select("id, name").order("name"),
+      db.from("clan_groups").select("id, name").eq("hidden", false).order("name"),
       db.from("clan_group_members").select("group_id, nickname, clan_groups(name)"),
     ]);
     groups = g || [];
