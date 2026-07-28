@@ -1242,6 +1242,7 @@
   }
   function saveState(){
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    scheduleCloudSave();
   }
 
   const grid = document.getElementById("grid");
@@ -2335,14 +2336,53 @@
     history.replaceState(null, "", location.pathname + location.search);
   }
 
-  // владелец панели — единственный конкретный аккаунт кабинета; только ему видны
-  // добавление иконок и крестики удаления групп/иконок, у всех остальных их нет вообще
-  const PANEL_OWNER_USERNAME = "МрачныйЛорд";
+  // раньше панель была одна на весь клан (localStorage браузера — фактически общая
+  // для всех, кто заходит с этого устройства), редактировать её мог только один
+  // захардкоженный аккаунт. Теперь у каждого аккаунта своя личная панель в Supabase —
+  // редактирует её всегда сам залогиненный человек, isOwner() оставлена только чтобы
+  // не переписывать все места, где она уже проверялась
   let ownerProfile = null;
-  function isOwner(){ return ownerProfile?.username === PANEL_OWNER_USERNAME; }
-  L2Cabinet.getProfile().then(p => {
+  function isOwner(){ return true; }
+  const db = L2Cabinet.client;
+  let cloudReady = false; // до первой попытки прочитать личную панель из облака в него не пишем
+  let cloudSaveTimer = null;
+
+  async function loadCloudState(profileId){
+    const { data, error } = await db.from("skill_panels").select("data").eq("profile_id", profileId).maybeSingle();
+    if(error){ console.error(error); return null; }
+    return data?.data || null;
+  }
+  function scheduleCloudSave(){
+    if(!ownerProfile?.id || !cloudReady) return;
+    clearTimeout(cloudSaveTimer);
+    cloudSaveTimer = setTimeout(async () => {
+      const { error } = await db.from("skill_panels")
+        .upsert({ profile_id: ownerProfile.id, data: state, updated_at: new Date().toISOString() }, { onConflict: "profile_id" });
+      if(error) console.error(error);
+    }, 800);
+  }
+
+  L2Cabinet.getProfile().then(async (p) => {
     ownerProfile = p;
     refreshOwnerUI();
+
+    // подтягиваем личную панель из облака; если её там ещё нет (первый заход этого
+    // аккаунта) — оставляем то, что уже накопилось локально в этом браузере, и сразу
+    // же заливаем это в облако, чтобы не потерять
+    const cloud = await loadCloudState(p.id);
+    if(cloud){
+      state = normalizeRoot(cloud);
+      if(!CLASSES[state.currentRace]) state.currentRace = RACES[0];
+      if(!CLASSES[state.currentRace].includes(state.currentClass)) state.currentClass = CLASSES[state.currentRace][0];
+      refreshNav();
+      switchProfile();
+      renderFloats();
+      applyOrient();
+      applyLock();
+    }
+    cloudReady = true;
+    if(!cloud) scheduleCloudSave();
+
     renderLibrary();
   }).catch(() => {});
 
