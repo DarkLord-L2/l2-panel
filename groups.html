@@ -173,6 +173,8 @@
   }
 
   const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
+  // не-админ с назначенной пати видит только свою группу — без списка всех групп и без возврата к нему
+  const isPartyRestricted = !isAdmin && !!profile.party_id;
   const db = L2Cabinet.client;
   document.getElementById("wrap").style.display = "";
   document.getElementById("createGroupBtn").style.display = isAdmin ? "" : "none";
@@ -551,15 +553,23 @@
 
   await loadNickOptions();
   await Promise.all([loadGroups(), loadMemberInfo()]);
-  renderGrid("");
 
-  // открыть конкретную группу сразу, если сюда перешли по ссылке из другого раздела
-  const params = new URLSearchParams(location.search);
-  const wantGroupId = params.get("group");
-  if(wantGroupId && groups.some(g => g.id === wantGroupId)){
-    openDetail(wantGroupId);
-    if(params.get("from") === "attendance"){
-      document.getElementById("backToJournalBtn").style.display = "";
+  if(isPartyRestricted){
+    // не-админ с назначенной пати не выбирает группу — сразу видит только свою,
+    // список всех групп и кнопка возврата к нему скрыты
+    document.getElementById("groupBackBtn").style.display = "none";
+    if(groups.some(g => g.id === profile.party_id)) openDetail(profile.party_id);
+  } else {
+    renderGrid("");
+
+    // открыть конкретную группу сразу, если сюда перешли по ссылке из другого раздела
+    const params = new URLSearchParams(location.search);
+    const wantGroupId = params.get("group");
+    if(wantGroupId && groups.some(g => g.id === wantGroupId)){
+      openDetail(wantGroupId);
+      if(params.get("from") === "attendance"){
+        document.getElementById("backToJournalBtn").style.display = "";
+      }
     }
   }
 })();
