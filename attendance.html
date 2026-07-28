@@ -354,8 +354,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=3"></script>
-<script src="js/event-roster.js?v=3"></script>
+<script src="js/supabase-client.js?v=4"></script>
+<script src="js/event-roster.js?v=4"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -369,6 +369,8 @@
   }
 
   const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
+  // не-админ с назначенной пати видит только свою группу во всех фильтрах по группе
+  const isPartyRestricted = !isAdmin && !!profile.party_id;
   const db = L2Cabinet.client;
 
   document.getElementById("wrap").style.display = "";
@@ -439,6 +441,17 @@
   function renderGroupFilterOptions(){
     const sel = document.getElementById("attGroupFilter");
     sel.innerHTML = "";
+    // не-админу с назначенной пати менять фильтр некуда — видит только свою группу
+    if(isPartyRestricted){
+      const myGroup = groupsList.find(g => g.id === profile.party_id);
+      const opt = document.createElement("option");
+      opt.value = profile.party_id; opt.textContent = myGroup?.name || "Моя пати";
+      sel.appendChild(opt);
+      sel.value = profile.party_id;
+      sel.disabled = true;
+      activeGroupFilterId = profile.party_id;
+      return;
+    }
     const allOpt = document.createElement("option");
     allOpt.value = ""; allOpt.textContent = "Все";
     sel.appendChild(allOpt);

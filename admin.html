@@ -75,7 +75,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=3"></script>
+<script src="js/supabase-client.js?v=4"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -94,7 +94,7 @@
   async function loadLookups(){
     const [{ data: r }, { data: p }, { data: s }] = await Promise.all([
       db.from("roles").select("id, key, label, rank").order("rank", { ascending: false }),
-      db.from("parties").select("id, name").order("name"),
+      db.from("clan_groups").select("id, name").order("name"),
       db.from("sections").select("key, label, sort").order("sort"),
     ]);
     roles = r || []; parties = p || []; sections = s || [];
@@ -108,7 +108,7 @@
   async function loadUsers(){
     const { data, error } = await db
       .from("profiles")
-      .select("id, username, role_id, created_at, roles(label), parties(name)")
+      .select("id, username, role_id, party_id, created_at, roles(label), clan_groups(name)")
       .eq("clan_id", profile.clan_id)
       .order("created_at", { ascending: false });
     if(error){ console.error(error); return; }
@@ -147,7 +147,29 @@
       }
 
       const tdParty = document.createElement("td");
-      tdParty.textContent = u.parties?.name || "—";
+      if(isSelf){
+        tdParty.textContent = u.clan_groups?.name || "—";
+      } else {
+        const partySel = document.createElement("select");
+        const emptyOpt = document.createElement("option");
+        emptyOpt.value = ""; emptyOpt.textContent = "—";
+        partySel.appendChild(emptyOpt);
+        parties.forEach(p => {
+          const opt = document.createElement("option");
+          opt.value = p.id; opt.textContent = p.name;
+          if(p.id === u.party_id) opt.selected = true;
+          partySel.appendChild(opt);
+        });
+        partySel.addEventListener("change", async () => {
+          partySel.disabled = true;
+          const errEl = document.getElementById("usersError");
+          errEl.textContent = "";
+          const { error } = await db.from("profiles").update({ party_id: partySel.value || null }).eq("id", u.id);
+          if(error) errEl.textContent = "Не удалось изменить пати: " + error.message;
+          partySel.disabled = false;
+        });
+        tdParty.appendChild(partySel);
+      }
 
       const tdCreated = document.createElement("td");
       tdCreated.textContent = new Date(u.created_at).toLocaleDateString("ru-RU");

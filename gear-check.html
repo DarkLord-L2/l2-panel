@@ -422,7 +422,7 @@
 <input type="file" id="iconPicker" accept="image/*" style="display:none;" />
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=3"></script>
+<script src="js/supabase-client.js?v=4"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -437,6 +437,8 @@
   }
 
   const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
+  // не-админ с назначенной пати видит только свою группу — без экрана выбора и без возврата к нему
+  const isPartyRestricted = !isAdmin && !!profile.party_id;
   const db = L2Cabinet.client;
   document.getElementById("wrap").style.display = "";
   document.getElementById("addSectionBtn").style.display = isAdmin ? "" : "none";
@@ -1276,7 +1278,15 @@
   const params = new URLSearchParams(location.search);
   const wantGroupId = params.get("group");
   const wantGroup = wantGroupId && groups.find(g => g.id === wantGroupId);
-  if(wantGroup){
+
+  if(isPartyRestricted){
+    // не-админ с назначенной пати не выбирает группу — сразу видит только свою,
+    // экран выбора и кнопка возврата к нему скрыты
+    const myGroup = groups.find(g => g.id === profile.party_id);
+    selectedGroupId = profile.party_id;
+    document.getElementById("gcBackBtn").style.display = "none";
+    showTableView(myGroup?.name || "Моя пати");
+  } else if(wantGroup){
     selectedGroupId = wantGroup.id;
     showTableView(wantGroup.name);
   } else if(groups.length){
