@@ -33,6 +33,10 @@
           <input type="text" id="newPassword" required minlength="6" />
         </div>
         <div class="field">
+          <label for="newNickname">Ник в игре (необязательно)</label>
+          <input type="text" id="newNickname" placeholder="Любой, хоть кириллицей" />
+        </div>
+        <div class="field">
           <label for="newRole">Роль</label>
           <select id="newRole"></select>
         </div>
@@ -51,7 +55,7 @@
     <h2>Пользователи</h2>
     <table class="data-table" id="usersTable">
       <thead>
-        <tr><th>Логин</th><th>Роль</th><th>Пати</th><th>Создан</th><th></th></tr>
+        <tr><th>Логин</th><th>Ник в игре</th><th>Роль</th><th>Пати</th><th>Создан</th><th></th></tr>
       </thead>
       <tbody id="usersBody"></tbody>
     </table>
@@ -108,7 +112,7 @@
   async function loadUsers(){
     const { data, error } = await db
       .from("profiles")
-      .select("id, username, role_id, party_id, created_at, roles(label), clan_groups(name)")
+      .select("id, username, nickname, role_id, party_id, created_at, roles(label), clan_groups(name)")
       .eq("clan_id", profile.clan_id)
       .order("created_at", { ascending: false });
     if(error){ console.error(error); return; }
@@ -122,6 +126,25 @@
 
       const tdUsername = document.createElement("td");
       tdUsername.textContent = u.username;
+
+      const tdNickname = document.createElement("td");
+      const nickInput = document.createElement("input");
+      nickInput.type = "text";
+      nickInput.value = u.nickname || "";
+      nickInput.placeholder = "—";
+      nickInput.style.width = "140px";
+      async function saveNickname(){
+        const errEl = document.getElementById("usersError");
+        errEl.textContent = "";
+        const val = nickInput.value.trim();
+        nickInput.disabled = true;
+        const { error } = await db.from("profiles").update({ nickname: val || null }).eq("id", u.id);
+        if(error) errEl.textContent = "Не удалось сохранить ник: " + error.message;
+        nickInput.disabled = false;
+      }
+      nickInput.addEventListener("blur", saveNickname);
+      nickInput.addEventListener("keydown", (e) => { if(e.key === "Enter") nickInput.blur(); });
+      tdNickname.appendChild(nickInput);
 
       const tdRole = document.createElement("td");
       if(isSelf){
@@ -195,7 +218,7 @@
         tdActions.appendChild(delBtn);
       }
 
-      tr.append(tdUsername, tdRole, tdParty, tdCreated, tdActions);
+      tr.append(tdUsername, tdNickname, tdRole, tdParty, tdCreated, tdActions);
       body.appendChild(tr);
     });
   }
@@ -250,12 +273,13 @@
 
     const username = document.getElementById("newUsername").value.trim();
     const password = document.getElementById("newPassword").value;
+    const nickname = document.getElementById("newNickname").value.trim();
     const roleId = document.getElementById("newRole").value;
     const partyId = document.getElementById("newParty").value;
     const role = roles.find(r => r.id === roleId);
 
     try{
-      await L2Cabinet.adminCreateUser({ username, password, role_key: role?.key, party_id: partyId || null });
+      await L2Cabinet.adminCreateUser({ username, password, nickname: nickname || null, role_key: role?.key, party_id: partyId || null });
       okEl.textContent = `Пользователь «${username}» создан.`;
       document.getElementById("createUserForm").reset();
       await loadUsers();

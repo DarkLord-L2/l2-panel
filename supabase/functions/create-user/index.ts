@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
   }
 
   // 2. Разбор запроса
-  let body: { username?: string; password?: string; role_key?: string; party_id?: string | null };
+  let body: { username?: string; password?: string; nickname?: string | null; role_key?: string; party_id?: string | null };
   try {
     body = await req.json();
   } catch {
@@ -63,6 +63,7 @@ Deno.serve(async (req) => {
 
   const username = (body.username ?? "").trim();
   const password = body.password ?? "";
+  const nickname = (body.nickname ?? "").trim() || null;
   const roleKey = body.role_key ?? "";
   const partyId = body.party_id || null;
 
@@ -99,6 +100,7 @@ Deno.serve(async (req) => {
   const { error: insertErr } = await admin.from("profiles").insert({
     id: created.user.id,
     username,
+    nickname,
     clan_id: (callerProfile as { clan_id: string }).clan_id,
     role_id: roleRow.id,
     party_id: partyId,

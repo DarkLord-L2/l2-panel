@@ -88,7 +88,7 @@ async function getVisibleSections(roleKey){
 
 // Создание нового пользователя — только для главного админа, идёт через Edge Function
 // (там же живёт service-role ключ, в браузере его нет и быть не должно).
-async function adminCreateUser({ username, password, role_key, party_id }){
+async function adminCreateUser({ username, password, nickname, role_key, party_id }){
   const { data: { session } } = await client.auth.getSession();
   if(!session) throw new Error("no_session");
 
@@ -98,7 +98,7 @@ async function adminCreateUser({ username, password, role_key, party_id }){
       "Content-Type": "application/json",
       "Authorization": `Bearer ${session.access_token}`,
     },
-    body: JSON.stringify({ username, password, role_key, party_id: party_id || null }),
+    body: JSON.stringify({ username, password, nickname: nickname || null, role_key, party_id: party_id || null }),
   });
   const body = await res.json().catch(() => ({}));
   if(!res.ok) throw new Error(body.error || "request_failed");
