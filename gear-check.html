@@ -471,6 +471,16 @@
 
   function keyOf(nick, itemId){ return nick + "|" + itemId; }
 
+  // перепись/группы иногда пишут один и тот же ник по-разному (кириллица/латиница
+  // похожих букв — К0РТЕС/K0PTEC, регистр) — схлопываем такие варианты
+  const CYR_LOOKALIKES = { "а":"a","в":"b","е":"e","к":"k","м":"m","н":"h","о":"o","р":"p","с":"c","т":"t","у":"y","х":"x","ё":"e" };
+  function normalizeNick(s){
+    return String(s || "")
+      .toLowerCase()
+      .split("").map(ch => CYR_LOOKALIKES[ch] || ch).join("")
+      .replace(/[^a-zа-яё0-9]/gi, "");
+  }
+
   const BLANK_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34'></svg>";
 
   // пока открыт дровер или любое окно поверх него — страница под ними не скроллится
@@ -505,17 +515,19 @@
     });
   }
 
-  // список ников, которые сейчас должны попасть в таблицу — зависит от выбранной группы/«Соло»
+  // список ников, которые сейчас должны попасть в таблицу — зависит от выбранной группы/«Соло».
+  // сравнение по нормализованному нику — census и clan_group_members могут писать
+  // один и тот же ник по-разному (кириллица/латиница похожих букв, регистр)
   function currentNicks(){
     if(!groups.length) return nicks;
     if(selectedGroupId === SOLO_KEY){
       const grouped = new Set();
-      membersByGroup.forEach(list => list.forEach(n => grouped.add(n)));
-      return nicks.filter(n => !grouped.has(n));
+      membersByGroup.forEach(list => list.forEach(n => grouped.add(normalizeNick(n))));
+      return nicks.filter(n => !grouped.has(normalizeNick(n)));
     }
     if(selectedGroupId){
-      const set = new Set(membersByGroup.get(selectedGroupId) || []);
-      return nicks.filter(n => set.has(n));
+      const set = new Set((membersByGroup.get(selectedGroupId) || []).map(normalizeNick));
+      return nicks.filter(n => set.has(normalizeNick(n)));
     }
     return [];
   }

@@ -426,8 +426,28 @@
   let attNickFilter = "";            // поиск по нику (подстрока, без регистра)
   let activeFilterKey = null;        // текущая активная вкладка-фильтр
   let nickGroupsMap = new Map();     // nickname -> [{id, name}] групп из раздела «Группы»
+  let nickGroupsNorm = new Map();    // normalizeNick(nickname) -> [{id, name}] — запасной поиск
   let groupsList = [];               // [{id, name}] — для выпадающего списка «Пати»
   let activeGroupFilterId = "";      // "" — все, иначе id выбранной группы/пати
+
+  // census/явка/налоги/группы иногда пишут один и тот же ник по-разному (кириллица/
+  // латиница похожих букв — К0РТЕС/K0PTEC, регистр) — схлопываем такие варианты
+  // в одну нормализованную форму, чтобы это не плодило "дублей" одного человека
+  const CYR_LOOKALIKES = { "а":"a","в":"b","е":"e","к":"k","м":"m","н":"h","о":"o","р":"p","с":"c","т":"t","у":"y","х":"x","ё":"e" };
+  function normalizeNick(s){
+    return String(s || "")
+      .toLowerCase()
+      .split("").map(ch => CYR_LOOKALIKES[ch] || ch).join("")
+      .replace(/[^a-zа-яё0-9]/gi, "");
+  }
+  function findByNormalized(map, nickname){
+    const norm = normalizeNick(nickname);
+    if(map.has(norm)) return map.get(norm);
+    for(const [key, value] of map){
+      if(key && (key.startsWith(norm) || norm.startsWith(key))) return value;
+    }
+    return undefined;
+  }
 
   async function loadNickGroups(){
     const { data, error } = await db
@@ -435,9 +455,13 @@
       .select("group_id, nickname, clan_groups(name)");
     if(error){ console.error(error); return; }
     nickGroupsMap = new Map();
+    nickGroupsNorm = new Map();
     (data || []).forEach(row => {
       if(!nickGroupsMap.has(row.nickname)) nickGroupsMap.set(row.nickname, []);
       nickGroupsMap.get(row.nickname).push({ id: row.group_id, name: row.clan_groups?.name || "?" });
+      const norm = normalizeNick(row.nickname);
+      if(!nickGroupsNorm.has(norm)) nickGroupsNorm.set(norm, []);
+      nickGroupsNorm.get(norm).push({ id: row.group_id, name: row.clan_groups?.name || "?" });
     });
   }
 
@@ -475,7 +499,8 @@
   // ник попадает в отчёт, только если либо «Пати» = «Все», либо он состоит в выбранной группе
   function passesGroupFilter(nickname){
     if(!activeGroupFilterId) return true;
-    return (nickGroupsMap.get(nickname) || []).some(g => g.id === activeGroupFilterId);
+    const groups = nickGroupsMap.get(nickname) || findByNormalized(nickGroupsNorm, nickname) || [];
+    return groups.some(g => g.id === activeGroupFilterId);
   }
 
   document.getElementById("attGroupFilter").addEventListener("change", (e) => {
@@ -487,7 +512,7 @@
     document.getElementById("nickInfoTitle").textContent = nickname;
     const statusEl = document.getElementById("nickInfoStatus");
     statusEl.innerHTML = "";
-    const groups = nickGroupsMap.get(nickname) || [];
+    const groups = nickGroupsMap.get(nickname) || findByNormalized(nickGroupsNorm, nickname) || [];
     if(!groups.length){
       statusEl.textContent = "Соло";
     } else {
@@ -761,14 +786,27 @@
     if(censusErr) console.error(censusErr);
     if(evErr) console.error(evErr);
 
+    // перепись/явка/налоги иногда пишут один и тот же ник по-разному (кириллица/
+    // латиница похожих букв, регистр) — сводим все написания к одному, отдавая
+    // предпочтение варианту из переписи (она — основной список участников)
+    const canonicalOf = new Map(); // normalizeNick(ник) -> отображаемый ник
+    function resolveNick(raw){
+      const key = normalizeNick(raw);
+      if(!canonicalOf.has(key)) canonicalOf.set(key, raw);
+      return canonicalOf.get(key);
+    }
+
     const firstSeen = new Map();
     let latestCensusWeek = null;
     (census || []).forEach(row => {
       if(!latestCensusWeek || row.week_start > latestCensusWeek) latestCensusWeek = row.week_start;
-      const cur = firstSeen.get(row.nickname);
-      if(!cur || row.week_start < cur) firstSeen.set(row.nickname, row.week_start);
     });
-    const latestRoster = new Set((census || []).filter(r => r.week_start === latestCensusWeek).map(r => r.nickname));
+    (census || []).forEach(row => {
+      const nickname = resolveNick(row.nickname);
+      const cur = firstSeen.get(nickname);
+      if(!cur || row.week_start < cur) firstSeen.set(nickname, row.week_start);
+    });
+    const latestRoster = new Set((census || []).filter(r => r.week_start === latestCensusWeek).map(r => resolveNick(r.nickname)));
 
     const eventIds = (evs || []).map(e => e.id);
     const totalEvents = eventIds.length;
@@ -783,10 +821,11 @@
         .in("event_id", eventIds);
       if(entErr) console.error(entErr);
       (entries || []).forEach(row => {
-        attendedCount.set(row.nickname, (attendedCount.get(row.nickname) || 0) + 1);
+        const nickname = resolveNick(row.nickname);
+        attendedCount.set(nickname, (attendedCount.get(nickname) || 0) + 1);
         const d = eventDateById.get(row.event_id);
-        if(!nickDays.has(row.nickname)) nickDays.set(row.nickname, new Set());
-        nickDays.get(row.nickname).add(d);
+        if(!nickDays.has(nickname)) nickDays.set(nickname, new Set());
+        nickDays.get(nickname).add(d);
       });
     }
 
@@ -796,7 +835,7 @@
       .gte("week_start", fromStr)
       .lte("week_start", toStr);
     if(payErr) console.error(payErr);
-    const paidSet = new Set((payments || []).map(r => r.nickname));
+    const paidSet = new Set((payments || []).map(r => resolveNick(r.nickname)));
 
     const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
     const cutoffStr = isoDate(cutoff);
