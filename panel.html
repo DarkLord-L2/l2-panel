@@ -30,42 +30,6 @@
     --danger-lit: #c46a6a;
     --focus: #5b8def;
   }
-  :root[data-theme="light"]{
-    --bg: #f2f2f4;
-    --bg-vignette: #f2f2f4;
-    --panel: #ffffff;
-    --panel-2: #f6f6f8;
-    --border: #dcdce0;
-    --border-lit: #c2c2c8;
-    --gold: #1c1d20;
-    --gold-dim: #6b6c74;
-    --text: #212226;
-    --text-dim: #6b6c74;
-    --slot-empty-a: #ededf0;
-    --slot-empty-b: #f4f4f6;
-    --danger: #b04747;
-    --danger-lit: #8f3535;
-    --focus: #3f6fd8;
-  }
-  @media (prefers-color-scheme: light){
-    :root:not([data-theme="dark"]){
-      --bg: #f2f2f4;
-      --bg-vignette: #f2f2f4;
-      --panel: #ffffff;
-      --panel-2: #f6f6f8;
-      --border: #dcdce0;
-      --border-lit: #c2c2c8;
-      --gold: #1c1d20;
-      --gold-dim: #6b6c74;
-      --text: #212226;
-      --text-dim: #6b6c74;
-      --slot-empty-a: #ededf0;
-      --slot-empty-b: #f4f4f6;
-      --danger: #b04747;
-      --danger-lit: #8f3535;
-      --focus: #3f6fd8;
-    }
-  }
 
   *{ box-sizing: border-box; }
   html,body{ height:100%; }
@@ -569,10 +533,6 @@
     z-index:1;
     pointer-events:none;
   }
-  :root[data-theme="light"] .slot-num{ color: rgba(0,0,0,.22); }
-  @media (prefers-color-scheme: light){
-    :root:not([data-theme="dark"]) .slot-num{ color: rgba(0,0,0,.22); }
-  }
 
   .menu-btn{
     position:fixed;
@@ -833,18 +793,6 @@
   }
   .modal-close:hover{ color: var(--gold); }
 
-  .theme-toggle{
-    position:fixed;
-    top:14px; right:16px;
-    font-size:11px;
-    padding:6px 10px;
-    border-radius:5px;
-    border:1px solid var(--border);
-    background: var(--panel);
-    color: var(--text-dim);
-    cursor:pointer;
-  }
-
   /* context menu */
   .ctx{
     position:fixed;
@@ -894,8 +842,6 @@
 </style>
 </head>
 <body>
-
-<button class="theme-toggle" id="themeToggle">☾ / ☀</button>
 
 <button class="menu-btn" id="menuBtn" title="Меню">☰</button>
 <div class="menu-panel" id="menuPanel">
@@ -1175,7 +1121,6 @@
   const FLOAT_MAX = 3; // доп. строки 11–13
   const SHAPES = ["12x1","6x2","4x3","3x4","2x6","1x12"]; // колонки x ряды
   const STORAGE_KEY = "l2SkillPanelData";
-  const THEME_KEY = "l2SkillPanelTheme";
 
   const CLASSES = {
     "Human Fighter": ["Dreadnought","Duelist","Phoenix Knight","Hell Knight","Adventurer","Sagittarius"],
@@ -1937,20 +1882,6 @@
   document.getElementById("copyTextClose").addEventListener("click", () => copyTextOverlay.classList.remove("show"));
   copyTextOverlay.addEventListener("click", (e) => { if(e.target === copyTextOverlay) copyTextOverlay.classList.remove("show"); });
 
-  // ---- theme toggle ----
-  const root = document.documentElement;
-  function applyTheme(t){
-    if(t) root.setAttribute("data-theme", t);
-    else root.removeAttribute("data-theme");
-  }
-  applyTheme(localStorage.getItem(THEME_KEY));
-  document.getElementById("themeToggle").addEventListener("click", () => {
-    const current = root.getAttribute("data-theme") ||
-      (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-    const next = current === "dark" ? "light" : "dark";
-    localStorage.setItem(THEME_KEY, next);
-    applyTheme(next);
-  });
 
   // бросок иконки из ячейки в пустое место страницы — убирает её с панели
   document.addEventListener("dragover", (e) => {
