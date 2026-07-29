@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Группы — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=3" />
+<link rel="stylesheet" href="js/theme.css?v=4" />
 <style>
   .groups-wrap{ padding:0 0 32px; }
   .groups-toolbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:10px 0 14px; }
@@ -77,11 +77,15 @@
     width:38px; height:38px; border-radius:50%; object-fit:cover; display:block;
     border:1px solid var(--border); background: var(--panel);
   }
+  /* доп-профессии кружочками у аватарки; их может быть до трёх, поэтому лежат
+     рядком с нахлёстом — иначе цепочка уезжала бы за пределы карточки */
+  .gm-member-card .sub-avatar-row{ position:absolute; right:-3px; bottom:-3px; display:flex; }
   .gm-member-card .sub-avatar{
-    position:absolute; right:-3px; bottom:-3px;
-    width:18px; height:18px; border-radius:50%; object-fit:cover;
+    width:17px; height:17px; border-radius:50%; object-fit:cover; display:block;
     border:2px solid var(--panel-2); background: var(--panel);
+    margin-right:-6px;
   }
+  .gm-member-card .sub-avatar:last-child{ margin-right:0; }
   .gm-member-card .who{ display:flex; flex-direction:column; gap:1px; min-width:0; }
   .gm-member-card .name{ font-weight:600; color: var(--text); font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .gm-member-card .cls{ font-size:11.5px; color: var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -139,10 +143,22 @@
   .hidden-group-row .name{ font-size:13.5px; color: var(--text); }
   .hidden-group-row .actions{ display:flex; gap:8px; flex:none; }
 
-  /* то же окно выбора класса, что и в «Проверке буста», плюс вторая профессия */
+  /* то же окно выбора класса, что и в «Проверке буста», но на четыре профессии */
   .gc-member-modal{ min-height:640px; display:flex; flex-direction:column; position:relative; }
-  .gc-member-modal .field{ margin:24px 0; }
+  .gc-member-modal .field{ margin:18px 0; }
   .gc-member-modal #memberSaveBtn{ margin-top:auto; align-self:flex-start; }
+
+  /* выбор класса и поле его уровня — в одну строку */
+  .gc-class-row{ display:flex; align-items:center; gap:10px; }
+  .gc-class-row .gc-class-picker{ flex:1; min-width:0; }
+  .gc-class-level{
+    flex:none; width:78px; text-align:center;
+    /* стрелки-спиннеры в таком узком поле только мешают попадать мышью */
+    -moz-appearance:textfield; appearance:textfield;
+  }
+  .gc-class-level::-webkit-outer-spin-button,
+  .gc-class-level::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .gc-class-level:disabled{ opacity:.4; cursor:not-allowed; }
 
   /* открытый список классов разворачивается на всю карточку: привязан не к своей
      кнопке, а к самому окну — иначе висел узкой полоской посреди пустоты */
@@ -263,29 +279,69 @@
 
     <div class="field">
       <label>Класс</label>
-      <div class="gc-class-picker" id="classPicker">
-        <button type="button" class="gc-class-picker-btn" id="classPickerBtn">
-          <img id="classPickerIcon" class="gc-class-picker-icon" alt="" style="display:none;" />
-          <span id="classPickerLabel">Не выбран</span>
-        </button>
-        <div class="gc-class-dropdown" id="classDropdown" style="display:none;">
-          <input type="text" id="classSearchInput" placeholder="Поиск класса..." />
-          <div class="gc-class-list" id="classDropdownList"></div>
+      <div class="gc-class-row">
+        <div class="gc-class-picker" id="classPicker1">
+          <button type="button" class="gc-class-picker-btn" id="classPickerBtn1">
+            <img id="classPickerIcon1" class="gc-class-picker-icon" alt="" style="display:none;" />
+            <span id="classPickerLabel1">Не выбран</span>
+          </button>
+          <div class="gc-class-dropdown" id="classDropdown1" style="display:none;">
+            <input type="text" id="classSearchInput1" placeholder="Поиск класса..." />
+            <div class="gc-class-list" id="classDropdownList1"></div>
+          </div>
         </div>
+        <input type="number" class="gc-class-level" id="classLevel1" min="1" max="85" placeholder="ур." title="Уровень, 1–85" />
       </div>
     </div>
 
     <div class="field">
       <label>Вторая профессия (необязательно)</label>
-      <div class="gc-class-picker" id="classPicker2">
-        <button type="button" class="gc-class-picker-btn" id="classPickerBtn2">
-          <img id="classPickerIcon2" class="gc-class-picker-icon" alt="" style="display:none;" />
-          <span id="classPickerLabel2">Не выбрана</span>
-        </button>
-        <div class="gc-class-dropdown" id="classDropdown2" style="display:none;">
-          <input type="text" id="classSearchInput2" placeholder="Поиск класса..." />
-          <div class="gc-class-list" id="classDropdownList2"></div>
+      <div class="gc-class-row">
+        <div class="gc-class-picker" id="classPicker2">
+          <button type="button" class="gc-class-picker-btn" id="classPickerBtn2">
+            <img id="classPickerIcon2" class="gc-class-picker-icon" alt="" style="display:none;" />
+            <span id="classPickerLabel2">Не выбрана</span>
+          </button>
+          <div class="gc-class-dropdown" id="classDropdown2" style="display:none;">
+            <input type="text" id="classSearchInput2" placeholder="Поиск класса..." />
+            <div class="gc-class-list" id="classDropdownList2"></div>
+          </div>
         </div>
+        <input type="number" class="gc-class-level" id="classLevel2" min="1" max="85" placeholder="ур." title="Уровень, 1–85" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Третья профессия (необязательно)</label>
+      <div class="gc-class-row">
+        <div class="gc-class-picker" id="classPicker3">
+          <button type="button" class="gc-class-picker-btn" id="classPickerBtn3">
+            <img id="classPickerIcon3" class="gc-class-picker-icon" alt="" style="display:none;" />
+            <span id="classPickerLabel3">Не выбрана</span>
+          </button>
+          <div class="gc-class-dropdown" id="classDropdown3" style="display:none;">
+            <input type="text" id="classSearchInput3" placeholder="Поиск класса..." />
+            <div class="gc-class-list" id="classDropdownList3"></div>
+          </div>
+        </div>
+        <input type="number" class="gc-class-level" id="classLevel3" min="1" max="85" placeholder="ур." title="Уровень, 1–85" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Четвёртая профессия (необязательно)</label>
+      <div class="gc-class-row">
+        <div class="gc-class-picker" id="classPicker4">
+          <button type="button" class="gc-class-picker-btn" id="classPickerBtn4">
+            <img id="classPickerIcon4" class="gc-class-picker-icon" alt="" style="display:none;" />
+            <span id="classPickerLabel4">Не выбрана</span>
+          </button>
+          <div class="gc-class-dropdown" id="classDropdown4" style="display:none;">
+            <input type="text" id="classSearchInput4" placeholder="Поиск класса..." />
+            <div class="gc-class-list" id="classDropdownList4"></div>
+          </div>
+        </div>
+        <input type="number" class="gc-class-level" id="classLevel4" min="1" max="85" placeholder="ур." title="Уровень, 1–85" />
       </div>
     </div>
 
@@ -312,6 +368,15 @@
       <div class="help-body">
         <p>Можно создавать группы («+ Создать группу»), переименовывать их, удалять и добавлять/убирать участников по нику (с подсказками из последней переписи).</p>
         <p>Остальным группы видны только для просмотра.</p>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary>Классы и уровни участника</summary>
+      <div class="help-body">
+        <p>«⋮» у карточки участника → «Класс…» открывает окно, где можно задать до четырёх профессий. Рядом с каждой — поле уровня от 1 до 85 (необязательное; поле включается, только когда профессия выбрана).</p>
+        <p>Первая профессия становится большой аватаркой участника, остальные — маленькими кружочками рядом с ней; при наведении на кружок видно название и уровень. Под ником профессии перечислены через «/» вместе с уровнями.</p>
+        <p>Уровень пока показывается только здесь, в «Группах» — в отчётах и «Проверке буста» он не участвует.</p>
       </div>
     </details>
   </div>
@@ -361,16 +426,17 @@
   let memberInfo = new Map();    // nickname -> {class_name, icon} — то же самое, что в «Проверке буста»
   let currentGroupId = null;
   let memberModalNick = null;
-  let memberModalClassName = "";  // выбранный в пикере класс (имя из L2_CLASSES или "")
-  let memberModalClassName2 = ""; // вторая профессия (необязательно), тот же список классов
 
   const BLANK_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34'></svg>";
   function classIcon(name){ return (window.L2_CLASS_ICON && name) ? window.L2_CLASS_ICON(name) : null; }
 
   async function loadMemberInfo(){
-    const { data } = await db.from("member_classes").select("nickname, class_name, class_name_2, icon");
+    const { data } = await db.from("member_classes").select(
+      "nickname, class_name, class_name_2, class_name_3, class_name_4, " +
+      "class_level, class_level_2, class_level_3, class_level_4, icon"
+    );
     memberInfo = new Map();
-    (data || []).forEach(r => memberInfo.set(r.nickname, { class_name: r.class_name, class_name_2: r.class_name_2, icon: r.icon }));
+    (data || []).forEach(r => memberInfo.set(r.nickname, r));
   }
 
   // средние по группе на карточках в «Все группы»: К/Д и PvP-урон за всё время,
@@ -726,98 +792,93 @@
     card.appendChild(menu);
   }
 
-  // ---------- класс участника (то же самое окно, что в «Проверке буста») ----------
-  function renderClassPickerButton(){
-    const icon = classIcon(memberModalClassName);
-    const iconEl = document.getElementById("classPickerIcon");
-    if(icon){ iconEl.src = icon; iconEl.style.display = ""; } else { iconEl.style.display = "none"; }
-    document.getElementById("classPickerLabel").textContent = memberModalClassName || "Не выбран";
-  }
-  function renderClassDropdownList(filterText){
-    const list = document.getElementById("classDropdownList");
-    const q = (filterText || "").trim().toLowerCase();
-    list.innerHTML = "";
-    const clearOpt = document.createElement("div");
-    clearOpt.className = "gc-class-option gc-class-clear";
-    clearOpt.textContent = "Не выбран";
-    clearOpt.addEventListener("click", () => { memberModalClassName = ""; renderClassPickerButton(); closeClassDropdown(); });
-    list.appendChild(clearOpt);
-    (window.L2_CLASSES || []).filter(c => !q || c.name.toLowerCase().includes(q)).forEach(c => {
-      const opt = document.createElement("div");
-      opt.className = "gc-class-option";
-      opt.innerHTML = `<img src="${c.icon}" alt="" /><span>${escapeHtml(c.name)}</span>`;
-      opt.addEventListener("click", () => { memberModalClassName = c.name; renderClassPickerButton(); closeClassDropdown(); });
-      list.appendChild(opt);
-    });
-  }
-  function openClassDropdown(){
-    document.getElementById("classDropdown").style.display = "";
-    document.getElementById("classSearchInput").value = "";
-    renderClassDropdownList("");
-    setTimeout(() => document.getElementById("classSearchInput").focus(), 0);
-  }
-  function closeClassDropdown(){ document.getElementById("classDropdown").style.display = "none"; }
-  document.getElementById("classPickerBtn").addEventListener("click", (e) => {
-    e.stopPropagation();
-    const isOpen = document.getElementById("classDropdown").style.display !== "none";
-    if(isOpen) closeClassDropdown(); else openClassDropdown();
-  });
-  document.getElementById("classSearchInput").addEventListener("input", (e) => renderClassDropdownList(e.target.value));
-  document.addEventListener("click", (e) => {
-    if(!document.getElementById("classPicker").contains(e.target)) closeClassDropdown();
-  });
+  // ---------- классы участника: 4 слота, у каждого свой уровень ----------
+  // все четыре выпадающих списка устроены одинаково, поэтому один конструктор
+  // на слот вместо копии кода на каждую профессию
+  function setupClassSlot(n){
+    const picker = document.getElementById("classPicker" + n);
+    const btn = document.getElementById("classPickerBtn" + n);
+    const iconEl = document.getElementById("classPickerIcon" + n);
+    const labelEl = document.getElementById("classPickerLabel" + n);
+    const dropdown = document.getElementById("classDropdown" + n);
+    const searchEl = document.getElementById("classSearchInput" + n);
+    const listEl = document.getElementById("classDropdownList" + n);
+    const levelEl = document.getElementById("classLevel" + n);
+    const emptyLabel = n === 1 ? "Не выбран" : "Не выбрана";
+    let className = "";
 
-  // ---- та же логика, но для второй профессии ----
-  function renderClassPickerButton2(){
-    const icon = classIcon(memberModalClassName2);
-    const iconEl = document.getElementById("classPickerIcon2");
-    if(icon){ iconEl.src = icon; iconEl.style.display = ""; } else { iconEl.style.display = "none"; }
-    document.getElementById("classPickerLabel2").textContent = memberModalClassName2 || "Не выбрана";
-  }
-  function renderClassDropdownList2(filterText){
-    const list = document.getElementById("classDropdownList2");
-    const q = (filterText || "").trim().toLowerCase();
-    list.innerHTML = "";
-    const clearOpt = document.createElement("div");
-    clearOpt.className = "gc-class-option gc-class-clear";
-    clearOpt.textContent = "Не выбрана";
-    clearOpt.addEventListener("click", () => { memberModalClassName2 = ""; renderClassPickerButton2(); closeClassDropdown2(); });
-    list.appendChild(clearOpt);
-    (window.L2_CLASSES || []).filter(c => !q || c.name.toLowerCase().includes(q)).forEach(c => {
-      const opt = document.createElement("div");
-      opt.className = "gc-class-option";
-      opt.innerHTML = `<img src="${c.icon}" alt="" /><span>${escapeHtml(c.name)}</span>`;
-      opt.addEventListener("click", () => { memberModalClassName2 = c.name; renderClassPickerButton2(); closeClassDropdown2(); });
-      list.appendChild(opt);
+    function renderButton(){
+      const icon = classIcon(className);
+      if(icon){ iconEl.src = icon; iconEl.style.display = ""; } else { iconEl.style.display = "none"; }
+      labelEl.textContent = className || emptyLabel;
+      // уровень без класса смысла не имеет — поле гаснет и очищается
+      levelEl.disabled = !className;
+      if(!className) levelEl.value = "";
+    }
+    function pick(name){ className = name; renderButton(); close(); }
+    function renderList(filterText){
+      const q = (filterText || "").trim().toLowerCase();
+      listEl.innerHTML = "";
+      const clearOpt = document.createElement("div");
+      clearOpt.className = "gc-class-option gc-class-clear";
+      clearOpt.textContent = emptyLabel;
+      clearOpt.addEventListener("click", () => pick(""));
+      listEl.appendChild(clearOpt);
+      (window.L2_CLASSES || []).filter(c => !q || c.name.toLowerCase().includes(q)).forEach(c => {
+        const opt = document.createElement("div");
+        opt.className = "gc-class-option";
+        opt.innerHTML = `<img src="${c.icon}" alt="" /><span>${escapeHtml(c.name)}</span>`;
+        opt.addEventListener("click", () => pick(c.name));
+        listEl.appendChild(opt);
+      });
+    }
+    function open(){
+      dropdown.style.display = "";
+      searchEl.value = "";
+      renderList("");
+      setTimeout(() => searchEl.focus(), 0);
+    }
+    function close(){ dropdown.style.display = "none"; }
+
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if(dropdown.style.display !== "none") close(); else open();
     });
+    searchEl.addEventListener("input", (e) => renderList(e.target.value));
+    document.addEventListener("click", (e) => { if(!picker.contains(e.target)) close(); });
+
+    return {
+      close,
+      name(){ return className; },
+      // пусто → null; иначе целое, отсечённое по игровому диапазону 1..85
+      level(){
+        const raw = levelEl.value.trim();
+        if(!className || !raw) return null;
+        const v = Math.round(Number(raw));
+        if(!isFinite(v)) return NaN;
+        return v;
+      },
+      fill(name, level){
+        className = name || "";
+        renderButton();
+        levelEl.value = (className && level != null) ? String(level) : "";
+      },
+    };
   }
-  function openClassDropdown2(){
-    document.getElementById("classDropdown2").style.display = "";
-    document.getElementById("classSearchInput2").value = "";
-    renderClassDropdownList2("");
-    setTimeout(() => document.getElementById("classSearchInput2").focus(), 0);
-  }
-  function closeClassDropdown2(){ document.getElementById("classDropdown2").style.display = "none"; }
-  document.getElementById("classPickerBtn2").addEventListener("click", (e) => {
-    e.stopPropagation();
-    const isOpen = document.getElementById("classDropdown2").style.display !== "none";
-    if(isOpen) closeClassDropdown2(); else openClassDropdown2();
-  });
-  document.getElementById("classSearchInput2").addEventListener("input", (e) => renderClassDropdownList2(e.target.value));
-  document.addEventListener("click", (e) => {
-    if(!document.getElementById("classPicker2").contains(e.target)) closeClassDropdown2();
-  });
+
+  const CLASS_SLOTS = [1, 2, 3, 4].map(setupClassSlot);
+  // слот №1 лежит в class_name/class_level, остальные — с номером в имени колонки
+  function classNameCol(n){ return n === 1 ? "class_name" : "class_name_" + n; }
+  function classLevelCol(n){ return n === 1 ? "class_level" : "class_level_" + n; }
 
   function openMemberModal(nick){
     memberModalNick = nick;
     const info = memberInfo.get(nick) || {};
     document.getElementById("memberTitle").textContent = nick;
-    memberModalClassName = info.class_name || "";
-    memberModalClassName2 = info.class_name_2 || "";
-    renderClassPickerButton();
-    renderClassPickerButton2();
-    closeClassDropdown();
-    closeClassDropdown2();
+    CLASS_SLOTS.forEach((slot, i) => {
+      slot.fill(info[classNameCol(i + 1)], info[classLevelCol(i + 1)]);
+      slot.close();
+    });
     document.getElementById("memberError").textContent = "";
     document.getElementById("memberOverlay").classList.add("show");
   }
@@ -830,12 +891,17 @@
   document.getElementById("memberSaveBtn").addEventListener("click", async () => {
     const errEl = document.getElementById("memberError");
     errEl.textContent = "";
-    const row = {
-      clan_id: profile.clan_id,
-      nickname: memberModalNick,
-      class_name: memberModalClassName || null,
-      class_name_2: memberModalClassName2 || null,
-    };
+    const row = { clan_id: profile.clan_id, nickname: memberModalNick };
+    for(let i = 0; i < CLASS_SLOTS.length; i++){
+      const slot = CLASS_SLOTS[i];
+      const level = slot.level();
+      if(Number.isNaN(level) || (level !== null && (level < 1 || level > 85))){
+        errEl.textContent = `Уровень должен быть числом от 1 до 85 (профессия №${i + 1}).`;
+        return;
+      }
+      row[classNameCol(i + 1)] = slot.name() || null;
+      row[classLevelCol(i + 1)] = level;
+    }
     const { error } = await db.from("member_classes").upsert(row, { onConflict: "clan_id,nickname" });
     if(error){ errEl.textContent = error.message; return; }
     document.getElementById("memberOverlay").classList.remove("show");
@@ -909,8 +975,22 @@
     nicks.forEach(nick => {
       const info = memberInfo.get(nick) || {};
       const avatarSrc = info.icon || classIcon(info.class_name) || BLANK_IMG;
-      const subSrc = classIcon(info.class_name_2);
-      const clsLabel = info.class_name_2 ? `${info.class_name || ""} / ${info.class_name_2}` : (info.class_name || "");
+
+      // все заданные профессии по порядку слотов; уровень пишем прямо в подписи
+      const classes = [1, 2, 3, 4]
+        .map(n => ({ name: info[classNameCol(n)], level: info[classLevelCol(n)] }))
+        .filter(c => c.name);
+      const clsLabel = classes.map(c => c.name + (c.level ? ` ${c.level}` : "")).join(" / ");
+      // основная профессия уже в большой аватарке — в кружочки идут только остальные
+      const subAvatars = classes.slice(1)
+        .map(c => {
+          const src = classIcon(c.name);
+          if(!src) return "";
+          const title = c.name + (c.level ? ` — ${c.level} ур.` : "");
+          return `<img class="sub-avatar" src="${src}" alt="" title="${escapeHtml(title)}" />`;
+        })
+        .join("");
+
       const isLeader = g?.leader_nickname === nick;
       const isDeputy = g?.deputy_nickname === nick;
       const card = document.createElement("div");
@@ -919,10 +999,10 @@
         `<div class="avatar-wrap"><img class="avatar" src="${avatarSrc}" alt="" />` +
         (isLeader ? `<span class="crown-badge" title="Пати лидер">👑</span>` : "") +
         (isDeputy ? `<span class="crown-badge deputy" title="Зам пати лидера">👑</span>` : "") +
-        (subSrc ? `<img class="sub-avatar" src="${subSrc}" alt="" title="${escapeHtml(info.class_name_2)}" />` : "") +
+        (subAvatars ? `<span class="sub-avatar-row">${subAvatars}</span>` : "") +
         `</div>` +
         `<span class="who"><span class="name">${escapeHtml(nick)}</span>` +
-        `<span class="cls">${escapeHtml(clsLabel)}</span></span>`;
+        `<span class="cls" title="${escapeHtml(clsLabel)}">${escapeHtml(clsLabel)}</span></span>`;
       const menuBtn = document.createElement("button");
       menuBtn.className = "gm-member-menu-btn";
       menuBtn.textContent = "⋮";
