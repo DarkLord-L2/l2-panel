@@ -131,6 +131,8 @@
     openGroup(groupId){ renderSection("groups", { group: groupId, from: "attendance" }); },
     // из карточки участника в группе — сразу открыть таблицу буста для этой группы
     openGearCheck(groupId){ renderSection("gear_check", { group: groupId }); },
+    // из меню «⋮» в «Группах» — клан-лидер/зам/лидер пати открывают личный кабинет участника
+    openMyCabinet(nick){ renderSection("my_cabinet", { nick }); },
     openSection(key){ renderSection(key); },
   };
 

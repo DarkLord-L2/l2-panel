@@ -14,22 +14,51 @@
   .group-card{
     background: var(--panel);
     border:1px solid var(--border);
-    border-radius:8px;
-    padding:16px 18px;
+    border-radius:10px;
+    padding:14px 16px;
     cursor:pointer;
     transition: border-color .12s;
-    display:flex; flex-direction:column; gap:10px;
+    display:flex; flex-direction:column; gap:12px;
   }
   .group-card:hover{ border-color: var(--border-lit); }
-  .group-card-head{ display:flex; align-items:center; gap:10px; }
-  .group-card-name{ font-size:14px; font-weight:500; color: var(--text); letter-spacing:0; }
-  .group-card-members{ font-size:12px; color: var(--text-dim); line-height:1.5; min-height:2.2em; }
+  .group-card-head{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .group-card-icon{
+    width:40px; height:40px; border-radius:8px; object-fit:cover; flex:none;
+    border:1px solid var(--border); background: var(--panel-2);
+  }
+  .group-card-titles{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+  .group-card-name{ font-size:14.5px; font-weight:600; color: var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .group-card-leader{ font-size:11.5px; color: var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .group-card-stats{ display:flex; gap:8px; }
+  .group-card-stat{ flex:1; min-width:0; background: var(--panel-2); border:1px solid var(--border); border-radius:7px; padding:6px 10px; }
+  .group-card-stat .lbl{ font-size:10px; color: var(--text-dim); }
+  .group-card-stat .val{ font-size:14px; font-weight:700; color: var(--text); }
   .group-card-foot{ display:flex; align-items:center; justify-content:space-between; }
+  .group-card-count{ display:flex; align-items:center; gap:5px; font-size:11.5px; color: var(--text-dim); }
+  .group-card-rank{
+    flex:none; min-width:22px; height:20px; padding:0 5px; display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:600; color: var(--text-dim);
+    border:1px solid var(--border); border-radius:5px; background: var(--panel-2);
+  }
 
   .group-detail-head{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:space-between; }
   .group-name-row{ display:flex; align-items:center; gap:10px; flex:1; min-width:200px; }
   .group-name-row input{ font-size:18px; padding:8px 12px; flex:1; max-width:360px; }
   .group-detail-tools{ display:flex; gap:8px; }
+
+  .group-leader-row{ display:flex; align-items:center; gap:16px; margin:2px 0 0; font-size:13px; color: var(--text-dim); flex-wrap:wrap; }
+  .group-leader-row .val{ color: var(--text); }
+
+  /* короны над аватаркой участника: золотая — пати лидер, маленькая серая — зам */
+  .gm-member-card .crown-badge{
+    position:absolute; left:-6px; top:-7px; font-size:17px; line-height:1;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,.7));
+  }
+  .gm-member-card .crown-badge.deputy{
+    left:-4px; top:-3px; font-size:12px;
+    filter: grayscale(1) brightness(1.35) drop-shadow(0 1px 2px rgba(0,0,0,.7));
+    opacity:.9;
+  }
 
   /* карточки участников группы — фото/иконка класса подтягивается из «Проверки буста»,
      как аватарка в самой gear-check.html (своя фотка → иконка класса → заглушка) */
@@ -147,6 +176,23 @@
         <button class="btn" id="groupRenameBtn">Переименовать</button>
         <button class="btn btn-primary" id="groupSaveNameBtn" style="display:none;">Сохранить</button>
         <button class="btn btn-danger" id="groupHideBtn">Скрыть группу</button>
+      </div>
+    </div>
+    <div class="group-leader-row">
+      <span>👑 Пати лидер: <span class="val" id="groupLeaderView">не назначен</span></span>
+      <span>🥈 Зам: <span class="val" id="groupDeputyView">не назначен</span></span>
+    </div>
+    <div class="group-leader-row" id="groupClassRow" style="display:none;">
+      <span>Иконка группы:</span>
+      <div class="gc-class-picker" id="groupClassPicker">
+        <button type="button" class="gc-class-picker-btn" id="groupClassPickerBtn" style="width:auto; padding:6px 10px;">
+          <img id="groupClassPickerIcon" class="gc-class-picker-icon" alt="" style="display:none;" />
+          <span id="groupClassPickerLabel">Не выбрана</span>
+        </button>
+        <div class="gc-class-dropdown" id="groupClassDropdown" style="display:none; min-width:220px;">
+          <input type="text" id="groupClassSearchInput" placeholder="Поиск класса..." />
+          <div class="gc-class-list" id="groupClassDropdownList"></div>
+        </div>
       </div>
     </div>
 
@@ -302,6 +348,17 @@
     return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
   }
 
+  // тот же запасной поиск по нику, что и в «Отчётах»/«Мой кабинет» — сверяем ник
+  // текущего аккаунта с назначенным лидером пати без учёта регистра/раскладки
+  const CYR_LOOKALIKES = { "а":"a","в":"b","е":"e","к":"k","м":"m","н":"h","о":"o","р":"p","с":"c","т":"t","у":"y","х":"x","ё":"e" };
+  function normalizeNick(s){
+    return String(s || "")
+      .toLowerCase()
+      .split("").map(ch => CYR_LOOKALIKES[ch] || ch).join("")
+      .replace(/[^a-zа-яё0-9]/gi, "");
+  }
+  const myNorm = normalizeNick(profile.nickname);
+
   let groups = [];               // [{id, name, sort_order}]
   let membersByGroup = new Map(); // group_id -> [nickname, ...]
   let memberOrderMap = new Map(); // group_id -> Map(nickname -> sort_order) — ручной порядок иконок
@@ -321,6 +378,44 @@
     (data || []).forEach(r => memberInfo.set(r.nickname, { class_name: r.class_name, class_name_2: r.class_name_2, icon: r.icon }));
   }
 
+  // средние по группе на карточках в «Все группы»: К/Д и PvP-урон за всё время,
+  // те же данные, что в «Отчётах» (js/event-roster.js их туда пишет) — тут просто
+  // сворачиваем в среднее на участника группы
+  let statsByNick = new Map(); // normalizeNick(nickname) -> {kills, deaths, pvp}
+  async function loadMemberStats(){
+    const { data } = await db.from("event_stats").select("nickname, kills, deaths, pvp_damage, removed");
+    statsByNick = new Map();
+    (data || []).forEach(r => {
+      if(r.removed) return;
+      const key = normalizeNick(r.nickname);
+      const cur = statsByNick.get(key) || { kills: 0, deaths: 0, pvp: 0 };
+      cur.kills += r.kills; cur.deaths += r.deaths; cur.pvp += r.pvp_damage;
+      statsByNick.set(key, cur);
+    });
+  }
+  // среднее по всем участникам группы (у кого нет записей в event_stats — считаются нулём,
+  // чтобы у пустых/новых групп карточка честно показывала «ещё нет данных», а не пропускала их)
+  function groupAverages(groupId){
+    const nicks = membersByGroup.get(groupId) || [];
+    if(!nicks.length) return { avgKd: 0, avgPvp: 0 };
+    let sumKd = 0, sumPvp = 0;
+    nicks.forEach(nick => {
+      const s = statsByNick.get(normalizeNick(nick));
+      if(s){
+        sumKd += s.deaths > 0 ? s.kills / s.deaths : s.kills;
+        sumPvp += s.pvp;
+      }
+    });
+    return { avgKd: sumKd / nicks.length, avgPvp: sumPvp / nicks.length };
+  }
+  function formatShort(n){
+    n = Number(n) || 0;
+    if(n >= 1e9) return (n / 1e9).toFixed(1) + "B";
+    if(n >= 1e6) return (n / 1e6).toFixed(1) + "M";
+    if(n >= 1e3) return (n / 1e3).toFixed(1) + "K";
+    return Math.round(n).toLocaleString("ru-RU");
+  }
+
   async function loadNickOptions(){
     const { data } = await db.from("census_entries").select("nickname, week_start");
     let latest = null;
@@ -331,7 +426,7 @@
 
   async function loadGroups(){
     const [{ data: g, error: gErr }, { data: m, error: mErr }] = await Promise.all([
-      db.from("clan_groups").select("id, name, sort_order, hidden").order("sort_order").order("name"),
+      db.from("clan_groups").select("id, name, sort_order, hidden, leader_nickname, deputy_nickname, class_name").order("sort_order").order("name"),
       db.from("clan_group_members").select("group_id, nickname, sort_order").order("sort_order").order("nickname"),
     ]);
     if(gErr) console.error(gErr);
@@ -386,23 +481,180 @@
     grid.innerHTML = "";
     const q = (filterText || "").trim().toLowerCase();
     const visible = groups.filter(g => !g.hidden);
-    const shown = visible.filter(g => !q || g.name.toLowerCase().includes(q));
     document.getElementById("groupsEmpty").style.display = visible.length ? "none" : "";
+
+    // рейтинг по среднему К/Д считаем по всем видимым группам (не только
+    // отфильтрованным поиском), чтобы номер не «прыгал» при вводе в поиск, а сами
+    // карточки показываем в этом же порядке — от лучшей группы к худшей
+    const ranked = visible.slice().sort((a, b) => groupAverages(b.id).avgKd - groupAverages(a.id).avgKd);
+    const rankMap = new Map(ranked.map((g, i) => [g.id, i + 1]));
+    const shown = ranked.filter(g => !q || g.name.toLowerCase().includes(q));
+
     shown.forEach(g => {
       const nicks = membersByGroup.get(g.id) || [];
-      const preview = nicks.slice(0, 4).join(", ") + (nicks.length > 4 ? `, +${nicks.length - 4}` : "");
+      const { avgKd, avgPvp } = groupAverages(g.id);
+      const iconSrc = classIcon(g.class_name) || BLANK_IMG;
       const card = document.createElement("div");
       card.className = "group-card";
       card.innerHTML = `
         <div class="group-card-head">
-          <div class="group-card-name">${escapeHtml(g.name)}</div>
+          <img class="group-card-icon" src="${iconSrc}" alt="" />
+          <div class="group-card-titles">
+            <div class="group-card-name">${escapeHtml(g.name)}</div>
+            <div class="group-card-leader">${escapeHtml(g.leader_nickname || "лидер не назначен")}</div>
+          </div>
         </div>
-        <div class="group-card-members">${nicks.length ? escapeHtml(preview) : "Пока никого нет"}</div>
-        <div class="group-card-foot"><span class="badge">${nicks.length} участников</span></div>
+        <div class="group-card-stats">
+          <div class="group-card-stat"><div class="lbl">Ср. К/Д</div><div class="val">${avgKd.toFixed(2)}</div></div>
+          <div class="group-card-stat"><div class="lbl">Ср. Урон</div><div class="val">${formatShort(avgPvp)}</div></div>
+        </div>
+        <div class="group-card-foot">
+          <span class="group-card-count">👥 ${nicks.length} участников</span>
+          <span class="group-card-rank">#${rankMap.get(g.id)}</span>
+        </div>
       `;
       card.addEventListener("click", () => openDetail(g.id));
       grid.appendChild(card);
     });
+  }
+
+  // назначенные лидер/зам пати (не админы) — видят и управляют только своей же
+  // группой, поэтому сверяем и party_id, и совпадение ника с полем этой группы
+  function isPartyLeaderOfCurrentGroup(){
+    if(isAdmin) return false;
+    if(profile.party_id !== currentGroupId) return false;
+    const g = groups.find(x => x.id === currentGroupId);
+    return !!(g && g.leader_nickname && normalizeNick(g.leader_nickname) === myNorm);
+  }
+  function isPartyDeputyOfCurrentGroup(){
+    if(isAdmin) return false;
+    if(profile.party_id !== currentGroupId) return false;
+    const g = groups.find(x => x.id === currentGroupId);
+    return !!(g && g.deputy_nickname && normalizeNick(g.deputy_nickname) === myNorm);
+  }
+  function canOpenCabinets(){
+    return isAdmin || isPartyLeaderOfCurrentGroup() || isPartyDeputyOfCurrentGroup();
+  }
+
+  // строка над списком участников — просто сводка, кто сейчас лидер/зам пати
+  // (назначение теперь делается через меню «⋮» конкретного участника)
+  function renderGroupLeaderRow(){
+    const g = groups.find(x => x.id === currentGroupId);
+    document.getElementById("groupLeaderView").textContent = g?.leader_nickname || "не назначен";
+    document.getElementById("groupDeputyView").textContent = g?.deputy_nickname || "не назначен";
+  }
+
+  // назначить/снять роль лидера или зама пати для конкретного ника — если он уже
+  // был в другой из двух ролей, старую роль снимаем, чтобы не быть в обеих сразу
+  async function assignPartyRole(nick, role){
+    const g = groups.find(x => x.id === currentGroupId);
+    const patch = {};
+    if(role === "leader"){
+      patch.leader_nickname = nick;
+      if(g?.deputy_nickname === nick) patch.deputy_nickname = null;
+    } else if(role === "deputy"){
+      patch.deputy_nickname = nick;
+      if(g?.leader_nickname === nick) patch.leader_nickname = null;
+    } else {
+      if(g?.leader_nickname === nick) patch.leader_nickname = null;
+      if(g?.deputy_nickname === nick) patch.deputy_nickname = null;
+    }
+    const { error } = await db.from("clan_groups").update(patch).eq("id", currentGroupId);
+    closeMemberMenu();
+    if(error){ alert("Не удалось сохранить назначение: " + error.message); return; }
+    if(g) Object.assign(g, patch);
+    renderGroupLeaderRow();
+    renderMembers();
+  }
+
+  // подменяет содержимое открытого меню участника на выбор роли — тот же приём,
+  // что и в renderMoveSubmenu (перемещение между группами)
+  function renderAssignSubmenu(menu, nick){
+    const g = groups.find(x => x.id === currentGroupId);
+    menu.innerHTML = "";
+
+    const list = document.createElement("div");
+    list.className = "move-list";
+
+    const leaderBtn = document.createElement("button");
+    leaderBtn.textContent = "👑 Пати Лидер";
+    leaderBtn.addEventListener("click", (e) => { e.stopPropagation(); assignPartyRole(nick, "leader"); });
+    list.appendChild(leaderBtn);
+
+    const deputyBtn = document.createElement("button");
+    deputyBtn.textContent = "🥈 Зам пати лидера";
+    deputyBtn.addEventListener("click", (e) => { e.stopPropagation(); assignPartyRole(nick, "deputy"); });
+    list.appendChild(deputyBtn);
+
+    if(g?.leader_nickname === nick || g?.deputy_nickname === nick){
+      const clearBtn = document.createElement("button");
+      clearBtn.className = "danger";
+      clearBtn.textContent = "Снять назначение";
+      clearBtn.addEventListener("click", (e) => { e.stopPropagation(); assignPartyRole(nick, null); });
+      list.appendChild(clearBtn);
+    }
+    menu.appendChild(list);
+
+    const backBtn = document.createElement("button");
+    backBtn.className = "move-back";
+    backBtn.textContent = "← Назад";
+    backBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const card = menu.parentElement;
+      menu.remove();
+      toggleMemberMenu(card, nick);
+    });
+    menu.appendChild(backBtn);
+  }
+
+  // ---------- «профессия» (иконка) группы — тот же список классов, что у участников ----------
+  function renderGroupClassPickerButton(){
+    const g = groups.find(x => x.id === currentGroupId);
+    const icon = classIcon(g?.class_name);
+    const iconEl = document.getElementById("groupClassPickerIcon");
+    if(icon){ iconEl.src = icon; iconEl.style.display = ""; } else { iconEl.style.display = "none"; }
+    document.getElementById("groupClassPickerLabel").textContent = g?.class_name || "Не выбрана";
+  }
+  function renderGroupClassDropdownList(filterText){
+    const list = document.getElementById("groupClassDropdownList");
+    const q = (filterText || "").trim().toLowerCase();
+    list.innerHTML = "";
+    const clearOpt = document.createElement("div");
+    clearOpt.className = "gc-class-option gc-class-clear";
+    clearOpt.textContent = "Не выбрана";
+    clearOpt.addEventListener("click", () => setGroupClass(""));
+    list.appendChild(clearOpt);
+    (window.L2_CLASSES || []).filter(c => !q || c.name.toLowerCase().includes(q)).forEach(c => {
+      const opt = document.createElement("div");
+      opt.className = "gc-class-option";
+      opt.innerHTML = `<img src="${c.icon}" alt="" /><span>${escapeHtml(c.name)}</span>`;
+      opt.addEventListener("click", () => setGroupClass(c.name));
+      list.appendChild(opt);
+    });
+  }
+  function openGroupClassDropdown(){
+    document.getElementById("groupClassDropdown").style.display = "";
+    document.getElementById("groupClassSearchInput").value = "";
+    renderGroupClassDropdownList("");
+    setTimeout(() => document.getElementById("groupClassSearchInput").focus(), 0);
+  }
+  function closeGroupClassDropdown(){ document.getElementById("groupClassDropdown").style.display = "none"; }
+  document.getElementById("groupClassPickerBtn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = document.getElementById("groupClassDropdown").style.display !== "none";
+    if(isOpen) closeGroupClassDropdown(); else openGroupClassDropdown();
+  });
+  document.getElementById("groupClassSearchInput").addEventListener("input", (e) => renderGroupClassDropdownList(e.target.value));
+  document.addEventListener("click", (e) => {
+    if(!document.getElementById("groupClassPicker").contains(e.target)) closeGroupClassDropdown();
+  });
+  async function setGroupClass(className){
+    closeGroupClassDropdown();
+    const { error } = await db.from("clan_groups").update({ class_name: className || null }).eq("id", currentGroupId);
+    if(error){ alert("Не удалось сохранить иконку группы: " + error.message); return; }
+    const g = groups.find(x => x.id === currentGroupId);
+    if(g) g.class_name = className || null;
+    renderGroupClassPickerButton();
   }
 
   // меню «⋮» у карточки участника — открыто максимум одно за раз
@@ -427,6 +679,18 @@
     });
     menu.appendChild(boostBtn);
 
+    // клан-лидер, его зам и назначенный лидер пати могут открыть личный кабинет
+    // любого участника своей группы — остальным пункт не показываем
+    if(canOpenCabinets()){
+      const cabinetBtn = document.createElement("button");
+      cabinetBtn.textContent = "Личный кабинет";
+      cabinetBtn.addEventListener("click", () => {
+        closeMemberMenu();
+        if(window.top && window.top.L2Nav) window.top.L2Nav.openMyCabinet(nick);
+      });
+      menu.appendChild(cabinetBtn);
+    }
+
     if(isAdmin){
       const classBtn = document.createElement("button");
       classBtn.textContent = "Класс/аватарка…";
@@ -435,6 +699,14 @@
         openMemberModal(nick);
       });
       menu.appendChild(classBtn);
+
+      const assignBtn = document.createElement("button");
+      assignBtn.textContent = "Назначить…";
+      assignBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        renderAssignSubmenu(menu, nick);
+      });
+      menu.appendChild(assignBtn);
 
       const moveBtn = document.createElement("button");
       moveBtn.textContent = "Переместить в группу…";
@@ -671,6 +943,7 @@
 
   function renderMembers(){
     const nicks = currentOrderedNicks();
+    const g = groups.find(x => x.id === currentGroupId);
     const wrap = document.getElementById("groupMembers");
     wrap.innerHTML = "";
     document.getElementById("groupMembersEmpty").style.display = nicks.length ? "none" : "";
@@ -680,10 +953,14 @@
       const avatarSrc = info.icon || classIcon(info.class_name) || BLANK_IMG;
       const subSrc = classIcon(info.class_name_2);
       const clsLabel = info.class_name_2 ? `${info.class_name || ""} / ${info.class_name_2}` : (info.class_name || "");
+      const isLeader = g?.leader_nickname === nick;
+      const isDeputy = g?.deputy_nickname === nick;
       const card = document.createElement("div");
       card.className = "gm-member-card";
       card.innerHTML =
         `<div class="avatar-wrap"><img class="avatar" src="${avatarSrc}" alt="" />` +
+        (isLeader ? `<span class="crown-badge" title="Пати лидер">👑</span>` : "") +
+        (isDeputy ? `<span class="crown-badge deputy" title="Зам пати лидера">👑</span>` : "") +
         (subSrc ? `<img class="sub-avatar" src="${subSrc}" alt="" title="${escapeHtml(info.class_name_2)}" />` : "") +
         `</div>` +
         `<span class="who"><span class="name">${escapeHtml(nick)}</span>` +
@@ -721,6 +998,7 @@
 
       wrap.appendChild(card);
     });
+    renderGroupLeaderRow();
   }
 
   function openDetail(groupId){
@@ -733,7 +1011,9 @@
     document.getElementById("groupRenameBtn").style.display = isAdmin ? "" : "none";
     document.getElementById("groupDetailTools").style.display = isAdmin ? "" : "none";
     document.getElementById("addMemberRow").style.display = isAdmin ? "" : "none";
+    document.getElementById("groupClassRow").style.display = isAdmin ? "" : "none";
     document.getElementById("groupError").textContent = "";
+    renderGroupClassPickerButton();
     renderMembers();
     document.getElementById("listView").style.display = "none";
     document.getElementById("detailView").style.display = "";
@@ -921,7 +1201,7 @@
   });
 
   await loadNickOptions();
-  await Promise.all([loadGroups(), loadMemberInfo()]);
+  await Promise.all([loadGroups(), loadMemberInfo(), loadMemberStats()]);
 
   if(isPartyRestricted){
     // не-админ с назначенной пати не выбирает группу — сразу видит только свою,

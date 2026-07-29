@@ -128,12 +128,7 @@
   const db = L2Cabinet.client;
   document.getElementById("wrap").style.display = "";
 
-  const myNick = (profile.nickname || "").trim();
-  if(!myNick){
-    document.getElementById("noNickCard").style.display = "";
-    return;
-  }
-  document.getElementById("cabContent").style.display = "";
+  const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
 
   function escapeHtml(s){
     return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
@@ -159,6 +154,55 @@
       .split("").map(ch => CYR_LOOKALIKES[ch] || ch).join("")
       .replace(/[^a-zа-яё0-9]/gi, "");
   }
+
+  const ownNick = (profile.nickname || "").trim();
+  const ownNorm = normalizeNick(ownNick);
+
+  // ?nick=... — сюда попали из меню «⋮» в «Группах» (клан-лидер/зам/лидер пати
+  // открывают кабинет другого участника); без параметра — свой собственный кабинет
+  const requestedNick = (new URLSearchParams(location.search).get("nick") || "").trim();
+  const viewingOther = !!requestedNick && normalizeNick(requestedNick) !== ownNorm;
+
+  if(viewingOther){
+    let allowed = isAdmin;
+    if(!allowed && profile.party_id){
+      const [{ data: groupRow }, { data: memberRows }] = await Promise.all([
+        db.from("clan_groups").select("leader_nickname, deputy_nickname").eq("id", profile.party_id).single(),
+        db.from("clan_group_members").select("nickname").eq("group_id", profile.party_id),
+      ]);
+      const iAmLeader = !!(groupRow?.leader_nickname && normalizeNick(groupRow.leader_nickname) === ownNorm);
+      const iAmDeputy = !!(groupRow?.deputy_nickname && normalizeNick(groupRow.deputy_nickname) === ownNorm);
+      const targetInMyGroup = (memberRows || []).some(r => normalizeNick(r.nickname) === normalizeNick(requestedNick));
+      allowed = (iAmLeader || iAmDeputy) && targetInMyGroup;
+    }
+    if(!allowed){
+      document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
+        '<h1>⛔ Доступ запрещён</h1><p class="hint">У вас нет прав смотреть кабинет этого участника.</p></div></div>';
+      return;
+    }
+  }
+
+  const myNick = viewingOther ? requestedNick : ownNick;
+  if(!myNick){
+    document.getElementById("noNickCard").style.display = "";
+    return;
+  }
+  document.getElementById("cabContent").style.display = "";
+
+  if(viewingOther){
+    const h1 = document.querySelector("#wrap .page-head h1");
+    if(h1){
+      h1.textContent = "Личный кабинет: " + myNick;
+      const backBtn = document.createElement("button");
+      backBtn.className = "btn btn-ghost";
+      backBtn.textContent = "← Группы";
+      backBtn.addEventListener("click", () => {
+        if(window.top && window.top.L2Nav) window.top.L2Nav.openSection("groups");
+      });
+      h1.parentElement.appendChild(backBtn);
+    }
+  }
+
   const myNorm = normalizeNick(myNick);
   function isMe(nickname){
     if(nickname === myNick) return true;
