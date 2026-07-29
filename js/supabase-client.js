@@ -124,6 +124,43 @@ async function adminDeleteUser(userId){
   return body;
 }
 
+// Защита своего аккаунта от удаления сид-фразой — только для главного админа,
+// фраза сверяется внутри Edge Function, в браузер/исходники не попадает.
+async function adminSetDeleteProtection(phrase){
+  const { data: { session } } = await client.auth.getSession();
+  if(!session) throw new Error("no_session");
+
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/set-delete-protection`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ phrase }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if(!res.ok) throw new Error(body.error || "request_failed");
+  return body;
+}
+
+// Снятие защиты от удаления — отдельная фраза, известная только владельцу сайта.
+async function adminRemoveDeleteProtection(phrase, userId){
+  const { data: { session } } = await client.auth.getSession();
+  if(!session) throw new Error("no_session");
+
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/remove-delete-protection`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ phrase, user_id: userId }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if(!res.ok) throw new Error(body.error || "request_failed");
+  return body;
+}
+
 // Распознавание ников на одном скриншоте (переписи/налогов) через Gemini.
 // Доступно только glavadmin/admin — проверяется внутри самой функции.
 async function adminOcrNicknames(imageDataUrl){
@@ -179,6 +216,8 @@ window.L2Cabinet = {
   getVisibleSections,
   adminCreateUser,
   adminDeleteUser,
+  adminSetDeleteProtection,
+  adminRemoveDeleteProtection,
   adminOcrNicknames,
   adminOcrEventStats,
   clearMustChangePassword,

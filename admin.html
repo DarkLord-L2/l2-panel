@@ -57,7 +57,7 @@
     <h2>Пользователи</h2>
     <table class="data-table" id="usersTable">
       <thead>
-        <tr><th>Логин</th><th>Ник в игре</th><th>Роль</th><th>Пати</th><th>Создан</th><th></th></tr>
+        <tr><th>Логин</th><th>Ник в игре</th><th>Роль</th><th>Пати</th><th>Защита</th><th>Создан</th><th></th></tr>
       </thead>
       <tbody id="usersBody"></tbody>
     </table>
@@ -92,7 +92,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=5"></script>
+<script src="js/supabase-client.js?v=6"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -126,7 +126,7 @@
   async function loadUsers(){
     const { data, error } = await db
       .from("profiles")
-      .select("id, username, nickname, role_id, party_id, created_at, roles(label), clan_groups(name)")
+      .select("id, username, nickname, role_id, party_id, delete_protected, created_at, roles(label), clan_groups(name)")
       .eq("clan_id", profile.clan_id)
       .order("created_at", { ascending: false });
     if(error){ console.error(error); return; }
@@ -208,11 +208,59 @@
         tdParty.appendChild(partySel);
       }
 
+      const tdProtect = document.createElement("td");
+      if(u.delete_protected){
+        const badge = document.createElement("span");
+        badge.textContent = "🔒 Защищён";
+        badge.style.cssText = "font-size:12px; color: var(--text-dim); margin-right:6px;";
+        const unprotectBtn = document.createElement("button");
+        unprotectBtn.className = "btn";
+        unprotectBtn.textContent = "Снять защиту";
+        unprotectBtn.title = "Нужна отдельная фраза-снятие";
+        unprotectBtn.addEventListener("click", async () => {
+          const phrase = prompt(`Снять защиту с «${u.username}»? Введите фразу-снятие:`);
+          if(phrase === null) return;
+          const errEl = document.getElementById("usersError");
+          errEl.textContent = "";
+          unprotectBtn.disabled = true;
+          try{
+            await L2Cabinet.adminRemoveDeleteProtection(phrase, u.id);
+            await loadUsers();
+          }catch(err){
+            errEl.textContent = "Не удалось снять защиту: " + err.message;
+            unprotectBtn.disabled = false;
+          }
+        });
+        tdProtect.append(badge, unprotectBtn);
+      } else if(isSelf){
+        const protectBtn = document.createElement("button");
+        protectBtn.className = "btn";
+        protectBtn.textContent = "🔒 Защитить";
+        protectBtn.title = "Защитить свой аккаунт от удаления другими главными админами";
+        protectBtn.addEventListener("click", async () => {
+          const phrase = prompt("Введите сид-фразу для защиты своего аккаунта от удаления:");
+          if(phrase === null) return;
+          const errEl = document.getElementById("usersError");
+          errEl.textContent = "";
+          protectBtn.disabled = true;
+          try{
+            await L2Cabinet.adminSetDeleteProtection(phrase);
+            await loadUsers();
+          }catch(err){
+            errEl.textContent = "Не удалось включить защиту: " + err.message;
+            protectBtn.disabled = false;
+          }
+        });
+        tdProtect.appendChild(protectBtn);
+      } else {
+        tdProtect.textContent = "—";
+      }
+
       const tdCreated = document.createElement("td");
       tdCreated.textContent = new Date(u.created_at).toLocaleDateString("ru-RU");
 
       const tdActions = document.createElement("td");
-      if(!isSelf){
+      if(!isSelf && !u.delete_protected){
         const delBtn = document.createElement("button");
         delBtn.className = "btn btn-danger";
         delBtn.textContent = "Удалить";
@@ -232,7 +280,7 @@
         tdActions.appendChild(delBtn);
       }
 
-      tr.append(tdUsername, tdNickname, tdRole, tdParty, tdCreated, tdActions);
+      tr.append(tdUsername, tdNickname, tdRole, tdParty, tdProtect, tdCreated, tdActions);
       body.appendChild(tr);
     });
   }
