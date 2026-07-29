@@ -61,22 +61,14 @@
   table.gc-table th.gc-col-item, table.gc-table td.gc-cell{ width:74px; min-width:74px; max-width:74px; }
   .gc-cell.on{ color: var(--ok); }
 
-  /* склеенные пункты — один блок на несколько колонок: общая шапка и общий фон
-     у ячеек, рамка только по краям блока, между самими пунктами линии нет */
-  table.gc-table th.gc-col-item.gc-merged-head{
-    width:auto; min-width:0; max-width:none;
-    background: var(--panel-2);
-    border-left:1px solid var(--border-lit); border-right:1px solid var(--border-lit);
-  }
-  table.gc-table td.gc-merged{ background: rgba(91,141,239,.06); }
-  table.gc-table tbody tr:hover td.gc-merged{ background: rgba(91,141,239,.12); }
-  table.gc-table td.gc-merged-first{ border-left:1px solid var(--border-lit); }
-  table.gc-table td.gc-merged-last{ border-right:1px solid var(--border-lit); }
+  /* склеенные пункты — одна колонка на всех, поэтому она шире обычной: место под
+     несколько иконок в шапке. Никаких рамок и разделителей внутри — в этом и смысл */
+  table.gc-table th.gc-col-item.gc-merged-head,
+  table.gc-table td.gc-cell.gc-merged{ width:auto; min-width:0; max-width:none; }
   .gc-item-head{ display:flex; flex-direction:column; align-items:center; gap:4px; position:relative; }
-  /* зазор между иконками склеенных пунктов — ровно чтобы бейджи веса не наезжали
-     друг на друга; ощущение единого блока даёт общая рамка и фон, а не отсутствие зазора */
-  .gc-head-icons{ display:flex; align-items:center; gap:10px; }
-  .gc-head-ic{ position:relative; display:inline-flex; }
+  /* иконки пунктов колонки в ряд; бейдж веса — общий на всю группу, поэтому висит
+     на этом блоке целиком (у обычной колонки в нём одна иконка — вид как раньше) */
+  .gc-head-icons{ display:flex; align-items:center; gap:6px; position:relative; }
   .gc-item-head .ic{ width:30px; height:30px; border-radius:6px; object-fit:cover; border:1px solid var(--border); background: var(--panel-2); }
   .gc-item-head .nm{ font-size:11px; color: var(--text-dim); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .gc-item-head .wt{
@@ -697,14 +689,14 @@
     const colGroups = mergeGroups(cols);
     let h = '<tr><th class="gc-col-nick">Участники</th><th>Общие баллы</th><th>Процент буста</th>';
     colGroups.forEach(group => {
-      // склеенные пункты живут под одной шапкой: иконки в ряд, названия через «+»
-      const heads = group.map(i =>
-        `<span class="gc-head-ic"><img class="ic" src="${i.icon || BLANK_IMG}" alt="" />` +
-        `<span class="wt">${i.weight}</span></span>`
-      ).join("");
+      // склеенные пункты — одна колонка на всех: иконки в ряд, названия через «+»,
+      // вес в шапке общий (сумма), балл в строке участника тоже один на группу
+      const icons = group.map(i => `<img class="ic" src="${i.icon || BLANK_IMG}" alt="" />`).join("");
       const names = group.map(i => escapeHtml(i.name)).join(" + ");
-      h += `<th class="gc-col-item${group.length > 1 ? " gc-merged-head" : ""}" colspan="${group.length}" title="${escapeHtml(group.map(i=>i.name).join(" + "))}">` +
-           `<div class="gc-item-head"><span class="gc-head-icons">${heads}</span><span class="nm">${names}</span></div></th>`;
+      const groupWeight = group.reduce((s, i) => s + i.weight, 0);
+      h += `<th class="gc-col-item${group.length > 1 ? " gc-merged-head" : ""}" title="${escapeHtml(group.map(i => i.name).join(" + "))}">` +
+           `<div class="gc-item-head"><span class="gc-head-icons">${icons}<span class="wt">${groupWeight}</span></span>` +
+           `<span class="nm">${names}</span></div></th>`;
     });
     // последний столбец — добавить пункт (у админа), чтобы колонки заводились прямо из таблицы
     if(isAdmin) h += '<th><button class="btn gc-add-col-btn" id="addColBtn" title="Добавить столбец">+</button></th>';
@@ -744,16 +736,15 @@
       let rest = `<td class="gc-score">${score.toFixed(2)}</td>`;
       rest += `<td class="gc-percent" style="color:${pctColor(pct)}">${pct.toFixed(2)}%</td>`;
       colGroups.forEach(group => {
-        group.forEach((i, idx) => {
-          const on = valueSet.has(keyOf(nick, i.id));
-          let cls = "gc-cell" + (on ? " on" : "");
-          if(group.length > 1){
-            cls += " gc-merged";
-            if(idx === 0) cls += " gc-merged-first";
-            if(idx === group.length - 1) cls += " gc-merged-last";
-          }
-          rest += `<td class="${cls}">${on ? i.weight.toFixed(2) : "0.00"}</td>`;
-        });
+        // у склеенных пунктов балл общий — сумма включённых; зелёным только когда
+        // включены все, иначе видно, что часть группы у человека не отмечена
+        const onItems = group.filter(i => valueSet.has(keyOf(nick, i.id)));
+        const sum = onItems.reduce((s, i) => s + i.weight, 0);
+        const cls = "gc-cell" + (onItems.length === group.length ? " on" : "") + (group.length > 1 ? " gc-merged" : "");
+        const title = group.length > 1
+          ? ' title="' + escapeHtml(group.map(i => `${i.name}: ${valueSet.has(keyOf(nick, i.id)) ? i.weight.toFixed(2) : "0.00"}`).join(", ")) + '"'
+          : "";
+        rest += `<td class="${cls}"${title}>${sum.toFixed(2)}</td>`;
       });
       if(isAdmin) rest += "<td></td>";
       tr.insertAdjacentHTML("beforeend", rest);

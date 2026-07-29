@@ -42,13 +42,30 @@
   }
   .table-resize-handle:hover, .table-resize-handle.dragging{ background: rgba(74,134,232,.4); }
 
+  /* таблица слева и от самого верха, поля фильтров — колонкой справа от неё:
+     раньше они лежали над таблицей и отжимали её вниз, до данных приходилось листать */
+  .tax-report-layout{ display:flex; align-items:flex-start; gap:18px; }
+  .tax-report-main{ flex:0 1 auto; min-width:0; display:flex; flex-direction:column; }
+  .tax-report-side{ flex:none; width:230px; display:flex; flex-direction:column; }
+  .tax-report-side .btn{ align-self:flex-start; margin-bottom:4px; }
+  .tax-report-side input, .tax-report-side select{ width:100%; }
+
   /* полноэкранный отчёт: сама страница не скроллится, скроллится только таблица —
      иначе к внутреннему скроллу таблицы добавляется ещё и внешний скролл страницы,
      и до таблицы приходится долистывать (тот же приём, что в attendance.html) */
   body.tax-report-focus{ height:100vh; overflow:hidden; }
   body.tax-report-focus #taxReportView{ height:100vh; display:flex; flex-direction:column; padding:6px 12px; }
   body.tax-report-focus #taxReportView > section.card{ flex:1; min-height:0; display:flex; flex-direction:column; padding:10px 14px; }
+  body.tax-report-focus .tax-report-layout{ flex:1; min-height:0; align-items:stretch; }
+  body.tax-report-focus .tax-report-main{ min-height:0; }
   body.tax-report-focus #taxReportTableWrap{ flex:1; min-height:0; max-height:none; }
+
+  /* узкий экран: колонка фильтров уходит под таблицу, а не сплющивает её */
+  @media (max-width:760px){
+    .tax-report-layout{ flex-direction:column; }
+    .tax-report-side{ width:100%; }
+    body.tax-report-focus .tax-report-main{ flex:1; }
+  }
 </style>
 </head>
 <body>
@@ -170,8 +187,22 @@
 <!-- Полноэкранный отчёт по налогам: недели матрицей (как в отчёте «Посещаемость») -->
 <div id="taxReportView" style="display:none;">
   <section class="card">
-    <div class="table-head-row">
-      <div class="date-range-row" style="margin:0;">
+    <div class="tax-report-layout">
+      <!-- таблица идёт от самого верха карточки, поля фильтров — сбоку справа,
+           чтобы не отжимать её вниз и не заставлять долистывать до данных -->
+      <div class="tax-report-main">
+        <div class="matrix-scroll" id="taxReportTableWrap">
+          <table class="matrix-table">
+            <thead id="taxReportHead"></thead>
+            <tbody id="taxReportBody"></tbody>
+          </table>
+        </div>
+        <p class="empty-hint" id="taxReportEmpty" style="display:none;">Нет данных за выбранные недели.</p>
+        <div class="legend" id="taxReportLegend"></div>
+      </div>
+
+      <aside class="tax-report-side">
+        <button class="btn" id="taxReportBackBtn">← Назад к выбору недель</button>
         <div class="field">
           <label for="taxReportNickSearch">Поиск по нику</label>
           <input type="text" id="taxReportNickSearch" placeholder="Ник" />
@@ -189,20 +220,8 @@
             <option value="name_desc">Имя: Я → А</option>
           </select>
         </div>
-      </div>
-      <div class="tools">
-        <button class="btn" id="taxReportBackBtn">← Назад к выбору недель</button>
-      </div>
+      </aside>
     </div>
-
-    <div class="matrix-scroll" id="taxReportTableWrap">
-      <table class="matrix-table">
-        <thead id="taxReportHead"></thead>
-        <tbody id="taxReportBody"></tbody>
-      </table>
-    </div>
-    <p class="empty-hint" id="taxReportEmpty" style="display:none;">Нет данных за выбранные недели.</p>
-    <div class="legend" id="taxReportLegend"></div>
   </section>
 </div>
 
