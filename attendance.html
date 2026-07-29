@@ -100,14 +100,6 @@
     width:100%; min-width:280px;
     padding-right:14px;
   }
-  .table-resize-handle{
-    display:none;
-    position:absolute; top:0; right:0; bottom:0; width:10px;
-    cursor:col-resize;
-    background: linear-gradient(90deg, transparent, rgba(74,134,232,.18));
-  }
-  .table-resize-handle:hover, .table-resize-handle.dragging{ background: rgba(74,134,232,.4); }
-  #attTableWrap.matrix-mode .table-resize-handle{ display:block; }
   .report-table th[colspan], .report-table .weekday-head th{ text-align:center; }
   .week-start{ border-left:2px solid var(--gold-dim) !important; }
   #attReportBody td{ border-bottom:1px solid var(--border); }
@@ -121,18 +113,19 @@
   body.hide-controls #reportModeTabs,
   body.hide-controls #periodInputsRow,
   body.hide-controls #dayInputRow{ display:none !important; }
-  /* фикс-режим отчёта: документ во фрейме сам не скроллится (иначе поверх
-     внутреннего скролла таблицы появляется ещё и внешний скролл страницы,
-     а кнопки "Настройки"/"?" "уезжают" вместе с ним) — скроллится только сама таблица. */
-  body.report-focus{ height:100vh; overflow:hidden; }
-  body.report-focus #wrap.roster-wrap{ max-width:none; height:100vh; overflow:hidden; padding:6px 12px; gap:8px; }
+  /* режим отчёта: раздел разворачивается на всю ширину, но своего внутреннего
+     вертикального скролла у таблицы нет — вниз листается вся страница целиком.
+     Кнопки «Настройки»/«?» position:fixed, поэтому при прокрутке остаются на месте. */
+  body.report-focus #wrap.roster-wrap{ max-width:none; padding:6px 12px; gap:8px; }
   body.report-focus #rememberStatus{ display:none; }
-  body.report-focus #attReportView{ flex:1; min-height:0; display:flex; flex-direction:column; }
-  body.report-focus #attReportView > section.card{ flex:1; min-height:0; display:flex; flex-direction:column; padding:10px 14px; }
-  body.report-focus .matrix-scroll{ flex:1; min-height:0; max-height:none; padding-bottom:40px; }
-  body.report-focus .day-columns{ flex:1; min-height:0; overflow:auto; padding-bottom:40px; }
-  /* шестерня/справка — в самые углы, таблица под них не заезжает (запас снизу
-     у .matrix-scroll/.day-columns уже есть, сверху шапка отчёта короткая) */
+  body.report-focus #attReportView > section.card{ padding:10px 14px; }
+  /* обёртка перестаёт быть коробкой со скроллом: и вниз, и вбок листается сама
+     страница. Это же и чинит "заморозку" шапки — position:sticky у thead липнет
+     к ближайшему контейнеру прокрутки, а им теперь стало окно, а не обёртка. */
+  body.report-focus #attTableWrap.matrix-mode{ overflow:visible; max-height:none; padding-bottom:40px; width:auto; }
+  body.report-focus .matrix-scroll{ overflow:visible; max-height:none; padding-bottom:40px; }
+  body.report-focus .day-columns{ padding-bottom:40px; }
+  /* шестерня/справка — в самые углы, таблица под них не заезжает */
   body.report-focus .settings-btn{ top:6px; right:6px; }
   body.report-focus .help-btn{ bottom:6px; right:6px; }
   .report-table th.att-num, .report-table td.att-num{
@@ -938,8 +931,6 @@
   function renderAttTableMatrix(filterKey){
     const wrapEl = document.getElementById("attTableWrap");
     wrapEl.classList.add("matrix-mode");
-    const savedWidth = localStorage.getItem(TABLE_WIDTH_KEY);
-    if(savedWidth) wrapEl.style.width = savedWidth + "px";
     const filter = REPORT_FILTERS.find(f => f.key === filterKey);
     const rows = (filter ? attReportRows.filter(filter.test) : [])
       .filter(r => !attNickFilter || r.nickname.toLowerCase().includes(attNickFilter))
@@ -1244,46 +1235,9 @@
     if(e.target.id === "helpOverlay") e.currentTarget.classList.remove("show");
   });
 
-  // матрица по дням может быть шире экрана — крутим её колесом мыши без Shift
-  const attTableWrapEl = document.getElementById("attTableWrap");
-  attTableWrapEl.addEventListener("wheel", (e) => {
-    if(attTableWrapEl.scrollWidth <= attTableWrapEl.clientWidth) return;
-    e.preventDefault();
-    attTableWrapEl.scrollLeft += e.deltaY;
-  }, { passive: false });
-
-  // ручка ресайза за правый край самой таблицы (видна только в матрице —
-  // управляется CSS через #attTableWrap.matrix-mode .table-resize-handle)
-  const resizeHandle = document.createElement("div");
-  resizeHandle.className = "table-resize-handle";
-  resizeHandle.title = "Потяните, чтобы изменить ширину таблицы";
-  attTableWrapEl.appendChild(resizeHandle);
-
-  // ширина, на которую растянули матрицу, переживает перезаход в раздел; ключ свой
-  // у каждого аккаунта — за одним браузером могут сидеть разные люди
-  const TABLE_WIDTH_KEY = "l2AttTableWidth:" + profile.id;
-
-  let resizeStartX = 0, resizeStartWidth = 0, resizing = false;
-  resizeHandle.addEventListener("mousedown", (e) => {
-    resizing = true;
-    resizeStartX = e.clientX;
-    resizeStartWidth = attTableWrapEl.getBoundingClientRect().width;
-    resizeHandle.classList.add("dragging");
-    document.body.style.userSelect = "none";
-    e.preventDefault();
-  });
-  window.addEventListener("mousemove", (e) => {
-    if(!resizing) return;
-    const newWidth = Math.max(280, resizeStartWidth + (e.clientX - resizeStartX));
-    attTableWrapEl.style.width = newWidth + "px";
-  });
-  window.addEventListener("mouseup", () => {
-    if(!resizing) return;
-    resizing = false;
-    resizeHandle.classList.remove("dragging");
-    document.body.style.userSelect = "";
-    localStorage.setItem(TABLE_WIDTH_KEY, String(Math.round(attTableWrapEl.getBoundingClientRect().width)));
-  });
+  // Ручки ширины и перехвата колеса здесь больше нет: матрица не живёт в своей
+  // коробке со скроллом, а лежит прямо на странице — вниз и вбок листается сам сайт,
+  // а шапка таблицы при этом примерзает к верху экрана.
 
   // ---- сохранение/восстановление открытого отчёта ----
   // Раздел живёт в iframe и при возврате из «Групп» перезагружается с нуля,
