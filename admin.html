@@ -13,6 +13,25 @@
   select{ width:100%; }
   .support-class-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:6px 12px; margin-top:8px; }
   .support-class-grid label{ display:flex; align-items:center; gap:7px; font-size:13px; }
+
+  /* порядок разделов меню: список в том же виде, в каком меню видно слева */
+  .sec-order-list{ display:flex; flex-direction:column; gap:6px; margin:10px 0; max-width:420px; }
+  .sec-order-row{
+    display:flex; align-items:center; gap:10px;
+    background: var(--panel-2); border:1px solid var(--border); border-radius:7px;
+    padding:8px 10px;
+  }
+  .sec-order-row .num{ flex:none; width:18px; font-size:11.5px; color: var(--text-dim); text-align:right; }
+  .sec-order-row .label{ flex:1; min-width:0; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .sec-order-row .sub{ font-size:11px; color: var(--text-dim); }
+  .sec-order-row .moves{ display:flex; gap:4px; flex:none; }
+  .sec-order-row .moves button{
+    width:26px; height:24px; padding:0; line-height:1;
+    border-radius:5px; border:1px solid var(--border);
+    background: var(--panel); color: var(--text-dim); font-size:12px; cursor:pointer;
+  }
+  .sec-order-row .moves button:hover:not(:disabled){ border-color: var(--border-lit); color: var(--text); }
+  .sec-order-row .moves button:disabled{ opacity:.3; cursor:default; }
 </style>
 </head>
 <body>
@@ -76,6 +95,16 @@
   </section>
 
   <section class="card">
+    <h2>Порядок разделов в меню</h2>
+    <p class="hint">Стрелками ▲▼ переставьте пункты — в таком порядке они будут идти в левом меню у всех в клане. «Учёт клана» двигается целиком, вместе со своими подпунктами.</p>
+    <div class="sec-order-list" id="secOrderList"></div>
+    <p class="ok-msg" id="secOrderOk" style="display:none;">
+      Порядок сохранён. <a href="#" id="secOrderReload">Обновить меню</a>
+    </p>
+    <p class="error-msg" id="secOrderError"></p>
+  </section>
+
+  <section class="card">
     <h2>Какие разделы видит каждая роль</h2>
     <p class="hint">Снимите галочку — раздел исчезнет из навигации у всех с этой ролью. Админ-панель всегда видна только главному админу.</p>
     <div style="overflow-x:auto;">
@@ -92,7 +121,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=6"></script>
+<script src="js/supabase-client.js?v=7"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -117,6 +146,104 @@
     ]);
     roles = r || []; parties = p || []; sections = s || [];
   }
+
+  // ---------- порядок разделов в левом меню ----------
+  // группировка пунктов повторяет NAV_GROUPS из index.html: в меню «Учёт клана» —
+  // один пункт с подпунктами, поэтому и переставлять его надо целиком
+  const NAV_GROUPS = [
+    { label: "Учёт клана", keys: ["census", "taxes", "attendance"] },
+  ];
+
+  let menuItems = []; // [{ label, keys: [section_key, ...] }] в текущем порядке меню
+
+  async function loadSectionOrder(){
+    const { data, error } = await db.from("clan_section_order").select("section_key, sort");
+    if(error){ console.error(error); }
+    const custom = new Map((data || []).map(r => [r.section_key, r.sort]));
+
+    const ordered = sections.slice().sort((a, b) =>
+      (custom.get(a.key) ?? a.sort) - (custom.get(b.key) ?? b.sort));
+
+    // сворачиваем разделы группы в один пункт — на месте первого из них
+    menuItems = [];
+    const seenGroups = new Set();
+    ordered.forEach(sec => {
+      const group = NAV_GROUPS.find(g => g.keys.includes(sec.key));
+      if(!group){
+        menuItems.push({ label: sec.label, keys: [sec.key] });
+        return;
+      }
+      if(seenGroups.has(group.label)) return;
+      seenGroups.add(group.label);
+      const children = ordered.filter(x => group.keys.includes(x.key));
+      menuItems.push({ label: group.label, keys: children.map(x => x.key), children: children.map(x => x.label) });
+    });
+  }
+
+  function renderSectionOrder(){
+    const list = document.getElementById("secOrderList");
+    list.innerHTML = "";
+    menuItems.forEach((item, i) => {
+      const row = document.createElement("div");
+      row.className = "sec-order-row";
+
+      const num = document.createElement("span");
+      num.className = "num";
+      num.textContent = String(i + 1);
+
+      const label = document.createElement("span");
+      label.className = "label";
+      label.textContent = item.label;
+      if(item.children){
+        const sub = document.createElement("span");
+        sub.className = "sub";
+        sub.textContent = " — " + item.children.join(", ");
+        label.appendChild(sub);
+      }
+
+      const moves = document.createElement("div");
+      moves.className = "moves";
+      const up = document.createElement("button");
+      up.textContent = "▲"; up.title = "Выше"; up.disabled = i === 0;
+      up.addEventListener("click", () => moveMenuItem(i, -1));
+      const down = document.createElement("button");
+      down.textContent = "▼"; down.title = "Ниже"; down.disabled = i === menuItems.length - 1;
+      down.addEventListener("click", () => moveMenuItem(i, 1));
+      moves.append(up, down);
+
+      row.append(num, label, moves);
+      list.appendChild(row);
+    });
+  }
+
+  async function moveMenuItem(index, delta){
+    const target = index + delta;
+    if(target < 0 || target >= menuItems.length) return;
+    [menuItems[index], menuItems[target]] = [menuItems[target], menuItems[index]];
+    renderSectionOrder();
+    await saveSectionOrder();
+  }
+
+  async function saveSectionOrder(){
+    const errEl = document.getElementById("secOrderError");
+    const okEl = document.getElementById("secOrderOk");
+    errEl.textContent = "";
+    // сквозная нумерация по всем ключам: подпункты группы получают подряд идущие номера
+    const rows = [];
+    let sort = 0;
+    menuItems.forEach(item => item.keys.forEach(key => {
+      rows.push({ clan_id: profile.clan_id, section_key: key, sort: sort++ });
+    }));
+    const { error } = await db.from("clan_section_order").upsert(rows, { onConflict: "clan_id,section_key" });
+    if(error){ okEl.style.display = "none"; errEl.textContent = "Не удалось сохранить: " + error.message; return; }
+    okEl.style.display = "";
+  }
+
+  document.getElementById("secOrderReload").addEventListener("click", (e) => {
+    e.preventDefault();
+    // раздел живёт в iframe — перезагружаем всю страницу кабинета, чтобы меню перестроилось
+    (window.top || window).location.reload();
+  });
 
   function fillSelect(sel, items, labelFn, withEmpty){
     sel.innerHTML = (withEmpty ? '<option value="">—</option>' : "") +
@@ -399,8 +526,9 @@
   await loadLookups();
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(r.label), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
-  await Promise.all([loadUsers(), loadMatrix(), loadDualClassSettings()]);
+  await Promise.all([loadUsers(), loadMatrix(), loadDualClassSettings(), loadSectionOrder()]);
   renderSupportClassGrid();
+  renderSectionOrder();
 })();
 </script>
 </body>

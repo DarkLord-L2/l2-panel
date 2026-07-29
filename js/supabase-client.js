@@ -73,17 +73,25 @@ async function getVisibleSections(roleKey){
     .from("roles").select("id").eq("key", roleKey).single();
   if(roleErr) throw roleErr;
 
-  const { data, error } = await client
-    .from("role_sections")
-    .select("visible, sections(key, label, sort)")
-    .eq("role_id", roleRow.id)
-    .eq("visible", true);
+  // порядок пунктов меню клан-лидер задаёт сам (Админ-панель → «Порядок разделов в меню»);
+  // clan_section_order виден только своему клану, а чего в нём нет — идёт по sections.sort
+  const [{ data, error }, { data: orderRows, error: orderErr }] = await Promise.all([
+    client
+      .from("role_sections")
+      .select("visible, sections(key, label, sort)")
+      .eq("role_id", roleRow.id)
+      .eq("visible", true),
+    client.from("clan_section_order").select("section_key, sort"),
+  ]);
   if(error) throw error;
+  if(orderErr) console.error(orderErr); // порядок не критичен — откатимся на sections.sort
+
+  const customSort = new Map((orderRows || []).map(r => [r.section_key, r.sort]));
 
   return (data || [])
     .map(row => row.sections)
     .filter(Boolean)
-    .sort((a, b) => a.sort - b.sort);
+    .sort((a, b) => (customSort.get(a.key) ?? a.sort) - (customSort.get(b.key) ?? b.sort));
 }
 
 // Создание нового пользователя — только для главного админа, идёт через Edge Function
