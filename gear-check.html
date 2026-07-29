@@ -143,6 +143,8 @@
   }
   .gc-item-part{ display:flex; flex-direction:column; gap:6px; }
   .gc-item-part.is-hidden{ opacity:.45; }
+  .gc-merge-note{ margin-top:2px; font-size:10.5px; line-height:1.4; color: var(--text-dim); }
+  .gc-merge-note.ok{ color: var(--ok); }
   .gc-item-card-top{ display:flex; align-items:center; gap:10px; }
   .gc-item-card img{ width:34px; height:34px; border-radius:7px; object-fit:cover; border:1px solid var(--border); flex:none; background: var(--panel); }
   .gc-item-card .meta{ flex:1; min-width:0; }
@@ -323,7 +325,8 @@
         <p>Кнопка «+» в шапке таблицы, последним столбцом, добавляет новый пункт: имя, вес, потом можно загрузить картинку. Если разделов ещё нет, автоматически создастся раздел «Общая»; если разделов несколько — спросит, в какой добавить.</p>
         <p>То же самое можно делать в панели справа: внизу кнопка «✎ Редактировать» показывает у разделов и пунктов кружок (скрыть/показать), карандаш (имя/вес/фото) и крестик (удалить совсем); «+ Раздел» тоже внизу. Пока «Редактировать» не нажат, панель чистая — видны только тумблеры.</p>
         <p><b>Скрыть</b> — пункт пропадает из таблицы и не считается в баллах, но тумблеры участников по нему сохраняются: в любой момент можно снова показать, ничего не переделывая. <b>Удалить</b> — совсем, без возврата.</p>
-        <p><b>Склеить с предыдущим пунктом</b> (галочка в окне пункта) — два соседних пункта одного раздела показываются как один блок: в таблице у них общая шапка без разделителя, в панели участника — одна общая карточка. Баллы и тумблеры у каждого остаются свои.</p>
+        <p><b>Склеить с предыдущим пунктом</b> (галочка в окне пункта) — соседние пункты одного раздела становятся одной колонкой: общий вес в шапке и один балл в строке участника, в панели — одна карточка со своими тумблерами. Склеивать можно и больше двух: отмечайте галочку у каждого следующего пункта цепочки.</p>
+        <p><b>Балл только если включено всё склеенное</b> — вторая галочка рядом. С ней группа даёт баллы, лишь когда у участника отмечены все её пункты; не хватает хотя бы одного — 0 баллов за всю группу. Без неё считается сумма того, что включено. Достаточно отметить у любого пункта группы.</p>
       </div>
     </details>
   </div>
@@ -361,7 +364,12 @@
     <label class="checkbox-row">
       <input type="checkbox" id="itemMerge" /> Склеить с предыдущим пунктом
     </label>
-    <p class="hint">Пункт срастётся с идущим перед ним пунктом того же раздела и подраздела: в таблице у них будет общая шапка без разделителя, в панели участника — одна общая карточка. Баллы и тумблеры у каждого остаются свои.</p>
+    <p class="hint">Пункт срастётся с идущим перед ним пунктом того же раздела и подраздела: в таблице они станут одной колонкой с общим весом и одним баллом, в панели участника — одной карточкой со своими тумблерами.</p>
+
+    <label class="checkbox-row">
+      <input type="checkbox" id="itemMergeAll" /> Балл только если включено всё склеенное
+    </label>
+    <p class="hint">Для склеенной группы: если у участника выключен хотя бы один пункт из неё, вся группа даёт 0 баллов. Без этой галочки считается сумма того, что включено. Отметить достаточно у любого пункта группы — действует на всю.</p>
 
     <div class="field">
       <label for="itemSubgroup">Подраздел внутри раздела (необязательно)</label>
@@ -599,7 +607,7 @@
     const [{ data: s }, { data: it }] = await Promise.all([
       db.from("boost_sections").select("id, name, sort_order").order("sort_order").order("name"),
       db.from("boost_items")
-        .select("id, section_id, name, icon, weight, sort_order, subtitle, per_class, full_width, subgroup, hidden, merged_with_prev")
+        .select("id, section_id, name, icon, weight, sort_order, subtitle, per_class, full_width, subgroup, hidden, merged_with_prev, merge_all_required")
         .order("sort_order"),
     ]);
     sections = s || [];
@@ -659,9 +667,22 @@
     return out;
   }
 
+  // «всё или ничего» — свойство всей склеенной группы, отмечать можно у любого её пункта
+  function isAllRequired(group){ return group.length > 1 && group.some(i => i.merge_all_required); }
+
+  // сколько баллов даёт группа конкретному участнику: обычно это сумма включённых
+  // пунктов, а с галочкой «только если включено всё» — либо весь вес, либо ноль
+  function groupScore(group, nick){
+    const onItems = group.filter(i => valueSet.has(keyOf(nick, i.id)));
+    if(isAllRequired(group)){
+      return onItems.length === group.length ? group.reduce((s, i) => s + i.weight, 0) : 0;
+    }
+    return onItems.reduce((s, i) => s + i.weight, 0);
+  }
+
   function maxScore(){ return orderedItems().reduce((s,i)=> s + i.weight, 0); }
   function scoreOf(nick){
-    return orderedItems().reduce((s,i)=> s + (valueSet.has(keyOf(nick,i.id)) ? i.weight : 0), 0);
+    return mergeGroups(orderedItems()).reduce((s, g) => s + groupScore(g, nick), 0);
   }
   function percentOf(nick){
     const mx = maxScore();
@@ -736,15 +757,17 @@
       let rest = `<td class="gc-score">${score.toFixed(2)}</td>`;
       rest += `<td class="gc-percent" style="color:${pctColor(pct)}">${pct.toFixed(2)}%</td>`;
       colGroups.forEach(group => {
-        // у склеенных пунктов балл общий — сумма включённых; зелёным только когда
-        // включены все, иначе видно, что часть группы у человека не отмечена
+        // у склеенных пунктов балл общий; зелёным — только когда включены все,
+        // иначе видно, что часть группы у человека не отмечена
         const onItems = group.filter(i => valueSet.has(keyOf(nick, i.id)));
-        const sum = onItems.reduce((s, i) => s + i.weight, 0);
         const cls = "gc-cell" + (onItems.length === group.length ? " on" : "") + (group.length > 1 ? " gc-merged" : "");
         const title = group.length > 1
-          ? ' title="' + escapeHtml(group.map(i => `${i.name}: ${valueSet.has(keyOf(nick, i.id)) ? i.weight.toFixed(2) : "0.00"}`).join(", ")) + '"'
+          ? ' title="' + escapeHtml(
+              group.map(i => `${i.name}: ${valueSet.has(keyOf(nick, i.id)) ? "есть" : "нет"}`).join(", ") +
+              (isAllRequired(group) ? " — балл только если есть всё" : "")
+            ) + '"'
           : "";
-        rest += `<td class="${cls}"${title}>${sum.toFixed(2)}</td>`;
+        rest += `<td class="${cls}"${title}>${groupScore(group, nick).toFixed(2)}</td>`;
       });
       if(isAdmin) rest += "<td></td>";
       tr.insertAdjacentHTML("beforeend", rest);
@@ -877,7 +900,32 @@
     const card = document.createElement("div");
     card.className = "gc-item-card" + (group.some(i => i.full_width) ? " full" : "");
     group.forEach(item => card.appendChild(makeItemPart(item)));
+
+    // правило «всё или ничего» не видно по самим тумблерам — подписываем его в карточке
+    if(isAllRequired(group)){
+      const note = document.createElement("div");
+      note.className = "gc-merge-note";
+      note._group = group; // чтобы обновлять подпись при переключении тумблеров
+      applyMergeNote(note);
+      card.appendChild(note);
+    }
     return card;
+  }
+
+  function applyMergeNote(note){
+    const group = note._group || [];
+    const onCount = group.filter(i => valueSet.has(keyOf(currentNick, i.id))).length;
+    const all = onCount === group.length;
+    note.textContent = all
+      ? "Засчитано полностью"
+      : `Балл только если включено всё (сейчас ${onCount} из ${group.length})`;
+    note.classList.toggle("ok", all);
+  }
+
+  // тумблер переключили — карточку целиком не перерисовываем (сбился бы скролл панели),
+  // достаточно освежить подписи «всё или ничего»
+  function refreshMergeNotes(){
+    document.querySelectorAll("#drawerBody .gc-merge-note").forEach(applyMergeNote);
   }
 
   function makeItemPart(item){
@@ -976,6 +1024,7 @@
     if(error){ alert("Не удалось сохранить: " + error.message); return; }
     const k = keyOf(currentNick, itemId);
     if(on) valueSet.add(k); else valueSet.delete(k);
+    refreshMergeNotes();
     renderTable();
   }
 
@@ -1040,6 +1089,7 @@
     document.getElementById("itemPerClass").checked = !!opts.item?.per_class;
     document.getElementById("itemFullWidth").checked = !!opts.item?.full_width;
     document.getElementById("itemMerge").checked = !!opts.item?.merged_with_prev;
+    document.getElementById("itemMergeAll").checked = !!opts.item?.merge_all_required;
     document.getElementById("itemSubgroup").value = opts.item?.subgroup || opts.subgroup || "";
     document.getElementById("itemIconPreview").src = opts.item?.icon || BLANK_IMG;
     document.getElementById("itemError").textContent = "";
@@ -1081,6 +1131,7 @@
       per_class: document.getElementById("itemPerClass").checked,
       full_width: document.getElementById("itemFullWidth").checked,
       merged_with_prev: document.getElementById("itemMerge").checked,
+      merge_all_required: document.getElementById("itemMergeAll").checked,
       subgroup: document.getElementById("itemSubgroup").value.trim() || null,
     };
     if(itemModalPendingIcon !== null) row.icon = itemModalPendingIcon || null;
