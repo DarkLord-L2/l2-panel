@@ -12,7 +12,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const OVERRIDE_PHRASE = Deno.env.get("DELETE_PROTECTION_OVERRIDE_PHRASE") ?? "";
+const OVERRIDE_PHRASE = (Deno.env.get("DELETE_PROTECTION_OVERRIDE_PHRASE") ?? "").trim();
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
