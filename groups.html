@@ -139,8 +139,8 @@
   .hidden-group-row .name{ font-size:13.5px; color: var(--text); }
   .hidden-group-row .actions{ display:flex; gap:8px; flex:none; }
 
-  /* тот же размер окна «Класс/аватарка», что и в «Проверке буста» */
-  .gc-member-modal{ min-height:640px; display:flex; flex-direction:column; }
+  /* то же окно выбора класса, что и в «Проверке буста», плюс вторая профессия */
+  .gc-member-modal{ min-height:440px; display:flex; flex-direction:column; }
   .gc-member-modal .field{ margin:24px 0; }
   .gc-member-modal #memberSaveBtn{ margin-top:auto; align-self:flex-start; }
 </style>
@@ -249,7 +249,7 @@
   </div>
 </div>
 
-<!-- Класс и аватарка участника — то же самое окно, что в «Проверке буста» -->
+<!-- Класс участника — то же самое окно, что в «Проверке буста» -->
 <div class="modal-overlay" id="memberOverlay">
   <div class="modal gc-member-modal" style="width:640px; max-width:94vw;">
     <button class="modal-close" id="memberClose" title="Закрыть">×</button>
@@ -283,20 +283,10 @@
       </div>
     </div>
 
-    <div class="field">
-      <label>Аватарка</label>
-      <div style="display:flex; align-items:center; gap:10px;">
-        <img id="memberIconPreview" alt="" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:1px solid var(--border); background: var(--panel-2);" />
-        <button class="btn" id="memberIconBtn">Загрузить фото</button>
-        <button class="btn btn-danger" id="memberIconClearBtn">Убрать</button>
-      </div>
-    </div>
-
     <p class="error-msg" id="memberError"></p>
     <button class="btn btn-primary" id="memberSaveBtn">Сохранить</button>
   </div>
 </div>
-<input type="file" id="memberIconPicker" accept="image/*" style="display:none;" />
 
 <button class="help-btn" id="helpBtn" title="Как пользоваться">?</button>
 <div class="modal-overlay" id="helpOverlay">
@@ -367,7 +357,6 @@
   let memberModalNick = null;
   let memberModalClassName = "";  // выбранный в пикере класс (имя из L2_CLASSES или "")
   let memberModalClassName2 = ""; // вторая профессия (необязательно), тот же список классов
-  let memberPendingIcon = null;  // null — не меняли, "" — убрать, dataURL — новая
 
   const BLANK_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34'></svg>";
   function classIcon(name){ return (window.L2_CLASS_ICON && name) ? window.L2_CLASS_ICON(name) : null; }
@@ -693,7 +682,7 @@
 
     if(isAdmin){
       const classBtn = document.createElement("button");
-      classBtn.textContent = "Класс/аватарка…";
+      classBtn.textContent = "Класс…";
       classBtn.addEventListener("click", () => {
         closeMemberMenu();
         openMemberModal(nick);
@@ -731,7 +720,7 @@
     card.appendChild(menu);
   }
 
-  // ---------- класс и аватарка участника (то же самое окно, что в «Проверке буста») ----------
+  // ---------- класс участника (то же самое окно, что в «Проверке буста») ----------
   function renderClassPickerButton(){
     const icon = classIcon(memberModalClassName);
     const iconEl = document.getElementById("classPickerIcon");
@@ -815,7 +804,6 @@
 
   function openMemberModal(nick){
     memberModalNick = nick;
-    memberPendingIcon = null;
     const info = memberInfo.get(nick) || {};
     document.getElementById("memberTitle").textContent = nick;
     memberModalClassName = info.class_name || "";
@@ -824,7 +812,6 @@
     renderClassPickerButton2();
     closeClassDropdown();
     closeClassDropdown2();
-    document.getElementById("memberIconPreview").src = info.icon || BLANK_IMG;
     document.getElementById("memberError").textContent = "";
     document.getElementById("memberOverlay").classList.add("show");
   }
@@ -833,21 +820,6 @@
   });
   document.getElementById("memberOverlay").addEventListener("click", (e) => {
     if(e.target.id === "memberOverlay") e.currentTarget.classList.remove("show");
-  });
-  document.getElementById("memberIconBtn").addEventListener("click", () => {
-    document.getElementById("memberIconPicker").value = "";
-    document.getElementById("memberIconPicker").click();
-  });
-  document.getElementById("memberIconClearBtn").addEventListener("click", () => {
-    memberPendingIcon = "";
-    document.getElementById("memberIconPreview").src = BLANK_IMG;
-  });
-  document.getElementById("memberIconPicker").addEventListener("change", async () => {
-    const file = document.getElementById("memberIconPicker").files[0];
-    if(!file) return;
-    const dataUrl = await downscaleImage(file, 96);
-    memberPendingIcon = dataUrl;
-    document.getElementById("memberIconPreview").src = dataUrl;
   });
   document.getElementById("memberSaveBtn").addEventListener("click", async () => {
     const errEl = document.getElementById("memberError");
@@ -858,32 +830,12 @@
       class_name: memberModalClassName || null,
       class_name_2: memberModalClassName2 || null,
     };
-    if(memberPendingIcon !== null) row.icon = memberPendingIcon || null;
     const { error } = await db.from("member_classes").upsert(row, { onConflict: "clan_id,nickname" });
     if(error){ errEl.textContent = error.message; return; }
     document.getElementById("memberOverlay").classList.remove("show");
     await loadMemberInfo();
     renderMembers();
   });
-
-  function downscaleImage(file, maxSize){
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      const reader = new FileReader();
-      reader.onload = () => { img.src = reader.result; };
-      reader.onerror = reject;
-      img.onload = () => {
-        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
-        const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
-        const canvas = document.createElement("canvas");
-        canvas.width = w; canvas.height = h;
-        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/png"));
-      };
-      img.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
 
   // подменяет содержимое уже открытого меню на список остальных групп — второй
   // клик снова открывать меню не нужно, всё происходит в том же попапе

@@ -232,9 +232,9 @@
   .gc-class-option img{ width:22px; height:22px; border-radius:4px; object-fit:cover; flex:none; }
   .gc-class-option.gc-class-clear{ color: var(--text-dim); font-style:italic; }
 
-  /* карточка «⋮ → класс/аватарка» увеличена по ширине и высоте по просьбе —
-     без min-height + flex-column блок просто сжимался по контенту вниз */
-  .gc-member-modal{ min-height:640px; display:flex; flex-direction:column; }
+  /* карточка «⋮ → класс» крупная по просьбе — без min-height + flex-column блок
+     сжимался бы по контенту вниз; высота под одно поле выбора класса */
+  .gc-member-modal{ min-height:330px; display:flex; flex-direction:column; }
   .gc-member-modal .field{ margin:24px 0; }
   .gc-member-modal #memberSaveBtn{ margin-top:auto; align-self:flex-start; }
 </style>
@@ -314,9 +314,9 @@
       </div>
     </details>
     <details class="help-section">
-      <summary>Класс и аватарка участника</summary>
+      <summary>Класс участника</summary>
       <div class="help-body">
-        <p>Кнопка «⋮» справа от ника (у админа) открывает окно, где можно вписать класс — он показывается подписью под ником — и загрузить аватарку.</p>
+        <p>Кнопка «⋮» справа от ника (у админа) открывает окно выбора класса — он показывается подписью под ником, а его иконка становится аватаркой участника. Отдельно загружать фото не нужно.</p>
       </div>
     </details>
     <details class="help-section">
@@ -431,15 +431,6 @@
           <input type="text" id="classSearchInput" placeholder="Поиск класса..." />
           <div class="gc-class-list" id="classDropdownList"></div>
         </div>
-      </div>
-    </div>
-
-    <div class="field">
-      <label>Аватарка</label>
-      <div style="display:flex; align-items:center; gap:10px;">
-        <img id="memberIconPreview" alt="" style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:1px solid var(--border); background: var(--panel-2);" />
-        <button class="btn" id="memberIconBtn">Загрузить фото</button>
-        <button class="btn btn-danger" id="memberIconClearBtn">Убрать</button>
       </div>
     </div>
 
@@ -747,7 +738,7 @@
         const menuBtn = document.createElement("button");
         menuBtn.className = "gc-row-menu";
         menuBtn.textContent = "⋮";
-        menuBtn.title = "Класс и аватарка";
+        menuBtn.title = "Класс";
         menuBtn.addEventListener("click", (e) => { e.stopPropagation(); openMemberModal(nick); });
         wrap.appendChild(menuBtn);
       }
@@ -1183,10 +1174,9 @@
     await addItem(sectionId);
   }
 
-  // ---------- класс и аватарка участника ----------
+  // ---------- класс участника (аватарка берётся из иконки класса) ----------
   let memberModalNick = null;
   let memberModalClassName = ""; // выбранный в пикере класс (имя из L2_CLASSES или "")
-  let memberPendingIcon = null; // null — не меняли, "" — убрать, dataURL — новая
 
   function classIcon(name){ return (window.L2_CLASS_ICON && name) ? window.L2_CLASS_ICON(name) : null; }
 
@@ -1233,13 +1223,11 @@
 
   function openMemberModal(nick){
     memberModalNick = nick;
-    memberPendingIcon = null;
     const info = memberInfo.get(nick) || {};
     document.getElementById("memberTitle").textContent = nick;
     memberModalClassName = info.class_name || "";
     renderClassPickerButton();
     closeClassDropdown();
-    document.getElementById("memberIconPreview").src = info.icon || BLANK_IMG;
     document.getElementById("memberError").textContent = "";
     document.getElementById("memberOverlay").classList.add("show");
     lockScroll();
@@ -1251,11 +1239,6 @@
   document.getElementById("memberOverlay").addEventListener("click", (e) => {
     if(e.target.id === "memberOverlay"){ e.currentTarget.classList.remove("show"); unlockScroll(); }
   });
-  document.getElementById("memberIconBtn").addEventListener("click", () => pickIcon({ type: "member" }));
-  document.getElementById("memberIconClearBtn").addEventListener("click", () => {
-    memberPendingIcon = "";
-    document.getElementById("memberIconPreview").src = BLANK_IMG;
-  });
   document.getElementById("memberSaveBtn").addEventListener("click", async () => {
     const errEl = document.getElementById("memberError");
     errEl.textContent = "";
@@ -1264,7 +1247,6 @@
       nickname: memberModalNick,
       class_name: memberModalClassName || null,
     };
-    if(memberPendingIcon !== null) row.icon = memberPendingIcon || null;
     const { error } = await db.from("member_classes").upsert(row, { onConflict: "clan_id,nickname" });
     if(error){ errEl.textContent = error.message; return; }
     document.getElementById("memberOverlay").classList.remove("show");
@@ -1356,8 +1338,8 @@
   });
 
   // ---------- загрузка/уменьшение фото ----------
-  // target: {type:"member"} — аватарка участника, {type:"itemModal"} — картинка пункта
-  // (в обоих случаях фото только показывается превью, сохраняется по кнопке «Сохранить»)
+  // target: {type:"itemModal"} — картинка пункта (фото сперва попадает в превью,
+  // а в базу уходит только по кнопке «Сохранить» в окне пункта)
   let pendingIconTarget = null;
   const iconPicker = document.getElementById("iconPicker");
   function pickIcon(target){ pendingIconTarget = target; iconPicker.value = ""; iconPicker.click(); }
@@ -1368,10 +1350,7 @@
     if(!file || !target) return;
     const dataUrl = await downscaleImage(file, 96);
 
-    if(target.type === "member"){
-      memberPendingIcon = dataUrl;
-      document.getElementById("memberIconPreview").src = dataUrl;
-    } else if(target.type === "itemModal"){
+    if(target.type === "itemModal"){
       itemModalPendingIcon = dataUrl;
       document.getElementById("itemIconPreview").src = dataUrl;
     }
