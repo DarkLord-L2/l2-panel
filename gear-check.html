@@ -232,11 +232,17 @@
   .gc-class-option img{ width:22px; height:22px; border-radius:4px; object-fit:cover; flex:none; }
   .gc-class-option.gc-class-clear{ color: var(--text-dim); font-style:italic; }
 
-  /* карточка «⋮ → класс» крупная по просьбе — без min-height + flex-column блок
-     сжимался бы по контенту вниз; высота под одно поле выбора класса */
-  .gc-member-modal{ min-height:330px; display:flex; flex-direction:column; }
+  /* карточка «⋮ → класс» увеличена по ширине и высоте по просьбе —
+     без min-height + flex-column блок просто сжимался по контенту вниз */
+  .gc-member-modal{ min-height:640px; display:flex; flex-direction:column; position:relative; }
   .gc-member-modal .field{ margin:24px 0; }
   .gc-member-modal #memberSaveBtn{ margin-top:auto; align-self:flex-start; }
+
+  /* открытый список классов разворачивается на всю карточку: привязан не к своей
+     кнопке, а к самому окну — иначе висел узкой полоской посреди пустоты */
+  .gc-member-modal .gc-class-picker{ position:static; }
+  .gc-member-modal .gc-class-dropdown{ top:68px; left:24px; right:24px; bottom:24px; }
+  .gc-member-modal .gc-class-list{ max-height:none; flex:1; }
 </style>
 </head>
 <body>

@@ -140,9 +140,15 @@
   .hidden-group-row .actions{ display:flex; gap:8px; flex:none; }
 
   /* то же окно выбора класса, что и в «Проверке буста», плюс вторая профессия */
-  .gc-member-modal{ min-height:440px; display:flex; flex-direction:column; }
+  .gc-member-modal{ min-height:640px; display:flex; flex-direction:column; position:relative; }
   .gc-member-modal .field{ margin:24px 0; }
   .gc-member-modal #memberSaveBtn{ margin-top:auto; align-self:flex-start; }
+
+  /* открытый список классов разворачивается на всю карточку: привязан не к своей
+     кнопке, а к самому окну — иначе висел узкой полоской посреди пустоты */
+  .gc-member-modal .gc-class-picker{ position:static; }
+  .gc-member-modal .gc-class-dropdown{ top:68px; left:24px; right:24px; bottom:24px; }
+  .gc-member-modal .gc-class-list{ max-height:none; flex:1; }
 </style>
 </head>
 <body>
