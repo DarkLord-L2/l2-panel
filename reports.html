@@ -89,6 +89,35 @@
     display:inline-block; width:7px; height:7px; border-radius:50%;
     background:#e0982a; margin-left:6px; vertical-align:middle;
   }
+  /* профессию выбрали руками — точка синяя, чтобы отличать от автоподбора */
+  .rep-swap-dot.forced{ background: var(--focus); }
+
+  /* смена профессии кликом по иконке класса (только у админа) */
+  .rep-nick .avatar.rep-avatar-btn{ cursor:pointer; }
+  .rep-nick .avatar.rep-avatar-btn:hover{ border-color: var(--gold); }
+  /* попап живёт в body с position:fixed: внутри таблицы его обрезал бы её скролл */
+  .rep-class-popup{
+    position:fixed; z-index:60;
+    min-width:210px; max-height:280px; overflow-y:auto;
+    background: var(--panel); border:1px solid var(--border-lit); border-radius:8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.45); padding:6px;
+    display:flex; flex-direction:column; gap:2px;
+    white-space:normal;
+  }
+  .rep-class-popup-head{ font-size:10.5px; color: var(--text-dim); padding:2px 6px 4px; }
+  .rep-class-opt{
+    display:flex; align-items:center; gap:8px; width:100%;
+    padding:6px 8px; border-radius:5px; border:none; background:none;
+    color: var(--text); font-family:inherit; font-size:12.5px; text-align:left; cursor:pointer;
+  }
+  .rep-class-opt:hover{ background: var(--panel-2); }
+  .rep-class-opt.active{ background: var(--panel-2); color: var(--gold); }
+  .rep-class-opt .ic{
+    width:22px; height:22px; flex:none; border-radius:4px; object-fit:cover;
+    background: var(--panel-2); display:flex; align-items:center; justify-content:center;
+    font-size:11px; color: var(--text-dim);
+  }
+  .rep-class-opt .now{ margin-left:auto; font-size:10px; color: var(--text-dim); flex:none; }
   .rep-col-actions .btn{ padding:1px 7px; font-size:11px; line-height:1.6; }
   /* кнопка удаления видна только при наведении на строку, чтобы не мозолить глаза
      постоянно горящей красной кнопкой у каждого ника; кнопка восстановления —
@@ -289,14 +318,22 @@
   }
 
   async function loadMemberInfo(){
-    const { data } = await db.from("member_classes").select("nickname, class_name, class_name_2, icon");
+    const { data } = await db.from("member_classes").select(
+      "nickname, class_name, class_name_2, class_name_3, class_name_4, icon"
+    );
     memberInfo = new Map();
     memberInfoNorm = new Map();
     (data || []).forEach(r => {
-      const info = { class_name: r.class_name, class_name_2: r.class_name_2, icon: r.icon };
-      memberInfo.set(r.nickname, info);
-      memberInfoNorm.set(normalizeNick(r.nickname), info);
+      // nickname кладём внутрь: правки профессии надо писать по тому написанию ника,
+      // что лежит в базе, а в отчёт ник мог попасть в другой раскладке
+      memberInfo.set(r.nickname, r);
+      memberInfoNorm.set(normalizeNick(r.nickname), r);
     });
+  }
+
+  // все профессии участника по порядку слотов, без пустых
+  function memberClasses(info){
+    return [info.class_name, info.class_name_2, info.class_name_3, info.class_name_4].filter(Boolean);
   }
 
   // ---- вторая профессия: какую из двух показать по числу килов на мероприятии ----
@@ -314,21 +351,148 @@
     killThreshold = ds?.kill_threshold ?? 8;
   }
 
-  // если задана только одна профессия — как раньше, без всякой логики.
-  // если обе — и одна из них саппорт, а другая нет — выбираем по числу килов:
-  // меньше порога → саппорт, иначе → вторая (боевая). swapped=true, если выбранная
-  // отличается от первой (основной) — по этому флагу рисуется оранжевая точка.
-  function pickDisplayClass(info, kills){
+  // Профессия, выбранная вручную для ТЕКУЩЕГО периода, перебивает автоподбор.
+  // В другом периоде её нет — там снова работает прежняя логика: одна профессия —
+  // показываем её; две, где одна саппорт, а другая нет — выбираем по числу килов
+  // (меньше порога → саппорт, иначе боевая). swapped=true, если выбранная отличается
+  // от первой (основной) — по этому флагу рисуется точка у ника.
+  function pickDisplayClass(info, kills, nickname){
+    const all = memberClasses(info);
     const c1 = info.class_name || "", c2 = info.class_name_2 || "";
-    if(!c2) return { name: c1, swapped: false };
+
+    const forced = forcedClassFor(nickname);
+    if(forced && all.includes(forced)) return { name: forced, swapped: forced !== c1, forced: true };
+
+    if(!c2) return { name: c1, swapped: false, forced: false };
     const c1Support = supportClasses.has(c1);
     const c2Support = supportClasses.has(c2);
-    if(c1Support === c2Support) return { name: c1, swapped: false };
+    if(c1Support === c2Support) return { name: c1, swapped: false, forced: false };
     const supportClass = c1Support ? c1 : c2;
     const ddClass = c1Support ? c2 : c1;
     const chosen = kills < killThreshold ? supportClass : ddClass;
-    return { name: chosen, swapped: chosen !== c1 };
+    return { name: chosen, swapped: chosen !== c1, forced: false };
   }
+
+  // ---- принудительная смена профессии: попап по клику на иконку класса ----
+  // ключ — нормализованный ник; правка привязана к периоду, поэтому карта
+  // перечитывается на каждую смену недели/мероприятия
+  let forcedClasses = new Map(); // normalizeNick(ник) -> class_name, только текущий период
+
+  // periodValue за всё время — пустая строка, а в ключе она должна быть осмысленной
+  function periodKey(){ return periodValue || "all"; }
+
+  // человеческое название периода для подписи в попапе — берём прямо из фильтров,
+  // чтобы не дублировать форматирование недель и названий мероприятий
+  function periodLabel(){
+    if(periodValue.startsWith("event:")){
+      const sel = document.getElementById("eventSelect");
+      return sel.options[sel.selectedIndex]?.textContent || "этого мероприятия";
+    }
+    if(periodValue.startsWith("week:")){
+      const sel = document.getElementById("weekSelect");
+      return sel.options[sel.selectedIndex]?.textContent || "этой недели";
+    }
+    return "всего времени";
+  }
+
+  async function loadForcedClasses(){
+    const { data, error } = await db
+      .from("report_class_overrides")
+      .select("nickname_norm, class_name")
+      .eq("period_key", periodKey());
+    if(error){ console.error(error); forcedClasses = new Map(); return; }
+    forcedClasses = new Map((data || []).map(r => [r.nickname_norm, r.class_name]));
+  }
+
+  function forcedClassFor(nickname){ return forcedClasses.get(normalizeNick(nickname)) || ""; }
+
+  let classPopupEl = null, classPopupAnchor = null;
+  function closeClassPopup(){
+    if(classPopupEl){ classPopupEl.remove(); classPopupEl = null; classPopupAnchor = null; }
+  }
+  document.addEventListener("click", (e) => {
+    if(classPopupEl && !classPopupEl.contains(e.target)) closeClassPopup();
+  });
+
+  // className пустой — снять правку и вернуть автоподбор в этом периоде
+  async function setForcedClass(nickname, className){
+    const norm = normalizeNick(nickname);
+    const { error } = className
+      ? await db.from("report_class_overrides").upsert(
+          { clan_id: profile.clan_id, nickname_norm: norm, period_key: periodKey(), class_name: className, updated_at: new Date().toISOString() },
+          { onConflict: "clan_id,nickname_norm,period_key" }
+        )
+      : await db.from("report_class_overrides").delete()
+          .eq("clan_id", profile.clan_id).eq("nickname_norm", norm).eq("period_key", periodKey());
+    if(error){ alert("Не удалось сохранить: " + error.message); return; }
+    await refreshReport();
+  }
+
+  function openClassPopup(anchorEl, reportNick, info, picked){
+    closeClassPopup();
+    const all = memberClasses(info);
+    const forced = forcedClassFor(reportNick);
+
+    const pop = document.createElement("div");
+    pop.className = "rep-class-popup";
+    pop.addEventListener("click", (e) => e.stopPropagation());
+
+    const head = document.createElement("div");
+    head.className = "rep-class-popup-head";
+    head.textContent = all.length > 1
+      ? "Профессия — только для «" + periodLabel() + "»"
+      : "Профессия одна";
+    pop.appendChild(head);
+
+    if(all.length > 1){
+      const autoOpt = document.createElement("button");
+      autoOpt.className = "rep-class-opt" + (forced ? "" : " active");
+      autoOpt.innerHTML = '<span class="ic">А</span><span>Авто (по килам)</span>';
+      autoOpt.addEventListener("click", () => { closeClassPopup(); setForcedClass(reportNick, ""); });
+      pop.appendChild(autoOpt);
+    }
+
+    all.forEach(name => {
+      const opt = document.createElement("button");
+      opt.className = "rep-class-opt" + (forced === name ? " active" : "");
+      const icon = classIcon(name);
+      opt.innerHTML =
+        (icon ? `<img class="ic" src="${icon}" alt="" />` : '<span class="ic"></span>') +
+        `<span>${escapeHtml(name)}</span>` +
+        (name === picked.name ? '<span class="now">сейчас</span>' : "");
+      opt.addEventListener("click", () => { closeClassPopup(); setForcedClass(reportNick, name); });
+      pop.appendChild(opt);
+    });
+
+    if(all.length <= 1){
+      const hint = document.createElement("p");
+      hint.className = "hint";
+      hint.style.cssText = "margin:4px 0 0; font-size:11.5px;";
+      hint.textContent = "Другие профессии задаются в разделе «Группы».";
+      pop.appendChild(hint);
+    }
+
+    document.body.appendChild(pop);
+    classPopupEl = pop;
+    classPopupAnchor = anchorEl;
+    positionClassPopup();
+  }
+
+  // держим попап под иконкой и не даём ему вылезти за край экрана
+  function positionClassPopup(){
+    if(!classPopupEl || !classPopupAnchor) return;
+    const a = classPopupAnchor.getBoundingClientRect();
+    const p = classPopupEl.getBoundingClientRect();
+    let left = a.left;
+    let top = a.bottom + 6;
+    if(left + p.width > window.innerWidth - 8) left = Math.max(8, window.innerWidth - p.width - 8);
+    if(top + p.height > window.innerHeight - 8) top = Math.max(8, a.top - p.height - 6);
+    classPopupEl.style.left = Math.round(left) + "px";
+    classPopupEl.style.top = Math.round(top) + "px";
+  }
+  // при прокрутке таблицы или страницы иконка уезжает — проще закрыть, чем догонять
+  window.addEventListener("scroll", closeClassPopup, true);
+  window.addEventListener("resize", closeClassPopup);
 
   let groupMembersMap = new Map(); // group_id -> [nickname, ...] (полный состав, включая тех, у кого нет статистики за период)
 
@@ -588,18 +752,33 @@
 
     sorted.forEach(r => {
       const info = lookupMemberInfo(r.nickname);
-      const picked = pickDisplayClass(info, r.kills);
+      const picked = pickDisplayClass(info, r.kills, r.nickname);
       const avatarSrc = info.icon || classIcon(picked.name) || BLANK_IMG;
       const tr = document.createElement("tr");
       if(r.removed) tr.className = "rep-row-removed";
 
       const tdNick = document.createElement("td");
       tdNick.className = "rep-col-nick";
-      tdNick.innerHTML = `<div class="rep-nick"><img class="avatar" src="${avatarSrc}" alt="" />` +
+      const dotTitle = picked.forced
+        ? "Профессия выбрана вручную — только для этого периода"
+        : "Профессия подобрана автоматически по числу килов";
+      tdNick.innerHTML = `<div class="rep-nick"><img class="avatar${isAdmin ? " rep-avatar-btn" : ""}" src="${avatarSrc}" alt=""` +
+        `${isAdmin ? ' title="Сменить профессию"' : ""} />` +
         `<span class="who"><span class="name">${escapeHtml(r.nickname)}` +
         `${r.removed ? ' <span class="rep-removed-badge">удалён</span>' : ""}` +
-        `${picked.swapped ? ' <span class="rep-swap-dot" title="Профессия подобрана автоматически по числу килов"></span>' : ""}</span>` +
+        `${picked.swapped ? ` <span class="rep-swap-dot${picked.forced ? " forced" : ""}" title="${dotTitle}"></span>` : ""}</span>` +
         `<span class="cls">${escapeHtml(picked.name || "")}</span></span></div>`;
+
+      if(isAdmin){
+        const avatarEl = tdNick.querySelector(".avatar");
+        avatarEl.addEventListener("click", (e) => {
+          e.stopPropagation();
+          // повторный клик по той же иконке закрывает уже открытый попап
+          const wasOpen = classPopupEl && classPopupEl.parentElement === avatarEl.parentElement;
+          closeClassPopup();
+          if(!wasOpen) openClassPopup(avatarEl, r.nickname, info, picked);
+        });
+      }
 
       const tdKills = document.createElement("td"); tdKills.textContent = r.kills.toLocaleString("ru-RU");
       const tdDeaths = document.createElement("td"); tdDeaths.textContent = r.deaths.toLocaleString("ru-RU");
@@ -873,7 +1052,11 @@
     }
   }
 
-  function refreshReport(){
+  async function refreshReport(){
+    // таблица сейчас перерисуется — иконка, к которой привязан попап, исчезнет
+    closeClassPopup();
+    // правки профессий свои у каждого периода — перечитываем на каждую перерисовку
+    await loadForcedClasses();
     const grouped = filteredStats();
     const periodRows = statsForPeriod(periodValue, grouped);
 
@@ -956,7 +1139,7 @@
     renderCmpGroupPicker();
   }
 
-  refreshReport();
+  await refreshReport();
 })();
 </script>
 </body>
