@@ -25,9 +25,12 @@
       <h2>Ники недели (<span id="weekCount">0</span>)</h2>
       <div class="tools">
         <button class="btn btn-primary" id="addEntryBtn" style="display:none;">+ Добавить перепись</button>
-        <button class="btn" id="expandBtn" title="Развернуть на весь экран">Развернуть</button>
-        <button class="btn" id="trashModeBtn" title="Режим удаления списком" style="display:none;">Удалить списком</button>
+        <button class="btn" id="trashModeBtn" title="Режим удаления списком" style="display:none;">Удалить</button>
       </div>
+    </div>
+
+    <div style="margin-top:10px;">
+      <input type="text" id="weekSearch" placeholder="Поиск по нику..." style="max-width:260px; width:100%;" />
     </div>
 
     <div class="table-head-row" id="bulkTools" style="display:none; margin-top:8px;">
@@ -79,7 +82,7 @@
     <details class="help-section">
       <summary>Правки</summary>
       <div class="help-body">
-        <p>Крестик у ника в списке недели убирает его. Кнопка «Удалить списком» включает выбор сразу нескольких ников для удаления. Кнопка «Развернуть» разворачивает список на весь экран.</p>
+        <p>Кнопка «Удалить» включает выбор ников для удаления — отметьте нужных (или «Выбрать всех») и подтвердите.</p>
       </div>
     </details>
   </div>
@@ -87,7 +90,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=6"></script>
-<script src="js/week-roster.js?v=3"></script>
+<script src="js/week-roster.js?v=4"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();

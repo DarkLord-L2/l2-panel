@@ -1,12 +1,13 @@
 // Общая логика понедельного списка ников — используется и «Переписью клана», и «Налогами».
 // Навигация по неделям, загрузка скринов → OCR → ревью чипами → сохранение,
-// удаление по одному и через мультивыбор, разворот на весь экран.
+// удаление только через мультивыбор («Удалить списком»/«Удалить»), разворот на весь экран.
 //
 // Ожидает на странице элементы с фиксированными id (см. census.html / taxes.html):
 // wrap, prevWeekBtn, nextWeekBtn, todayBtn, weekLabel, weekCount, addEntryBtn,
-// expandBtn, trashModeBtn, bulkTools, selectAllBtn, deleteSelectedBtn, weekBody,
+// trashModeBtn, bulkTools, selectAllBtn, deleteSelectedBtn, weekBody,
 // emptyHint, uploadCard, fileInput, filePickBtn, uploadStatus, chipRow,
 // manualNick, manualAddBtn, uploadError, saveWeekBtn, cancelUploadBtn.
+// expandBtn — необязателен, вешаем обработчик только если он есть в разметке страницы.
 // Разметку и подписи (заголовки, hint-тексты) каждая страница задаёт сама в HTML —
 // этот модуль знает только то, что реально отличается (см. config ниже).
 
@@ -64,6 +65,16 @@ function initWeekRoster(config){
   let selectMode = false;
   let selectedIds = new Set();
 
+  // поиск по нику — необязателен, как и expandBtn: работает, только если на странице
+  // есть #weekSearch (сейчас — «Перепись клана»); фильтрует только отображение,
+  // «Выбрать всех» по-прежнему берёт весь состав недели, а не только видимое
+  const weekSearchEl = document.getElementById("weekSearch");
+  const emptyHintEl = document.getElementById("emptyHint");
+  const defaultEmptyHintText = emptyHintEl.textContent;
+  if(weekSearchEl){
+    weekSearchEl.addEventListener("input", renderList);
+  }
+
   function renderWeekLabel(){
     document.getElementById("weekLabel").textContent = weekLabel(currentWeek);
   }
@@ -115,11 +126,23 @@ function initWeekRoster(config){
     const body = document.getElementById("weekBody");
     body.innerHTML = "";
     document.getElementById("weekCount").textContent = weekEntries.length;
-    document.getElementById("emptyHint").style.display = weekEntries.length ? "none" : "";
+
+    const q = weekSearchEl ? weekSearchEl.value.trim().toLowerCase() : "";
+    const visibleEntries = q ? weekEntries.filter(e => e.nickname.toLowerCase().includes(q)) : weekEntries;
+
+    if(!weekEntries.length){
+      emptyHintEl.textContent = defaultEmptyHintText;
+      emptyHintEl.style.display = "";
+    } else if(q && !visibleEntries.length){
+      emptyHintEl.textContent = "Ничего не найдено.";
+      emptyHintEl.style.display = "";
+    } else {
+      emptyHintEl.style.display = "none";
+    }
 
     let col = null; // weekEntries уже отсортированы по алфавиту самим запросом (.order("nickname"))
 
-    weekEntries.forEach((entry, i) => {
+    visibleEntries.forEach((entry, i) => {
       if(i % PER_COLUMN === 0){
         col = document.createElement("div");
         col.className = "roster-col";
@@ -148,20 +171,9 @@ function initWeekRoster(config){
       span.textContent = entry.nickname;
       chip.appendChild(span);
 
-      if(onNickClick){
-        if(!selectMode){
-          chip.style.cursor = "pointer";
-          chip.addEventListener("click", () => onNickClick(entry.nickname));
-        }
-      } else if(isAdmin && !selectMode){
-        const x = document.createElement("button");
-        x.textContent = "×";
-        x.title = "Удалить";
-        x.addEventListener("click", async () => {
-          const { error } = await db.from(tableName).delete().eq("id", entry.id);
-          if(!error) await loadWeek();
-        });
-        chip.appendChild(x);
+      if(onNickClick && !selectMode){
+        chip.style.cursor = "pointer";
+        chip.addEventListener("click", () => onNickClick(entry.nickname));
       }
 
       col.appendChild(chip);
@@ -188,9 +200,14 @@ function initWeekRoster(config){
   });
   document.getElementById("todayBtn").addEventListener("click", () => goToWeek(mondayOf(new Date())));
 
-  document.getElementById("expandBtn").addEventListener("click", () => {
-    document.getElementById("wrap").classList.toggle("expanded");
-  });
+  // кнопки "Развернуть" может не быть на странице (убрана в «Переписи клана») —
+  // навешиваем обработчик только если элемент реально есть в разметке
+  const expandBtn = document.getElementById("expandBtn");
+  if(expandBtn){
+    expandBtn.addEventListener("click", () => {
+      document.getElementById("wrap").classList.toggle("expanded");
+    });
+  }
 
   document.getElementById("trashModeBtn").addEventListener("click", () => {
     selectMode = !selectMode;
