@@ -10,11 +10,38 @@
 
   /* stretch — обе карточки одной высоты (по самой высокой), чтобы низ таблицы слева
      и низ «Сравнения пати» справа совпадали, без пустоты под короткой колонкой */
-  .rep-layout{ display:flex; gap:16px; align-items:stretch; flex-wrap:wrap; }
+  .rep-layout{ display:flex; gap:0; align-items:stretch; flex-wrap:wrap; }
   .rep-main{ flex:1 1 480px; min-width:320px; display:flex; flex-direction:column; }
-  .rep-summary{ flex:0 0 300px; min-width:260px; }
+  /* ширину правой панели задаёт перетаскиваемый разделитель (см. .rep-splitter) */
+  .rep-summary{ flex:0 0 var(--rep-summary-w, 300px); min-width:0; }
   .rep-summary h2{ font-size:14px; margin:0 0 2px; }
   .rep-summary .sub{ font-size:11.5px; color: var(--text-dim); margin:0 0 12px; }
+
+  /* «двигалка» между таблицей и правой панелью: тянешь — панель шире/уже,
+     двойной клик возвращает 300px по умолчанию */
+  .rep-splitter{
+    flex:none; width:16px; align-self:stretch; cursor:col-resize;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .rep-splitter i{
+    width:3px; height:40px; border-radius:2px;
+    background: var(--border-lit); transition: background .12s, height .12s;
+  }
+  .rep-splitter:hover i, .rep-splitter.dragging i{ background: var(--gold-dim); height:90px; }
+  body.rep-resizing{ cursor:col-resize; user-select:none; }
+
+  /* панель узкая — плитки в 2 колонки, широкая — сами разложатся в 3-4 и подрастут */
+  .rep-summary.is-wide h2{ font-size:15.5px; }
+  .rep-summary.is-wide .rep-tile{ padding:10px 12px; }
+  .rep-summary.is-wide .rep-tile .val{ font-size:19px; }
+  .rep-summary.is-wide .rep-tile .lbl{ font-size:11.5px; }
+
+  /* на узком экране колонки и так встают друг под друга — разделитель там не нужен */
+  @media (max-width:900px){
+    .rep-layout{ gap:16px; }
+    .rep-splitter{ display:none; }
+    .rep-summary{ flex:1 1 320px; }
+  }
 
   /* overflow:auto обязателен явно, иначе sticky-шапка «прилипает» к контейнеру, а не
      к экрану; высоту теперь задаёт flex:1 (растягивает таблицу до низа карточки вместо
@@ -74,7 +101,8 @@
   .rep-filters .field{ margin:0; min-width:200px; }
 
   /* ---- радар-график (текущий период vs среднее) ---- */
-  .rep-radar-svg{ width:100%; max-width:240px; display:block; margin:0 auto; overflow:visible; }
+  /* радары тянутся вместе с панелью (потолок — чтобы на широкой не распухали) */
+  .rep-radar-svg{ width:100%; max-width:min(100%, 380px); display:block; margin:0 auto; overflow:visible; }
   .rep-radar-grid{ fill:none; stroke: var(--border); stroke-width:1; }
   .rep-radar-cur{ fill: rgba(139,92,246,.28); stroke:#8b5cf6; stroke-width:2; }
   .rep-radar-avg{ fill:none; stroke:#8b5cf6; stroke-width:1.5; stroke-dasharray:4 3; opacity:.9; }
@@ -84,7 +112,8 @@
   .rep-legend-item .dot{ width:10px; height:10px; border-radius:2px; display:inline-block; background:#8b5cf6; }
   .rep-legend-item .dot.avg{ background:none; border:1.5px dashed #8b5cf6; }
 
-  .rep-tiles{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px; }
+  /* auto-fit: на узкой панели 2 плитки в ряд, на растянутой сами станут в 3-4 */
+  .rep-tiles{ display:grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap:8px; margin-top:14px; }
   .rep-tile{ background: var(--panel-2); border:1px solid var(--border); border-radius:7px; padding:8px 10px; }
   .rep-tile .val{ font-size:16px; font-weight:700; color: var(--text); line-height:1.3; }
   .rep-tile .lbl{ font-size:10.5px; color: var(--text-dim); }
@@ -100,7 +129,7 @@
   .cmp-group-chip input{ accent-color: var(--gold); }
   .cmp-group-chip input:disabled{ cursor:not-allowed; }
 
-  .cmp-radar-svg{ width:100%; max-width:230px; display:block; margin:0 auto; overflow:visible; }
+  .cmp-radar-svg{ width:100%; max-width:min(100%, 380px); display:block; margin:0 auto; overflow:visible; }
 
   .cmp-swatch{ display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:6px; vertical-align:middle; flex:none; }
   table.cmp-table{ border-collapse:separate; border-spacing:0; width:100%; font-size:12px; margin-top:10px; }
@@ -140,7 +169,9 @@
       <p class="empty-hint" id="repEmpty" style="display:none;">За выбранный период данных нет.</p>
     </section>
 
-    <section class="card rep-summary">
+    <div class="rep-splitter" id="repSplitter" title="Потяните влево-вправо, чтобы изменить ширину панели. Двойной клик — вернуть как было."><i></i></div>
+
+    <section class="card rep-summary" id="repSummary">
       <h2 id="summaryTitle">Общая статистика</h2>
       <p class="sub" id="summarySubtitle">За всё время</p>
 
@@ -151,6 +182,7 @@
         <div class="rep-tile"><div class="val" id="sumDeaths">0</div><div class="lbl">Всего смертей</div></div>
         <div class="rep-tile"><div class="val" id="sumKd">0.00</div><div class="lbl">Ср. K:D</div></div>
         <div class="rep-tile"><div class="val" id="sumPvp">0</div><div class="lbl">Всего PvP урона</div></div>
+        <div class="rep-tile"><div class="val" id="sumPve">0</div><div class="lbl">Всего PvE урона</div></div>
         <div class="rep-tile" style="grid-column:1 / -1;"><div class="val" id="sumActive">0</div><div class="lbl">Всего активных</div></div>
       </div>
 
@@ -165,7 +197,7 @@
           <div class="rep-table-scroll">
             <table class="cmp-table">
               <thead>
-                <tr><th>Пати</th><th>Килы</th><th>Смерти</th><th>K:D</th><th>PvP</th><th>Чел.</th></tr>
+                <tr><th>Пати</th><th>Килы</th><th>Смерти</th><th>K:D</th><th>PvP</th><th>PvE</th><th>Чел.</th></tr>
               </thead>
               <tbody id="cmpTableBody"></tbody>
             </table>
@@ -618,7 +650,40 @@
     document.getElementById("sumDeaths").textContent = t.deaths.toLocaleString("ru-RU");
     document.getElementById("sumKd").textContent = t.kd.toFixed(2);
     document.getElementById("sumPvp").textContent = t.pvp.toLocaleString("ru-RU");
+    document.getElementById("sumPve").textContent = t.pve.toLocaleString("ru-RU");
     document.getElementById("sumActive").textContent = String(t.active);
+  }
+
+  // ---------- общий каркас радара (пятиугольник: PvP, Килы, Смерти, K:D, PvE) ----------
+  // оба радара на странице рисуются по одним и тем же осям, чтобы «звезда» сверху
+  // и «звезда» в сравнении пати читались одинаково
+  const RADAR_LABELS = ["PvP урон", "Килы", "Смерти", "K:D", "PvE урон"];
+  const RADAR_ANGLES = RADAR_LABELS.map((_, i) => i * (360 / RADAR_LABELS.length));
+
+  function radarGeometry(cx, r){
+    function toPoint(angleDeg, frac){
+      const rad = (angleDeg - 90) * Math.PI / 180;
+      return { x: cx + Math.cos(rad) * r * frac, y: cx + Math.sin(rad) * r * frac };
+    }
+    function polyStr(fracs){
+      return RADAR_ANGLES.map((a, i) => toPoint(a, fracs[i]))
+        .map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+    }
+    const grid = [0.25, 0.5, 0.75, 1].map(lvl =>
+      `<polygon class="rep-radar-grid" points="${polyStr(RADAR_ANGLES.map(() => lvl))}"/>`
+    ).join("");
+    const axes = RADAR_ANGLES.map(a => {
+      const p = toPoint(a, 1);
+      return `<line x1="${cx}" y1="${cx}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="var(--border-lit)" stroke-width="1"/>`;
+    }).join("");
+    // подпись прижимается к своей стороне звезды — влево или вправо по знаку смещения
+    const labels = RADAR_ANGLES.map((a, i) => {
+      const p = toPoint(a, 1.2);
+      const dx = p.x - cx;
+      const anchor = Math.abs(dx) < 1 ? "middle" : (dx > 0 ? "start" : "end");
+      return `<text x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle" class="rep-radar-label">${RADAR_LABELS[i]}</text>`;
+    }).join("");
+    return { polyStr, grid, axes, labels };
   }
 
   function renderRadar(current, avg){
@@ -628,43 +693,19 @@
       return;
     }
 
-    const R = 70, C = 120;
-    const angles = [0, 90, 180, 270];
-    const labels = ["PvP урон", "Убийства", "Смерти", "K:D"];
-    const curVals = [current.pvp, current.kills, current.deaths, current.kd];
-    const avgVals = [avg.pvp, avg.kills, avg.deaths, avg.kd];
+    const curVals = [current.pvp, current.kills, current.deaths, current.kd, current.pve];
+    const avgVals = [avg.pvp, avg.kills, avg.deaths, avg.kd, avg.pve];
     const fracCur = curVals.map((v, i) => v / (Math.max(v, avgVals[i]) || 1));
     const fracAvg = avgVals.map((v, i) => v / (Math.max(v, curVals[i]) || 1));
 
-    function toPoint(angleDeg, frac){
-      const rad = (angleDeg - 90) * Math.PI / 180;
-      return { x: C + Math.cos(rad) * R * frac, y: C + Math.sin(rad) * R * frac };
-    }
-    function polyStr(fracs){
-      return angles.map((a, i) => toPoint(a, fracs[i])).map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-    }
-
-    const gridPolys = [0.25, 0.5, 0.75, 1].map(lvl =>
-      `<polygon class="rep-radar-grid" points="${polyStr([lvl, lvl, lvl, lvl])}"/>`
-    ).join("");
-    const axisLines = angles.map(a => {
-      const p = toPoint(a, 1);
-      return `<line x1="${C}" y1="${C}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="var(--border-lit)" stroke-width="1"/>`;
-    }).join("");
-    const labelEls = angles.map((a, i) => {
-      const p = toPoint(a, 1.24);
-      let anchor = "middle";
-      if(a === 90) anchor = "start";
-      if(a === 270) anchor = "end";
-      return `<text x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle" class="rep-radar-label">${labels[i]}</text>`;
-    }).join("");
+    const geo = radarGeometry(120, 70);
 
     wrap.innerHTML =
       `<svg viewBox="0 0 240 240" class="rep-radar-svg">` +
-        gridPolys + axisLines +
-        `<polygon class="rep-radar-avg" points="${polyStr(fracAvg)}"/>` +
-        `<polygon class="rep-radar-cur" points="${polyStr(fracCur)}"/>` +
-        labelEls +
+        geo.grid + geo.axes +
+        `<polygon class="rep-radar-avg" points="${geo.polyStr(fracAvg)}"/>` +
+        `<polygon class="rep-radar-cur" points="${geo.polyStr(fracCur)}"/>` +
+        geo.labels +
       `</svg>` +
       `<div class="rep-radar-legend">` +
         `<span class="rep-legend-item"><i class="dot"></i>Текущий период</span>` +
@@ -747,46 +788,26 @@
 
   function renderComparisonRadar(selectedGroupIds, normStatsMap){
     const wrap = document.getElementById("cmpRadarWrap");
-    const R = 70, C = 100;
-    const angles = [0, 90, 180, 270];
-    const labels = ["PvP урон", "Килы", "Смерти", "K:D"];
     const series = selectedGroupIds.map(id => {
       const g = groups.find(x => x.id === id);
       const avg = computeGroupAverages(id, normStatsMap);
-      return { name: g?.name || "?", color: groupColorMap.get(id), vals: [avg.pvp, avg.kills, avg.deaths, avg.kd] };
+      return {
+        name: g?.name || "?",
+        color: groupColorMap.get(id),
+        vals: [avg.pvp, avg.kills, avg.deaths, avg.kd, avg.pve],
+      };
     });
     // нормализация каждой оси на максимум среди сравниваемых пати — иначе разные по
     // масштабу метрики (урон в миллионах vs K:D в единицах) сплющили бы мелкие оси
-    const maxPerAxis = labels.map((_, i) => Math.max(...series.map(s => s.vals[i]), 1e-9));
+    const maxPerAxis = RADAR_LABELS.map((_, i) => Math.max(...series.map(s => s.vals[i]), 1e-9));
 
-    function toPoint(angleDeg, frac){
-      const rad = (angleDeg - 90) * Math.PI / 180;
-      return { x: C + Math.cos(rad) * R * frac, y: C + Math.sin(rad) * R * frac };
-    }
-    function polyStr(fracs){
-      return angles.map((a, i) => toPoint(a, fracs[i])).map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-    }
-
-    const gridPolys = [0.25, 0.5, 0.75, 1].map(lvl =>
-      `<polygon class="rep-radar-grid" points="${polyStr([lvl, lvl, lvl, lvl])}"/>`
-    ).join("");
-    const axisLines = angles.map(a => {
-      const p = toPoint(a, 1);
-      return `<line x1="${C}" y1="${C}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="var(--border-lit)" stroke-width="1"/>`;
-    }).join("");
-    const labelEls = angles.map((a, i) => {
-      const p = toPoint(a, 1.18);
-      let anchor = "middle";
-      if(a === 90) anchor = "start";
-      if(a === 270) anchor = "end";
-      return `<text x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle" class="rep-radar-label">${labels[i]}</text>`;
-    }).join("");
+    const geo = radarGeometry(100, 68);
 
     // тонкая обводка (2px) + лёгкая заливка — при 4+ наложенных фигурах сплошная
     // заливка превращается в кашу, обводка остаётся читаемой в любом случае
     const seriesPolys = series.map(s => {
       const fracs = s.vals.map((v, i) => v / maxPerAxis[i]);
-      return `<polygon points="${polyStr(fracs)}" fill="${s.color}1a" stroke="${s.color}" stroke-width="2"/>`;
+      return `<polygon points="${geo.polyStr(fracs)}" fill="${s.color}1a" stroke="${s.color}" stroke-width="2"/>`;
     }).join("");
 
     const legend = series.map(s =>
@@ -795,7 +816,7 @@
 
     wrap.innerHTML =
       `<svg viewBox="0 0 200 200" class="cmp-radar-svg">` +
-        gridPolys + axisLines + seriesPolys + labelEls +
+        geo.grid + geo.axes + seriesPolys + geo.labels +
       `</svg>` +
       `<div class="rep-radar-legend">${legend}</div>`;
   }
@@ -815,6 +836,7 @@
         `<td>${avg.deaths.toFixed(1)}</td>` +
         `<td>${avg.kd.toFixed(2)}</td>` +
         `<td>${Math.round(avg.pvp).toLocaleString("ru-RU")}</td>` +
+        `<td>${Math.round(avg.pve).toLocaleString("ru-RU")}</td>` +
         `<td>${roster.length}</td>`;
       body.appendChild(tr);
     });
@@ -867,6 +889,60 @@
 
     renderComparison();
   }
+
+  // ---------- «двигалка» между таблицей и правой панелью ----------
+  // ширина панели переживает перезаход в раздел; ключ свой у каждого аккаунта —
+  // за одним браузером могут сидеть разные люди (как в «Посещаемости» и «Налогах»)
+  const SUMMARY_WIDTH_KEY = "l2RepSummaryWidth:" + profile.id;
+  const SUMMARY_DEFAULT_W = 300, SUMMARY_MIN_W = 260;
+  const layoutEl = document.querySelector(".rep-layout");
+  const summaryEl = document.getElementById("repSummary");
+  const splitterEl = document.getElementById("repSplitter");
+
+  // потолок — чтобы панель не съела таблицу целиком: не больше 60% ширины раздела
+  function maxSummaryWidth(){
+    return Math.max(SUMMARY_MIN_W, Math.round(layoutEl.getBoundingClientRect().width * 0.6));
+  }
+  function applySummaryWidth(px){
+    const w = Math.min(Math.max(px, SUMMARY_MIN_W), maxSummaryWidth());
+    layoutEl.style.setProperty("--rep-summary-w", w + "px");
+    return w;
+  }
+
+  const savedWidth = Number(localStorage.getItem(SUMMARY_WIDTH_KEY));
+  applySummaryWidth(savedWidth > 0 ? savedWidth : SUMMARY_DEFAULT_W);
+
+  let splitStartX = 0, splitStartW = 0, splitting = false;
+  splitterEl.addEventListener("mousedown", (e) => {
+    splitting = true;
+    splitStartX = e.clientX;
+    splitStartW = summaryEl.getBoundingClientRect().width;
+    splitterEl.classList.add("dragging");
+    document.body.classList.add("rep-resizing");
+    e.preventDefault();
+  });
+  window.addEventListener("mousemove", (e) => {
+    if(!splitting) return;
+    // панель справа: тянем влево — она шире, вправо — уже, отсюда знак
+    applySummaryWidth(splitStartW - (e.clientX - splitStartX));
+  });
+  window.addEventListener("mouseup", () => {
+    if(!splitting) return;
+    splitting = false;
+    splitterEl.classList.remove("dragging");
+    document.body.classList.remove("rep-resizing");
+    localStorage.setItem(SUMMARY_WIDTH_KEY, String(Math.round(summaryEl.getBoundingClientRect().width)));
+  });
+  splitterEl.addEventListener("dblclick", () => {
+    applySummaryWidth(SUMMARY_DEFAULT_W);
+    localStorage.setItem(SUMMARY_WIDTH_KEY, String(SUMMARY_DEFAULT_W));
+  });
+
+  // панель шире — заголовки и плитки крупнее, плитки сами перестраиваются в 3-4 колонки
+  // (сам грид и радары тянутся на CSS, класс нужен только для укрупнения текста)
+  new ResizeObserver(() => {
+    summaryEl.classList.toggle("is-wide", summaryEl.getBoundingClientRect().width >= 420);
+  }).observe(summaryEl);
 
   await Promise.all([loadMemberInfo(), loadGroups(), loadEvents(), loadAllStats(), loadDualClassSettings()]);
   renderGroupFilterOptions();
