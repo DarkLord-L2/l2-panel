@@ -60,7 +60,23 @@
   /* все колонки-пункты одной ширины, чтобы иконки шли ровно, без разных промежутков */
   table.gc-table th.gc-col-item, table.gc-table td.gc-cell{ width:74px; min-width:74px; max-width:74px; }
   .gc-cell.on{ color: var(--ok); }
+
+  /* склеенные пункты — один блок на несколько колонок: общая шапка и общий фон
+     у ячеек, рамка только по краям блока, между самими пунктами линии нет */
+  table.gc-table th.gc-col-item.gc-merged-head{
+    width:auto; min-width:0; max-width:none;
+    background: var(--panel-2);
+    border-left:1px solid var(--border-lit); border-right:1px solid var(--border-lit);
+  }
+  table.gc-table td.gc-merged{ background: rgba(91,141,239,.06); }
+  table.gc-table tbody tr:hover td.gc-merged{ background: rgba(91,141,239,.12); }
+  table.gc-table td.gc-merged-first{ border-left:1px solid var(--border-lit); }
+  table.gc-table td.gc-merged-last{ border-right:1px solid var(--border-lit); }
   .gc-item-head{ display:flex; flex-direction:column; align-items:center; gap:4px; position:relative; }
+  /* зазор между иконками склеенных пунктов — ровно чтобы бейджи веса не наезжали
+     друг на друга; ощущение единого блока даёт общая рамка и фон, а не отсутствие зазора */
+  .gc-head-icons{ display:flex; align-items:center; gap:10px; }
+  .gc-head-ic{ position:relative; display:inline-flex; }
   .gc-item-head .ic{ width:30px; height:30px; border-radius:6px; object-fit:cover; border:1px solid var(--border); background: var(--panel-2); }
   .gc-item-head .nm{ font-size:11px; color: var(--text-dim); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .gc-item-head .wt{
@@ -133,7 +149,8 @@
     background: var(--panel-2); border:1px solid var(--border); border-radius:8px;
     padding:8px 10px; min-height:52px;
   }
-  .gc-item-card.is-hidden{ opacity:.45; }
+  .gc-item-part{ display:flex; flex-direction:column; gap:6px; }
+  .gc-item-part.is-hidden{ opacity:.45; }
   .gc-item-card-top{ display:flex; align-items:center; gap:10px; }
   .gc-item-card img{ width:34px; height:34px; border-radius:7px; object-fit:cover; border:1px solid var(--border); flex:none; background: var(--panel); }
   .gc-item-card .meta{ flex:1; min-width:0; }
@@ -314,6 +331,7 @@
         <p>Кнопка «+» в шапке таблицы, последним столбцом, добавляет новый пункт: имя, вес, потом можно загрузить картинку. Если разделов ещё нет, автоматически создастся раздел «Общая»; если разделов несколько — спросит, в какой добавить.</p>
         <p>То же самое можно делать в панели справа: внизу кнопка «✎ Редактировать» показывает у разделов и пунктов кружок (скрыть/показать), карандаш (имя/вес/фото) и крестик (удалить совсем); «+ Раздел» тоже внизу. Пока «Редактировать» не нажат, панель чистая — видны только тумблеры.</p>
         <p><b>Скрыть</b> — пункт пропадает из таблицы и не считается в баллах, но тумблеры участников по нему сохраняются: в любой момент можно снова показать, ничего не переделывая. <b>Удалить</b> — совсем, без возврата.</p>
+        <p><b>Склеить с предыдущим пунктом</b> (галочка в окне пункта) — два соседних пункта одного раздела показываются как один блок: в таблице у них общая шапка без разделителя, в панели участника — одна общая карточка. Баллы и тумблеры у каждого остаются свои.</p>
       </div>
     </details>
   </div>
@@ -347,6 +365,11 @@
     <label class="checkbox-row">
       <input type="checkbox" id="itemFullWidth" /> Широкая ячейка (на всю строку)
     </label>
+
+    <label class="checkbox-row">
+      <input type="checkbox" id="itemMerge" /> Склеить с предыдущим пунктом
+    </label>
+    <p class="hint">Пункт срастётся с идущим перед ним пунктом того же раздела и подраздела: в таблице у них будет общая шапка без разделителя, в панели участника — одна общая карточка. Баллы и тумблеры у каждого остаются свои.</p>
 
     <div class="field">
       <label for="itemSubgroup">Подраздел внутри раздела (необязательно)</label>
@@ -503,9 +526,11 @@
   }
 
   async function loadGroups(){
+    // порядок участников — тот же, что в разделе «Группы» (ручная перестановка иконок
+    // пишется в clan_group_members.sort_order), при равенстве — по алфавиту
     const [{ data: g }, { data: m }] = await Promise.all([
       db.from("clan_groups").select("id, name, sort_order").eq("hidden", false).order("sort_order").order("name"),
-      db.from("clan_group_members").select("group_id, nickname").order("nickname"),
+      db.from("clan_group_members").select("group_id, nickname, sort_order").order("sort_order").order("nickname"),
     ]);
     groups = g || [];
     membersByGroup = new Map();
@@ -526,8 +551,12 @@
       return nicks.filter(n => !grouped.has(normalizeNick(n)));
     }
     if(selectedGroupId){
-      const set = new Set((membersByGroup.get(selectedGroupId) || []).map(normalizeNick));
-      return nicks.filter(n => set.has(normalizeNick(n)));
+      // порядок строк повторяет порядок участников в самой группе, а не алфавит
+      const order = new Map();
+      (membersByGroup.get(selectedGroupId) || []).forEach((n, i) => order.set(normalizeNick(n), i));
+      return nicks
+        .filter(n => order.has(normalizeNick(n)))
+        .sort((a, b) => order.get(normalizeNick(a)) - order.get(normalizeNick(b)));
     }
     return [];
   }
@@ -578,7 +607,7 @@
     const [{ data: s }, { data: it }] = await Promise.all([
       db.from("boost_sections").select("id, name, sort_order").order("sort_order").order("name"),
       db.from("boost_items")
-        .select("id, section_id, name, icon, weight, sort_order, subtitle, per_class, full_width, subgroup, hidden")
+        .select("id, section_id, name, icon, weight, sort_order, subtitle, per_class, full_width, subgroup, hidden, merged_with_prev")
         .order("sort_order"),
     ]);
     sections = s || [];
@@ -622,6 +651,22 @@
     // скрытые не идут ни в таблицу, ни в счёт баллов, но данные по ним не трогаем
     return sections.flatMap(s => itemsOfSection(s.id)).filter(i => !i.hidden);
   }
+  // соседние пункты, склеенные флагом merged_with_prev, собираются в один блок:
+  // [[пункт], [пункт, пункт], ...]. Склейка не перескакивает через границу раздела
+  // или подраздела — иначе «предыдущий» был бы совсем из другого места списка
+  function mergeGroups(list){
+    const out = [];
+    list.forEach(item => {
+      const prev = out[out.length - 1];
+      const sameBlock = prev
+        && prev[0].section_id === item.section_id
+        && (prev[0].subgroup || "") === (item.subgroup || "");
+      if(item.merged_with_prev && sameBlock) prev.push(item);
+      else out.push([item]);
+    });
+    return out;
+  }
+
   function maxScore(){ return orderedItems().reduce((s,i)=> s + i.weight, 0); }
   function scoreOf(nick){
     return orderedItems().reduce((s,i)=> s + (valueSet.has(keyOf(nick,i.id)) ? i.weight : 0), 0);
@@ -649,12 +694,17 @@
       emptyEl.style.display = "none";
     }
 
+    const colGroups = mergeGroups(cols);
     let h = '<tr><th class="gc-col-nick">Участники</th><th>Общие баллы</th><th>Процент буста</th>';
-    cols.forEach(i => {
-      const ic = `<img class="ic" src="${i.icon || BLANK_IMG}" alt="" />`;
-      h += `<th class="gc-col-item" title="${escapeHtml(i.name)}"><div class="gc-item-head">` +
-           `${ic}<span class="wt">${i.weight}</span><span class="nm">${escapeHtml(i.name)}</span>` +
-           `</div></th>`;
+    colGroups.forEach(group => {
+      // склеенные пункты живут под одной шапкой: иконки в ряд, названия через «+»
+      const heads = group.map(i =>
+        `<span class="gc-head-ic"><img class="ic" src="${i.icon || BLANK_IMG}" alt="" />` +
+        `<span class="wt">${i.weight}</span></span>`
+      ).join("");
+      const names = group.map(i => escapeHtml(i.name)).join(" + ");
+      h += `<th class="gc-col-item${group.length > 1 ? " gc-merged-head" : ""}" colspan="${group.length}" title="${escapeHtml(group.map(i=>i.name).join(" + "))}">` +
+           `<div class="gc-item-head"><span class="gc-head-icons">${heads}</span><span class="nm">${names}</span></div></th>`;
     });
     // последний столбец — добавить пункт (у админа), чтобы колонки заводились прямо из таблицы
     if(isAdmin) h += '<th><button class="btn gc-add-col-btn" id="addColBtn" title="Добавить столбец">+</button></th>';
@@ -693,9 +743,17 @@
 
       let rest = `<td class="gc-score">${score.toFixed(2)}</td>`;
       rest += `<td class="gc-percent" style="color:${pctColor(pct)}">${pct.toFixed(2)}%</td>`;
-      cols.forEach(i => {
-        const on = valueSet.has(keyOf(nick, i.id));
-        rest += `<td class="gc-cell${on ? " on" : ""}">${on ? i.weight.toFixed(2) : "0.00"}</td>`;
+      colGroups.forEach(group => {
+        group.forEach((i, idx) => {
+          const on = valueSet.has(keyOf(nick, i.id));
+          let cls = "gc-cell" + (on ? " on" : "");
+          if(group.length > 1){
+            cls += " gc-merged";
+            if(idx === 0) cls += " gc-merged-first";
+            if(idx === group.length - 1) cls += " gc-merged-last";
+          }
+          rest += `<td class="${cls}">${on ? i.weight.toFixed(2) : "0.00"}</td>`;
+        });
       });
       if(isAdmin) rest += "<td></td>";
       tr.insertAdjacentHTML("beforeend", rest);
@@ -792,7 +850,7 @@
         empty.className = "hint"; empty.style.gridColumn = "1 / -1"; empty.textContent = "Пунктов нет.";
         grid.appendChild(empty);
       }
-      mainItems.forEach(item => grid.appendChild(makeItemCard(item)));
+      mergeGroups(mainItems).forEach(group => grid.appendChild(makeItemCard(group)));
       secEl.appendChild(grid);
 
       // подгруппы вроде «Еліксири» — отдельным блоком под общим списком раздела,
@@ -814,7 +872,7 @@
 
         const sgGrid = document.createElement("div");
         sgGrid.className = "gc-item-grid";
-        secItems.filter(i => i.subgroup === sg).forEach(item => sgGrid.appendChild(makeItemCard(item)));
+        mergeGroups(secItems.filter(i => i.subgroup === sg)).forEach(group => sgGrid.appendChild(makeItemCard(group)));
         secEl.appendChild(sgGrid);
       });
 
@@ -822,9 +880,18 @@
     });
   }
 
-  function makeItemCard(item){
+  // group — один пункт или несколько склеенных: они рисуются внутри одной карточки,
+  // без рамки между собой, но каждый со своим тумблером, подписью и кнопками правки
+  function makeItemCard(group){
     const card = document.createElement("div");
-    card.className = "gc-item-card" + (item.full_width ? " full" : "") + (item.hidden ? " is-hidden" : "");
+    card.className = "gc-item-card" + (group.some(i => i.full_width) ? " full" : "");
+    group.forEach(item => card.appendChild(makeItemPart(item)));
+    return card;
+  }
+
+  function makeItemPart(item){
+    const card = document.createElement("div");
+    card.className = "gc-item-part" + (item.hidden ? " is-hidden" : "");
 
     const top = document.createElement("div");
     top.className = "gc-item-card-top";
@@ -981,6 +1048,7 @@
     document.getElementById("itemSubtitle").value = opts.item?.subtitle || "";
     document.getElementById("itemPerClass").checked = !!opts.item?.per_class;
     document.getElementById("itemFullWidth").checked = !!opts.item?.full_width;
+    document.getElementById("itemMerge").checked = !!opts.item?.merged_with_prev;
     document.getElementById("itemSubgroup").value = opts.item?.subgroup || opts.subgroup || "";
     document.getElementById("itemIconPreview").src = opts.item?.icon || BLANK_IMG;
     document.getElementById("itemError").textContent = "";
@@ -1021,6 +1089,7 @@
       subtitle: document.getElementById("itemSubtitle").value.trim() || null,
       per_class: document.getElementById("itemPerClass").checked,
       full_width: document.getElementById("itemFullWidth").checked,
+      merged_with_prev: document.getElementById("itemMerge").checked,
       subgroup: document.getElementById("itemSubgroup").value.trim() || null,
     };
     if(itemModalPendingIcon !== null) row.icon = itemModalPendingIcon || null;

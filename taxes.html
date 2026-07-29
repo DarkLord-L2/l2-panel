@@ -18,16 +18,37 @@
 
   /* отчёт по налогам матрицей (недели колонками) — тот же sticky-паттерн, что в
      отчёте «Посещаемость»: overflow:auto + max-height на обёртке, position:sticky на шапке */
-  #taxReportTableWrap{ overflow:auto; max-height:82vh; }
+  #taxReportTableWrap{
+    overflow:auto; max-height:82vh; position:relative;
+    width:100%; min-width:280px; padding-right:14px;
+  }
   #taxReportHead th{
     position:sticky; top:0; z-index:2;
     background: var(--panel); color: var(--text-dim);
     font-size:12px; font-weight:500; text-align:center;
     padding:6px 10px; border-bottom:1px solid var(--border);
   }
-  #taxReportHead th:first-child{ text-align:left; }
+  #taxReportHead th.tax-nick{ text-align:left; }
   #taxReportBody td{ padding:6px 10px; text-align:center; }
-  #taxReportBody td:first-child{ text-align:left; }
+  #taxReportBody td.tax-nick{ text-align:left; }
+  #taxReportHead th.tax-num, #taxReportBody td.tax-num{
+    width:1%; white-space:nowrap; text-align:center; padding-left:8px; padding-right:8px;
+  }
+
+  .table-resize-handle{
+    position:absolute; top:0; right:0; bottom:0; width:10px;
+    cursor:col-resize;
+    background: linear-gradient(90deg, transparent, rgba(74,134,232,.18));
+  }
+  .table-resize-handle:hover, .table-resize-handle.dragging{ background: rgba(74,134,232,.4); }
+
+  /* полноэкранный отчёт: сама страница не скроллится, скроллится только таблица —
+     иначе к внутреннему скроллу таблицы добавляется ещё и внешний скролл страницы,
+     и до таблицы приходится долистывать (тот же приём, что в attendance.html) */
+  body.tax-report-focus{ height:100vh; overflow:hidden; }
+  body.tax-report-focus #taxReportView{ height:100vh; display:flex; flex-direction:column; padding:6px 12px; }
+  body.tax-report-focus #taxReportView > section.card{ flex:1; min-height:0; display:flex; flex-direction:column; padding:10px 14px; }
+  body.tax-report-focus #taxReportTableWrap{ flex:1; min-height:0; max-height:none; }
 </style>
 </head>
 <body>
@@ -228,7 +249,7 @@
     <details class="help-section">
       <summary>Отчёт по налогам</summary>
       <div class="help-body">
-        <p>Кнопка «Отчёт по налогам» — выберите любые недели галочками и нажмите «Показать отчёт». Откроется таблица-матрица (как в отчёте «Посещаемость»): по колонке на каждую выбранную неделю, ✓ если оплачена, плюс поиск по нику и фильтр «Пати». Для каждого ника посчитается, сколько раз из выбранных недель он платил, и статус:</p>
+        <p>Кнопка «Отчёт по налогам» — выберите любые недели галочками и нажмите «Показать отчёт». Откроется таблица-матрица (как в отчёте «Посещаемость») на весь экран: по колонке на каждую выбранную неделю, ✓ если оплачена, плюс поиск по нику и фильтр «Пати». Таблицу можно растянуть за правый край — ширина запомнится до следующего захода. Для каждого ника посчитается, сколько раз из выбранных недель он платил, и статус:</p>
         <ul>
           <li><b>Новый</b> — этот ник впервые встретился в самой свежей «Переписи клана» (или его там ещё вообще нет).</li>
           <li><b>Старый</b> — ник встречался в переписи и раньше, до самой свежей.</li>
@@ -731,18 +752,19 @@
 
     const head = document.getElementById("taxReportHead");
     const weekCells = taxReportWeeksSorted.map(w => `<th title="${weekRangeLabel(w)}">${weekShortLabel(w)}</th>`).join("");
-    head.innerHTML = `<tr><th>Никнейм</th>${weekCells}<th>Итого</th><th>%</th><th>Статус</th></tr>`;
+    head.innerHTML = `<tr><th class="tax-num">#</th><th class="tax-nick">Никнейм</th>${weekCells}<th>Итого</th><th>%</th><th>Статус</th></tr>`;
     applyTaxStickyHead();
 
     const body = document.getElementById("taxReportBody");
     body.innerHTML = "";
     document.getElementById("taxReportEmpty").style.display = rows.length ? "none" : "";
-    rows.forEach(r => {
+    rows.forEach((r, i) => {
       const tr = document.createElement("tr");
       tr.style.background = r.color;
       tr.style.color = DARK_TEXT;
-      const tdNick = document.createElement("td"); tdNick.textContent = r.nickname;
-      tr.appendChild(tdNick);
+      const tdNum = document.createElement("td"); tdNum.className = "tax-num"; tdNum.textContent = i + 1;
+      const tdNick = document.createElement("td"); tdNick.className = "tax-nick"; tdNick.textContent = r.nickname;
+      tr.append(tdNum, tdNick);
 
       const nickWeekSet = taxReportNickWeeks.get(r.nickname) || new Set();
       taxReportWeeksSorted.forEach(w => {
@@ -787,8 +809,45 @@
 
   document.getElementById("taxReportBackBtn").addEventListener("click", () => {
     document.getElementById("taxReportView").style.display = "none";
+    document.body.classList.remove("tax-report-focus");
     document.getElementById("wrap").style.display = "";
     openReportPicker();
+  });
+
+  // ---- растягивание таблицы за правый край, ширина запоминается ----
+  // ключ свой у каждого аккаунта — за одним браузером могут сидеть разные люди
+  const TAX_TABLE_WIDTH_KEY = "l2TaxTableWidth:" + profile.id;
+  const taxTableWrapEl = document.getElementById("taxReportTableWrap");
+
+  const taxResizeHandle = document.createElement("div");
+  taxResizeHandle.className = "table-resize-handle";
+  taxResizeHandle.title = "Потяните, чтобы изменить ширину таблицы";
+  taxTableWrapEl.appendChild(taxResizeHandle);
+
+  function applySavedTaxWidth(){
+    const saved = localStorage.getItem(TAX_TABLE_WIDTH_KEY);
+    if(saved) taxTableWrapEl.style.width = saved + "px";
+  }
+
+  let taxResizeStartX = 0, taxResizeStartWidth = 0, taxResizing = false;
+  taxResizeHandle.addEventListener("mousedown", (e) => {
+    taxResizing = true;
+    taxResizeStartX = e.clientX;
+    taxResizeStartWidth = taxTableWrapEl.getBoundingClientRect().width;
+    taxResizeHandle.classList.add("dragging");
+    document.body.style.userSelect = "none";
+    e.preventDefault();
+  });
+  window.addEventListener("mousemove", (e) => {
+    if(!taxResizing) return;
+    taxTableWrapEl.style.width = Math.max(280, taxResizeStartWidth + (e.clientX - taxResizeStartX)) + "px";
+  });
+  window.addEventListener("mouseup", () => {
+    if(!taxResizing) return;
+    taxResizing = false;
+    taxResizeHandle.classList.remove("dragging");
+    document.body.style.userSelect = "";
+    localStorage.setItem(TAX_TABLE_WIDTH_KEY, String(Math.round(taxTableWrapEl.getBoundingClientRect().width)));
   });
 
   document.getElementById("showReportBtn").addEventListener("click", async () => {
@@ -812,6 +871,8 @@
     reportOverlay.classList.remove("show");
     document.getElementById("wrap").style.display = "none";
     document.getElementById("taxReportView").style.display = "";
+    document.body.classList.add("tax-report-focus");
+    applySavedTaxWidth();
     renderTaxReportMatrix();
   });
 })();

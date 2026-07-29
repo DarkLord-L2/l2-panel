@@ -135,6 +135,9 @@
      у .matrix-scroll/.day-columns уже есть, сверху шапка отчёта короткая) */
   body.report-focus .settings-btn{ top:6px; right:6px; }
   body.report-focus .help-btn{ bottom:6px; right:6px; }
+  .report-table th.att-num, .report-table td.att-num{
+    text-align:center; width:1%; white-space:nowrap; color: var(--text-dim);
+  }
   .nick-click{ cursor:pointer; }
   .nick-click:hover{ color: var(--gold); }
   #nickInfoStatus a{ cursor:pointer; }
@@ -151,7 +154,7 @@
      жёлтый/голубой/коричневый), отдельно от тёмной темы всего остального сайта */
   #attTableWrap.matrix-mode table{ background:#ffffff; color:#1a1a1a; width:100%; }
   #attTableWrap.matrix-mode th, #attTableWrap.matrix-mode td{ border-color:#c4c4c4; padding:6px 13px; font-size:12.5px; }
-  #attTableWrap.matrix-mode th:first-child, #attTableWrap.matrix-mode td:first-child{ padding-right:28px; }
+  #attTableWrap.matrix-mode th.att-nick, #attTableWrap.matrix-mode td.att-nick{ padding-right:28px; }
   #attTableWrap.matrix-mode #attReportHead th{ background:#dce6f5; color:#1b3a5c; }
   #attTableWrap.matrix-mode #attReportHead th:first-child{ border-left:4px solid #4a86e8; }
   #attTableWrap.matrix-mode .week-start{ border-left:2px solid #4a86e8 !important; }
@@ -163,6 +166,7 @@
   #attTableWrap.matrix-mode .att-tier-mid{ background:#76a5af; color:#0b2b30; font-weight:600; }
   #attTableWrap.matrix-mode .att-tier-low{ background:#a0522d; color:#fff; font-weight:600; }
   #attTableWrap.matrix-mode .nick-click:hover{ color:#1156a3; }
+  #attTableWrap.matrix-mode .att-num{ color:#5c5c5c; padding-left:8px; padding-right:8px; }
   .day-columns{ display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; margin-top:14px; }
   .day-columns .roster-col{ flex:1; min-width:220px; }
   .day-columns h3{ font-size:13px; margin:0 0 10px; }
@@ -239,7 +243,7 @@
       <div class="matrix-scroll" id="attTableWrap">
         <table class="report-table">
           <thead id="attReportHead">
-            <tr><th>Никнейм</th><th>Посещено</th><th>%</th><th>В клане с</th></tr>
+            <tr><th class="att-num">#</th><th class="att-nick">Никнейм</th><th>Посещено</th><th>%</th><th>В клане с</th></tr>
           </thead>
           <tbody id="attReportBody"></tbody>
         </table>
@@ -877,9 +881,11 @@
   }
 
   function resetFlatHead(){
-    document.getElementById("attTableWrap").classList.remove("matrix-mode");
+    const wrap = document.getElementById("attTableWrap");
+    wrap.classList.remove("matrix-mode");
+    wrap.style.width = ""; // ручная ширина — только у матрицы, обычная таблица тянется по месту
     document.getElementById("attReportHead").innerHTML =
-      "<tr><th>Никнейм</th><th>Посещено</th><th>%</th><th>В клане с</th></tr>";
+      '<tr><th class="att-num">#</th><th class="att-nick">Никнейм</th><th>Посещено</th><th>%</th><th>В клане с</th></tr>';
     applyStickyHead();
   }
 
@@ -894,15 +900,16 @@
     const body = document.getElementById("attReportBody");
     body.innerHTML = "";
     document.getElementById("attReportEmpty").style.display = rows.length ? "none" : "";
-    rows.forEach(r => {
+    rows.forEach((r, i) => {
       const tr = document.createElement("tr");
+      const tdNum = document.createElement("td"); tdNum.className = "att-num"; tdNum.textContent = i + 1;
       const tdNick = document.createElement("td"); tdNick.textContent = r.nickname;
-      tdNick.className = "nick-click";
+      tdNick.className = "nick-click att-nick";
       tdNick.addEventListener("click", () => showNickInfo(r.nickname));
       const tdAtt = document.createElement("td"); tdAtt.textContent = `${r.attendedN}/${r.total}`;
       const tdPct = document.createElement("td"); tdPct.textContent = `${r.percent}%`;
       const tdSince = document.createElement("td"); tdSince.textContent = r.since || "Новый";
-      tr.append(tdNick, tdAtt, tdPct, tdSince);
+      tr.append(tdNum, tdNick, tdAtt, tdPct, tdSince);
       body.appendChild(tr);
     });
   }
@@ -929,7 +936,10 @@
   }
 
   function renderAttTableMatrix(filterKey){
-    document.getElementById("attTableWrap").classList.add("matrix-mode");
+    const wrapEl = document.getElementById("attTableWrap");
+    wrapEl.classList.add("matrix-mode");
+    const savedWidth = localStorage.getItem(TABLE_WIDTH_KEY);
+    if(savedWidth) wrapEl.style.width = savedWidth + "px";
     const filter = REPORT_FILTERS.find(f => f.key === filterKey);
     const rows = (filter ? attReportRows.filter(filter.test) : [])
       .filter(r => !attNickFilter || r.nickname.toLowerCase().includes(attNickFilter))
@@ -949,19 +959,20 @@
       return `<th title="${d}"${cls}>${wd}</th>`;
     }).join("");
     document.getElementById("attReportHead").innerHTML =
-      `<tr><th rowspan="2">Никнейм</th>${weekHeadCells}<th rowspan="2">Итого</th><th rowspan="2">%</th></tr>` +
+      `<tr><th class="att-num" rowspan="2">#</th><th class="att-nick" rowspan="2">Никнейм</th>${weekHeadCells}<th rowspan="2">Итого</th><th rowspan="2">%</th></tr>` +
       `<tr class="weekday-head">${dayHeadCells}</tr>`;
     applyStickyHead();
 
     const body = document.getElementById("attReportBody");
     body.innerHTML = "";
     document.getElementById("attReportEmpty").style.display = rows.length ? "none" : "";
-    rows.forEach(r => {
+    rows.forEach((r, i) => {
       const tr = document.createElement("tr");
+      const tdNum = document.createElement("td"); tdNum.className = "att-num"; tdNum.textContent = i + 1;
       const tdNick = document.createElement("td"); tdNick.textContent = r.nickname;
-      tdNick.className = "nick-click";
+      tdNick.className = "nick-click att-nick";
       tdNick.addEventListener("click", () => showNickInfo(r.nickname));
-      tr.appendChild(tdNick);
+      tr.append(tdNum, tdNick);
       const nickDaySet = attReportNickDays.get(r.nickname) || new Set();
       attReportDays.forEach(d => {
         const td = document.createElement("td");
@@ -1248,6 +1259,10 @@
   resizeHandle.title = "Потяните, чтобы изменить ширину таблицы";
   attTableWrapEl.appendChild(resizeHandle);
 
+  // ширина, на которую растянули матрицу, переживает перезаход в раздел; ключ свой
+  // у каждого аккаунта — за одним браузером могут сидеть разные люди
+  const TABLE_WIDTH_KEY = "l2AttTableWidth:" + profile.id;
+
   let resizeStartX = 0, resizeStartWidth = 0, resizing = false;
   resizeHandle.addEventListener("mousedown", (e) => {
     resizing = true;
@@ -1267,6 +1282,7 @@
     resizing = false;
     resizeHandle.classList.remove("dragging");
     document.body.style.userSelect = "";
+    localStorage.setItem(TABLE_WIDTH_KEY, String(Math.round(attTableWrapEl.getBoundingClientRect().width)));
   });
 
   // ---- сохранение/восстановление открытого отчёта ----
