@@ -32,6 +32,31 @@
   }
   .sec-order-row .moves button:hover:not(:disabled){ border-color: var(--border-lit); color: var(--text); }
   .sec-order-row .moves button:disabled{ opacity:.3; cursor:default; }
+
+  /* «Пользователи» — разбивка по пати или по роли (переключатель), чтобы не
+     мешались в кучу все подряд */
+  .users-group-toolbar{ display:flex; align-items:center; gap:10px; margin:0 0 12px; }
+  .users-group-label{ font-size:12.5px; color: var(--text-dim); }
+  .users-group-tabs{ display:flex; gap:6px; }
+  .users-group-tab{
+    font-family:inherit; font-size:12.5px; padding:6px 14px;
+    border-radius:6px; border:1px solid var(--border);
+    background: var(--panel-2); color: var(--text-dim); cursor:pointer;
+    transition: border-color .12s, color .12s, background .12s;
+  }
+  .users-group-tab:hover{ border-color: var(--border-lit); color: var(--text); }
+  .users-group-tab.active{ background: var(--panel); border-color: var(--border-lit); color: var(--gold); }
+
+  tr.users-group-row td{
+    background: var(--panel-2);
+    color: var(--gold);
+    font-weight:600;
+    font-size:12.5px;
+    padding:9px 10px;
+    border-bottom:1px solid var(--border-lit);
+  }
+  tr.users-group-row:hover td{ background: var(--panel-2); }
+  tr.users-group-row .count{ color: var(--text-dim); font-weight:400; margin-left:6px; }
 </style>
 </head>
 <body>
@@ -74,6 +99,13 @@
 
   <section class="card">
     <h2>Пользователи</h2>
+    <div class="users-group-toolbar">
+      <span class="users-group-label">Группировать по:</span>
+      <div class="users-group-tabs" id="usersGroupTabs">
+        <button type="button" class="users-group-tab" data-group="party">Пати</button>
+        <button type="button" class="users-group-tab" data-group="role">Роль</button>
+      </div>
+    </div>
     <table class="data-table" id="usersTable">
       <thead>
         <tr><th>Логин</th><th>Ник в игре</th><th>Роль</th><th>Пати</th><th>Защита</th><th>Создан</th><th></th></tr>
@@ -250,18 +282,9 @@
       items.map(it => `<option value="${it.id}">${labelFn(it)}</option>`).join("");
   }
 
-  async function loadUsers(){
-    const { data, error } = await db
-      .from("profiles")
-      .select("id, username, nickname, role_id, party_id, delete_protected, created_at, roles(label), clan_groups(name)")
-      .eq("clan_id", profile.clan_id)
-      .order("created_at", { ascending: false });
-    if(error){ console.error(error); return; }
-
-    const body = document.getElementById("usersBody");
-    body.innerHTML = "";
-
-    data.forEach(u => {
+  // одна строка таблицы «Пользователи» — вынесено из loadUsers(), чтобы можно было
+  // строить их группами (по пати или по роли), а не всех подряд одним плоским списком
+  function buildUserRow(u){
       const isSelf = u.id === profile.id;
       const tr = document.createElement("tr");
 
@@ -408,8 +431,87 @@
       }
 
       tr.append(tdUsername, tdNickname, tdRole, tdParty, tdProtect, tdCreated, tdActions);
-      body.appendChild(tr);
+      return tr;
+  }
+
+  // ---------- «Пользователи»: группировка по пати или по роли, с переключателем ----------
+  let lastUsersData = [];
+  let usersGroupBy = localStorage.getItem("l2AdminUsersGroupBy") || "party";
+
+  function updateUsersGroupTabs(){
+    document.querySelectorAll("#usersGroupTabs .users-group-tab").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.group === usersGroupBy);
     });
+  }
+
+  function renderUsersGrouped(){
+    const body = document.getElementById("usersBody");
+    body.innerHTML = "";
+
+    const byGroup = new Map(); // id ("" — без группы) -> [profiles]
+    lastUsersData.forEach(u => {
+      const key = (usersGroupBy === "role" ? u.role_id : u.party_id) || "";
+      if(!byGroup.has(key)) byGroup.set(key, []);
+      byGroup.get(key).push(u);
+    });
+
+    const knownGroups = usersGroupBy === "role"
+      ? roles.map(r => ({ id: r.id, name: r.label }))       // уже по рангу (см. loadLookups)
+      : parties.map(p => ({ id: p.id, name: p.name }));      // уже по алфавиту
+
+    const renderedKeys = new Set();
+    function renderGroup(key, name){
+      const members = byGroup.get(key);
+      if(!members || !members.length) return;
+      renderedKeys.add(key);
+
+      const headerTr = document.createElement("tr");
+      headerTr.className = "users-group-row";
+      const th = document.createElement("td");
+      th.colSpan = 7;
+      th.innerHTML = `${escapeHtml(name)}<span class="count"> · ${members.length}</span>`;
+      headerTr.appendChild(th);
+      body.appendChild(headerTr);
+
+      members
+        .slice()
+        .sort((a, b) => a.username.localeCompare(b.username))
+        .forEach(u => body.appendChild(buildUserRow(u)));
+    }
+
+    knownGroups.forEach(g => renderGroup(g.id, g.name));
+
+    // всё, что не попало в известные группы — «без пати/роли» и скрытые пати
+    // (clan_groups(name) уже подтянут в самой строке) — не теряем молча, показываем в конце
+    byGroup.forEach((members, key) => {
+      if(renderedKeys.has(key)) return;
+      const fallbackName = key
+        ? (usersGroupBy === "role" ? "Неизвестная роль" : (members[0]?.clan_groups?.name || "Скрытая пати"))
+        : (usersGroupBy === "role" ? "Без роли" : "Без пати");
+      renderGroup(key, fallbackName);
+    });
+  }
+
+  document.querySelectorAll("#usersGroupTabs .users-group-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if(btn.dataset.group === usersGroupBy) return;
+      usersGroupBy = btn.dataset.group;
+      localStorage.setItem("l2AdminUsersGroupBy", usersGroupBy);
+      updateUsersGroupTabs();
+      renderUsersGrouped();
+    });
+  });
+  updateUsersGroupTabs();
+
+  async function loadUsers(){
+    const { data, error } = await db
+      .from("profiles")
+      .select("id, username, nickname, role_id, party_id, delete_protected, created_at, roles(label), clan_groups(name)")
+      .eq("clan_id", profile.clan_id)
+      .order("created_at", { ascending: false });
+    if(error){ console.error(error); return; }
+    lastUsersData = data;
+    renderUsersGrouped();
   }
 
   function escapeHtml(s){
