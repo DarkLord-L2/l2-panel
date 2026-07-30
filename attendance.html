@@ -398,7 +398,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=7"></script>
+<script src="js/supabase-client.js?v=8"></script>
 <script src="js/event-roster.js?v=4"></script>
 <script>
 (async function(){
@@ -456,6 +456,8 @@
 
   let advancedView = false;          // новый вид отчёта «Посещаемость» (тумблер в настройках)
   let darkMatrix = false;            // тёмная раскраска таблицы «Посещаемость» (тумблер в настройках)
+  let tierHighThreshold = 75;        // от какого % явки — верхний тир (настраивается в Админ-панели)
+  let tierMidThreshold = 40;         // от какого % явки — средний тир, ниже — нижний
   // ширина, на которую растянули матрицу, переживает перезаход в раздел; ключ свой
   // у каждого аккаунта — за одним браузером могут сидеть разные люди
   const TABLE_WIDTH_KEY = "l2AttTableWidth:" + profile.id;
@@ -966,8 +968,8 @@
   }
 
   function percentTierClass(percent){
-    if(percent >= 75) return "att-tier-high";
-    if(percent >= 40) return "att-tier-mid";
+    if(percent >= tierHighThreshold) return "att-tier-high";
+    if(percent >= tierMidThreshold) return "att-tier-mid";
     return "att-tier-low";
   }
 
@@ -1069,12 +1071,14 @@
   async function loadReportStyle(){
     const { data, error } = await db
       .from("attendance_report_style")
-      .select("advanced_view, dark_matrix")
+      .select("advanced_view, dark_matrix, tier_high_threshold, tier_mid_threshold")
       .eq("clan_id", profile.clan_id)
       .maybeSingle();
     if(error) console.error(error);
     advancedView = data?.advanced_view || false;
     darkMatrix = data?.dark_matrix || false;
+    tierHighThreshold = data?.tier_high_threshold ?? 75;
+    tierMidThreshold = data?.tier_mid_threshold ?? 40;
   }
 
   function renderFilterTabs(){

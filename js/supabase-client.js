@@ -74,23 +74,31 @@ async function getVisibleSections(roleKey){
   if(roleErr) throw roleErr;
 
   // порядок пунктов меню клан-лидер задаёт сам (Админ-панель → «Порядок разделов в меню»);
-  // clan_section_order виден только своему клану, а чего в нём нет — идёт по sections.sort
-  const [{ data, error }, { data: orderRows, error: orderErr }] = await Promise.all([
+  // clan_section_order виден только своему клану, а чего в нём нет — идёт по sections.sort.
+  // clan_section_toggles — отдельный, более грубый выключатель: раздел, выключенный на
+  // весь клан («Разделы и права» → «Какие разделы вообще есть»), не покажется НИ ОДНОЙ
+  // роли, даже если у роли стоит галочка видимости в role_sections.
+  const [{ data, error }, { data: orderRows, error: orderErr }, { data: toggleRows, error: toggleErr }] = await Promise.all([
     client
       .from("role_sections")
       .select("visible, sections(key, label, sort)")
       .eq("role_id", roleRow.id)
       .eq("visible", true),
     client.from("clan_section_order").select("section_key, sort"),
+    client.from("clan_section_toggles").select("section_key, enabled"),
   ]);
   if(error) throw error;
   if(orderErr) console.error(orderErr); // порядок не критичен — откатимся на sections.sort
+  if(toggleErr) console.error(toggleErr); // тоже не критично — откатимся на «все разделы включены»
 
   const customSort = new Map((orderRows || []).map(r => [r.section_key, r.sort]));
+  // отсутствие строки в clan_section_toggles = раздел включён (значение по умолчанию)
+  const disabledKeys = new Set((toggleRows || []).filter(r => r.enabled === false).map(r => r.section_key));
 
   return (data || [])
     .map(row => row.sections)
     .filter(Boolean)
+    .filter(s => s.key === "admin" || !disabledKeys.has(s.key))
     .sort((a, b) => (customSort.get(a.key) ?? a.sort) - (customSort.get(b.key) ?? b.sort));
 }
 

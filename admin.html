@@ -36,6 +36,28 @@
   .support-class-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:6px 12px; margin-top:8px; }
   .support-class-grid label{ display:flex; align-items:center; gap:7px; font-size:13px; }
 
+  /* полное вкл/выкл раздела на клан — отдельно от per-роль матрицы ниже */
+  .section-toggle-list{ display:flex; flex-direction:column; gap:6px; margin:10px 0; max-width:420px; }
+  .section-toggle-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background: var(--panel-2); border:1px solid var(--border); border-radius:7px;
+    padding:9px 12px;
+  }
+  .section-toggle-row .label{ font-size:13px; color: var(--text); }
+  .toggle-switch{ position:relative; flex:none; width:38px; height:22px; display:block; }
+  .toggle-switch input{ opacity:0; width:0; height:0; position:absolute; }
+  .toggle-switch .track{
+    position:absolute; inset:0; border-radius:999px; background: var(--border);
+    transition: background .15s; cursor:pointer;
+  }
+  .toggle-switch .track::before{
+    content:""; position:absolute; left:2px; top:2px; width:18px; height:18px;
+    border-radius:50%; background: var(--text-dim); transition: transform .15s, background .15s;
+  }
+  .toggle-switch input:checked + .track{ background: rgba(76,154,99,.35); }
+  .toggle-switch input:checked + .track::before{ transform: translateX(16px); background: var(--ok); }
+  .toggle-switch input:disabled + .track{ opacity:.4; cursor:not-allowed; }
+
   /* порядок разделов меню: список в том же виде, в каком меню видно слева */
   .sec-order-list{ display:flex; flex-direction:column; gap:6px; margin:10px 0; max-width:420px; }
   .sec-order-row{
@@ -149,6 +171,23 @@
 
     <div class="admin-tab-panel" data-panel="rules">
   <section class="card">
+    <h2>Тиры явки «Посещаемость»</h2>
+    <p class="hint">От какого процента явки строка в матрице подсвечивается верхним/средним тиром (жёлтый/голубой в светлой раскраске) — ниже среднего порога тир всегда нижний.</p>
+    <div class="form-row">
+      <div class="field" style="max-width:200px;">
+        <label for="tierHighInput">Верхний тир, от % явки</label>
+        <input type="number" id="tierHighInput" min="0" max="100" />
+      </div>
+      <div class="field" style="max-width:200px;">
+        <label for="tierMidInput">Средний тир, от % явки</label>
+        <input type="number" id="tierMidInput" min="0" max="100" />
+      </div>
+      <button type="button" class="btn" id="tierDefaultBtn" title="Вернуть 75/40 — как было до настройки">Стандарт</button>
+    </div>
+    <p class="error-msg" id="tierError"></p>
+  </section>
+
+  <section class="card">
     <h2>Вторая профессия: правила показа в отчётах</h2>
     <p class="hint">У кого в «Группах» указана вторая профессия — в «Отчётах по мероприятиям» иконка на мероприятии подбирается сама: если килов меньше порога, показывается та профессия из двух, что отмечена ниже как саппорт, иначе — вторая (боевая).</p>
     <div class="field" style="max-width:200px;">
@@ -161,6 +200,13 @@
     </div>
 
     <div class="admin-tab-panel" data-panel="sections">
+  <section class="card">
+    <h2>Какие разделы вообще есть</h2>
+    <p class="hint">Полностью выключает раздел для всего клана — исчезает из меню у абсолютно всех, независимо от роли и от галочек в матрице ниже. «Админ-панель» выключить нельзя — иначе некому будет включить остальное обратно.</p>
+    <div class="section-toggle-list" id="sectionToggleList"></div>
+    <p class="error-msg" id="sectionToggleError"></p>
+  </section>
+
   <section class="card">
     <h2>Порядок разделов в меню</h2>
     <p class="hint">Стрелками ▲▼ переставьте пункты — в таком порядке они будут идти в левом меню у всех в клане. «Учёт клана» двигается целиком, вместе со своими подпунктами.</p>
@@ -191,7 +237,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=7"></script>
+<script src="js/supabase-client.js?v=8"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -227,6 +273,61 @@
       db.from("sections").select("key, label, sort").order("sort"),
     ]);
     roles = r || []; parties = p || []; sections = s || [];
+  }
+
+  // ---------- полное вкл/выкл раздела на весь клан («Какие разделы вообще есть») ----------
+  // отдельно от role_sections (видимость по роли) — выключенный тут раздел пропадает
+  // из меню у абсолютно всех, что бы ни было отмечено в матрице ролей ниже
+  let sectionToggles = new Map(); // section_key -> enabled
+
+  async function loadSectionToggles(){
+    const { data, error } = await db.from("clan_section_toggles").select("section_key, enabled");
+    if(error) console.error(error);
+    sectionToggles = new Map((data || []).map(r => [r.section_key, r.enabled]));
+  }
+
+  function renderSectionToggleList(){
+    const wrap = document.getElementById("sectionToggleList");
+    wrap.innerHTML = "";
+    sections.filter(s => s.key !== "admin").forEach(s => {
+      const enabled = sectionToggles.get(s.key) ?? true; // нет строки — раздел включён
+
+      const row = document.createElement("div");
+      row.className = "section-toggle-row";
+
+      const label = document.createElement("span");
+      label.className = "label";
+      label.textContent = s.label;
+
+      const switchLabel = document.createElement("label");
+      switchLabel.className = "toggle-switch";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = enabled;
+      const track = document.createElement("span");
+      track.className = "track";
+      switchLabel.append(cb, track);
+
+      cb.addEventListener("change", async () => {
+        const errEl = document.getElementById("sectionToggleError");
+        errEl.textContent = "";
+        cb.disabled = true;
+        const { error } = await db.from("clan_section_toggles").upsert(
+          { clan_id: profile.clan_id, section_key: s.key, enabled: cb.checked },
+          { onConflict: "clan_id,section_key" }
+        );
+        if(error){
+          errEl.textContent = "Не удалось сохранить: " + error.message;
+          cb.checked = !cb.checked;
+        } else {
+          sectionToggles.set(s.key, cb.checked);
+        }
+        cb.disabled = false;
+      });
+
+      row.append(label, switchLabel);
+      wrap.appendChild(row);
+    });
   }
 
   // ---------- порядок разделов в левом меню ----------
@@ -675,12 +776,72 @@
     await db.from("dual_class_settings").upsert({ clan_id: profile.clan_id, kill_threshold: val }, { onConflict: "clan_id" });
   });
 
+  // ---- тиры явки «Посещаемость»: захардкоженные раньше 75/40, теперь на клан ----
+  async function loadTierSettings(){
+    const { data, error } = await db
+      .from("attendance_report_style")
+      .select("tier_high_threshold, tier_mid_threshold")
+      .eq("clan_id", profile.clan_id)
+      .maybeSingle();
+    if(error) console.error(error);
+    document.getElementById("tierHighInput").value = data?.tier_high_threshold ?? 75;
+    document.getElementById("tierMidInput").value = data?.tier_mid_threshold ?? 40;
+  }
+
+  async function saveTierThreshold(field, value){
+    const errEl = document.getElementById("tierError");
+    const { error } = await db.from("attendance_report_style").upsert(
+      { clan_id: profile.clan_id, [field]: value },
+      { onConflict: "clan_id" }
+    );
+    if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
+  }
+
+  document.getElementById("tierHighInput").addEventListener("change", async (e) => {
+    const errEl = document.getElementById("tierError");
+    errEl.textContent = "";
+    const val = Math.min(100, Math.max(0, parseInt(e.target.value, 10) || 0));
+    e.target.value = val;
+    const midVal = parseInt(document.getElementById("tierMidInput").value, 10) || 0;
+    if(val <= midVal){
+      errEl.textContent = "Верхний порог должен быть больше среднего.";
+      return;
+    }
+    await saveTierThreshold("tier_high_threshold", val);
+  });
+  document.getElementById("tierMidInput").addEventListener("change", async (e) => {
+    const errEl = document.getElementById("tierError");
+    errEl.textContent = "";
+    const val = Math.min(100, Math.max(0, parseInt(e.target.value, 10) || 0));
+    e.target.value = val;
+    const highVal = parseInt(document.getElementById("tierHighInput").value, 10) || 100;
+    if(val >= highVal){
+      errEl.textContent = "Средний порог должен быть меньше верхнего.";
+      return;
+    }
+    await saveTierThreshold("tier_mid_threshold", val);
+  });
+
+  // «Стандарт» — вернуть 75/40 (значения по умолчанию, что были всегда до этой настройки)
+  document.getElementById("tierDefaultBtn").addEventListener("click", async () => {
+    const errEl = document.getElementById("tierError");
+    errEl.textContent = "";
+    document.getElementById("tierHighInput").value = 75;
+    document.getElementById("tierMidInput").value = 40;
+    const { error } = await db.from("attendance_report_style").upsert(
+      { clan_id: profile.clan_id, tier_high_threshold: 75, tier_mid_threshold: 40 },
+      { onConflict: "clan_id" }
+    );
+    if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
+  });
+
   await loadLookups();
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(r.label), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
-  await Promise.all([loadUsers(), loadMatrix(), loadDualClassSettings(), loadSectionOrder()]);
+  await Promise.all([loadUsers(), loadMatrix(), loadDualClassSettings(), loadSectionOrder(), loadTierSettings(), loadSectionToggles()]);
   renderSupportClassGrid();
   renderSectionOrder();
+  renderSectionToggleList();
 })();
 </script>
 </body>
