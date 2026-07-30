@@ -269,8 +269,16 @@
         <label for="brandLogoInput">Ссылка на лого (URL)</label>
         <input type="text" id="brandLogoInput" placeholder="https://…" />
       </div>
-      <img id="brandLogoPreview" alt="" style="display:none; height:38px; width:38px; object-fit:cover; border-radius:6px; border:1px solid var(--border);" />
+      <div class="field" style="justify-content:flex-end;">
+        <label>&nbsp;</label>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <img id="brandLogoPreview" alt="" style="display:none; height:38px; width:38px; object-fit:cover; border-radius:6px; border:1px solid var(--border);" />
+          <button type="button" class="btn" id="brandLogoUploadBtn">Загрузить фото</button>
+          <button type="button" class="btn btn-danger" id="brandLogoClearBtn">Убрать</button>
+        </div>
+      </div>
     </div>
+    <input type="file" id="brandLogoPicker" accept="image/*" style="display:none;" />
     <p class="error-msg" id="brandingError"></p>
     <p class="ok-msg" id="brandingOk" style="display:none;">Сохранено.</p>
   </section>
@@ -986,6 +994,56 @@
     const error = await saveBranding();
     if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
     okEl.style.display = "";
+  });
+
+  // загрузка лого файлом — та же схема, что в Проверке буста (js/gear-check.html):
+  // фото не грузится в Storage, а уменьшается на канвасе и сохраняется как
+  // data URL прямо в текстовую колонку logo_url — без отдельной инфраструктуры
+  function downscaleImage(file, maxSize){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = () => { img.src = reader.result; };
+      reader.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  document.getElementById("brandLogoUploadBtn").addEventListener("click", () => {
+    document.getElementById("brandLogoPicker").value = "";
+    document.getElementById("brandLogoPicker").click();
+  });
+  document.getElementById("brandLogoPicker").addEventListener("change", async () => {
+    const file = document.getElementById("brandLogoPicker").files[0];
+    if(!file) return;
+    const errEl = document.getElementById("brandingError");
+    const okEl = document.getElementById("brandingOk");
+    errEl.textContent = ""; okEl.style.display = "none";
+    const dataUrl = await downscaleImage(file, 128);
+    document.getElementById("brandLogoInput").value = dataUrl;
+    updateLogoPreview();
+    clanBranding.logo_url = dataUrl;
+    const error = await saveBranding();
+    if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
+    okEl.style.display = "";
+  });
+  document.getElementById("brandLogoClearBtn").addEventListener("click", async () => {
+    const errEl = document.getElementById("brandingError");
+    errEl.textContent = "";
+    document.getElementById("brandLogoInput").value = "";
+    updateLogoPreview();
+    clanBranding.logo_url = null;
+    const error = await saveBranding();
+    if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
   });
 
   await loadLookups();
