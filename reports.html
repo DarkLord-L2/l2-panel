@@ -647,30 +647,43 @@
     return rows; // "" — всё время
   }
 
+  // группируем по НОРМАЛИЗОВАННОМУ нику, а не по точной строке — иначе один и тот же
+  // человек, распознанный на разных скринах то кириллицей, то латиницей (КОРТЕС /
+  // K0PTEC / KOPTEC), превращается в два разных ряда с одинаковым на вид именем.
+  // entries хранит все исходные (nickname, event_id) варианты — «Удалить»/
+  // «Восстановить» должны задеть все из них, а не только один вариант написания.
   function aggregateByNickname(rows){
     const agg = new Map();
     rows.forEach(r => {
-      const cur = agg.get(r.nickname) || { nickname: r.nickname, kills: 0, deaths: 0, pvp: 0, pve: 0, rowCount: 0, removedCount: 0, eventIds: [] };
+      const key = normalizeNick(r.nickname);
+      const cur = agg.get(key) || { nicknames: [], kills: 0, deaths: 0, pvp: 0, pve: 0, rowCount: 0, removedCount: 0, entries: [] };
       cur.kills += r.kills; cur.deaths += r.deaths; cur.pvp += r.pvp; cur.pve += r.pve;
       cur.rowCount += 1;
       if(r.removed) cur.removedCount += 1;
-      cur.eventIds.push(r.event_id);
-      agg.set(r.nickname, cur);
+      cur.nicknames.push(r.nickname);
+      cur.entries.push({ nickname: r.nickname, event_id: r.event_id });
+      agg.set(key, cur);
     });
     // ник считается «удалённым» в этой выборке, только если удалены ВСЕ его записи —
     // если он ещё активен хотя бы в одном мероприятии периода, вниз не отправляем
     return [...agg.values()].map(r => ({
       ...r,
+      // отображаем то написание, что зарегистрировано в «Группах»/«Проверке буста»
+      // (member_classes) — оно авторитетное; если среди вариантов такого нет, берём
+      // первый попавшийся вариант написания
+      nickname: r.nicknames.find(n => memberInfo.has(n)) || r.nicknames[0],
       kd: r.deaths > 0 ? r.kills / r.deaths : r.kills,
       removed: r.removedCount === r.rowCount,
     }));
   }
 
   function totals(rows){
+    // normalizeNick — та же причина, что в aggregateByNickname: один человек,
+    // распознанный то кириллицей, то латиницей, не должен считаться за двоих
     const nicks = new Set();
     const t = rows.reduce((acc, r) => {
       acc.kills += r.kills; acc.deaths += r.deaths; acc.pvp += r.pvp; acc.pve += r.pve;
-      nicks.add(r.nickname);
+      nicks.add(normalizeNick(r.nickname));
       return acc;
     }, { kills: 0, deaths: 0, pvp: 0, pve: 0 });
     t.active = nicks.size;
@@ -714,26 +727,48 @@
     head.style.top = "0";
   }
 
-  // помечает/снимает пометку removed у всех строк event_stats этого ника, попавших
-  // в текущую выборку (period + фильтр по пати) — не трогает записи вне периода,
-  // поэтому «удаление» из недельного/общего отчёта не задевает другие недели
-  async function setNicknameRemoved(nickname, eventIds, removed){
-    const { error } = await db.from("event_stats")
-      .update({ removed, updated_at: new Date().toISOString() })
-      .eq("nickname", nickname).in("event_id", eventIds);
-    if(error){ console.error(error); alert("Не удалось сохранить: " + error.message); return; }
+  // строки одного агрегированного ряда могут ссылаться на разные варианты написания
+  // (см. aggregateByNickname) — группируем entries по фактическому nickname в БД,
+  // чтобы каждый вариант обновился/удалился своим отдельным запросом
+  function groupEntriesByNickname(entries){
+    const byNick = new Map();
+    entries.forEach(e => {
+      if(!byNick.has(e.nickname)) byNick.set(e.nickname, []);
+      byNick.get(e.nickname).push(e.event_id);
+    });
+    return byNick;
+  }
+
+  // помечает/снимает пометку removed у всех строк event_stats этого ника (по всем
+  // вариантам написания), попавших в текущую выборку (period + фильтр по пати) —
+  // не трогает записи вне периода, поэтому «удаление» из недельного/общего отчёта
+  // не задевает другие недели
+  async function setNicknameRemoved(entries, removed){
+    const results = await Promise.all(
+      [...groupEntriesByNickname(entries)].map(([nickname, eventIds]) =>
+        db.from("event_stats")
+          .update({ removed, updated_at: new Date().toISOString() })
+          .eq("nickname", nickname).in("event_id", eventIds)
+      )
+    );
+    const failed = results.find(r => r.error);
+    if(failed){ console.error(failed.error); alert("Не удалось сохранить: " + failed.error.message); return; }
     await loadAllStats();
     refreshReport();
   }
 
-  // безвозвратно стирает строки event_stats — доступно только для ника, уже
-  // помеченного removed (второй шаг после «Удалить»), чтобы случайный клик по
-  // мягкому удалению не мог тут же обернуться потерей данных без возможности отмены
-  async function deleteNicknamePermanently(nickname, eventIds){
-    const { error } = await db.from("event_stats")
-      .delete()
-      .eq("nickname", nickname).in("event_id", eventIds);
-    if(error){ console.error(error); alert("Не удалось удалить: " + error.message); return; }
+  // безвозвратно стирает строки event_stats (по всем вариантам написания) —
+  // доступно только для ника, уже помеченного removed (второй шаг после «Удалить»),
+  // чтобы случайный клик по мягкому удалению не мог тут же обернуться потерей
+  // данных без возможности отмены
+  async function deleteNicknamePermanently(entries){
+    const results = await Promise.all(
+      [...groupEntriesByNickname(entries)].map(([nickname, eventIds]) =>
+        db.from("event_stats").delete().eq("nickname", nickname).in("event_id", eventIds)
+      )
+    );
+    const failed = results.find(r => r.error);
+    if(failed){ console.error(failed.error); alert("Не удалось удалить: " + failed.error.message); return; }
     await loadAllStats();
     refreshReport();
   }
@@ -797,7 +832,7 @@
           const restoreBtn = document.createElement("button");
           restoreBtn.className = "btn btn-ghost";
           restoreBtn.textContent = "Восстановить";
-          restoreBtn.addEventListener("click", () => setNicknameRemoved(r.nickname, r.eventIds, false));
+          restoreBtn.addEventListener("click", () => setNicknameRemoved(r.entries, false));
           tdActions.appendChild(restoreBtn);
 
           const purgeBtn = document.createElement("button");
@@ -805,7 +840,7 @@
           purgeBtn.textContent = "Удалить навсегда";
           purgeBtn.addEventListener("click", () => {
             if(confirm(`Удалить ${r.nickname} навсегда? Статистика будет стёрта без возможности восстановления.`)){
-              deleteNicknamePermanently(r.nickname, r.eventIds);
+              deleteNicknamePermanently(r.entries);
             }
           });
           tdActions.appendChild(purgeBtn);
@@ -814,7 +849,7 @@
           btn.className = "btn btn-danger";
           btn.textContent = "Удалить";
           btn.addEventListener("click", () => {
-            if(confirm(`Удалить ${r.nickname} из этого отчёта?`)) setNicknameRemoved(r.nickname, r.eventIds, true);
+            if(confirm(`Удалить ${r.nickname} из этого отчёта?`)) setNicknameRemoved(r.entries, true);
           });
           tdActions.appendChild(btn);
         }
