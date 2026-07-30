@@ -906,13 +906,25 @@
     });
   }
 
+  // clans пишет только платформенный супер-админ (RLS) — глав-админ клана меняет
+  // оформление через узкую RPC (update_clan_branding), а не прямым UPDATE
+  async function saveBranding(){
+    const { error } = await db.rpc("update_clan_branding", {
+      p_theme_preset: clanBranding.theme_preset,
+      p_accent_color: clanBranding.accent_color,
+      p_display_name: clanBranding.display_name,
+      p_logo_url: clanBranding.logo_url,
+    });
+    return error;
+  }
+
   async function selectPreset(key){
     const errEl = document.getElementById("brandingError");
     errEl.textContent = "";
     clanBranding.theme_preset = key;
     renderPresetGrid();
     document.documentElement.dataset.preset = key; // мгновенный превью прямо в админ-панели
-    const { error } = await db.from("clans").update({ theme_preset: key }).eq("id", profile.clan_id);
+    const error = await saveBranding();
     if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
   }
 
@@ -942,7 +954,8 @@
     const color = e.target.value;
     document.documentElement.style.setProperty("--gold", color);
     document.documentElement.style.setProperty("--focus", color);
-    const { error } = await db.from("clans").update({ accent_color: color }).eq("id", profile.clan_id);
+    clanBranding.accent_color = color;
+    const error = await saveBranding();
     if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
   });
   document.getElementById("accentClearBtn").addEventListener("click", async () => {
@@ -951,14 +964,16 @@
     document.documentElement.style.removeProperty("--gold");
     document.documentElement.style.removeProperty("--focus");
     document.getElementById("accentColorInput").value = "#e8e8ea";
-    const { error } = await db.from("clans").update({ accent_color: null }).eq("id", profile.clan_id);
+    clanBranding.accent_color = null;
+    const error = await saveBranding();
     if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
   });
   document.getElementById("brandNameInput").addEventListener("change", async (e) => {
     const errEl = document.getElementById("brandingError");
     const okEl = document.getElementById("brandingOk");
     errEl.textContent = ""; okEl.style.display = "none";
-    const { error } = await db.from("clans").update({ display_name: e.target.value.trim() || null }).eq("id", profile.clan_id);
+    clanBranding.display_name = e.target.value.trim() || null;
+    const error = await saveBranding();
     if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
     okEl.style.display = "";
   });
@@ -967,7 +982,8 @@
     const errEl = document.getElementById("brandingError");
     const okEl = document.getElementById("brandingOk");
     errEl.textContent = ""; okEl.style.display = "none";
-    const { error } = await db.from("clans").update({ logo_url: e.target.value.trim() || null }).eq("id", profile.clan_id);
+    clanBranding.logo_url = e.target.value.trim() || null;
+    const error = await saveBranding();
     if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
     okEl.style.display = "";
   });
