@@ -127,6 +127,7 @@
       <button type="button" class="admin-nav-item" data-tab="sections">Разделы и права</button>
       <button type="button" class="admin-nav-item" data-tab="rules">Правила клана</button>
       <button type="button" class="admin-nav-item" data-tab="branding">Оформление</button>
+      <button type="button" class="admin-nav-item" data-tab="shares">Ссылки</button>
     </nav>
 
     <div class="admin-content">
@@ -281,6 +282,21 @@
     <input type="file" id="brandLogoPicker" accept="image/*" style="display:none;" />
     <p class="error-msg" id="brandingError"></p>
     <p class="ok-msg" id="brandingOk" style="display:none;">Сохранено.</p>
+  </section>
+    </div>
+
+    <div class="admin-tab-panel" data-panel="shares">
+  <section class="card">
+    <h2>Активные ссылки «Поделиться»</h2>
+    <p class="hint">Публичные ссылки на снимки отчётов (Посещаемость, Налоги) — живут 5 дней с момента создания, дальше пропадают сами. Здесь можно удалить ссылку раньше срока.</p>
+    <table class="data-table" id="sharesTable">
+      <thead>
+        <tr><th>Раздел</th><th>Ссылка</th><th>Создана</th><th>Истекает</th><th></th></tr>
+      </thead>
+      <tbody id="sharesBody"></tbody>
+    </table>
+    <p class="hint" id="sharesEmpty" style="display:none;">Активных ссылок нет.</p>
+    <p class="error-msg" id="sharesError"></p>
   </section>
     </div>
     </div>
@@ -1046,10 +1062,66 @@
     if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
   });
 
+  // ---- Ссылки: активные снимки-«Поделиться» (Посещаемость/Налоги), можно удалить раньше срока ----
+  function fmtDateTime(iso){
+    const d = new Date(iso);
+    return d.toLocaleDateString("ru-RU") + " " + d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  async function loadShares(){
+    const errEl = document.getElementById("sharesError");
+    errEl.textContent = "";
+    const { data, error } = await db
+      .from("report_shares")
+      .select("id, title, created_at, expires_at")
+      .eq("clan_id", profile.clan_id)
+      .order("created_at", { ascending: false });
+    if(error){ errEl.textContent = error.message; return; }
+
+    const body = document.getElementById("sharesBody");
+    body.innerHTML = "";
+    document.getElementById("sharesEmpty").style.display = (data || []).length ? "none" : "";
+    (data || []).forEach(s => {
+      const tr = document.createElement("tr");
+
+      const tdTitle = document.createElement("td");
+      tdTitle.textContent = s.title;
+
+      const tdLink = document.createElement("td");
+      const linkInput = document.createElement("input");
+      linkInput.type = "text";
+      linkInput.readOnly = true;
+      linkInput.value = location.origin + location.pathname.replace(/[^/]*$/, "") + "share.html?id=" + s.id;
+      linkInput.style.cssText = "width:260px; font-size:12px;";
+      linkInput.addEventListener("click", () => linkInput.select());
+      tdLink.appendChild(linkInput);
+
+      const tdCreated = document.createElement("td");
+      tdCreated.textContent = fmtDateTime(s.created_at);
+      const tdExpires = document.createElement("td");
+      tdExpires.textContent = fmtDateTime(s.expires_at);
+
+      const tdDel = document.createElement("td");
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn btn-danger";
+      delBtn.textContent = "Удалить";
+      delBtn.addEventListener("click", async () => {
+        delBtn.disabled = true;
+        const { error: delErr } = await db.from("report_shares").delete().eq("id", s.id);
+        if(delErr){ errEl.textContent = delErr.message; delBtn.disabled = false; return; }
+        await loadShares();
+      });
+      tdDel.appendChild(delBtn);
+
+      tr.append(tdTitle, tdLink, tdCreated, tdExpires, tdDel);
+      body.appendChild(tr);
+    });
+  }
+
   await loadLookups();
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(r.label), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
-  await Promise.all([loadUsers(), loadMatrix(), loadDualClassSettings(), loadSectionOrder(), loadTierSettings(), loadSectionToggles(), loadBranding()]);
+  await Promise.all([loadUsers(), loadMatrix(), loadDualClassSettings(), loadSectionOrder(), loadTierSettings(), loadSectionToggles(), loadBranding(), loadShares()]);
   renderSupportClassGrid();
   renderSectionOrder();
   renderSectionToggleList();

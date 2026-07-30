@@ -187,7 +187,6 @@
           <label for="groupFilter">Пати</label>
           <select id="groupFilter"></select>
         </div>
-        <button type="button" class="btn" id="repExportBtn">Экспорт в Excel</button>
       </div>
 
       <div class="rep-table-scroll" style="margin-top:14px;">
@@ -242,7 +241,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=10"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/export-csv.js?v=1"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -639,11 +637,6 @@
     refreshReport();
   });
 
-  document.getElementById("repExportBtn").addEventListener("click", () => {
-    const table = document.querySelector(".rep-table");
-    L2Export.exportTableToCsv(table, "отчёт-по-мероприятиям");
-  });
-
   function filteredStats(){
     return allRawStats.filter(r => passesGroupFilter(r.nickname));
   }
@@ -785,7 +778,7 @@
     head.innerHTML = '<tr>' +
       '<th class="rep-col-nick">Ник</th>' +
       '<th>Килы</th><th>Смерти</th><th>K:D</th><th>PvP урон</th><th>PvE урон</th>' +
-      (isAdmin ? '<th class="no-export"></th>' : '') +
+      (isAdmin ? '<th></th>' : '') +
       '</tr>';
     applyStickyHead();
 
@@ -833,7 +826,7 @@
 
       if(isAdmin){
         const tdActions = document.createElement("td");
-        tdActions.className = "rep-col-actions no-export";
+        tdActions.className = "rep-col-actions";
 
         if(r.removed){
           const restoreBtn = document.createElement("button");

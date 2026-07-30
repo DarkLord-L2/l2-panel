@@ -231,7 +231,7 @@
           <button class="btn" id="attNickSearchBtn">Поиск</button>
         </div>
         <div class="tools">
-          <button class="btn" id="attExportBtn">Экспорт в Excel</button>
+          <button class="btn" id="attShareBtn">Поделиться</button>
           <button class="btn" id="attEditBtn" style="display:none;">Изменить период</button>
           <button class="btn" id="attBackBtn">← К дням недели</button>
         </div>
@@ -332,6 +332,20 @@
   </div>
 </div>
 
+<!-- Ссылка «Поделиться» на снимок текущего отчёта — публичная, без логина, 5 дней -->
+<div class="modal-overlay" id="shareOverlay">
+  <div class="modal" style="max-width:480px;">
+    <button class="modal-close" id="shareClose" title="Закрыть">×</button>
+    <h2>Ссылка на отчёт</h2>
+    <p class="hint">Доступна 5 дней, без пароля — увидит любой, у кого есть ссылка.</p>
+    <div class="field">
+      <input type="text" id="shareLinkInput" readonly onclick="this.select()" />
+    </div>
+    <button class="btn btn-primary" id="shareCopyBtn">Скопировать</button>
+    <p class="error-msg" id="shareError"></p>
+  </div>
+</div>
+
 <button class="help-btn" id="helpBtn" title="Как пользоваться">?</button>
 <div class="modal-overlay" id="helpOverlay">
   <div class="modal">
@@ -401,7 +415,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=10"></script>
 <script src="js/event-roster.js?v=4"></script>
-<script src="js/export-csv.js?v=1"></script>
+<script src="js/share-report.js?v=2"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -1160,13 +1174,37 @@
     document.body.classList.remove("report-focus", "hide-chrome", "hide-controls");
   });
 
-  document.getElementById("attExportBtn").addEventListener("click", () => {
+  document.getElementById("attShareBtn").addEventListener("click", async () => {
     if(reportMode === "day"){
-      alert("Экспорт доступен только в режиме «Период» (таблица), не в режиме «Один день».");
+      alert("Поделиться можно только в режиме «Период» (таблица), не в режиме «Один день».");
       return;
     }
-    const table = document.querySelector("#attTableWrap table");
-    L2Export.exportTableToCsv(table, "журнал-посещаемости");
+    const btn = document.getElementById("attShareBtn");
+    btn.disabled = true;
+    try{
+      const table = document.querySelector("#attTableWrap table");
+      const url = await L2Share.createShareLink(db, {
+        table, title: "Посещаемость", clanId: profile.clan_id, createdBy: profile.id,
+        nickSelector: ".att-nick",
+      });
+      document.getElementById("shareLinkInput").value = url;
+      document.getElementById("shareOverlay").classList.add("show");
+    }catch(e){
+      alert("Не удалось создать ссылку: " + e.message);
+    }finally{
+      btn.disabled = false;
+    }
+  });
+  document.getElementById("shareClose").addEventListener("click", () => {
+    document.getElementById("shareOverlay").classList.remove("show");
+  });
+  document.getElementById("shareOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "shareOverlay") e.currentTarget.classList.remove("show");
+  });
+  document.getElementById("shareCopyBtn").addEventListener("click", () => {
+    const input = document.getElementById("shareLinkInput");
+    input.select();
+    navigator.clipboard?.writeText(input.value).catch(() => {});
   });
 
   // сворачивает шапку сайта и панель управления отчётом (даты/переключатель режима),
