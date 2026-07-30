@@ -1,10 +1,10 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Отчёты по мероприятиям — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=4" />
+<link rel="stylesheet" href="js/theme.css?v=5" />
 <style>
   .rep-wrap{ padding:0 0 32px; }
 
@@ -187,6 +187,7 @@
           <label for="groupFilter">Пати</label>
           <select id="groupFilter"></select>
         </div>
+        <button type="button" class="btn" id="repExportBtn">Экспорт в Excel</button>
       </div>
 
       <div class="rep-table-scroll" style="margin-top:14px;">
@@ -239,8 +240,9 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=8"></script>
+<script src="js/supabase-client.js?v=10"></script>
 <script src="js/classes.js?v=1"></script>
+<script src="js/export-csv.js?v=1"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -637,6 +639,11 @@
     refreshReport();
   });
 
+  document.getElementById("repExportBtn").addEventListener("click", () => {
+    const table = document.querySelector(".rep-table");
+    L2Export.exportTableToCsv(table, "отчёт-по-мероприятиям");
+  });
+
   function filteredStats(){
     return allRawStats.filter(r => passesGroupFilter(r.nickname));
   }
@@ -778,7 +785,7 @@
     head.innerHTML = '<tr>' +
       '<th class="rep-col-nick">Ник</th>' +
       '<th>Килы</th><th>Смерти</th><th>K:D</th><th>PvP урон</th><th>PvE урон</th>' +
-      (isAdmin ? '<th></th>' : '') +
+      (isAdmin ? '<th class="no-export"></th>' : '') +
       '</tr>';
     applyStickyHead();
 
@@ -826,7 +833,7 @@
 
       if(isAdmin){
         const tdActions = document.createElement("td");
-        tdActions.className = "rep-col-actions";
+        tdActions.className = "rep-col-actions no-export";
 
         if(r.removed){
           const restoreBtn = document.createElement("button");

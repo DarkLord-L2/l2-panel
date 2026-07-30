@@ -18,6 +18,26 @@
   --ok: #4c9a63;
   --focus: #5b8def;
 }
+
+/* Пресеты оформления (конструктор → «Оформление», задаётся на клан) — тот же
+   тёмный фон/панели, меняется только акцент (--gold*/--focus). Ставится
+   как data-preset на <html> из applyClanBranding() в supabase-client.js,
+   поэтому работает на любой странице, подключающей этот файл. */
+:root[data-preset="amber"]{
+  --gold: #e0a52a;
+  --gold-dim: #b3841f;
+  --focus: #e0a52a;
+}
+:root[data-preset="azure"]{
+  --gold: #5b9dd9;
+  --gold-dim: #4a7ba8;
+  --focus: #5b9dd9;
+}
+:root[data-preset="emerald"]{
+  --gold: #4fb37e;
+  --gold-dim: #3d8c63;
+  --focus: #4fb37e;
+}
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
 

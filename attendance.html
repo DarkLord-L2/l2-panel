@@ -1,10 +1,10 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Журнал посещаемости — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=4" />
+<link rel="stylesheet" href="js/theme.css?v=5" />
 <style>
   #daysContainer{
     display:grid;
@@ -231,6 +231,7 @@
           <button class="btn" id="attNickSearchBtn">Поиск</button>
         </div>
         <div class="tools">
+          <button class="btn" id="attExportBtn">Экспорт в Excel</button>
           <button class="btn" id="attEditBtn" style="display:none;">Изменить период</button>
           <button class="btn" id="attBackBtn">← К дням недели</button>
         </div>
@@ -398,8 +399,9 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=8"></script>
+<script src="js/supabase-client.js?v=10"></script>
 <script src="js/event-roster.js?v=4"></script>
+<script src="js/export-csv.js?v=1"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -1156,6 +1158,15 @@
     document.getElementById("attReportView").style.display = "none";
     document.getElementById("daysContainer").style.display = "";
     document.body.classList.remove("report-focus", "hide-chrome", "hide-controls");
+  });
+
+  document.getElementById("attExportBtn").addEventListener("click", () => {
+    if(reportMode === "day"){
+      alert("Экспорт доступен только в режиме «Период» (таблица), не в режиме «Один день».");
+      return;
+    }
+    const table = document.querySelector("#attTableWrap table");
+    L2Export.exportTableToCsv(table, "журнал-посещаемости");
   });
 
   // сворачивает шапку сайта и панель управления отчётом (даты/переключатель режима),

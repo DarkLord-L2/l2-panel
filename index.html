@@ -1,16 +1,19 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=4" />
+<link rel="stylesheet" href="js/theme.css?v=5" />
 </head>
 <body>
 
 <div class="app-shell" id="appShell" style="display:none;">
   <div class="topbar">
-    <div class="brand">Кабинет клана</div>
+    <div class="brand" id="brand">
+      <img id="brandLogo" alt="" style="display:none; height:22px; border-radius:4px; vertical-align:-6px; margin-right:8px;" />
+      <span id="brandName">Кабинет клана</span>
+    </div>
     <div class="who">
       <span class="name" id="whoName"></span>
       <span class="badge" id="whoRole"></span>
@@ -24,7 +27,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=8"></script>
+<script src="js/supabase-client.js?v=10"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -75,6 +78,13 @@
   if(profile.must_change_password){
     location.href = "change-password.html";
     return;
+  }
+
+  if(profile.clans?.display_name) document.getElementById("brandName").textContent = profile.clans.display_name;
+  if(profile.clans?.logo_url){
+    const logo = document.getElementById("brandLogo");
+    logo.src = profile.clans.logo_url;
+    logo.style.display = "";
   }
 
   const roleKey = profile.roles?.key || "obychniy";

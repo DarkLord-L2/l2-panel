@@ -55,15 +55,35 @@ async function requireSession(){
 // строки в profiles, например незавершённо созданной) 0 строк — это ожидаемый случай,
 // а не ошибка: .single() в такой ситуации бросает PGRST116 и рвёт всю страницу вместо
 // того, чтобы дать index.html показать «Профиль не найден».
+// Применяет оформление клана (конструктор → «Оформление») ко ТЕКУЩЕМУ документу —
+// вызывается из getProfile(), поэтому срабатывает на каждой странице, включая
+// каждый iframe-раздел (у каждого свой document, наследования CSS-переменных
+// между iframe и родителем нет). accent_color — точечный оверрайд поверх пресета,
+// применяется отдельно, чтобы клан мог подправить именно акцент, не теряя пресет.
+function applyClanBranding(clan){
+  if(!clan) return;
+  document.documentElement.dataset.preset = clan.theme_preset || "default";
+  if(clan.accent_color){
+    document.documentElement.style.setProperty("--gold", clan.accent_color);
+    document.documentElement.style.setProperty("--focus", clan.accent_color);
+  }
+}
+
+// Профиль текущего пользователя вместе с ролью и пати.
+// .maybeSingle(), не .single() — у платформенного супер-админа (и у любой учётки без
+// строки в profiles, например незавершённо созданной) 0 строк — это ожидаемый случай,
+// а не ошибка: .single() в такой ситуации бросает PGRST116 и рвёт всю страницу вместо
+// того, чтобы дать index.html показать «Профиль не найден».
 async function getProfile(){
   const { data: { user } } = await client.auth.getUser();
   if(!user) return null;
   const { data, error } = await client
     .from("profiles")
-    .select("id, username, nickname, clan_id, party_id, must_change_password, roles(key, label, rank), clan_groups(name), clans(access_enabled, name)")
+    .select("id, username, nickname, clan_id, party_id, must_change_password, roles(key, label, rank), clan_groups(name), clans(access_enabled, name, theme_preset, accent_color, display_name, logo_url)")
     .eq("id", user.id)
     .maybeSingle();
   if(error) throw error;
+  applyClanBranding(data?.clans);
   return data;
 }
 
@@ -237,4 +257,5 @@ window.L2Cabinet = {
   adminOcrNicknames,
   adminOcrEventStats,
   clearMustChangePassword,
+  applyClanBranding,
 };

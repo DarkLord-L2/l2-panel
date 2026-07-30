@@ -1,10 +1,10 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Админ-панель — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=4" />
+<link rel="stylesheet" href="js/theme.css?v=5" />
 <style>
   .admin-wrap{ display:flex; flex-direction:column; gap:14px; padding:0 0 32px; }
   .admin-head{ display:flex; align-items:center; justify-content:space-between; }
@@ -101,6 +101,17 @@
   }
   tr.users-group-row:hover td{ background: var(--panel-2); }
   tr.users-group-row .count{ color: var(--text-dim); font-weight:400; margin-left:6px; }
+
+  .preset-grid{ display:flex; gap:12px; flex-wrap:wrap; }
+  .preset-card{
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    width:100px; padding:12px 8px; border-radius:8px;
+    border:1px solid var(--border); background: var(--panel-2);
+    cursor:pointer; font-size:12px; color: var(--text-dim);
+  }
+  .preset-card:hover{ border-color: var(--border-lit); }
+  .preset-card.active{ border-color: var(--gold); color: var(--text); }
+  .preset-card .dot{ width:28px; height:28px; border-radius:50%; }
 </style>
 </head>
 <body>
@@ -115,6 +126,7 @@
       <button type="button" class="admin-nav-item" data-tab="users">Пользователи</button>
       <button type="button" class="admin-nav-item" data-tab="sections">Разделы и права</button>
       <button type="button" class="admin-nav-item" data-tab="rules">Правила клана</button>
+      <button type="button" class="admin-nav-item" data-tab="branding">Оформление</button>
     </nav>
 
     <div class="admin-content">
@@ -225,6 +237,44 @@
     </div>
   </section>
     </div>
+
+    <div class="admin-tab-panel" data-panel="branding">
+  <section class="card">
+    <h2>Цветовая схема</h2>
+    <p class="hint">Общий тёмный фон везде одинаковый, меняется только акцентный цвет (заголовки, ссылки, кнопки). Применяется сразу всем в клане.</p>
+    <div class="preset-grid" id="presetGrid"></div>
+  </section>
+
+  <section class="card">
+    <h2>Свой акцентный цвет</h2>
+    <p class="hint">Необязательно — точечно подменяет цвет акцента поверх выбранной схемы выше, если хочется свой конкретный оттенок.</p>
+    <div class="form-row" style="align-items:center;">
+      <div class="field" style="max-width:120px;">
+        <label for="accentColorInput">Цвет</label>
+        <input type="color" id="accentColorInput" style="height:38px; padding:2px; cursor:pointer;" />
+      </div>
+      <button type="button" class="btn" id="accentClearBtn">Сбросить к схеме</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Название и лого</h2>
+    <p class="hint">Подменяет заголовок «Кабинет клана» в шапке сайта и логине. Оставьте пустым, чтобы использовать значение по умолчанию.</p>
+    <div class="form-row">
+      <div class="field">
+        <label for="brandNameInput">Название кабинета</label>
+        <input type="text" id="brandNameInput" placeholder="Кабинет клана" />
+      </div>
+      <div class="field">
+        <label for="brandLogoInput">Ссылка на лого (URL)</label>
+        <input type="text" id="brandLogoInput" placeholder="https://…" />
+      </div>
+      <img id="brandLogoPreview" alt="" style="display:none; height:38px; width:38px; object-fit:cover; border-radius:6px; border:1px solid var(--border);" />
+    </div>
+    <p class="error-msg" id="brandingError"></p>
+    <p class="ok-msg" id="brandingOk" style="display:none;">Сохранено.</p>
+  </section>
+    </div>
     </div>
   </div>
 </div>
@@ -237,7 +287,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=8"></script>
+<script src="js/supabase-client.js?v=10"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -835,13 +885,101 @@
     if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
   });
 
+  // ---- Оформление: цветовая схема клана, точечный акцент, название/лого ----
+  const PRESETS = [
+    { key: "default", label: "Классика", color: "#e8e8ea" },
+    { key: "amber", label: "Янтарь", color: "#d5a94a" },
+    { key: "azure", label: "Лазурь", color: "#5b9dd9" },
+    { key: "emerald", label: "Изумруд", color: "#4fb37e" },
+  ];
+  let clanBranding = { theme_preset: "default", accent_color: null, display_name: null, logo_url: null };
+
+  function renderPresetGrid(){
+    const grid = document.getElementById("presetGrid");
+    grid.innerHTML = "";
+    PRESETS.forEach(p => {
+      const card = document.createElement("div");
+      card.className = "preset-card" + (clanBranding.theme_preset === p.key ? " active" : "");
+      card.innerHTML = `<span class="dot" style="background:${p.color};"></span><span>${escapeHtml(p.label)}</span>`;
+      card.addEventListener("click", () => selectPreset(p.key));
+      grid.appendChild(card);
+    });
+  }
+
+  async function selectPreset(key){
+    const errEl = document.getElementById("brandingError");
+    errEl.textContent = "";
+    clanBranding.theme_preset = key;
+    renderPresetGrid();
+    document.documentElement.dataset.preset = key; // мгновенный превью прямо в админ-панели
+    const { error } = await db.from("clans").update({ theme_preset: key }).eq("id", profile.clan_id);
+    if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
+  }
+
+  function updateLogoPreview(){
+    const url = document.getElementById("brandLogoInput").value.trim();
+    const img = document.getElementById("brandLogoPreview");
+    if(url){ img.src = url; img.style.display = ""; } else { img.style.display = "none"; }
+  }
+
+  async function loadBranding(){
+    const { data, error } = await db
+      .from("clans")
+      .select("theme_preset, accent_color, display_name, logo_url")
+      .eq("id", profile.clan_id)
+      .maybeSingle();
+    if(error){ console.error(error); return; }
+    clanBranding = data || clanBranding;
+    document.getElementById("accentColorInput").value = clanBranding.accent_color || "#e8e8ea";
+    document.getElementById("brandNameInput").value = clanBranding.display_name || "";
+    document.getElementById("brandLogoInput").value = clanBranding.logo_url || "";
+    updateLogoPreview();
+  }
+
+  document.getElementById("accentColorInput").addEventListener("change", async (e) => {
+    const errEl = document.getElementById("brandingError");
+    errEl.textContent = "";
+    const color = e.target.value;
+    document.documentElement.style.setProperty("--gold", color);
+    document.documentElement.style.setProperty("--focus", color);
+    const { error } = await db.from("clans").update({ accent_color: color }).eq("id", profile.clan_id);
+    if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
+  });
+  document.getElementById("accentClearBtn").addEventListener("click", async () => {
+    const errEl = document.getElementById("brandingError");
+    errEl.textContent = "";
+    document.documentElement.style.removeProperty("--gold");
+    document.documentElement.style.removeProperty("--focus");
+    document.getElementById("accentColorInput").value = "#e8e8ea";
+    const { error } = await db.from("clans").update({ accent_color: null }).eq("id", profile.clan_id);
+    if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
+  });
+  document.getElementById("brandNameInput").addEventListener("change", async (e) => {
+    const errEl = document.getElementById("brandingError");
+    const okEl = document.getElementById("brandingOk");
+    errEl.textContent = ""; okEl.style.display = "none";
+    const { error } = await db.from("clans").update({ display_name: e.target.value.trim() || null }).eq("id", profile.clan_id);
+    if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
+    okEl.style.display = "";
+  });
+  document.getElementById("brandLogoInput").addEventListener("change", async (e) => {
+    updateLogoPreview();
+    const errEl = document.getElementById("brandingError");
+    const okEl = document.getElementById("brandingOk");
+    errEl.textContent = ""; okEl.style.display = "none";
+    const { error } = await db.from("clans").update({ logo_url: e.target.value.trim() || null }).eq("id", profile.clan_id);
+    if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
+    okEl.style.display = "";
+  });
+
   await loadLookups();
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(r.label), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
-  await Promise.all([loadUsers(), loadMatrix(), loadDualClassSettings(), loadSectionOrder(), loadTierSettings(), loadSectionToggles()]);
+  await Promise.all([loadUsers(), loadMatrix(), loadDualClassSettings(), loadSectionOrder(), loadTierSettings(), loadSectionToggles(), loadBranding()]);
   renderSupportClassGrid();
   renderSectionOrder();
   renderSectionToggleList();
+  renderPresetGrid();
 })();
 </script>
 </body>

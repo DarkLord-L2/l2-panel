@@ -1,10 +1,10 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Налоги — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=4" />
+<link rel="stylesheet" href="js/theme.css?v=5" />
 <style>
   .weeks-list{ display:flex; flex-direction:column; gap:6px; max-height:320px; overflow-y:auto; margin:10px 0; }
   .weeks-list label{ display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; }
@@ -212,6 +212,7 @@
 
       <aside class="tax-report-side">
         <button class="btn" id="taxReportBackBtn">← Назад к выбору недель</button>
+        <button class="btn" id="taxReportExportBtn">Экспорт в Excel</button>
         <div class="field">
           <label for="taxReportNickSearch">Поиск по нику</label>
           <input type="text" id="taxReportNickSearch" placeholder="Ник" />
@@ -302,8 +303,9 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=8"></script>
+<script src="js/supabase-client.js?v=10"></script>
 <script src="js/week-roster.js?v=4"></script>
+<script src="js/export-csv.js?v=1"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -841,6 +843,11 @@
     document.body.classList.remove("tax-report-focus");
     document.getElementById("wrap").style.display = "";
     openReportPicker();
+  });
+
+  document.getElementById("taxReportExportBtn").addEventListener("click", () => {
+    const table = document.querySelector("#taxReportTableWrap table");
+    L2Export.exportTableToCsv(table, "отчёт-по-налогам");
   });
 
   // матрица по неделям может быть шире экрана — крутим колесом мыши без Shift не
