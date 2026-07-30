@@ -94,10 +94,16 @@
   .report-mode-tabs{ display:flex; gap:8px; margin:4px 0 14px; }
   .single-day-row{ display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; margin:10px 0; }
   .single-day-row .field{ margin:0; }
-  .matrix-scroll{ overflow:auto; max-height:64vh; }
+  .matrix-scroll{ overflow:visible; }
+  /* display:inline-block — коробка обёртки в точности повторяет размер самой
+     таблицы (а не тянется на всю ширину страницы), поэтому ручка ресайза за
+     right:0 всегда стоит ровно у правого края таблицы, а не где-то в пустоте.
+     overflow:visible — своего скролла у обёртки нет, если таблица шире экрана,
+     листается вбок вся страница целиком (см. ниже обработчик колеса на window). */
   #attTableWrap.matrix-mode{
-    overflow:auto; position:relative;
-    width:100%; min-width:280px;
+    display:inline-block; vertical-align:top;
+    overflow:visible; position:relative;
+    min-width:280px;
     padding-right:14px;
   }
   .table-resize-handle{
@@ -121,18 +127,16 @@
   body.hide-controls #reportModeTabs,
   body.hide-controls #periodInputsRow,
   body.hide-controls #dayInputRow{ display:none !important; }
-  /* режим отчёта: раздел разворачивается на всю ширину, а у самой таблицы —
-     собственная коробка со скроллом (.matrix-scroll/#attTableWrap, см. выше):
-     свой скролл вниз/вбок и ручка ширины с прилипающей к НЕЙ шапкой (не к окну
-     целиком — так теряется отдельная страничная прокрутка, зато работают и
-     ручка ширины, и горизontальный скролл колесом, без второй лишней полосы
-     прокрутки у всей страницы). В фокусе отчёта коробке даём больше высоты,
-     раз панель управления/шапка сайта всё равно скрыты. */
+  /* режим отчёта: раздел разворачивается на всю ширину. У таблицы нет своей
+     коробки со скроллом — вниз и вбок листается вся страница целиком, единым
+     куском с сайтом, шапка таблицы прилипает к верху ЭКРАНА (не какой-то
+     внутренней коробки): position:sticky липнет к ближайшему контейнеру
+     прокрутки, а у обёртки таблицы теперь нет своего overflow, так что этим
+     контейнером остаётся окно/страница. Сдвиг и ширина таблицы — ниже, через
+     колесо мыши над таблицей и ручку за её правым краем (см. JS). */
   body.report-focus #wrap.roster-wrap{ max-width:none; padding:6px 12px; gap:8px; }
   body.report-focus #rememberStatus{ display:none; }
   body.report-focus #attReportView > section.card{ padding:10px 14px; }
-  body.report-focus #attTableWrap.matrix-mode{ max-height:82vh; }
-  body.report-focus .matrix-scroll{ max-height:82vh; }
   body.report-focus .day-columns{ padding-bottom:40px; }
   /* шестерня/справка — в самые углы, таблица под них не заезжает */
   body.report-focus .settings-btn{ top:6px; right:6px; }
@@ -1291,12 +1295,14 @@
     if(e.target.id === "helpOverlay") e.currentTarget.classList.remove("show");
   });
 
-  // матрица по дням может быть шире экрана — крутим её колесом мыши без Shift
+  // матрица по дням может быть шире экрана — крутим колесом мыши без Shift не
+  // саму обёртку (у неё больше нет своего скролла), а всю страницу целиком
   const attTableWrapEl = document.getElementById("attTableWrap");
   attTableWrapEl.addEventListener("wheel", (e) => {
-    if(attTableWrapEl.scrollWidth <= attTableWrapEl.clientWidth) return;
+    const doc = document.documentElement;
+    if(doc.scrollWidth <= doc.clientWidth) return;
     e.preventDefault();
-    attTableWrapEl.scrollLeft += e.deltaY;
+    window.scrollBy({ left: e.deltaY });
   }, { passive: false });
 
   // ручка ресайза за правый край самой таблицы (видна только в матрице —
@@ -1319,6 +1325,12 @@
     if(!resizing) return;
     const newWidth = Math.max(280, resizeStartWidth + (e.clientX - resizeStartX));
     attTableWrapEl.style.width = newWidth + "px";
+    // у таблицы есть свой минимум (колонки не сжимаются дальше содержимого) —
+    // не даём обёртке (а с ней и ручке справа) уйти уже уже этого минимума,
+    // иначе ручка "оторвётся" от настоящего правого края таблицы
+    const tableEl = attTableWrapEl.querySelector("table");
+    const actualWidth = tableEl?.getBoundingClientRect().width || 0;
+    if(actualWidth > newWidth) attTableWrapEl.style.width = Math.ceil(actualWidth) + "px";
   });
   window.addEventListener("mouseup", () => {
     if(!resizing) return;
