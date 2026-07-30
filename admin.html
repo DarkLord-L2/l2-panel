@@ -8,6 +8,28 @@
 <style>
   .admin-wrap{ display:flex; flex-direction:column; gap:14px; padding:0 0 32px; }
   .admin-head{ display:flex; align-items:center; justify-content:space-between; }
+
+  /* левая навигация вместо одной длинной страницы со всеми карточками подряд —
+     разделы сгруппированы по смыслу («Пользователи», «Разделы и права», «Правила
+     клана»), в последнюю в будущем лягут остальные настраиваемые правила клана */
+  .admin-shell{ display:flex; gap:24px; align-items:flex-start; }
+  .admin-nav{ flex:none; width:200px; display:flex; flex-direction:column; gap:3px; position:sticky; top:16px; }
+  .admin-nav-item{
+    font-family:inherit; text-align:left; font-size:13.5px; padding:10px 14px;
+    border-radius:7px; border:1px solid transparent; background:none; color: var(--text-dim); cursor:pointer;
+    transition: background .12s, color .12s;
+  }
+  .admin-nav-item:hover{ background: var(--panel-2); color: var(--text); }
+  .admin-nav-item.active{ background: var(--panel-2); border-color: var(--border); color: var(--gold); font-weight:600; }
+  .admin-content{ flex:1; min-width:0; display:flex; flex-direction:column; gap:14px; }
+  .admin-tab-panel{ display:none; flex-direction:column; gap:14px; }
+  .admin-tab-panel.active{ display:flex; }
+
+  @media (max-width:760px){
+    .admin-shell{ flex-direction:column; }
+    .admin-nav{ position:static; width:100%; flex-direction:row; flex-wrap:wrap; }
+  }
+
   .form-row{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
   .form-row .field{ margin:0; min-width:160px; flex:1; }
   select{ width:100%; }
@@ -66,6 +88,15 @@
     <h1>Админ-панель</h1>
   </div>
 
+  <div class="admin-shell">
+    <nav class="admin-nav" id="adminNav">
+      <button type="button" class="admin-nav-item" data-tab="users">Пользователи</button>
+      <button type="button" class="admin-nav-item" data-tab="sections">Разделы и права</button>
+      <button type="button" class="admin-nav-item" data-tab="rules">Правила клана</button>
+    </nav>
+
+    <div class="admin-content">
+    <div class="admin-tab-panel" data-panel="users">
   <section class="card">
     <h2>Новый пользователь</h2>
     <form id="createUserForm">
@@ -114,7 +145,9 @@
     </table>
     <p class="error-msg" id="usersError"></p>
   </section>
+    </div>
 
+    <div class="admin-tab-panel" data-panel="rules">
   <section class="card">
     <h2>Вторая профессия: правила показа в отчётах</h2>
     <p class="hint">У кого в «Группах» указана вторая профессия — в «Отчётах по мероприятиям» иконка на мероприятии подбирается сама: если килов меньше порога, показывается та профессия из двух, что отмечена ниже как саппорт, иначе — вторая (боевая).</p>
@@ -125,7 +158,9 @@
     <p class="hint" style="margin-top:14px;">Саппорт-классы (отметьте нужные):</p>
     <div class="support-class-grid" id="supportClassGrid"></div>
   </section>
+    </div>
 
+    <div class="admin-tab-panel" data-panel="sections">
   <section class="card">
     <h2>Порядок разделов в меню</h2>
     <p class="hint">Стрелками ▲▼ переставьте пункты — в таком порядке они будут идти в левом меню у всех в клане. «Учёт клана» двигается целиком, вместе со своими подпунктами.</p>
@@ -143,6 +178,9 @@
       <table class="matrix-table" id="permMatrix"></table>
     </div>
   </section>
+    </div>
+    </div>
+  </div>
 </div>
 
 <div class="login-wrap" id="deniedWrap" style="display:none;">
@@ -166,6 +204,18 @@
     return;
   }
   document.getElementById("adminWrap").style.display = "";
+
+  // ---------- вкладки Админ-панели (вместо одной длинной страницы) ----------
+  const ADMIN_TAB_KEY = "l2AdminActiveTab";
+  function setAdminTab(tab){
+    document.querySelectorAll(".admin-nav-item").forEach(btn => btn.classList.toggle("active", btn.dataset.tab === tab));
+    document.querySelectorAll(".admin-tab-panel").forEach(p => p.classList.toggle("active", p.dataset.panel === tab));
+    localStorage.setItem(ADMIN_TAB_KEY, tab);
+  }
+  document.querySelectorAll(".admin-nav-item").forEach(btn => {
+    btn.addEventListener("click", () => setAdminTab(btn.dataset.tab));
+  });
+  setAdminTab(localStorage.getItem(ADMIN_TAB_KEY) || "users");
 
   const db = L2Cabinet.client;
   let roles = [], parties = [], sections = [];
