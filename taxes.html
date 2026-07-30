@@ -16,12 +16,19 @@
   .tax-chip-ahead{ border-color: var(--ok); color: var(--ok); }
   .tax-chip-debt{ border-color:#d98a3d; color:#d98a3d; }
 
-  /* отчёт по налогам матрицей (недели колонками) — тот же sticky-паттерн, что в
-     отчёте «Посещаемость»: overflow:auto + max-height на обёртке, position:sticky на шапке */
+  /* отчёт по налогам матрицей (недели колонками) — тот же приём, что в «Посещаемости»:
+     у обёртки нет overflow вообще, вместо этого display:inline-block, чтобы коробка
+     в точности повторяла размер самой таблицы (а не тянулась на всю ширину страницы) —
+     тогда ручка ресайза за right:0 всегда стоит у настоящего правого края таблицы, а
+     шапка (position:sticky) честно прилипает к окну браузера, а не к своей коробке.
+     Если таблица шире экрана — вбок листается вся страница целиком (см. JS, колесо
+     мыши крутит window, а не саму обёртку). */
   #taxReportTableWrap{
-    overflow:auto; max-height:82vh; position:relative;
-    width:100%; min-width:280px; padding-right:14px;
+    display:inline-block; vertical-align:top;
+    overflow:visible; position:relative;
+    min-width:280px; padding-right:14px;
   }
+  #taxReportTableWrap table{ width:100%; }
   #taxReportHead th{
     position:sticky; top:0; z-index:2;
     background: var(--panel); color: var(--text-dim);
@@ -43,28 +50,30 @@
   .table-resize-handle:hover, .table-resize-handle.dragging{ background: rgba(74,134,232,.4); }
 
   /* таблица слева и от самого верха, поля фильтров — колонкой справа от неё:
-     раньше они лежали над таблицей и отжимали её вниз, до данных приходилось листать */
+     раньше они лежали над таблицей и отжимали её вниз, до данных приходилось листать.
+     У колонки фильтров position:sticky — при длинной таблице (много недель — страница
+     реально скроллится вниз) она едет вместе со страницей, но не убегает вверх экрана,
+     пока не кончится сама таблица рядом с ней. */
   .tax-report-layout{ display:flex; align-items:flex-start; gap:18px; }
   .tax-report-main{ flex:0 1 auto; min-width:0; display:flex; flex-direction:column; }
-  .tax-report-side{ flex:none; width:230px; display:flex; flex-direction:column; }
+  .tax-report-side{
+    flex:none; width:230px; display:flex; flex-direction:column;
+    position:sticky; top:12px;
+  }
   .tax-report-side .btn{ align-self:flex-start; margin-bottom:4px; }
   .tax-report-side input, .tax-report-side select{ width:100%; }
 
-  /* полноэкранный отчёт: сама страница не скроллится, скроллится только таблица —
-     иначе к внутреннему скроллу таблицы добавляется ещё и внешний скролл страницы,
-     и до таблицы приходится долистывать (тот же приём, что в attendance.html) */
-  body.tax-report-focus{ height:100vh; overflow:hidden; }
-  body.tax-report-focus #taxReportView{ height:100vh; display:flex; flex-direction:column; padding:6px 12px; }
-  body.tax-report-focus #taxReportView > section.card{ flex:1; min-height:0; display:flex; flex-direction:column; padding:10px 14px; }
-  body.tax-report-focus .tax-report-layout{ flex:1; min-height:0; align-items:stretch; }
-  body.tax-report-focus .tax-report-main{ min-height:0; }
-  body.tax-report-focus #taxReportTableWrap{ flex:1; min-height:0; max-height:none; }
+  /* режим отчёта: раздел разворачивается на всю ширину, но у страницы больше нет
+     своего height:100vh/overflow:hidden — вниз и вбок листается вся страница целиком,
+     единым куском с сайтом (тот же приём, что в attendance.html). */
+  body.tax-report-focus #taxReportView{ padding:6px 12px; }
+  body.tax-report-focus #taxReportView > section.card{ padding:10px 14px; }
 
-  /* узкий экран: колонка фильтров уходит под таблицу, а не сплющивает её */
+  /* узкий экран: колонка фильтров уходит под таблицу, а не сплющивает её —
+     и там уже не липнет к верху, сама уезжает вместе с таблицей вверх-вниз */
   @media (max-width:760px){
     .tax-report-layout{ flex-direction:column; }
-    .tax-report-side{ width:100%; }
-    body.tax-report-focus .tax-report-main{ flex:1; }
+    .tax-report-side{ width:100%; position:static; }
   }
 </style>
 </head>
@@ -834,10 +843,19 @@
     openReportPicker();
   });
 
+  // матрица по неделям может быть шире экрана — крутим колесом мыши без Shift не
+  // саму обёртку (у неё нет своего скролла), а всю страницу целиком
+  const taxTableWrapEl = document.getElementById("taxReportTableWrap");
+  taxTableWrapEl.addEventListener("wheel", (e) => {
+    const doc = document.documentElement;
+    if(doc.scrollWidth <= doc.clientWidth) return;
+    e.preventDefault();
+    window.scrollBy({ left: e.deltaY });
+  }, { passive: false });
+
   // ---- растягивание таблицы за правый край, ширина запоминается ----
   // ключ свой у каждого аккаунта — за одним браузером могут сидеть разные люди
   const TAX_TABLE_WIDTH_KEY = "l2TaxTableWidth:" + profile.id;
-  const taxTableWrapEl = document.getElementById("taxReportTableWrap");
 
   const taxResizeHandle = document.createElement("div");
   taxResizeHandle.className = "table-resize-handle";
@@ -860,7 +878,13 @@
   });
   window.addEventListener("mousemove", (e) => {
     if(!taxResizing) return;
-    taxTableWrapEl.style.width = Math.max(280, taxResizeStartWidth + (e.clientX - taxResizeStartX)) + "px";
+    const newWidth = Math.max(280, taxResizeStartWidth + (e.clientX - taxResizeStartX));
+    taxTableWrapEl.style.width = newWidth + "px";
+    // таблица не может сжаться уже некуда — не даём обёртке (и ручке на ней)
+    // убежать дальше её фактического края
+    const tableEl = taxTableWrapEl.querySelector("table");
+    const actualWidth = tableEl?.getBoundingClientRect().width || 0;
+    if(actualWidth > newWidth) taxTableWrapEl.style.width = Math.ceil(actualWidth) + "px";
   });
   window.addEventListener("mouseup", () => {
     if(!taxResizing) return;
