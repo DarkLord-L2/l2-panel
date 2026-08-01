@@ -216,8 +216,13 @@ async function adminOcrNicknames(imageDataUrl){
   return body.nicknames || [];
 }
 
-// Распознавание таблицы боевой статистики (килы/смерти/PvP/PvE урон) на одном
-// скриншоте (Отчёты по мероприятиям) через Gemini. Доступно только glavadmin/admin.
+// Распознавание таблицы боевой статистики (килы/смерти/PvP/PvE урон + класс по
+// иконке) на одном скриншоте (Журнал посещаемости) через Gemini. Доступно только
+// glavadmin/admin. Раньше сюда же слались эталонные PNG-иконки классов из
+// assets/classes — убрано: набор картинок там смешанный (портреты/арт/иконки
+// скиллов, не то, что реально в партийном окне игры), и как эталон для сверки
+// иконки в скрине только сбивало модель с толку. Точность держится на самом
+// промпте (см. PROMPT в ocr-event-stats — явные подсказки по спорным парам классов).
 async function adminOcrEventStats(imageDataUrl){
   const { data: { session } } = await client.auth.getSession();
   if(!session) throw new Error("no_session");

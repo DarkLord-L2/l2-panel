@@ -37,7 +37,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
 
   let entries = [];
   let pending = [];
-  let pendingStats = new Map(); // nickname -> {kills, deaths, pvp_damage, pve_damage}, из тех же скринов
+  let pendingStats = new Map(); // nickname -> {kills, deaths, pvp_damage, pve_damage, class_name}, из тех же скринов
 
   async function load(){
     const { data, error } = await db
@@ -120,6 +120,32 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
       });
     }
 
+    // Иконка класса в скрине — считаные пиксели среди большого кадра с таблицей.
+    // Апскейлим весь скрин в 2x (с потолком по стороне, чтобы запрос не разросся
+    // безгранично) перед отправкой на распознавание — той же мелочи достаётся
+    // больше пикселей, модели физически есть с чего разбирать детали иконки.
+    function upscaleForOcr(dataUrl, scale = 2, maxSide = 2600){
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width * scale, h = img.height * scale;
+          if(Math.max(w, h) > maxSide){
+            const shrink = maxSide / Math.max(w, h);
+            w *= shrink; h *= shrink;
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(w); canvas.height = Math.round(h);
+          const ctx = canvas.getContext("2d");
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL("image/png"));
+        };
+        img.onerror = reject;
+        img.src = dataUrl;
+      });
+    }
+
     q("file-input").addEventListener("change", async () => {
       let files = Array.from(q("file-input").files);
       const statusEl = q("status");
@@ -133,7 +159,8 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
       for(let i = 0; i < files.length; i++){
         statusEl.textContent = `Распознаю скрин ${i + 1} из ${files.length}…`;
         try{
-          const dataUrl = await fileToDataUrl(files[i]);
+          const rawDataUrl = await fileToDataUrl(files[i]);
+          const dataUrl = await upscaleForOcr(rawDataUrl);
           const rows = await L2Cabinet.adminOcrEventStats(dataUrl);
           rows.forEach(r => {
             if(!r.nickname) return;
@@ -141,6 +168,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
             pendingStats.set(r.nickname, {
               kills: r.kills, deaths: r.deaths,
               pvp_damage: r.pvp_damage, pve_damage: r.pve_damage,
+              class_name: r.class_name || null,
             });
           });
           renderChips();
@@ -206,6 +234,28 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
           });
         const { error: statsErr } = await db.from("event_stats").upsert(statRows, { onConflict: "event_id,nickname" });
         if(statsErr){ errEl.textContent = "Явка сохранена, но статистика — нет: " + statsErr.message; return; }
+      }
+
+      // класс распознаётся по маленькой иконке в том же скрине (ocr-event-stats) —
+      // заполняем только тем, у кого класс ещё не указан, чтобы случайная ошибка
+      // распознавания мелкой иконки не затёрла то, что уже выверено вручную
+      const recognized = pending
+        .filter(n => pendingStats.get(n)?.class_name)
+        .map(n => ({ nickname: n, class_name: pendingStats.get(n).class_name }));
+      if(recognized.length){
+        const { data: existingClasses } = await db
+          .from("member_classes")
+          .select("nickname, class_name")
+          .eq("clan_id", profile.clan_id)
+          .in("nickname", recognized.map(r => r.nickname));
+        const alreadySet = new Set((existingClasses || []).filter(r => r.class_name).map(r => r.nickname));
+        const toFill = recognized.filter(r => !alreadySet.has(r.nickname));
+        if(toFill.length){
+          await db.from("member_classes").upsert(
+            toFill.map(r => ({ clan_id: profile.clan_id, nickname: r.nickname, class_name: r.class_name })),
+            { onConflict: "clan_id,nickname" }
+          );
+        }
       }
 
       resetUpload();
