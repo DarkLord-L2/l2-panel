@@ -448,7 +448,7 @@
 <input type="file" id="iconPicker" accept="image/*" style="display:none;" />
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=12"></script>
+<script src="js/supabase-client.js?v=15"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -465,6 +465,7 @@
   const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
   // не-админ с назначенной пати видит только свою группу — без экрана выбора и без возврата к нему
   const isPartyRestricted = !isAdmin && !!profile.party_id;
+  const myNorm = normalizeNick(profile.nickname || "");
   const db = L2Cabinet.client;
   document.getElementById("wrap").style.display = "";
   document.getElementById("addSectionBtn").style.display = isAdmin ? "" : "none";
@@ -527,7 +528,7 @@
     // порядок участников — тот же, что в разделе «Группы» (ручная перестановка иконок
     // пишется в clan_group_members.sort_order), при равенстве — по алфавиту
     const [{ data: g }, { data: m }] = await Promise.all([
-      db.from("clan_groups").select("id, name, sort_order").eq("hidden", false).order("sort_order").order("name"),
+      db.from("clan_groups").select("id, name, sort_order, leader_nickname").eq("hidden", false).order("sort_order").order("name"),
       db.from("clan_group_members").select("group_id, nickname, sort_order").order("sort_order").order("nickname"),
     ]);
     groups = g || [];
@@ -557,6 +558,28 @@
         .sort((a, b) => order.get(normalizeNick(a)) - order.get(normalizeNick(b)));
     }
     return [];
+  }
+
+  // id группы, в которой состоит ник (сравнение по нормализованному нику — та же
+  // причина, что и в currentNicks: census/группы иногда пишут ник по-разному)
+  function groupIdOfNick(nick){
+    const norm = normalizeNick(nick);
+    for(const [gid, list] of membersByGroup){
+      if(list.some(n => normalizeNick(n) === norm)) return gid;
+    }
+    return null;
+  }
+
+  // назначенный лидер пати (clan_groups.leader_nickname, ставится в «Группах») может
+  // отмечать буст только своим же одногруппникам — та же проверка (party_id совпадает
+  // с группой + ник совпадает с leader_nickname), что и isPartyLeaderOfCurrentGroup в
+  // groups.html, только тут группа берётся не из выбранной вкладки, а из группы самого nick
+  function isPartyLeaderOfNick(nick){
+    if(isAdmin) return false;
+    const gid = groupIdOfNick(nick);
+    if(gid == null || profile.party_id !== gid) return false;
+    const g = groups.find(x => x.id === gid);
+    return !!(g && g.leader_nickname && normalizeNick(g.leader_nickname) === myNorm);
   }
 
   function renderPicker(){
@@ -966,7 +989,7 @@
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.checked = valueSet.has(keyOf(currentNick, item.id));
-    cb.disabled = !isAdmin;
+    cb.disabled = !(isAdmin || isPartyLeaderOfNick(currentNick));
     cb.addEventListener("change", () => toggleValue(item.id, cb.checked));
     const track = document.createElement("span"); track.className = "track";
     sw.append(cb, track);
