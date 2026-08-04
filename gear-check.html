@@ -465,7 +465,6 @@
   const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
   // не-админ с назначенной пати видит только свою группу — без экрана выбора и без возврата к нему
   const isPartyRestricted = !isAdmin && !!profile.party_id;
-  const myNorm = normalizeNick(profile.nickname || "");
   const db = L2Cabinet.client;
   document.getElementById("wrap").style.display = "";
   document.getElementById("addSectionBtn").style.display = isAdmin ? "" : "none";
@@ -502,6 +501,7 @@
       .split("").map(ch => CYR_LOOKALIKES[ch] || ch).join("")
       .replace(/[^a-zа-яё0-9]/gi, "");
   }
+  const myNorm = normalizeNick(profile.nickname || "");
 
   const BLANK_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34'></svg>";
 
