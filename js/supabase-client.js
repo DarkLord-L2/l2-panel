@@ -212,17 +212,15 @@ async function adminOcrNicknames(imageDataUrl){
     body: JSON.stringify({ image: imageDataUrl }),
   });
   const body = await res.json().catch(() => ({}));
-  if(!res.ok) throw new Error((body.error || "request_failed") + (body.detail ? ": " + body.detail : ""));
+  if(!res.ok) throw new Error((body.error || `request_failed (HTTP ${res.status})`) + (body.detail ? ": " + body.detail : ""));
   return body.nicknames || [];
 }
 
-// Распознавание таблицы боевой статистики (килы/смерти/PvP/PvE урон + класс по
-// иконке) на одном скриншоте (Журнал посещаемости) через Gemini. Доступно только
-// glavadmin/admin. Раньше сюда же слались эталонные PNG-иконки классов из
-// assets/classes — убрано: набор картинок там смешанный (портреты/арт/иконки
-// скиллов, не то, что реально в партийном окне игры), и как эталон для сверки
-// иконки в скрине только сбивало модель с толку. Точность держится на самом
-// промпте (см. PROMPT в ocr-event-stats — явные подсказки по спорным парам классов).
+// Распознавание таблицы боевой статистики (килы/смерти/PvP/PvE урон) на одном
+// скриншоте (Журнал посещаемости) через Gemini. Доступно только glavadmin/admin.
+// Распознавание класса персонажа по иконке пробовали (вторым запросом,
+// adminOcrClassifyIcons) и убрали — иконку (36 похожих вариантов) не удалось
+// распознавать стабильно, ник и цифры модель читает надёжно и без этого.
 async function adminOcrEventStats(imageDataUrl){
   const { data: { session } } = await client.auth.getSession();
   if(!session) throw new Error("no_session");
@@ -236,7 +234,7 @@ async function adminOcrEventStats(imageDataUrl){
     body: JSON.stringify({ image: imageDataUrl }),
   });
   const body = await res.json().catch(() => ({}));
-  if(!res.ok) throw new Error((body.error || "request_failed") + (body.detail ? ": " + body.detail : ""));
+  if(!res.ok) throw new Error((body.error || `request_failed (HTTP ${res.status})`) + (body.detail ? ": " + body.detail : ""));
   return body.stats || [];
 }
 

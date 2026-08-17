@@ -9,6 +9,13 @@
 // автоматически попадают в event_stats. Отдельного шага «добавить статистику»
 // в «Отчётах по мероприятиям» больше нет — эта страница лишь показывает то,
 // что уже посчиталось здесь.
+//
+// Распознавание профессии по иконке пробовали (два прохода через Gemini, потом
+// локальное пиксельное сравнение с эталонами) и в итоге убрали целиком — ник и
+// цифры модель читает надёжно, а иконку (маленькая, 36 похожих вариантов) не
+// удалось распознавать стабильно ни одним из способов. Профессия участника
+// по-прежнему видна в «Группах»/«Проверке буста» (member_classes) — просто не
+// автоматизирована по скрину явки.
 
 function initEventRoster({ root, eventId, profile, isAdmin, db }){
   root.innerHTML = `
@@ -37,7 +44,9 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
 
   let entries = [];
   let pending = [];
-  let pendingStats = new Map(); // nickname -> {kills, deaths, pvp_damage, pve_damage, class_name}, из тех же скринов
+  let pendingStats = new Map(); // nickname -> {kills, deaths, pvp_damage, pve_damage}, из тех же скринов
+  let pendingBatchOf = new Map(); // nickname -> индекс скрина (в этой сессии загрузки), с которого он распознан
+  let batchCount = 0; // сколько скринов в этой сессии дали хотя бы одного распознанного ника
 
   async function load(){
     const { data, error } = await db
@@ -98,6 +107,8 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
     function resetUpload(){
       pending = [];
       pendingStats = new Map();
+      pendingBatchOf = new Map();
+      batchCount = 0;
       q("file-input").value = "";
       q("status").textContent = "";
       q("error").textContent = "";
@@ -120,10 +131,9 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
       });
     }
 
-    // Иконка класса в скрине — считаные пиксели среди большого кадра с таблицей.
-    // Апскейлим весь скрин в 2x (с потолком по стороне, чтобы запрос не разросся
-    // безгранично) перед отправкой на распознавание — той же мелочи достаётся
-    // больше пикселей, модели физически есть с чего разбирать детали иконки.
+    // Апскейлим скрин в 2x (с потолком по стороне, чтобы запрос не разросся
+    // безгранично) перед распознаванием — мелкому тексту (ники, цифры)
+    // достаётся больше пикселей, читается надёжнее.
     function upscaleForOcr(dataUrl, scale = 2, maxSide = 2600){
       return new Promise((resolve, reject) => {
         const img = new Image();
@@ -162,14 +172,21 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
           const rawDataUrl = await fileToDataUrl(files[i]);
           const dataUrl = await upscaleForOcr(rawDataUrl);
           const rows = await L2Cabinet.adminOcrEventStats(dataUrl);
+
+          // индекс скрина заводим лениво, только если он реально дал хоть одного ника —
+          // «Отчёт по мероприятиям» использует эти индексы, чтобы группировать строки
+          // по скрину (пати) и подписывать блок именем группы клана или «Соло»
+          const hasAny = rows.some(r => r.nickname);
+          const bIdx = hasAny ? batchCount++ : null;
+
           rows.forEach(r => {
             if(!r.nickname) return;
             if(!pending.includes(r.nickname)) pending.push(r.nickname);
             pendingStats.set(r.nickname, {
               kills: r.kills, deaths: r.deaths,
               pvp_damage: r.pvp_damage, pve_damage: r.pve_damage,
-              class_name: r.class_name || null,
             });
+            pendingBatchOf.set(r.nickname, bIdx);
           });
           renderChips();
         }catch(err){
@@ -215,10 +232,24 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
       // отдельного шага в «Отчётах»; повторная загрузка скрина с поправленными
       // цифрами просто перезапишет старые значения (upsert по event_id+nickname)
       if(pendingStats.size){
+        // по одной записи-«скрину» на каждый batchCount — последовательно, не массовым
+        // insert, чтобы не полагаться на порядок строк ответа: скринов максимум 9,
+        // действие админское и нечастое, разница в цене не имеет значения
+        const batchIds = [];
+        for(let bi = 0; bi < batchCount; bi++){
+          const { data: batchRow, error: batchErr } = await db
+            .from("event_screenshot_batches")
+            .insert({ clan_id: profile.clan_id, event_id: eventId, created_by: profile.id })
+            .select("id").single();
+          if(batchErr){ errEl.textContent = "Не удалось сохранить метку скрина: " + batchErr.message; return; }
+          batchIds.push(batchRow.id);
+        }
+
         const statRows = pending
           .filter(n => pendingStats.has(n))
           .map(n => {
             const s = pendingStats.get(n);
+            const bIdx = pendingBatchOf.get(n);
             return {
               clan_id: profile.clan_id,
               event_id: eventId,
@@ -227,35 +258,15 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
               deaths: s.deaths,
               pvp_damage: s.pvp_damage,
               pve_damage: s.pve_damage,
+              batch_id: (bIdx != null) ? batchIds[bIdx] : null,
               removed: false, // если ник раньше был помечен «удалён» — новое распознавание снимает пометку
               created_by: profile.id,
               updated_at: new Date().toISOString(),
             };
           });
+
         const { error: statsErr } = await db.from("event_stats").upsert(statRows, { onConflict: "event_id,nickname" });
         if(statsErr){ errEl.textContent = "Явка сохранена, но статистика — нет: " + statsErr.message; return; }
-      }
-
-      // класс распознаётся по маленькой иконке в том же скрине (ocr-event-stats) —
-      // заполняем только тем, у кого класс ещё не указан, чтобы случайная ошибка
-      // распознавания мелкой иконки не затёрла то, что уже выверено вручную
-      const recognized = pending
-        .filter(n => pendingStats.get(n)?.class_name)
-        .map(n => ({ nickname: n, class_name: pendingStats.get(n).class_name }));
-      if(recognized.length){
-        const { data: existingClasses } = await db
-          .from("member_classes")
-          .select("nickname, class_name")
-          .eq("clan_id", profile.clan_id)
-          .in("nickname", recognized.map(r => r.nickname));
-        const alreadySet = new Set((existingClasses || []).filter(r => r.class_name).map(r => r.nickname));
-        const toFill = recognized.filter(r => !alreadySet.has(r.nickname));
-        if(toFill.length){
-          await db.from("member_classes").upsert(
-            toFill.map(r => ({ clan_id: profile.clan_id, nickname: r.nickname, class_name: r.class_name })),
-            { onConflict: "clan_id,nickname" }
-          );
-        }
       }
 
       resetUpload();

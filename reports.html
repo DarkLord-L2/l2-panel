@@ -71,10 +71,19 @@
 
   .rep-nick{ display:flex; align-items:center; gap:10px; }
   .rep-nick .avatar{
-    width:34px; height:34px; flex:none;
-    border-radius:50%; object-fit:cover;
+    width:34px; height:34px;
+    border-radius:50%; object-fit:cover; display:block;
     border:1px solid var(--border); background: var(--panel-2);
   }
+  /* доп-профессии за неделю (по ручным override'ам за отдельные мероприятия
+     недели) — кружочки поверх аватарки, тот же паттерн, что в groups.html */
+  .rep-nick .avatar-wrap{ position:relative; flex:none; }
+  .rep-nick .sub-avatar-row{ position:absolute; right:-3px; bottom:-3px; display:flex; }
+  .rep-nick .sub-avatar{
+    width:15px; height:15px; border-radius:50%; object-fit:cover; display:block;
+    border:2px solid var(--panel-2); background: var(--panel); margin-right:-6px;
+  }
+  .rep-nick .sub-avatar:last-child{ margin-right:0; }
   .rep-nick .who{ display:flex; flex-direction:column; gap:1px; min-width:0; }
   .rep-nick .name{ color: var(--text); font-weight:600; }
   .rep-nick .cls{ font-size:11px; color: var(--text-dim); }
@@ -128,6 +137,25 @@
 
   .rep-filters{ display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; }
   .rep-filters .field{ margin:0; min-width:200px; }
+
+  /* подпись-«шапка» перед строками одного скрина явки, только в событийном виде */
+  tr.rep-batch-subhead td{ background: var(--panel-2); padding:6px 12px; border-bottom:1px solid var(--border-lit); }
+  .rep-batch-label{ font-size:11.5px; font-weight:600; color: var(--gold-dim); text-transform:uppercase; letter-spacing:.02em; }
+  .rep-batch-gear{
+    margin-left:8px; width:20px; height:20px; padding:0; border-radius:5px; border:1px solid transparent;
+    background:none; color: var(--text-dim); font-size:12px; cursor:pointer; vertical-align:middle;
+  }
+  .rep-batch-gear:hover{ border-color: var(--border); color: var(--text); }
+  .rep-batch-rename-input{ font-size:12px; padding:3px 6px; width:180px; }
+  .rep-batch-rename-save{ margin-left:6px; padding:2px 10px; font-size:11px; }
+
+  /* повтор .settings-btn из attendance.html — этого класса нет в общем theme.css */
+  .settings-btn{
+    position:fixed; top:14px; right:16px; height:32px; padding:0 12px;
+    border-radius:6px; border:1px solid var(--border); background: var(--panel);
+    color: var(--text-dim); font-size:13px; font-family:inherit; cursor:pointer; z-index:56;
+  }
+  .settings-btn:hover{ border-color: var(--border-lit); color: var(--text); }
 
   /* ---- радар-график (текущий период vs среднее) ---- */
   /* радары тянутся вместе с панелью (потолок — чтобы на широкой не распухали) */
@@ -238,8 +266,30 @@
   </div>
 </div>
 
+<button class="settings-btn" id="groupLabelSettingsBtn" title="Настройки меток пати" style="display:none;">⚙ Метки пати</button>
+<div class="modal-overlay" id="groupLabelSettingsOverlay">
+  <div class="modal">
+    <button class="modal-close" id="groupLabelSettingsClose" title="Закрыть">×</button>
+    <h2>Метки пати на скринах явки</h2>
+    <p class="hint">Если среди ников, распознанных на скрине явки, минимум столько-то состоят
+      в одной группе клана — блок подписывается её названием; иначе — названием ниже.
+      Это правило пересчитывается на лету и задним числом переподписывает уже сохранённые
+      скрины (кроме тех, что переименованы вручную).</p>
+    <div class="field">
+      <label for="minGroupCountInput">Минимум ников из одной группы (макс. 9 на скрине)</label>
+      <input type="number" id="minGroupCountInput" min="1" max="9" />
+    </div>
+    <div class="field">
+      <label for="soloLabelInput">Название, если группа не набралась</label>
+      <input type="text" id="soloLabelInput" maxlength="40" />
+    </div>
+    <button class="btn btn-primary" id="groupLabelSettingsSaveBtn">Сохранить</button>
+    <p class="error-msg" id="groupLabelSettingsError"></p>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=12"></script>
+<script src="js/supabase-client.js?v=16"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -259,6 +309,7 @@
   const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
   // не-админ с назначенной пати видит только свою группу во всех фильтрах по группе
   const isPartyRestricted = !isAdmin && !!profile.party_id;
+  document.getElementById("groupLabelSettingsBtn").style.display = isAdmin ? "" : "none";
 
   // статистика (килы/смерти/PvP/PvE) заносится в event_stats автоматически при
   // загрузке скринов в «Посещаемости» (js/event-roster.js) — здесь только просмотр.
@@ -338,41 +389,100 @@
     return [info.class_name, info.class_name_2, info.class_name_3, info.class_name_4].filter(Boolean);
   }
 
-  // ---- вторая профессия: какую из двух показать по числу килов на мероприятии ----
-  let supportClasses = new Set();
-  let killThreshold = 8;
-
-  async function loadDualClassSettings(){
-    const [{ data: sc, error: scErr }, { data: ds, error: dsErr }] = await Promise.all([
-      db.from("support_classes").select("class_name"),
-      db.from("dual_class_settings").select("kill_threshold").maybeSingle(),
-    ]);
-    if(scErr) console.error(scErr);
-    if(dsErr) console.error(dsErr);
-    supportClasses = new Set((sc || []).map(r => r.class_name));
-    killThreshold = ds?.kill_threshold ?? 8;
-  }
-
-  // Профессия, выбранная вручную для ТЕКУЩЕГО периода, перебивает автоподбор.
-  // В другом периоде её нет — там снова работает прежняя логика: одна профессия —
-  // показываем её; две, где одна саппорт, а другая нет — выбираем по числу килов
-  // (меньше порога → саппорт, иначе боевая). swapped=true, если выбранная отличается
-  // от первой (основной) — по этому флагу рисуется точка у ника.
+  // Профессия по умолчанию — всегда первая (основная) из «Групп». Ручной
+  // override для ТЕКУЩЕГО периода (клик по аватарке) перебивает её — единственный
+  // способ показать что-то отличное от основной профессии, никакого автоподбора
+  // по килам больше нет (пробовали — не надо, слишком нестабильно). swapped=true,
+  // если выбранная отличается от первой (основной) — по этому флагу рисуется
+  // точка у ника.
   function pickDisplayClass(info, kills, nickname){
     const all = memberClasses(info);
-    const c1 = info.class_name || "", c2 = info.class_name_2 || "";
+    const c1 = info.class_name || "";
 
     const forced = forcedClassFor(nickname);
     if(forced && all.includes(forced)) return { name: forced, swapped: forced !== c1, forced: true };
 
-    if(!c2) return { name: c1, swapped: false, forced: false };
-    const c1Support = supportClasses.has(c1);
-    const c2Support = supportClasses.has(c2);
-    if(c1Support === c2Support) return { name: c1, swapped: false, forced: false };
-    const supportClass = c1Support ? c1 : c2;
-    const ddClass = c1Support ? c2 : c1;
-    const chosen = kills < killThreshold ? supportClass : ddClass;
-    return { name: chosen, swapped: chosen !== c1, forced: false };
+    return { name: c1, swapped: false, forced: false };
+  }
+
+  // В недельном виде, кроме ручного override'а на саму неделю целиком (см.
+  // pickDisplayClass выше — высший приоритет, тут не трогается), смотрим, не
+  // проставлены ли ручные override'ы ПО ОТДЕЛЬНЫМ мероприятиям недели (тем же
+  // попапом, только когда открыто конкретное мероприятие) — если да, берём
+  // самую частую профессию среди них, остальные уникальные — бейджами-кружочками
+  // у аватарки (как саб-классы в «Группах»). Никакой автоматики по килам — только
+  // то, что вручную проставлено.
+  let weekEventOverridesByNorm = new Map(); // normalizeNick(ник) -> [{event_id, class_name}, ...]
+
+  async function loadWeekEventOverrides(weekStart){
+    weekEventOverridesByNorm = new Map();
+    if(!weekStart) return;
+    const weekEventIds = events.filter(e => e.week_start === weekStart).map(e => e.id);
+    if(!weekEventIds.length) return;
+    const { data, error } = await db
+      .from("report_class_overrides")
+      .select("nickname_norm, period_key, class_name")
+      .eq("clan_id", profile.clan_id)
+      .in("period_key", weekEventIds.map(id => "event:" + id));
+    if(error){ console.error(error); return; }
+    (data || []).forEach(r => {
+      if(!weekEventOverridesByNorm.has(r.nickname_norm)) weekEventOverridesByNorm.set(r.nickname_norm, []);
+      weekEventOverridesByNorm.get(r.nickname_norm).push({
+        event_id: r.period_key.slice("event:".length),
+        class_name: r.class_name,
+      });
+    });
+  }
+
+  function eventDateOf(eventId){
+    const e = events.find(x => x.id === eventId);
+    return e ? e.event_date : "";
+  }
+
+  // Для КАЖДОГО мероприятия недели, на котором отметился этот ник (entries),
+  // берём ручной override, если он стоит именно на этом мероприятии, иначе —
+  // основную профессию (c1) — «не трогали» здесь означает «был на основной»,
+  // а не «неизвестно», поэтому такое мероприятие тоже участвует в подсчёте.
+  // Самая частая получившаяся профессия — основная, остальные уникальные —
+  // в бейджи. При равенстве частот побеждает та, что встретилась раньше по
+  // датам мероприятий недели. Если ни одной ручной правки за неделю нет —
+  // возвращаем null, дальше сработает обычный показ (без агрегации).
+  function weekClassSummary(info, nickname, entries){
+    const manualList = weekEventOverridesByNorm.get(normalizeNick(nickname));
+    if(!manualList || !manualList.length || !entries || !entries.length) return null;
+    const c1 = info.class_name || "";
+    if(!c1) return null;
+    const manualByEvent = new Map(manualList.map(e => [e.event_id, e.class_name]));
+    const picks = entries.map(e => ({
+      event_id: e.event_id,
+      class_name: manualByEvent.get(e.event_id) || c1,
+    }));
+    const ordered = picks.slice().sort((a, b) => eventDateOf(a.event_id).localeCompare(eventDateOf(b.event_id)));
+    const freq = new Map();
+    ordered.forEach(e => freq.set(e.class_name, (freq.get(e.class_name) || 0) + 1));
+    let primary = null, primaryCount = 0;
+    ordered.forEach(e => {
+      const c = freq.get(e.class_name);
+      if(c > primaryCount){ primaryCount = c; primary = e.class_name; }
+    });
+    const others = [...freq.keys()].filter(c => c !== primary);
+    return { primary, others };
+  }
+
+  // В недельном виде ручной override НА ВСЮ НЕДЕЛЮ больше не проверяется вообще
+  // (даже если в базе завалялась старая запись с period_key="week:..." — она
+  // просто игнорируется): такая запись не может сосуществовать с подсчётом по
+  // отдельным мероприятиям без путаницы (одно тихо перебивает другое). Правки
+  // делаются только по конкретным мероприятиям — см. weekClassSummary выше.
+  // entries — сырые (nickname, event_id) этого человека за выбранный период.
+  function pickDisplayClassForPeriod(info, kills, nickname, entries){
+    if(periodValue.startsWith("week:")){
+      const c1 = info.class_name || "";
+      const summary = weekClassSummary(info, nickname, entries);
+      if(!summary) return { name: c1, swapped: false, forced: false, badges: [] };
+      return { name: summary.primary, swapped: summary.primary !== c1, forced: false, badges: summary.others };
+    }
+    return { ...pickDisplayClass(info, kills, nickname), badges: [] };
   }
 
   // ---- принудительная смена профессии: попап по клику на иконку класса ----
@@ -449,7 +559,7 @@
     if(all.length > 1){
       const autoOpt = document.createElement("button");
       autoOpt.className = "rep-class-opt" + (forced ? "" : " active");
-      autoOpt.innerHTML = '<span class="ic">А</span><span>Авто (по килам)</span>';
+      autoOpt.innerHTML = '<span class="ic">А</span><span>Авто (основная профессия)</span>';
       autoOpt.addEventListener("click", () => { closeClassPopup(); setForcedClass(reportNick, ""); });
       pop.appendChild(autoOpt);
     }
@@ -530,7 +640,8 @@
   async function loadAllStats(){
     const { data, error } = await db
       .from("event_stats")
-      .select("nickname, kills, deaths, pvp_damage, pve_damage, event_id, removed, attendance_events!inner(week_start)");
+      .select("nickname, kills, deaths, pvp_damage, pve_damage, event_id, removed, batch_id, " +
+        "attendance_events!inner(week_start), event_screenshot_batches(manual_label, created_at)");
     if(error){ console.error(error); allRawStats = []; return; }
     allRawStats = (data || []).map(r => ({
       nickname: r.nickname,
@@ -538,7 +649,19 @@
       pvp: r.pvp_damage, pve: r.pve_damage,
       event_id: r.event_id, week_start: r.attendance_events?.week_start,
       removed: !!r.removed,
+      batch_id: r.batch_id || null,
+      batch_manual_label: r.event_screenshot_batches?.manual_label ?? null,
+      batch_created_at: r.event_screenshot_batches?.created_at ?? null,
     }));
+  }
+
+  // ---- метка пати на скрине явки: «Отчёт по мероприятиям» ----
+  let groupLabelMinCount = 5, groupLabelSoloName = "Соло";
+  async function loadGroupLabelSettings(){
+    const { data, error } = await db.from("group_label_settings").select("min_group_count, solo_label").maybeSingle();
+    if(error) console.error(error);
+    groupLabelMinCount = data?.min_group_count ?? 5;
+    groupLabelSoloName = data?.solo_label ?? "Соло";
   }
 
   function passesGroupFilter(nickname){
@@ -637,6 +760,42 @@
     refreshReport();
   });
 
+  document.getElementById("groupLabelSettingsBtn").addEventListener("click", async () => {
+    await loadGroupLabelSettings();
+    document.getElementById("minGroupCountInput").value = groupLabelMinCount;
+    document.getElementById("soloLabelInput").value = groupLabelSoloName;
+    document.getElementById("groupLabelSettingsError").textContent = "";
+    document.getElementById("groupLabelSettingsOverlay").classList.add("show");
+  });
+  document.getElementById("groupLabelSettingsClose").addEventListener("click", () => {
+    document.getElementById("groupLabelSettingsOverlay").classList.remove("show");
+  });
+  document.getElementById("groupLabelSettingsOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "groupLabelSettingsOverlay") e.currentTarget.classList.remove("show");
+  });
+  document.getElementById("groupLabelSettingsSaveBtn").addEventListener("click", async () => {
+    const errEl = document.getElementById("groupLabelSettingsError");
+    errEl.textContent = "";
+    const minCount = Number(document.getElementById("minGroupCountInput").value);
+    const soloLabel = document.getElementById("soloLabelInput").value.trim();
+    if(!Number.isInteger(minCount) || minCount < 1 || minCount > 9){
+      errEl.textContent = "Минимум ников — целое число от 1 до 9.";
+      return;
+    }
+    if(!soloLabel){
+      errEl.textContent = "Название не может быть пустым.";
+      return;
+    }
+    const { error } = await db.from("group_label_settings").upsert(
+      { clan_id: profile.clan_id, min_group_count: minCount, solo_label: soloLabel },
+      { onConflict: "clan_id" }
+    );
+    if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
+    document.getElementById("groupLabelSettingsOverlay").classList.remove("show");
+    await loadGroupLabelSettings();
+    await refreshReport();
+  });
+
   function filteredStats(){
     return allRawStats.filter(r => passesGroupFilter(r.nickname));
   }
@@ -675,6 +834,63 @@
       kd: r.deaths > 0 ? r.kills / r.deaths : r.kills,
       removed: r.removedCount === r.rowCount,
     }));
+  }
+
+  // Метка пати на скрине явки — считается на лету при каждом рендере (как dual-class
+  // kill_threshold ниже), а не замораживается в момент сохранения скрина: при смене
+  // порога/названия «Соло» в настройках задним числом переподписываются все старые скрины.
+  // nicknames — все ники, распознанные на ОДНОМ скрине (одном event_screenshot_batches).
+  function computeBatchAutoLabel(nicknames){
+    const seenNorm = new Set();
+    const counts = new Map(); // group id -> сколько разных людей со скрина в этой группе
+    const names = new Map();  // group id -> имя группы
+    nicknames.forEach(nick => {
+      const norm = normalizeNick(nick);
+      if(seenNorm.has(norm)) return; // один и тот же человек дважды на одном скрине не считаем
+      seenNorm.add(norm);
+      const seenGroupIds = new Set();
+      lookupGroups(nick).forEach(g => {
+        if(seenGroupIds.has(g.id)) return; // ник в одной группе дважды тоже не задвоит счётчик
+        seenGroupIds.add(g.id);
+        counts.set(g.id, (counts.get(g.id) || 0) + 1);
+        names.set(g.id, g.name);
+      });
+    });
+    let maxCount = 0;
+    counts.forEach(c => { if(c > maxCount) maxCount = c; });
+    if(maxCount === 0 || maxCount < groupLabelMinCount) return groupLabelSoloName;
+    const winners = [...counts.entries()].filter(([, c]) => c === maxCount);
+    if(winners.length !== 1) return groupLabelSoloName; // 2+ группы поровну — явного большинства нет
+    return names.get(winners[0][0]);
+  }
+
+  function batchDisplayLabel(batch){
+    return batch.manual_label || computeBatchAutoLabel(batch.rows.map(r => r.nickname));
+  }
+
+  // группирует сырые строки события по скрину (batch_id) — только для событийного вида
+  // отчёта; строки без batch_id (записи до этой фичи, или добавленные вручную без скрина)
+  // уходят отдельным нередактируемым блоком в конец
+  function groupRowsByBatch(rows){
+    const byBatch = new Map();
+    rows.forEach(r => {
+      const key = r.batch_id || "__none__";
+      if(!byBatch.has(key)) byBatch.set(key, []);
+      byBatch.get(key).push(r);
+    });
+    const real = [...byBatch.entries()]
+      .filter(([id]) => id !== "__none__")
+      .map(([id, batchRows]) => ({
+        id, rows: batchRows,
+        manual_label: batchRows[0].batch_manual_label,
+        created_at: batchRows[0].batch_created_at,
+      }))
+      .sort((a, b) => (a.created_at || "").localeCompare(b.created_at || ""));
+    real.forEach((b, i) => { b.ordinal = i + 1; });
+    if(byBatch.has("__none__")){
+      real.push({ id: null, rows: byBatch.get("__none__"), manual_label: null, created_at: null, ordinal: null });
+    }
+    return real;
   }
 
   function totals(rows){
@@ -773,7 +989,142 @@
     refreshReport();
   }
 
-  function renderReportTable(rows){
+  function renderPersonRow(body, r){
+    const info = lookupMemberInfo(r.nickname);
+    const picked = pickDisplayClassForPeriod(info, r.kills, r.nickname, r.entries);
+    const avatarSrc = info.icon || classIcon(picked.name) || BLANK_IMG;
+    const tr = document.createElement("tr");
+    if(r.removed) tr.className = "rep-row-removed";
+
+    const subAvatars = (picked.badges || [])
+      .map(name => {
+        const src = classIcon(name);
+        return src ? `<img class="sub-avatar" src="${src}" alt="" title="${escapeHtml(name)}" />` : "";
+      })
+      .join("");
+
+    // на «Вся неделя» аватарка не кликабельна — профессия за неделю только
+    // складывается из отдельных мероприятий (см. weekClassSummary), менять
+    // вручную можно лишь по конкретному мероприятию в фильтре выше
+    const editable = isAdmin && !periodValue.startsWith("week:");
+
+    const tdNick = document.createElement("td");
+    tdNick.className = "rep-col-nick";
+    const dotTitle = picked.forced
+      ? "Профессия выбрана вручную — только для этого периода"
+      : "Профессия по умолчанию";
+    tdNick.innerHTML = `<div class="rep-nick"><span class="avatar-wrap"><img class="avatar${editable ? " rep-avatar-btn" : ""}" src="${avatarSrc}" alt=""` +
+      `${editable ? ' title="Сменить профессию"' : ""} />` +
+      (subAvatars ? `<span class="sub-avatar-row">${subAvatars}</span>` : "") +
+      `</span>` +
+      `<span class="who"><span class="name">${escapeHtml(r.nickname)}` +
+      `${r.removed ? ' <span class="rep-removed-badge">удалён</span>' : ""}` +
+      `${picked.swapped ? ` <span class="rep-swap-dot${picked.forced ? " forced" : ""}" title="${dotTitle}"></span>` : ""}</span>` +
+      `<span class="cls">${escapeHtml(picked.name || "")}</span></span></div>`;
+
+    if(editable){
+      const avatarEl = tdNick.querySelector(".avatar");
+      avatarEl.addEventListener("click", (e) => {
+        e.stopPropagation();
+        // повторный клик по той же иконке закрывает уже открытый попап
+        const wasOpen = classPopupEl && classPopupEl.parentElement === avatarEl.parentElement;
+        closeClassPopup();
+        if(!wasOpen) openClassPopup(avatarEl, r.nickname, info, picked);
+      });
+    }
+
+    const tdKills = document.createElement("td"); tdKills.textContent = r.kills.toLocaleString("ru-RU");
+    const tdDeaths = document.createElement("td"); tdDeaths.textContent = r.deaths.toLocaleString("ru-RU");
+    const tdKd = document.createElement("td"); tdKd.textContent = r.kd.toFixed(2);
+    const tdPvp = document.createElement("td"); tdPvp.textContent = r.pvp.toLocaleString("ru-RU");
+    const tdPve = document.createElement("td"); tdPve.textContent = r.pve.toLocaleString("ru-RU");
+    tr.append(tdNick, tdKills, tdDeaths, tdKd, tdPvp, tdPve);
+
+    if(isAdmin){
+      const tdActions = document.createElement("td");
+      tdActions.className = "rep-col-actions";
+
+      if(r.removed){
+        const restoreBtn = document.createElement("button");
+        restoreBtn.className = "btn btn-ghost";
+        restoreBtn.textContent = "Восстановить";
+        restoreBtn.addEventListener("click", () => setNicknameRemoved(r.entries, false));
+        tdActions.appendChild(restoreBtn);
+
+        const purgeBtn = document.createElement("button");
+        purgeBtn.className = "btn btn-danger";
+        purgeBtn.textContent = "Удалить навсегда";
+        purgeBtn.addEventListener("click", () => {
+          if(confirm(`Удалить ${r.nickname} навсегда? Статистика будет стёрта без возможности восстановления.`)){
+            deleteNicknamePermanently(r.entries);
+          }
+        });
+        tdActions.appendChild(purgeBtn);
+      } else {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-danger";
+        btn.textContent = "Удалить";
+        btn.addEventListener("click", () => {
+          if(confirm(`Удалить ${r.nickname} из этого отчёта?`)) setNicknameRemoved(r.entries, true);
+        });
+        tdActions.appendChild(btn);
+      }
+
+      tr.appendChild(tdActions);
+    }
+
+    body.appendChild(tr);
+  }
+
+  // подпись-«шапка» перед строками одного скрина в событийном виде отчёта; у админа —
+  // с шестерёнкой для ручного переименования метки (перебивает авто-подбор по группе)
+  function renderBatchSubheader(body, batch){
+    const tr = document.createElement("tr");
+    tr.className = "rep-batch-subhead";
+    const td = document.createElement("td");
+    td.colSpan = isAdmin ? 7 : 6;
+
+    const labelSpan = document.createElement("span");
+    labelSpan.className = "rep-batch-label";
+    labelSpan.textContent = batch.ordinal ? `Скрин ${batch.ordinal}: ${batchDisplayLabel(batch)}` : "Без привязки к скрину";
+    td.appendChild(labelSpan);
+
+    if(isAdmin && batch.id){
+      const gearBtn = document.createElement("button");
+      gearBtn.className = "rep-batch-gear";
+      gearBtn.textContent = "⚙";
+      gearBtn.title = "Переименовать метку скрина";
+      gearBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "rep-batch-rename-input";
+        input.maxLength = 60;
+        input.value = batch.manual_label || batchDisplayLabel(batch);
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "btn btn-primary rep-batch-rename-save";
+        saveBtn.textContent = "OK";
+        saveBtn.addEventListener("click", async () => {
+          const val = input.value.trim();
+          const { error } = await db.from("event_screenshot_batches")
+            .update({ manual_label: val || null }).eq("id", batch.id);
+          if(error){ alert("Не удалось сохранить: " + error.message); return; }
+          await loadAllStats();
+          refreshReport();
+        });
+        input.addEventListener("keydown", (ev) => { if(ev.key === "Enter"){ ev.preventDefault(); saveBtn.click(); } });
+        td.innerHTML = "";
+        td.append(input, saveBtn);
+        input.focus();
+      });
+      td.appendChild(gearBtn);
+    }
+
+    tr.appendChild(td);
+    body.appendChild(tr);
+  }
+
+  function renderReportTable(periodRowsRaw){
     const head = document.getElementById("repHead");
     head.innerHTML = '<tr>' +
       '<th class="rep-col-nick">Ник</th>' +
@@ -782,83 +1133,21 @@
       '</tr>';
     applyStickyHead();
 
-    const sorted = sortRows(rows);
     const body = document.getElementById("repBody");
     body.innerHTML = "";
-    document.getElementById("repEmpty").style.display = sorted.length ? "none" : "";
+    document.getElementById("repEmpty").style.display = periodRowsRaw.length ? "none" : "";
 
-    sorted.forEach(r => {
-      const info = lookupMemberInfo(r.nickname);
-      const picked = pickDisplayClass(info, r.kills, r.nickname);
-      const avatarSrc = info.icon || classIcon(picked.name) || BLANK_IMG;
-      const tr = document.createElement("tr");
-      if(r.removed) tr.className = "rep-row-removed";
-
-      const tdNick = document.createElement("td");
-      tdNick.className = "rep-col-nick";
-      const dotTitle = picked.forced
-        ? "Профессия выбрана вручную — только для этого периода"
-        : "Профессия подобрана автоматически по числу килов";
-      tdNick.innerHTML = `<div class="rep-nick"><img class="avatar${isAdmin ? " rep-avatar-btn" : ""}" src="${avatarSrc}" alt=""` +
-        `${isAdmin ? ' title="Сменить профессию"' : ""} />` +
-        `<span class="who"><span class="name">${escapeHtml(r.nickname)}` +
-        `${r.removed ? ' <span class="rep-removed-badge">удалён</span>' : ""}` +
-        `${picked.swapped ? ` <span class="rep-swap-dot${picked.forced ? " forced" : ""}" title="${dotTitle}"></span>` : ""}</span>` +
-        `<span class="cls">${escapeHtml(picked.name || "")}</span></span></div>`;
-
-      if(isAdmin){
-        const avatarEl = tdNick.querySelector(".avatar");
-        avatarEl.addEventListener("click", (e) => {
-          e.stopPropagation();
-          // повторный клик по той же иконке закрывает уже открытый попап
-          const wasOpen = classPopupEl && classPopupEl.parentElement === avatarEl.parentElement;
-          closeClassPopup();
-          if(!wasOpen) openClassPopup(avatarEl, r.nickname, info, picked);
-        });
-      }
-
-      const tdKills = document.createElement("td"); tdKills.textContent = r.kills.toLocaleString("ru-RU");
-      const tdDeaths = document.createElement("td"); tdDeaths.textContent = r.deaths.toLocaleString("ru-RU");
-      const tdKd = document.createElement("td"); tdKd.textContent = r.kd.toFixed(2);
-      const tdPvp = document.createElement("td"); tdPvp.textContent = r.pvp.toLocaleString("ru-RU");
-      const tdPve = document.createElement("td"); tdPve.textContent = r.pve.toLocaleString("ru-RU");
-      tr.append(tdNick, tdKills, tdDeaths, tdKd, tdPvp, tdPve);
-
-      if(isAdmin){
-        const tdActions = document.createElement("td");
-        tdActions.className = "rep-col-actions";
-
-        if(r.removed){
-          const restoreBtn = document.createElement("button");
-          restoreBtn.className = "btn btn-ghost";
-          restoreBtn.textContent = "Восстановить";
-          restoreBtn.addEventListener("click", () => setNicknameRemoved(r.entries, false));
-          tdActions.appendChild(restoreBtn);
-
-          const purgeBtn = document.createElement("button");
-          purgeBtn.className = "btn btn-danger";
-          purgeBtn.textContent = "Удалить навсегда";
-          purgeBtn.addEventListener("click", () => {
-            if(confirm(`Удалить ${r.nickname} навсегда? Статистика будет стёрта без возможности восстановления.`)){
-              deleteNicknamePermanently(r.entries);
-            }
-          });
-          tdActions.appendChild(purgeBtn);
-        } else {
-          const btn = document.createElement("button");
-          btn.className = "btn btn-danger";
-          btn.textContent = "Удалить";
-          btn.addEventListener("click", () => {
-            if(confirm(`Удалить ${r.nickname} из этого отчёта?`)) setNicknameRemoved(r.entries, true);
-          });
-          tdActions.appendChild(btn);
-        }
-
-        tr.appendChild(tdActions);
-      }
-
-      body.appendChild(tr);
-    });
+    if(periodValue.startsWith("event:")){
+      groupRowsByBatch(periodRowsRaw).forEach(batch => {
+        // строки без привязки к скрину (домиграционные/добавленные вручную) —
+        // без подписи-«шапки», просто обычными строками, не нужно мозолить
+        // глаза служебной меткой на пустом месте
+        if(batch.id) renderBatchSubheader(body, batch);
+        sortRows(aggregateByNickname(batch.rows)).forEach(r => renderPersonRow(body, r));
+      });
+    } else {
+      sortRows(aggregateByNickname(periodRowsRaw)).forEach(r => renderPersonRow(body, r));
+    }
   }
 
   function renderTiles(t){
@@ -1094,10 +1383,11 @@
     closeClassPopup();
     // правки профессий свои у каждого периода — перечитываем на каждую перерисовку
     await loadForcedClasses();
+    if(periodValue.startsWith("week:")) await loadWeekEventOverrides(periodValue.slice(5));
     const grouped = filteredStats();
     const periodRows = statsForPeriod(periodValue, grouped);
 
-    renderReportTable(aggregateByNickname(periodRows));
+    renderReportTable(periodRows);
 
     renderSummaryHeader();
     renderTiles(totals(periodRows));
@@ -1164,7 +1454,7 @@
     summaryEl.classList.toggle("is-wide", summaryEl.getBoundingClientRect().width >= 420);
   }).observe(summaryEl);
 
-  await Promise.all([loadMemberInfo(), loadGroups(), loadEvents(), loadAllStats(), loadDualClassSettings()]);
+  await Promise.all([loadMemberInfo(), loadGroups(), loadEvents(), loadAllStats(), loadGroupLabelSettings()]);
   renderGroupFilterOptions();
   renderWeekOptions();
 
