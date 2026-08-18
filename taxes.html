@@ -493,9 +493,18 @@
   bindCopyBtn("copyPayersBtn", () =>
     Array.from(document.querySelectorAll("#weekBody .chip span")).map(el => el.textContent));
   bindCopyBtn("copyDonorsBtn", () =>
-    Array.from(document.querySelectorAll("#donationsBoxList .tax-side-box-row span:not(.amt)")).map(el => el.textContent));
+    Array.from(document.querySelectorAll("#donationsBoxList .tax-side-box-row")).map(row => {
+      const name = row.querySelector("span:not(.amt)")?.textContent || "";
+      const amt = row.querySelector("span.amt")?.textContent || "";
+      return amt ? `${name} — ${amt}` : name;
+    }));
   bindCopyBtn("donationsModalCopyBtn", () =>
-    Array.from(document.querySelectorAll("#donationsBody tr td:first-child")).map(el => el.textContent));
+    Array.from(document.querySelectorAll("#donationsBody tr")).map(tr => {
+      const tds = tr.querySelectorAll("td");
+      const name = tds[0]?.textContent || "";
+      const amt = tds[1]?.textContent || "";
+      return amt ? `${name} — ${amt}` : name;
+    }));
   bindCopyBtn("copyAheadBtn", () =>
     Array.from(document.querySelectorAll("#aheadList .tax-side-box-row span:not(.amt)")).map(el => el.textContent));
   bindCopyBtn("taxReportCopyBtn", () =>

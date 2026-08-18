@@ -7,14 +7,16 @@
 <link rel="stylesheet" href="js/theme.css?v=10" />
 <style>
   .gc-wrap{ padding:0 0 32px; }
-  .gc-avg{ display:inline-flex; align-items:center; gap:8px; font-size:13px; color: var(--text-dim); margin:2px 0 14px; }
+  .gc-avg{ display:inline-flex; align-items:center; gap:8px; font-size:13px; color: var(--text-dim); margin:0; }
   .gc-avg b{ color: var(--gold); font-size:15px; }
 
-  /* overflow-x:auto без overflow-y превращает контейнер в скролл-контейнер и по вертикали
-     (браузерное правило пары overflow-x/overflow-y), из-за чего sticky-шапка ниже
-     "прилипает" к границам этого контейнера, а не к видимой области при скролле —
-     явно задаём overflow:auto + ограничение по высоте, как в matrix-scroll (attendance.html) */
-  .gc-table-scroll{ overflow:auto; max-height:75vh; }
+  /* без своей высоты и скролла — низа у таблицы больше нет, длинный список просто
+     продолжается вниз, и скроллится вся страница целиком (тот же приём, что в
+     отчётах «Налоги»/«Посещаемость»: display:inline-block + overflow:visible вместо
+     overflow:auto+max-height — тогда sticky-шапка честно прилипает к окну браузера,
+     а не к границе своей коробки). Если таблица шире экрана — вбок листается тоже
+     вся страница (см. JS, колесо мыши без Shift крутит window, а не саму коробку) */
+  .gc-table-scroll{ display:inline-block; vertical-align:top; overflow:visible; position:relative; }
   /* без width:100% — таблица растёт по содержимому вправо (много пунктов = шире
      таблица + горизонтальный скролл), а не сплющивает все колонки в экран */
   table.gc-table{ border-collapse:separate; border-spacing:0; width:auto; font-size:13px; }
@@ -204,8 +206,20 @@
   .gc-group-card-name{ font-size:14px; font-weight:500; color: var(--text); }
   .gc-group-card-members{ font-size:12px; color: var(--text-dim); line-height:1.5; min-height:2.2em; }
   .gc-group-card-foot{ display:flex; align-items:center; justify-content:space-between; }
-  .gc-table-topbar{ display:flex; align-items:center; gap:14px; margin:2px 0 14px; }
-  .gc-current-label{ font-size:13px; color: var(--text-dim); }
+  /* стрелка назад стоит прямо перед заголовком страницы («Проверка буста»), а не
+     отдельной строкой — название группы/% буста переехали ближе к таблице ниже */
+  .gc-title-row{ display:flex; align-items:center; gap:10px; }
+  .gc-back-arrow{
+    flex:none; width:30px; height:30px; padding:0;
+    border-radius:6px; border:1px solid var(--border);
+    background: var(--panel-2); color: var(--text-dim);
+    font-size:16px; line-height:1; cursor:pointer;
+  }
+  .gc-back-arrow:hover{ border-color: var(--border-lit); color: var(--text); }
+
+  /* название группы и % буста — прямо над таблицей участников, внутри той же карточки */
+  .gc-table-head-row{ display:flex; align-items:baseline; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:10px; }
+  .gc-group-name{ margin:0; }
 
   /* выбор класса в карточке участника — кнопка с текущей иконкой + выпадающий список с поиском */
   .gc-class-picker{ position:relative; }
@@ -249,7 +263,10 @@
 
 <div class="gc-wrap" id="wrap" style="display:none;">
   <div class="page-head">
-    <h1>Проверка буста</h1>
+    <div class="gc-title-row">
+      <button type="button" class="gc-back-arrow" id="gcBackBtn" title="Выбрать другую группу" style="display:none;">←</button>
+      <h1>Проверка буста</h1>
+    </div>
   </div>
 
   <div id="gcPickView">
@@ -259,14 +276,11 @@
   </div>
 
   <div id="gcTableView" style="display:none;">
-    <div class="gc-table-topbar" id="gcTableTopbar" style="display:none;">
-      <button class="btn btn-ghost" id="gcBackBtn">← Выбрать другую группу</button>
-      <span class="gc-current-label" id="gcCurrentLabel"></span>
-    </div>
-
-    <p class="gc-avg">Средний процент буста: <b id="avgPercent">—</b></p>
-
     <section class="card">
+      <div class="gc-table-head-row">
+        <h2 class="gc-group-name" id="gcCurrentLabel"></h2>
+        <p class="gc-avg">Средний процент буста: <b id="avgPercent">—</b></p>
+      </div>
       <div class="gc-table-scroll">
         <table class="gc-table">
           <thead id="gcHead"></thead>
@@ -499,6 +513,15 @@
     else showPickerView();
   });
 
+  // таблица может быть шире экрана (много пунктов) — крутим колесом мыши без
+  // Shift не саму коробку (у неё нет своего скролла), а всю страницу целиком
+  document.querySelector(".gc-table-scroll").addEventListener("wheel", (e) => {
+    const doc = document.documentElement;
+    if(doc.scrollWidth <= doc.clientWidth) return;
+    e.preventDefault();
+    window.scrollBy({ left: e.deltaY });
+  }, { passive: false });
+
   function escapeHtml(s){
     return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
   }
@@ -642,13 +665,11 @@
   function showTableView(label){
     document.getElementById("gcPickView").style.display = "none";
     document.getElementById("gcTableView").style.display = "";
-    const topbar = document.getElementById("gcTableTopbar");
-    if(groups.length){
-      topbar.style.display = "";
-      document.getElementById("gcCurrentLabel").textContent = label != null ? label : (selectedGroupId === SOLO_KEY ? "Соло" : "");
-    } else {
-      topbar.style.display = "none";
-    }
+    const hasGroups = groups.length > 0;
+    document.getElementById("gcBackBtn").style.display = hasGroups ? "" : "none";
+    document.getElementById("gcCurrentLabel").textContent = hasGroups
+      ? (label != null ? label : (selectedGroupId === SOLO_KEY ? "Соло" : ""))
+      : "";
     renderTable();
   }
 
@@ -1450,8 +1471,8 @@
     // экран выбора и кнопка возврата к нему скрыты
     const myGroup = groups.find(g => g.id === profile.party_id);
     selectedGroupId = profile.party_id;
-    document.getElementById("gcBackBtn").style.display = "none";
     showTableView(myGroup?.name || "Моя пати");
+    document.getElementById("gcBackBtn").style.display = "none";
   } else if(wantGroup){
     selectedGroupId = wantGroup.id;
     showTableView(wantGroup.name);
