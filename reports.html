@@ -1690,6 +1690,9 @@
     }
     renderPplChips();
     renderReportTable(lastPeriodRows); // перерисовать кнопки ⚖ в таблице (активна/недоступна)
+    // если график уже показан («Сравнить» нажимали) — держим его в синхроне с составом;
+    // если ещё не показан, renderPeopleComparison сама ничего не отрисует (pplBarsVisible=false)
+    renderPeopleComparison();
   }
 
   const PPL_METRICS = [

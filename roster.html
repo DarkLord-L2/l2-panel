@@ -291,8 +291,14 @@
       db.from("clan_group_members").select("group_id, nickname, sort_order").order("sort_order").order("nickname"),
     ]);
     groups = g || [];
+    // clan_group_members не фильтруется по hidden сам по себе (там нет такой колонки) —
+    // членство в СКРЫТОЙ группе всё равно приходит в выборке; без этого фильтра такой
+    // человек не попадал бы ни в свою группу (она скрыта), ни в «Без пати» (он вроде
+    // как «в группе»), и просто пропадал бы из вкладки «По пати» целиком
+    const visibleGroupIds = new Set(groups.map(gr => gr.id));
     membersByGroup = new Map();
     (m || []).forEach(row => {
+      if(!visibleGroupIds.has(row.group_id)) return;
       if(!membersByGroup.has(row.group_id)) membersByGroup.set(row.group_id, []);
       membersByGroup.get(row.group_id).push(row.nickname);
     });

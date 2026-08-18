@@ -293,11 +293,15 @@
       </div>
       <div class="day-columns" id="dayColumns" style="display:none;">
         <div class="roster-col">
-          <h3>Пришли (<span id="dayYesCount">0</span>)</h3>
+          <h3 id="dayCol1Label">Пришли (0)</h3>
           <div class="chip-row" id="dayYesList"></div>
         </div>
+        <div class="roster-col" id="dayPaidCol" style="display:none;">
+          <h3>Платил (<span id="dayPaidCount">0</span>)</h3>
+          <div class="chip-row" id="dayPaidList"></div>
+        </div>
         <div class="roster-col">
-          <h3>Не пришли (<span id="dayNoCount">0</span>)</h3>
+          <h3 id="dayCol2Label">Не пришли (0)</h3>
           <div class="chip-row" id="dayNoList"></div>
         </div>
       </div>
@@ -1129,16 +1133,11 @@
 
   function renderDayColumns(filterKey){
     const filter = REPORT_FILTERS.find(f => f.key === filterKey);
-    const rows = (filter ? attReportRows.filter(filter.test || (() => true)) : [])
+    const baseRows = attReportRows
       .filter(r => !attNickFilter || r.nickname.toLowerCase().includes(attNickFilter))
       .filter(r => passesGroupFilter(r.nickname))
       .slice()
       .sort((a, b) => a.nickname.localeCompare(b.nickname));
-    const yes = rows.filter(r => r.attended);
-    const no = rows.filter(r => !r.attended);
-    document.getElementById("dayYesCount").textContent = yes.length;
-    document.getElementById("dayNoCount").textContent = no.length;
-    document.getElementById("attReportEmpty").style.display = rows.length ? "none" : "";
 
     function renderList(el, list){
       el.innerHTML = "";
@@ -1150,6 +1149,33 @@
         el.appendChild(chip);
       });
     }
+
+    const paidCol = document.getElementById("dayPaidCol");
+    // «Ходил / Платил» — тот же раздел на 3 группы, что в обычном/матричном виде
+    // (buildGroupedSections), просто списками-чипами вместо таблицы; раньше эта
+    // ветка вообще не проверялась, и фильтр тихо показывал всех подряд
+    if(filter && filter.group){
+      const attended = baseRows.filter(r => filter.group(r) === "attended");
+      const paid = baseRows.filter(r => filter.group(r) === "paid");
+      const neither = baseRows.filter(r => filter.group(r) === "neither");
+      document.getElementById("dayCol1Label").textContent = `Ходил (${attended.length})`;
+      document.getElementById("dayCol2Label").textContent = `Не ходил и не платил (${neither.length})`;
+      document.getElementById("dayPaidCount").textContent = paid.length;
+      paidCol.style.display = "";
+      document.getElementById("attReportEmpty").style.display = (attended.length + paid.length + neither.length) ? "none" : "";
+      renderList(document.getElementById("dayYesList"), attended);
+      renderList(document.getElementById("dayPaidList"), paid);
+      renderList(document.getElementById("dayNoList"), neither);
+      return;
+    }
+
+    paidCol.style.display = "none";
+    const rows = filter ? baseRows.filter(filter.test) : [];
+    const yes = rows.filter(r => r.attended);
+    const no = rows.filter(r => !r.attended);
+    document.getElementById("dayCol1Label").textContent = `Пришли (${yes.length})`;
+    document.getElementById("dayCol2Label").textContent = `Не пришли (${no.length})`;
+    document.getElementById("attReportEmpty").style.display = rows.length ? "none" : "";
     renderList(document.getElementById("dayYesList"), yes);
     renderList(document.getElementById("dayNoList"), no);
   }

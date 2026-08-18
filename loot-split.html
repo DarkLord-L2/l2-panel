@@ -142,10 +142,19 @@
   function findByNormalized(map, nickname){
     const norm = normalizeNick(nickname);
     if(map.has(norm)) return map.get(norm);
+    // без точного совпадения — берём совпадение по префиксу, только если оно ЕДИНСТВЕННОЕ;
+    // тут результат идёт прямиком в коэффициент профессии для раздела голды, а не просто
+    // в подпись — при неоднозначности лучше явно не найти класс (коэффициент 1), чем
+    // молча приписать человеку чужую профессию
+    let found, matches = 0;
     for(const [key, value] of map){
-      if(key && (key.startsWith(norm) || norm.startsWith(key))) return value;
+      if(key && (key.startsWith(norm) || norm.startsWith(key))){
+        found = value;
+        matches++;
+        if(matches > 1) return undefined;
+      }
     }
-    return undefined;
+    return matches === 1 ? found : undefined;
   }
 
   const DAY_SHORT = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];

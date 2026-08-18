@@ -399,7 +399,15 @@
       "Недели: " + weeks.map(w => weekRangeLabel(w)).join(", ");
   }
 
+  // таймер автозакрытия (см. closeNickModalAfterOk) — отслеживаем сам id, чтобы
+  // старый таймер от предыдущего ника не закрыл окно, уже открытое для другого
+  let nickModalCloseTimer = null;
+  function cancelNickModalCloseTimer(){
+    if(nickModalCloseTimer){ clearTimeout(nickModalCloseTimer); nickModalCloseTimer = null; }
+  }
+
   function openNickModal(nickname){
+    cancelNickModalCloseTimer();
     nickModalNick = nickname;
     document.getElementById("nickTitle").textContent = nickname;
     document.getElementById("nickError").textContent = "";
@@ -418,16 +426,23 @@
   });
 
   document.getElementById("nickClose").addEventListener("click", () => {
+    cancelNickModalCloseTimer();
     document.getElementById("nickOverlay").classList.remove("show");
   });
   document.getElementById("nickOverlay").addEventListener("click", (e) => {
-    if(e.target.id === "nickOverlay") e.currentTarget.classList.remove("show");
+    if(e.target.id === "nickOverlay"){
+      cancelNickModalCloseTimer();
+      e.currentTarget.classList.remove("show");
+    }
   });
 
   // кнопка не трогается — просто через секунду после успеха окно само закрывается,
-  // не нужно жать крестик руками
+  // не нужно жать крестик руками. Таймер отслеживается и гасится при открытии/закрытии
+  // окна заново, чтобы не закрыть чужую, уже открытую для другого ника, сессию.
   function closeNickModalAfterOk(){
-    setTimeout(() => {
+    cancelNickModalCloseTimer();
+    nickModalCloseTimer = setTimeout(() => {
+      nickModalCloseTimer = null;
       document.getElementById("nickOverlay").classList.remove("show");
     }, 900);
   }
