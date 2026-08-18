@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Админ-панель — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=9" />
+<link rel="stylesheet" href="js/theme.css?v=10" />
 <style>
   .admin-wrap{ display:flex; flex-direction:column; gap:14px; padding:0 0 32px; }
   .admin-head{ display:flex; align-items:center; justify-content:space-between; }
@@ -55,6 +55,16 @@
   .toggle-switch input:checked + .track{ background: rgba(76,154,99,.35); }
   .toggle-switch input:checked + .track::before{ transform: translateX(16px); background: var(--ok); }
   .toggle-switch input:disabled + .track{ opacity:.4; cursor:not-allowed; }
+
+  /* коэффициенты профессий («Раздел дропа») — список классов с полем-числом у каждого */
+  .loot-coef-list{ display:flex; flex-direction:column; gap:6px; margin:10px 0; max-width:420px; max-height:420px; overflow-y:auto; }
+  .loot-coef-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background: var(--panel-2); border:1px solid var(--border); border-radius:7px;
+    padding:8px 12px;
+  }
+  .loot-coef-row .label{ font-size:13px; color: var(--text); }
+  .loot-coef-row input{ width:80px; text-align:right; }
 
   /* порядок разделов меню: список в том же виде, в каком меню видно слева */
   .sec-order-list{ display:flex; flex-direction:column; gap:6px; margin:10px 0; max-width:420px; }
@@ -182,8 +192,10 @@
 
     <div class="admin-tab-panel" data-panel="rules">
   <section class="card">
-    <h2>Правила клана</h2>
-    <p class="hint">Здесь пока пусто.</p>
+    <h2>Коэффициент профессии для «Раздела дропа»</h2>
+    <p class="hint">У каждой профессии свой множитель: финальные баллы участника в «Разделе дропа» = начальные баллы × % буста × этот коэффициент. Нет строки для класса — считается как 1.</p>
+    <div class="loot-coef-list" id="lootCoefList"></div>
+    <p class="error-msg" id="lootCoefError"></p>
   </section>
     </div>
 
@@ -286,7 +298,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=16"></script>
+<script src="js/supabase-client.js?v=17"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -375,6 +387,52 @@
       });
 
       row.append(label, switchLabel);
+      wrap.appendChild(row);
+    });
+  }
+
+  // ---------- коэффициенты профессий («Раздел дропа») ----------
+  let lootCoefficients = new Map(); // class_name -> coefficient
+
+  async function loadLootCoefficients(){
+    const { data, error } = await db.from("loot_class_coefficients").select("class_name, coefficient");
+    if(error) console.error(error);
+    lootCoefficients = new Map((data || []).map(r => [r.class_name, Number(r.coefficient)]));
+  }
+
+  function renderLootCoefList(){
+    const wrap = document.getElementById("lootCoefList");
+    wrap.innerHTML = "";
+    (window.L2_CLASSES || []).forEach(cls => {
+      const row = document.createElement("div");
+      row.className = "loot-coef-row";
+
+      const label = document.createElement("span");
+      label.className = "label";
+      label.textContent = cls.name;
+
+      const input = document.createElement("input");
+      input.type = "number";
+      input.step = "0.1";
+      input.min = "0";
+      input.value = lootCoefficients.get(cls.name) ?? 1;
+
+      input.addEventListener("change", async () => {
+        const errEl = document.getElementById("lootCoefError");
+        errEl.textContent = "";
+        const val = Number(input.value);
+        if(!Number.isFinite(val) || val < 0){ errEl.textContent = "Коэффициент должен быть числом ≥ 0."; return; }
+        input.disabled = true;
+        const { error } = await db.from("loot_class_coefficients").upsert(
+          { clan_id: profile.clan_id, class_name: cls.name, coefficient: val },
+          { onConflict: "clan_id,class_name" }
+        );
+        if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
+        else lootCoefficients.set(cls.name, val);
+        input.disabled = false;
+      });
+
+      row.append(label, input);
       wrap.appendChild(row);
     });
   }
@@ -566,9 +624,9 @@
         const unprotectBtn = document.createElement("button");
         unprotectBtn.className = "btn";
         unprotectBtn.textContent = "Снять защиту";
-        unprotectBtn.title = "Нужна отдельная фраза-снятие";
+        unprotectBtn.title = "Пароль, которым ставили защиту, или мастер-сид-фраза";
         unprotectBtn.addEventListener("click", async () => {
-          const phrase = prompt(`Снять защиту с «${u.username}»? Введите фразу-снятие:`);
+          const phrase = prompt(`Снять защиту с «${u.username}»? Введите пароль защиты (или сид-фразу):`);
           if(phrase === null) return;
           const errEl = document.getElementById("usersError");
           errEl.textContent = "";
@@ -588,7 +646,7 @@
         protectBtn.textContent = "🔒 Защитить";
         protectBtn.title = "Защитить свой аккаунт от удаления другими главными админами";
         protectBtn.addEventListener("click", async () => {
-          const phrase = prompt("Введите сид-фразу для защиты своего аккаунта от удаления:");
+          const phrase = prompt("Придумайте пароль для защиты своего аккаунта от удаления (запомните — он понадобится, чтобы снять защиту):");
           if(phrase === null) return;
           const errEl = document.getElementById("usersError");
           errEl.textContent = "";
@@ -610,17 +668,22 @@
       tdCreated.textContent = new Date(u.created_at).toLocaleDateString("ru-RU");
 
       const tdActions = document.createElement("td");
-      if(!isSelf && !u.delete_protected){
+      if(!isSelf){
         const delBtn = document.createElement("button");
         delBtn.className = "btn btn-danger";
         delBtn.textContent = "Удалить";
         delBtn.addEventListener("click", async () => {
           if(!confirm(`Удалить пользователя «${u.username}»? Это необратимо.`)) return;
+          let phrase;
+          if(u.delete_protected){
+            phrase = prompt(`«${u.username}» защищён от удаления. Введите пароль защиты (или сид-фразу):`);
+            if(phrase === null) return;
+          }
           delBtn.disabled = true;
           const errEl = document.getElementById("usersError");
           errEl.textContent = "";
           try{
-            await L2Cabinet.adminDeleteUser(u.id);
+            await L2Cabinet.adminDeleteUser(u.id, phrase);
             await loadUsers();
           }catch(err){
             errEl.textContent = "Не удалось удалить: " + err.message;
@@ -993,9 +1056,10 @@
   await loadLookups();
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(r.label), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
-  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares()]);
+  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients()]);
   renderSectionOrder();
   renderSectionToggleList();
+  renderLootCoefList();
   renderPresetGrid();
 })();
 </script>

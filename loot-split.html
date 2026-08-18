@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Раздел дропа — Кабинет клана</title>
+<link rel="stylesheet" href="js/theme.css?v=10" />
+<style>
+  .ls-wrap{ padding:0 0 24px; }
+  .ls-wrap .page-head{ margin-bottom:0; }
+  .ls-filters{ display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; margin:2px 0 10px; }
+  .ls-filters .field{ margin:0; }
+  .ls-filters input[type="date"]{ min-width:150px; }
+  .ls-filters input[type="number"]{ width:140px; }
+  .ls-wrap .card{ padding-top:12px; }
+
+  /* никакого overflow/скролл-бокса у обёртки — таблица продолжается вниз и вбок
+     вместе со всей страницей, а не в своём отдельном "окошке" (та же история и то
+     же решение, что для матрицы в attendance.html: сколько-то раз пробовали
+     overflow:auto — пользователь видит это как "таблица отдельно от сайта",
+     потому что position:sticky липнет к ближайшему скролл-предку, а не к окну).
+     display:inline-block — чтобы обёртка была ровно по размеру таблицы. */
+  .ls-table-scroll{ display:inline-block; vertical-align:top; overflow:visible; }
+  table.ls-table{ border-collapse:separate; border-spacing:0; width:auto; font-size:13px; }
+  table.ls-table th, table.ls-table td{ padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  table.ls-table thead th{
+    position:sticky; top:0; z-index:2;
+    background: var(--panel);
+    color: var(--text-dim); font-size:12px; font-weight:500; letter-spacing:0;
+    vertical-align:bottom; text-align:center;
+  }
+  table.ls-table thead th.ls-col-nick{ text-align:left; }
+  table.ls-table .ls-col-nick{
+    position:sticky; left:0; z-index:1;
+    background: var(--panel-2);
+    box-shadow: 2px 0 6px rgba(0,0,0,.35);
+  }
+  /* тень «закреплённой колонки» нужна только у строк с данными — на шапке она
+     накладывалась поверх обычного фона и выглядела грязным пятном в углу */
+  table.ls-table thead th.ls-col-nick{ z-index:3; background: var(--panel); box-shadow:none; }
+  table.ls-table tbody tr:hover td{ background: rgba(255,255,255,.03); }
+  table.ls-table tbody tr:hover td.ls-col-nick{ background: var(--panel-2); }
+
+  .ls-nick{ display:flex; align-items:center; gap:10px; }
+  .ls-nick .avatar{
+    width:32px; height:32px; flex:none;
+    border-radius:50%; object-fit:cover;
+    border:1px solid var(--border); background: var(--panel-2);
+  }
+  .ls-nick .who{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+  .ls-nick .name{ color: var(--text); font-weight:600; }
+  .ls-nick .cls{ font-size:11px; color: var(--text-dim); }
+
+  .ls-num{ text-align:center; }
+  .ls-final{ text-align:center; color: var(--gold); font-weight:700; }
+  .ls-gold{ text-align:center; font-weight:700; }
+
+  table.ls-table th.ls-col-day, table.ls-table td.ls-col-day{ width:56px; min-width:56px; max-width:56px; text-align:center; }
+  .ls-day-head{ display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .ls-day-icon-btn{
+    width:26px; height:26px; padding:0; border-radius:6px;
+    border:1px solid var(--border); background: var(--panel-2);
+    color: var(--text-dim); font-size:13px; line-height:1; cursor:pointer;
+    background-size:cover; background-position:center;
+  }
+  .ls-day-icon-btn:hover{ border-color: var(--border-lit); }
+  .ls-day-icon-btn:disabled{ cursor:default; }
+  .ls-day-wd{ font-size:11px; color: var(--text-dim); }
+  .ls-mark-yes{ color: var(--ok); font-weight:700; }
+  .ls-mark-no{ color: var(--text-dim); opacity:.4; }
+</style>
+</head>
+<body>
+
+<div class="ls-wrap" id="wrap" style="display:none;">
+  <div class="page-head">
+    <h1>Раздел дропа</h1>
+  </div>
+
+  <section class="card">
+    <div class="ls-filters">
+      <div class="field">
+        <label for="fromDate">Начальная дата</label>
+        <input type="date" id="fromDate" />
+      </div>
+      <div class="field">
+        <label for="toDate">Конечная дата</label>
+        <input type="date" id="toDate" />
+      </div>
+      <div class="field">
+        <label for="goldInput">Голда</label>
+        <input type="number" id="goldInput" min="0" step="1" value="0" />
+      </div>
+      <button class="btn btn-primary" id="splitBtn">Разделить дроп</button>
+    </div>
+    <p class="error-msg" id="lsError"></p>
+
+    <div class="ls-table-scroll">
+      <table class="ls-table">
+        <thead id="lsHead"></thead>
+        <tbody id="lsBody"></tbody>
+      </table>
+    </div>
+    <p class="empty-hint" id="lsEmpty" style="display:none;"></p>
+  </section>
+</div>
+
+<input type="file" id="dayIconPicker" accept="image/*" style="display:none;" />
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-client.js?v=17"></script>
+<script src="js/classes.js?v=1"></script>
+<script>
+(async function(){
+  const session = await L2Cabinet.requireSession();
+  if(!session) return;
+
+  const profile = await L2Cabinet.getProfile();
+  if(!profile){
+    document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
+      '<h1>⚠ Профиль не найден</h1><p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+    return;
+  }
+
+  const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
+  const db = L2Cabinet.client;
+  document.getElementById("wrap").style.display = "";
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  }
+
+  // перепись/явка/классы иногда пишут один и тот же ник по-разному (кириллица/латиница
+  // похожих букв, регистр) — та же схема нормализации, что в attendance.html/reports.html
+  const CYR_LOOKALIKES = { "а":"a","в":"b","е":"e","к":"k","м":"m","н":"h","о":"o","р":"p","с":"c","т":"t","у":"y","х":"x","ё":"e","0":"o" };
+  function normalizeNick(s){
+    return String(s || "")
+      .toLowerCase()
+      .split("").map(ch => CYR_LOOKALIKES[ch] || ch).join("")
+      .replace(/[^a-zа-яё0-9]/gi, "");
+  }
+  function findByNormalized(map, nickname){
+    const norm = normalizeNick(nickname);
+    if(map.has(norm)) return map.get(norm);
+    for(const [key, value] of map){
+      if(key && (key.startsWith(norm) || norm.startsWith(key))) return value;
+    }
+    return undefined;
+  }
+
+  const DAY_SHORT = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
+  const BLANK_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'></svg>";
+
+  function classIcon(name){ return name && window.L2_CLASS_ICON ? window.L2_CLASS_ICON(name) : null; }
+
+  let nicks = [];                  // ники последней переписи, по алфавиту
+  let memberClasses = new Map();   // nickname -> class_name
+  let memberClassesNorm = new Map();
+  let memberIcons = new Map();     // nickname -> data-URL своей аватарки
+
+  let boostSections = [];
+  let boostItems = [];
+  let boostValueSet = new Set();   // `${nickname}|${item_id}`
+
+  let coefficients = new Map();    // class_name -> coefficient
+
+  let events = [];                 // [{id, event_date, event_name, icon}] в диапазоне, по дате
+  let attendedByEvent = new Map(); // event_id -> Set(normalizeNick)
+
+  let lastRows = [];               // последний посчитанный «Разделить дроп»
+
+  async function loadCensus(){
+    const { data } = await db.from("census_entries").select("nickname, week_start");
+    let latest = null;
+    (data || []).forEach(r => { if(!latest || r.week_start > latest) latest = r.week_start; });
+    nicks = [...new Set((data || []).filter(r => r.week_start === latest).map(r => r.nickname))]
+      .sort((a,b)=>a.localeCompare(b));
+  }
+
+  async function loadMemberClasses(){
+    const { data } = await db.from("member_classes").select("nickname, class_name, icon");
+    memberClasses = new Map();
+    memberClassesNorm = new Map();
+    memberIcons = new Map();
+    (data || []).forEach(r => {
+      memberClasses.set(r.nickname, r.class_name || null);
+      memberClassesNorm.set(normalizeNick(r.nickname), r.class_name || null);
+      if(r.icon) memberIcons.set(r.nickname, r.icon);
+    });
+  }
+
+  function classOf(nick){
+    if(memberClasses.has(nick)) return memberClasses.get(nick);
+    return findByNormalized(memberClassesNorm, nick) || null;
+  }
+
+  async function loadBoostStructure(){
+    const [{ data: s }, { data: it }] = await Promise.all([
+      db.from("boost_sections").select("id, sort_order").order("sort_order"),
+      db.from("boost_items")
+        .select("id, section_id, name, weight, sort_order, subgroup, hidden, merged_with_prev, merge_all_required")
+        .order("sort_order"),
+    ]);
+    boostSections = s || [];
+    boostItems = (it || []).map(x => ({ ...x, weight: Number(x.weight) }));
+  }
+
+  async function loadBoostValues(){
+    const { data } = await db.from("boost_member_values").select("nickname, item_id, enabled");
+    boostValueSet = new Set();
+    (data || []).forEach(r => { if(r.enabled) boostValueSet.add(r.nickname + "|" + r.item_id); });
+  }
+
+  // ---- те же формулы, что в «Проверке буста» (gear-check.html), чтобы % совпадал 1-в-1 ----
+  function itemsOfSection(secId){
+    return boostItems.filter(i => i.section_id === secId).sort((a,b)=> a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+  }
+  function orderedBoostItems(){
+    return boostSections.flatMap(s => itemsOfSection(s.id)).filter(i => !i.hidden);
+  }
+  function mergeGroups(list){
+    const out = [];
+    list.forEach(item => {
+      const prev = out[out.length - 1];
+      const sameBlock = prev && prev[0].section_id === item.section_id && (prev[0].subgroup || "") === (item.subgroup || "");
+      if(item.merged_with_prev && sameBlock) prev.push(item);
+      else out.push([item]);
+    });
+    return out;
+  }
+  function isAllRequired(group){ return group.length > 1 && group.some(i => i.merge_all_required); }
+  function groupScore(group, nick){
+    const onItems = group.filter(i => boostValueSet.has(nick + "|" + i.id));
+    if(isAllRequired(group)) return onItems.length === group.length ? group.reduce((s,i)=>s+i.weight,0) : 0;
+    return onItems.reduce((s,i)=>s+i.weight,0);
+  }
+  function maxBoostScore(){ return orderedBoostItems().reduce((s,i)=> s + i.weight, 0); }
+  function boostScoreOf(nick){ return mergeGroups(orderedBoostItems()).reduce((s,g)=> s + groupScore(g, nick), 0); }
+  function percentOf(nick){
+    const mx = maxBoostScore();
+    return mx ? (boostScoreOf(nick) / mx) * 100 : 0;
+  }
+  function pctColor(p){
+    if(p >= 90) return "var(--ok)";
+    if(p >= 60) return "var(--gold)";
+    return "var(--danger-lit)";
+  }
+
+  async function loadCoefficients(){
+    const { data } = await db.from("loot_class_coefficients").select("class_name, coefficient");
+    coefficients = new Map((data || []).map(r => [r.class_name, Number(r.coefficient)]));
+  }
+  function coefficientOf(nick){
+    const cls = classOf(nick);
+    if(!cls) return 1;
+    const c = coefficients.get(cls);
+    return c === undefined ? 1 : c;
+  }
+
+  async function loadEventsAndAttendance(fromStr, toStr){
+    const { data: evs, error: evErr } = await db
+      .from("attendance_events")
+      .select("id, event_date, event_name, icon")
+      .gte("event_date", fromStr)
+      .lte("event_date", toStr)
+      .order("event_date");
+    if(evErr){ console.error(evErr); events = []; attendedByEvent = new Map(); return; }
+    events = evs || [];
+
+    attendedByEvent = new Map();
+    const eventIds = events.map(e => e.id);
+    if(!eventIds.length) return;
+
+    const { data: entries, error: entErr } = await db
+      .from("attendance_entries")
+      .select("nickname, event_id")
+      .in("event_id", eventIds);
+    if(entErr){ console.error(entErr); return; }
+    (entries || []).forEach(row => {
+      const norm = normalizeNick(row.nickname);
+      if(!attendedByEvent.has(row.event_id)) attendedByEvent.set(row.event_id, new Set());
+      attendedByEvent.get(row.event_id).add(norm);
+    });
+  }
+
+  function fmtInt(n){ return Math.round(n).toLocaleString("ru-RU"); }
+
+  function computeRows(){
+    return nicks.map(nick => {
+      const norm = normalizeNick(nick);
+      const initial = events.reduce((s, e) => s + ((attendedByEvent.get(e.id) || new Set()).has(norm) ? 1 : 0), 0);
+      const pct = percentOf(nick);
+      const cls = classOf(nick);
+      const coef = coefficientOf(nick);
+      const final = initial * (pct / 100) * coef;
+      return { nick, norm, cls, initial, pct, coef, final };
+    });
+  }
+
+  function applyGold(rows){
+    const gold = Number(document.getElementById("goldInput").value) || 0;
+    const sumFinal = rows.reduce((s,r)=> s + r.final, 0);
+    rows.forEach(r => { r.gold = sumFinal ? (r.final / sumFinal) * gold : 0; });
+    return rows;
+  }
+
+  function renderHead(){
+    const head = document.getElementById("lsHead");
+    let h = '<tr><th class="ls-col-nick">Участники</th><th>Начальные баллы</th><th>% буста</th>' +
+      '<th>Коэффициент</th><th>Финальные баллы</th><th>Голда</th>';
+    events.forEach(e => {
+      const dt = new Date(e.event_date + "T00:00:00");
+      const wd = DAY_SHORT[(dt.getDay() + 6) % 7];
+      const title = escapeHtml((e.event_name || "") + " — " + e.event_date);
+      const bg = e.icon ? ` style="background-image:url('${e.icon}')"` : "";
+      h += `<th class="ls-col-day" title="${title}"><div class="ls-day-head">` +
+        `<button type="button" class="ls-day-icon-btn" data-event="${e.id}"${bg} ${isAdmin ? "" : "disabled"}>${e.icon ? "" : "+"}</button>` +
+        `<span class="ls-day-wd">${wd}</span></div></th>`;
+    });
+    h += "</tr>";
+    head.innerHTML = h;
+
+    if(isAdmin){
+      head.querySelectorAll(".ls-day-icon-btn").forEach(btn => {
+        btn.addEventListener("click", () => openDayIconPicker(btn.dataset.event));
+      });
+    }
+  }
+
+  function renderBody(rows){
+    const body = document.getElementById("lsBody");
+    body.innerHTML = "";
+    rows.forEach(r => {
+      const tr = document.createElement("tr");
+      const avatarSrc = memberIcons.get(r.nick) || classIcon(r.cls) || BLANK_IMG;
+      let html = `<td class="ls-col-nick"><div class="ls-nick"><img class="avatar" src="${avatarSrc}" alt="" />` +
+        `<span class="who"><span class="name">${escapeHtml(r.nick)}</span><span class="cls">${escapeHtml(r.cls || "")}</span></span></div></td>`;
+      html += `<td class="ls-num">${r.initial}</td>`;
+      html += `<td class="ls-num" style="color:${pctColor(r.pct)}">${r.pct.toFixed(2)}%</td>`;
+      html += `<td class="ls-num">${r.coef}</td>`;
+      html += `<td class="ls-final">${r.final.toFixed(2)}</td>`;
+      html += `<td class="ls-gold">${fmtInt(r.gold)}</td>`;
+      events.forEach(e => {
+        const was = (attendedByEvent.get(e.id) || new Set()).has(r.norm);
+        html += `<td class="ls-col-day ${was ? "ls-mark-yes" : "ls-mark-no"}">${was ? 1 : 0}</td>`;
+      });
+      tr.innerHTML = html;
+      body.appendChild(tr);
+    });
+  }
+
+  let hasSplit = false; // «Разделить дроп» ещё не нажимали — пока рано говорить, что мероприятий нет
+
+  function renderTable(rows){
+    renderHead();
+    renderBody(rows);
+    const emptyEl = document.getElementById("lsEmpty");
+    if(!nicks.length){
+      emptyEl.textContent = "В последней переписи нет участников — сначала заполните «Перепись клана».";
+      emptyEl.style.display = "";
+    } else if(!hasSplit){
+      emptyEl.textContent = "Укажите период и нажмите «Разделить дроп».";
+      emptyEl.style.display = "";
+    } else if(!events.length){
+      emptyEl.textContent = "За выбранный период нет мероприятий в «Журнале посещаемости».";
+      emptyEl.style.display = "";
+    } else {
+      emptyEl.style.display = "none";
+    }
+  }
+
+  async function doSplit(){
+    const errEl = document.getElementById("lsError");
+    errEl.textContent = "";
+    const fromStr = document.getElementById("fromDate").value;
+    const toStr = document.getElementById("toDate").value;
+    if(!fromStr || !toStr){ errEl.textContent = "Укажите начальную и конечную дату."; return; }
+    if(fromStr > toStr){ errEl.textContent = "Начальная дата позже конечной."; return; }
+
+    document.getElementById("splitBtn").disabled = true;
+    await loadEventsAndAttendance(fromStr, toStr);
+    hasSplit = true;
+    lastRows = applyGold(computeRows());
+    renderTable(lastRows);
+    document.getElementById("splitBtn").disabled = false;
+  }
+
+  document.getElementById("splitBtn").addEventListener("click", doSplit);
+  // сумму голды можно поменять без повторного пересчёта явки/буста — просто
+  // перераспределяем уже посчитанные финальные баллы по новой сумме
+  document.getElementById("goldInput").addEventListener("input", () => {
+    if(!lastRows.length) return;
+    applyGold(lastRows);
+    renderBody(lastRows);
+  });
+
+  // ---- иконка над столбцом мероприятия (только админ) ----
+  let pickerTargetEventId = null;
+  function openDayIconPicker(eventId){
+    pickerTargetEventId = eventId;
+    document.getElementById("dayIconPicker").click();
+  }
+  function resizeImageFile(file, maxSize){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+          const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/png"));
+        };
+        img.onerror = reject;
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  document.getElementById("dayIconPicker").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if(!file || !pickerTargetEventId) return;
+    const dataUrl = await resizeImageFile(file, 64);
+    const { error } = await db.from("attendance_events").update({ icon: dataUrl }).eq("id", pickerTargetEventId);
+    if(error){ document.getElementById("lsError").textContent = "Не удалось сохранить иконку: " + error.message; return; }
+    const ev = events.find(x => x.id === pickerTargetEventId);
+    if(ev) ev.icon = dataUrl;
+    renderHead();
+  });
+
+  await Promise.all([loadCensus(), loadMemberClasses(), loadBoostStructure(), loadBoostValues(), loadCoefficients()]);
+  renderTable([]);
+})();
+</script>
+</body>
+</html>

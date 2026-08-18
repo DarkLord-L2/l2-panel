@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Мой кабинет — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=9" />
+<link rel="stylesheet" href="js/theme.css?v=10" />
 <style>
   .cab-wrap{ padding:0 0 32px; display:flex; flex-direction:column; gap:16px; }
 
@@ -111,7 +111,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=16"></script>
+<script src="js/supabase-client.js?v=17"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -159,10 +159,13 @@
   const ownNick = (profile.nickname || "").trim();
   const ownNorm = normalizeNick(ownNick);
 
-  // ?nick=... — сюда попали из меню «⋮» в «Группах» (клан-лидер/зам/лидер пати
-  // открывают кабинет другого участника); без параметра — свой собственный кабинет
+  // ?nick=... — сюда попали кликом на чужой ник (из «Групп» или «Участников клана»,
+  // клан-лидер/зам/лидер пати открывают кабинет другого участника своей группы);
+  // без параметра — свой собственный кабинет. ?from=... — куда вести кнопкой «Назад».
   const requestedNick = (new URLSearchParams(location.search).get("nick") || "").trim();
   const viewingOther = !!requestedNick && normalizeNick(requestedNick) !== ownNorm;
+  const FROM_SECTIONS = { groups: "Группы", roster: "Участники клана" };
+  const fromKey = (new URLSearchParams(location.search).get("from") || "groups").trim();
 
   if(viewingOther){
     let allowed = isAdmin;
@@ -196,9 +199,9 @@
       h1.textContent = "Личный кабинет: " + myNick;
       const backBtn = document.createElement("button");
       backBtn.className = "btn btn-ghost";
-      backBtn.textContent = "← Группы";
+      backBtn.textContent = "← " + (FROM_SECTIONS[fromKey] || "Назад");
       backBtn.addEventListener("click", () => {
-        if(window.top && window.top.L2Nav) window.top.L2Nav.openSection("groups");
+        if(window.top && window.top.L2Nav) window.top.L2Nav.openSection(fromKey);
       });
       h1.parentElement.appendChild(backBtn);
     }

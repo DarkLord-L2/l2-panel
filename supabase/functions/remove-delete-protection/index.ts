@@ -1,18 +1,18 @@
 // Edge Function: remove-delete-protection
-// Вызывается только из admin.html. Снимает delete_protected с чужого (или своего)
-// аккаунта — но только если фраза совпадает с секретом
-// DELETE_PROTECTION_OVERRIDE_PHRASE (отдельный секрет от set-delete-protection,
-// задаётся в Supabase → Edge Functions → Secrets). Эта фраза предназначена только
-// для владельца сайта — знать её не должен ни один клан-лидер.
+// Вызывается только из admin.html. Снимает delete_protected с аккаунта (свой или чужой
+// в своём клане) — если введённая фраза совпадает либо с ХЕШЕМ ПАРОЛЯ, которым сам
+// владелец аккаунта ставил защиту (set-delete-protection), либо с мастер-сид-фразой
+// DELETE_PROTECTION_SEED_PHRASE (секрет в Supabase → Edge Functions → Secrets,
+// известна только владельцу сайта и работает поверх ЛЮБОГО чужого пароля).
 //
-// Фраза сверяется только здесь, на сервере — в браузер/исходники сайта она не попадает.
+// Обе фразы сверяются только здесь, на сервере.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const OVERRIDE_PHRASE = (Deno.env.get("DELETE_PROTECTION_OVERRIDE_PHRASE") ?? "").trim();
+const SEED_PHRASE = (Deno.env.get("DELETE_PROTECTION_SEED_PHRASE") ?? "").trim();
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -25,6 +25,12 @@ function json(body: unknown, status = 200) {
     status,
     headers: { "Content-Type": "application/json", ...CORS_HEADERS },
   });
+}
+
+async function hashPhrase(phrase: string, salt: string): Promise<string> {
+  const bytes = new TextEncoder().encode(salt + ":" + phrase);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 Deno.serve(async (req) => {
@@ -50,11 +56,11 @@ Deno.serve(async (req) => {
     .select("clan_id, roles(key)")
     .eq("id", userData.user.id)
     .single();
-
-  const callerRoleKey = (callerProfile as { roles?: { key?: string } } | null)?.roles?.key;
-  if (profileErr || callerRoleKey !== "glavadmin") {
+  if (profileErr || !callerProfile) {
     return json({ error: "forbidden" }, 403);
   }
+  const callerRoleKey = (callerProfile as { roles?: { key?: string } }).roles?.key;
+  const callerClanId = (callerProfile as { clan_id: string }).clan_id;
 
   let body: { phrase?: string; user_id?: string };
   try {
@@ -64,29 +70,42 @@ Deno.serve(async (req) => {
   }
 
   const phrase = (body.phrase ?? "").trim();
-  const targetId = body.user_id ?? "";
-  if (!OVERRIDE_PHRASE || !phrase || phrase !== OVERRIDE_PHRASE) {
+  const targetId = body.user_id || userData.user.id; // без user_id — снимаем со своего аккаунта
+  if (!phrase) {
     return json({ error: "invalid_phrase" }, 403);
   }
-  if (!targetId) {
-    return json({ error: "missing_user_id" }, 400);
+
+  const isSelf = targetId === userData.user.id;
+  // на чужой аккаунт может покуситься только главный админ того же клана —
+  // самого себя снять может кто угодно, кто вообще смог зайти в Админ-панель
+  if (!isSelf && callerRoleKey !== "glavadmin") {
+    return json({ error: "forbidden" }, 403);
   }
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-  // тот же клан, что у вызывающего — не позволяем снять защиту с аккаунта из чужого клана
   const { data: targetProfile, error: targetErr } = await admin
     .from("profiles")
-    .select("clan_id")
+    .select("clan_id, delete_protection_hash, delete_protection_salt")
     .eq("id", targetId)
     .single();
-  if (targetErr || !targetProfile || targetProfile.clan_id !== (callerProfile as { clan_id: string }).clan_id) {
+  if (targetErr || !targetProfile || targetProfile.clan_id !== callerClanId) {
     return json({ error: "forbidden" }, 403);
+  }
+
+  const isSeedPhrase = !!SEED_PHRASE && phrase === SEED_PHRASE;
+  let matchesOwnPassword = false;
+  if (targetProfile.delete_protection_hash && targetProfile.delete_protection_salt) {
+    const candidate = await hashPhrase(phrase, targetProfile.delete_protection_salt);
+    matchesOwnPassword = candidate === targetProfile.delete_protection_hash;
+  }
+  if (!isSeedPhrase && !matchesOwnPassword) {
+    return json({ error: "invalid_phrase" }, 403);
   }
 
   const { error: updErr } = await admin
     .from("profiles")
-    .update({ delete_protected: false })
+    .update({ delete_protected: false, delete_protection_hash: null, delete_protection_salt: null })
     .eq("id", targetId);
   if (updErr) {
     return json({ error: updErr.message }, 400);

@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=9" />
+<link rel="stylesheet" href="js/theme.css?v=10" />
 </head>
 <body>
 
@@ -27,7 +27,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=16"></script>
+<script src="js/supabase-client.js?v=17"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -41,10 +41,12 @@
     skill_panel: { type: "iframe", src: "panel.html" },
     admin:       { type: "iframe", src: "admin.html" },
     census:      { type: "iframe", src: "census.html" },
+    roster:      { type: "iframe", src: "roster.html" },
     attendance:  { type: "iframe", src: "attendance.html" },
     taxes:       { type: "iframe", src: "taxes.html" },
     reports:     { type: "iframe", src: "reports.html" },
     gear_check:  { type: "iframe", src: "gear-check.html" },
+    loot_split:  { type: "iframe", src: "loot-split.html" },
   };
 
   // Чисто визуальная группировка пунктов меню — на права доступа не влияет,
@@ -142,7 +144,7 @@
     // из карточки участника в группе — сразу открыть таблицу буста для этой группы
     openGearCheck(groupId){ renderSection("gear_check", { group: groupId }); },
     // из меню «⋮» в «Группах» — клан-лидер/зам/лидер пати открывают личный кабинет участника
-    openMyCabinet(nick){ renderSection("my_cabinet", { nick }); },
+    openMyCabinet(nick, from){ renderSection("my_cabinet", { nick, from: from || "groups" }); },
     openSection(key){ renderSection(key); },
   };
 

@@ -143,7 +143,9 @@ async function adminCreateUser({ username, password, nickname, role_key, party_i
 
 // Удаление пользователя — тоже только для главного админа, тоже через Edge Function
 // (нужен service-role, чтобы удалить саму учётку в auth.users, не только строку в profiles).
-async function adminDeleteUser(userId){
+// phrase нужен, только если аккаунт защищён (delete_protected) — пароль защиты
+// этого же аккаунта либо мастер-сид-фраза; для незащищённых можно не передавать
+async function adminDeleteUser(userId, phrase){
   const { data: { session } } = await client.auth.getSession();
   if(!session) throw new Error("no_session");
 
@@ -153,7 +155,7 @@ async function adminDeleteUser(userId){
       "Content-Type": "application/json",
       "Authorization": `Bearer ${session.access_token}`,
     },
-    body: JSON.stringify({ user_id: userId }),
+    body: JSON.stringify({ user_id: userId, phrase }),
   });
   const body = await res.json().catch(() => ({}));
   if(!res.ok) throw new Error(body.error || "request_failed");

@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Журнал посещаемости — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=9" />
+<link rel="stylesheet" href="js/theme.css?v=10" />
 <style>
   #daysContainer{
     display:grid;
@@ -47,6 +47,15 @@
     cursor:pointer;
   }
   .day-add-toggle:hover{ color: var(--gold); border-color: var(--border-lit); }
+
+  /* маленькая зелёная кнопка рядом с «Посещаемость» — открывает отчёт сразу
+     за ту неделю, что сейчас показана в редакторе (Пн–Вс), без лишних кликов */
+  .week-report-btn{
+    width:34px; height:34px; padding:0; flex:none;
+    font-size:15px; line-height:1;
+    background: var(--ok); border-color: var(--ok); color:#fff;
+  }
+  .week-report-btn:hover{ filter:brightness(1.12); }
   .day-add-row{ display:none; gap:6px; margin-top:6px; }
   .day-add-row.open{ display:flex; }
   .day-add-row input{ flex:1; font-size:12px; padding:6px 8px; }
@@ -144,6 +153,14 @@
   .report-table th.att-num, .report-table td.att-num{
     text-align:center; width:1%; white-space:nowrap; color: var(--text-dim);
   }
+  /* разделитель разделов в режиме «Ходил / Платил» — один общий список, три
+     подряд идущих блока вместо переключения вкладками */
+  tr.att-section-row td{
+    background: var(--panel-2); color: var(--gold-dim);
+    font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;
+    padding:8px 12px; border-bottom:1px solid var(--border-lit);
+  }
+  tr.att-section-row:first-child td{ border-top:none; }
   .nick-click{ cursor:pointer; }
   .nick-click:hover{ color: var(--gold); }
   #nickInfoStatus a{ cursor:pointer; }
@@ -211,6 +228,7 @@
     <button class="btn" id="todayBtn">Сегодня</button>
     <button class="btn" id="pullPrevWeekBtn" style="display:none;">Подтянуть из прошлой недели</button>
     <button class="btn btn-primary" id="openAttReportBtn">Посещаемость</button>
+    <button class="btn week-report-btn" id="weekReportBtn" title="Отчёт сразу за эту неделю">▤</button>
   </section>
   <p class="remember-status" id="rememberStatus" style="text-align:center;"></p>
 
@@ -413,7 +431,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=16"></script>
+<script src="js/supabase-client.js?v=17"></script>
 <script src="js/event-roster.js?v=22"></script>
 <script src="js/share-report.js?v=2"></script>
 <script>
@@ -441,6 +459,11 @@
   const DAY_SHORT = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
   const REPORT_FILTERS = [
+    // особый пункт — не фильтр в один список, а три раздела подряд (см. renderAttTableFlat):
+    // сначала Ходил (даже если человек ещё и платит), потом Платил (кто не ходил, но платит),
+    // потом Не ходил и не платил. test не используется, group решает, в какой раздел попасть
+    { key: "attended_or_paid", label: "Ходил / Платил", test: null,
+      group: r => r.attended ? "attended" : r.paid ? "paid" : "neither" },
     { key: "attended", label: "Ходил", test: r => r.attended },
     { key: "not_attended", label: "Не ходил", test: r => !r.attended },
     { key: "new_attended", label: "Новый + ходил", test: r => !r.isOld && r.attended },
@@ -943,29 +966,68 @@
     applyStickyHead();
   }
 
+  // три раздела режима «Ходил / Платил» — у «Платил» в заголовке сразу видна вся
+  // сверка с «Налогами»: сколько показано тут + сколько уже учтено в «Ходил» = сколько
+  // всего платили за период, чтобы не считать в уме и не листать наверх за подсказкой
+  function buildGroupedSections(baseRows, filter){
+    const attended = baseRows.filter(r => filter.group(r) === "attended").sort(ATT_SORT);
+    const paidOnly = baseRows.filter(r => filter.group(r) === "paid").sort(ATT_SORT);
+    const neither = baseRows.filter(r => filter.group(r) === "neither").sort(ATT_SORT);
+    const paidAndAttended = attended.filter(r => r.paid).length;
+    const totalPaid = paidOnly.length + paidAndAttended;
+    return [
+      { text: `Ходил (${attended.length})`, list: attended },
+      { text: `Платил (${paidOnly.length}) · Ходил и платил (${paidAndAttended}) · Итого платили (${totalPaid})`, list: paidOnly },
+      { text: `Не ходил и не платил (${neither.length})`, list: neither },
+    ];
+  }
+
+  function buildFlatRow(r, num){
+    const tr = document.createElement("tr");
+    const tdNum = document.createElement("td"); tdNum.className = "att-num"; tdNum.textContent = num;
+    const tdNick = document.createElement("td"); tdNick.textContent = r.nickname;
+    tdNick.className = "nick-click att-nick";
+    tdNick.addEventListener("click", () => showNickInfo(r.nickname));
+    const tdAtt = document.createElement("td"); tdAtt.textContent = `${r.attendedN}/${r.total}`;
+    const tdPct = document.createElement("td"); tdPct.textContent = `${r.percent}%`;
+    const tdSince = document.createElement("td"); tdSince.textContent = r.since || "Новый";
+    tr.append(tdNum, tdNick, tdAtt, tdPct, tdSince);
+    return tr;
+  }
+
+  const ATT_SORT = (a, b) => b.attendedN - a.attendedN || a.nickname.localeCompare(b.nickname);
+
   function renderAttTableFlat(filterKey){
     resetFlatHead();
     const filter = REPORT_FILTERS.find(f => f.key === filterKey);
-    const rows = (filter ? attReportRows.filter(filter.test) : [])
+    const baseRows = attReportRows
       .filter(r => !attNickFilter || r.nickname.toLowerCase().includes(attNickFilter))
-      .filter(r => passesGroupFilter(r.nickname))
-      .slice()
-      .sort((a, b) => b.attendedN - a.attendedN || a.nickname.localeCompare(b.nickname));
+      .filter(r => passesGroupFilter(r.nickname));
     const body = document.getElementById("attReportBody");
     body.innerHTML = "";
+
+    if(filter && filter.group){
+      // не один список, а три раздела подряд: Ходил → Платил (но не ходил) → ни то ни другое
+      const sections = buildGroupedSections(baseRows, filter);
+      document.getElementById("attReportEmpty").style.display = sections.some(s => s.list.length) ? "none" : "";
+      let num = 0;
+      sections.forEach(s => {
+        if(!s.list.length) return;
+        const secTr = document.createElement("tr");
+        secTr.className = "att-section-row";
+        const secTd = document.createElement("td");
+        secTd.colSpan = 5;
+        secTd.textContent = s.text;
+        secTr.appendChild(secTd);
+        body.appendChild(secTr);
+        s.list.forEach(r => { num++; body.appendChild(buildFlatRow(r, num)); });
+      });
+      return;
+    }
+
+    const rows = (filter ? baseRows.filter(filter.test) : []).slice().sort(ATT_SORT);
     document.getElementById("attReportEmpty").style.display = rows.length ? "none" : "";
-    rows.forEach((r, i) => {
-      const tr = document.createElement("tr");
-      const tdNum = document.createElement("td"); tdNum.className = "att-num"; tdNum.textContent = i + 1;
-      const tdNick = document.createElement("td"); tdNick.textContent = r.nickname;
-      tdNick.className = "nick-click att-nick";
-      tdNick.addEventListener("click", () => showNickInfo(r.nickname));
-      const tdAtt = document.createElement("td"); tdAtt.textContent = `${r.attendedN}/${r.total}`;
-      const tdPct = document.createElement("td"); tdPct.textContent = `${r.percent}%`;
-      const tdSince = document.createElement("td"); tdSince.textContent = r.since || "Новый";
-      tr.append(tdNum, tdNick, tdAtt, tdPct, tdSince);
-      body.appendChild(tr);
-    });
+    rows.forEach((r, i) => body.appendChild(buildFlatRow(r, i + 1)));
   }
 
   function groupDaysByWeek(days){
@@ -996,11 +1058,9 @@
     const savedWidth = localStorage.getItem(TABLE_WIDTH_KEY);
     if(savedWidth) wrapEl.style.width = savedWidth + "px";
     const filter = REPORT_FILTERS.find(f => f.key === filterKey);
-    const rows = (filter ? attReportRows.filter(filter.test) : [])
+    const baseRows = attReportRows
       .filter(r => !attNickFilter || r.nickname.toLowerCase().includes(attNickFilter))
-      .filter(r => passesGroupFilter(r.nickname))
-      .slice()
-      .sort((a, b) => b.attendedN - a.attendedN || a.nickname.localeCompare(b.nickname));
+      .filter(r => passesGroupFilter(r.nickname));
 
     const weekGroups = groupDaysByWeek(attReportDays);
     // первый день каждой недели, кроме самой первой — граница-разделитель между блоками недель
@@ -1020,10 +1080,11 @@
 
     const body = document.getElementById("attReportBody");
     body.innerHTML = "";
-    document.getElementById("attReportEmpty").style.display = rows.length ? "none" : "";
-    rows.forEach((r, i) => {
+    const matrixColSpan = 2 + attReportDays.length + 2;
+
+    function buildMatrixRow(r, num){
       const tr = document.createElement("tr");
-      const tdNum = document.createElement("td"); tdNum.className = "att-num"; tdNum.textContent = i + 1;
+      const tdNum = document.createElement("td"); tdNum.className = "att-num"; tdNum.textContent = num;
       const tdNick = document.createElement("td"); tdNick.textContent = r.nickname;
       tdNick.className = "nick-click att-nick";
       tdNick.addEventListener("click", () => showNickInfo(r.nickname));
@@ -1040,13 +1101,35 @@
       const tdTotal = document.createElement("td"); tdTotal.className = tier; tdTotal.textContent = `${r.attendedN}/${r.total}`;
       const tdPct = document.createElement("td"); tdPct.className = tier; tdPct.textContent = `${r.percent}%`;
       tr.append(tdTotal, tdPct);
-      body.appendChild(tr);
-    });
+      return tr;
+    }
+
+    if(filter && filter.group){
+      const sections = buildGroupedSections(baseRows, filter);
+      document.getElementById("attReportEmpty").style.display = sections.some(s => s.list.length) ? "none" : "";
+      let num = 0;
+      sections.forEach(s => {
+        if(!s.list.length) return;
+        const secTr = document.createElement("tr");
+        secTr.className = "att-section-row";
+        const secTd = document.createElement("td");
+        secTd.colSpan = matrixColSpan;
+        secTd.textContent = s.text;
+        secTr.appendChild(secTd);
+        body.appendChild(secTr);
+        s.list.forEach(r => { num++; body.appendChild(buildMatrixRow(r, num)); });
+      });
+      return;
+    }
+
+    const rows = (filter ? baseRows.filter(filter.test) : []).slice().sort(ATT_SORT);
+    document.getElementById("attReportEmpty").style.display = rows.length ? "none" : "";
+    rows.forEach((r, i) => body.appendChild(buildMatrixRow(r, i + 1)));
   }
 
   function renderDayColumns(filterKey){
     const filter = REPORT_FILTERS.find(f => f.key === filterKey);
-    const rows = (filter ? attReportRows.filter(filter.test) : [])
+    const rows = (filter ? attReportRows.filter(filter.test || (() => true)) : [])
       .filter(r => !attNickFilter || r.nickname.toLowerCase().includes(attNickFilter))
       .filter(r => passesGroupFilter(r.nickname))
       .slice()
@@ -1141,10 +1224,15 @@
   document.getElementById("modePeriodBtn").addEventListener("click", () => setReportMode("period"));
   document.getElementById("modeDayBtn").addEventListener("click", () => setReportMode("day"));
 
-  document.getElementById("openAttReportBtn").addEventListener("click", async () => {
+  // открывает раздел отчёта; from/to — если заданы, подставляются в поля дат
+  // (кнопка за конкретную неделю), иначе — что уже было введено, либо последние 7 дней
+  async function openReportView(from, to){
     const fromEl = document.getElementById("attFrom");
     const toEl = document.getElementById("attTo");
-    if(!fromEl.value || !toEl.value){
+    if(from && to){
+      fromEl.value = from;
+      toEl.value = to;
+    } else if(!fromEl.value || !toEl.value){
       const today = new Date();
       const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 6);
       toEl.value = isoDate(today);
@@ -1167,6 +1255,33 @@
     document.getElementById("attReportView").style.display = "";
     document.body.classList.add("report-focus");
     expandReportControls();
+  }
+
+  // строит и показывает саму таблицу отчёта за period-даты, уже стоящие в полях —
+  // общий код кнопки «Показать» и зелёной кнопки «за эту неделю»
+  async function runPeriodReport(from, to){
+    const errEl = document.getElementById("attReportError");
+    errEl.textContent = "";
+    if(!from || !to){ errEl.textContent = "Заполните обе даты."; return; }
+    if(from > to){ errEl.textContent = "Дата «с» позже даты «по»."; return; }
+    const result = await buildAttendanceReport(from, to);
+    attReportRows = result.rows;
+    attReportDays = result.days;
+    attReportNickDays = result.nickDays;
+    renderFilterTabs();
+    collapseReportControls();
+  }
+
+  document.getElementById("openAttReportBtn").addEventListener("click", () => openReportView());
+
+  // зелёная кнопка у навигации по неделям — открывает отчёт сразу за ту неделю,
+  // что сейчас показана в редакторе явки (currentWeek), без промежуточных кликов
+  document.getElementById("weekReportBtn").addEventListener("click", async () => {
+    const monday = mondayOf(currentWeek);
+    const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6);
+    const from = isoDate(monday), to = isoDate(sunday);
+    await openReportView(from, to);
+    await runPeriodReport(from, to);
   });
   document.getElementById("attBackBtn").addEventListener("click", () => {
     document.getElementById("attReportView").style.display = "none";
@@ -1219,19 +1334,8 @@
   }
   document.getElementById("attEditBtn").addEventListener("click", expandReportControls);
 
-  document.getElementById("attShowBtn").addEventListener("click", async () => {
-    const from = document.getElementById("attFrom").value;
-    const to = document.getElementById("attTo").value;
-    const errEl = document.getElementById("attReportError");
-    errEl.textContent = "";
-    if(!from || !to){ errEl.textContent = "Заполните обе даты."; return; }
-    if(from > to){ errEl.textContent = "Дата «с» позже даты «по»."; return; }
-    const result = await buildAttendanceReport(from, to);
-    attReportRows = result.rows;
-    attReportDays = result.days;
-    attReportNickDays = result.nickDays;
-    renderFilterTabs();
-    collapseReportControls();
+  document.getElementById("attShowBtn").addEventListener("click", () => {
+    runPeriodReport(document.getElementById("attFrom").value, document.getElementById("attTo").value);
   });
 
   document.getElementById("attShowDayBtn").addEventListener("click", async () => {

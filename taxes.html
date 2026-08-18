@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Налоги — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=9" />
+<link rel="stylesheet" href="js/theme.css?v=10" />
 <style>
   .weeks-list{ display:flex; flex-direction:column; gap:6px; max-height:320px; overflow-y:auto; margin:10px 0; }
   .weeks-list label{ display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; }
@@ -161,7 +161,7 @@
     <p class="hint" id="nickHint"></p>
     <p class="error-msg" id="nickError"></p>
     <p class="ok-msg" id="nickOk"></p>
-    <button class="btn btn-primary" id="nickApplyBtn">Отметить</button>
+    <button class="btn btn-primary" id="nickApplyBtn">ОК</button>
   </div>
 </div>
 
@@ -254,6 +254,11 @@
   <div class="modal report-modal">
     <button class="modal-close" id="donationsClose" title="Закрыть">×</button>
     <h2>Донаты</h2>
+    <div style="display:flex; gap:8px; margin:2px 0 8px;">
+      <button type="button" class="btn btn-primary" id="donationsWeekBtn">За неделю</button>
+      <button type="button" class="btn" id="donationsAllBtn">За всё время</button>
+    </div>
+    <p class="hint" id="donationsWeekLabel"></p>
     <div style="overflow-x:auto;">
       <table class="report-table">
         <thead>
@@ -317,7 +322,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=16"></script>
+<script src="js/supabase-client.js?v=17"></script>
 <script src="js/week-roster.js?v=4"></script>
 <script src="js/share-report.js?v=2"></script>
 <script>
@@ -419,6 +424,14 @@
     if(e.target.id === "nickOverlay") e.currentTarget.classList.remove("show");
   });
 
+  // кнопка не трогается — просто через секунду после успеха окно само закрывается,
+  // не нужно жать крестик руками
+  function closeNickModalAfterOk(){
+    setTimeout(() => {
+      document.getElementById("nickOverlay").classList.remove("show");
+    }, 900);
+  }
+
   document.getElementById("nickApplyBtn").addEventListener("click", async () => {
     const errEl = document.getElementById("nickError");
     const okEl = document.getElementById("nickOk");
@@ -436,8 +449,9 @@
         created_by: profile.id,
       });
       if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
-      okEl.textContent = "Донат записан.";
+      okEl.textContent = "✓ Ок — донат записан.";
       document.getElementById("nickDonateAmount").value = "";
+      closeNickModalAfterOk();
       return;
     }
 
@@ -465,8 +479,9 @@
 
     const { error } = await db.from("tax_payments").insert(rows);
     if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
-    okEl.textContent = `Отмечено недель: ${rows.length}.`;
+    okEl.textContent = `✓ Ок — отмечено недель: ${rows.length}.`;
     await roster.reloadWeek();
+    closeNickModalAfterOk();
   });
 
   // ---- справка ----
@@ -563,13 +578,27 @@
   document.getElementById("archiveBackBtn").addEventListener("click", openReportPicker);
 
   // ---- донаты ----
+  // по умолчанию только за неделю, что сейчас открыта в редакторе (roster.getCurrentWeek()),
+  // либо целиком за всё время (кнопка «За всё время») — donations не привязаны к week_start,
+  // как tax_payments, поэтому фильтруем по created_at (Пн 00:00 – следующий Пн 00:00).
+  // Всегда от большего к меньшему по сумме.
+  let donationsShowAll = false;
   async function loadDonations(){
     const errEl = document.getElementById("donationsError");
     errEl.textContent = "";
-    const { data, error } = await db
-      .from("tax_donations")
-      .select("id, nickname, amount, created_at")
-      .order("created_at", { ascending: false });
+    document.getElementById("donationsWeekBtn").classList.toggle("btn-primary", !donationsShowAll);
+    document.getElementById("donationsAllBtn").classList.toggle("btn-primary", donationsShowAll);
+
+    let query = db.from("tax_donations").select("id, nickname, amount, created_at").order("amount", { ascending: false });
+    if(donationsShowAll){
+      document.getElementById("donationsWeekLabel").textContent = "За всё время";
+    } else {
+      const weekStart = roster.getCurrentWeek();
+      const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 7);
+      document.getElementById("donationsWeekLabel").textContent = "За неделю: " + weekRangeLabel(isoOf(weekStart));
+      query = query.gte("created_at", weekStart.toISOString()).lt("created_at", weekEnd.toISOString());
+    }
+    const { data, error } = await query;
     if(error){ errEl.textContent = error.message; return; }
 
     const body = document.getElementById("donationsBody");
@@ -598,8 +627,17 @@
     });
   }
   document.getElementById("openDonationsBtn").addEventListener("click", async () => {
+    donationsShowAll = false; // каждое открытие окна — заново с текущей недели
     await loadDonations();
     document.getElementById("donationsOverlay").classList.add("show");
+  });
+  document.getElementById("donationsWeekBtn").addEventListener("click", () => {
+    donationsShowAll = false;
+    loadDonations();
+  });
+  document.getElementById("donationsAllBtn").addEventListener("click", () => {
+    donationsShowAll = true;
+    loadDonations();
   });
   document.getElementById("donationsClose").addEventListener("click", () => {
     document.getElementById("donationsOverlay").classList.remove("show");

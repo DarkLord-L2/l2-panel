@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Отчёты по мероприятиям — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=9" />
+<link rel="stylesheet" href="js/theme.css?v=10" />
 <style>
   .rep-wrap{ padding:0 0 32px; }
 
@@ -65,6 +65,8 @@
     text-align:left;
   }
   table.rep-table thead th.rep-col-nick{ z-index:3; background: var(--panel); }
+  table.rep-table thead th.rep-sortable{ cursor:pointer; user-select:none; }
+  table.rep-table thead th.rep-sortable:hover{ color: var(--text); }
   table.rep-table tbody tr:hover td{ background: rgba(255,255,255,.03); }
   table.rep-table tbody tr:hover td.rep-col-nick{ background: var(--panel-2); }
   table.rep-table td:not(.rep-col-nick){ text-align:center; }
@@ -101,6 +103,29 @@
   /* профессию выбрали руками — точка синяя, чтобы отличать от автоподбора */
   .rep-swap-dot.forced{ background: var(--focus); }
 
+  /* «Неделя» — можно отметить галочками сразу несколько, отчёт сложит их вместе */
+  .week-multi{ position:relative; }
+  .week-multi-btn{
+    width:100%; text-align:left; font-family:inherit; font-size:13.5px;
+    padding:9px 11px; border-radius:5px; border:1px solid var(--border);
+    background: var(--panel-2); color: var(--text); cursor:pointer;
+  }
+  .week-multi-btn:hover{ border-color: var(--border-lit); }
+  .week-multi-dropdown{
+    position:absolute; top:calc(100% + 4px); left:0; z-index:20; min-width:240px;
+    background: var(--panel); border:1px solid var(--border-lit); border-radius:8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4); padding:6px;
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .week-multi-opt{
+    display:flex; align-items:center; gap:8px; padding:7px 8px; border-radius:5px;
+    font-size:12.5px; color: var(--text); cursor:pointer;
+  }
+  .week-multi-opt:hover{ background: var(--panel-2); }
+  .week-multi-opt input{ accent-color: var(--gold); cursor:pointer; }
+  .week-multi-all{ border-bottom:1px solid var(--border); margin-bottom:3px; padding-bottom:9px; }
+  .week-multi-list{ max-height:260px; overflow-y:auto; display:flex; flex-direction:column; gap:2px; }
+
   /* смена профессии кликом по иконке класса (только у админа) */
   .rep-nick .avatar.rep-avatar-btn{ cursor:pointer; }
   .rep-nick .avatar.rep-avatar-btn:hover{ border-color: var(--gold); }
@@ -127,6 +152,9 @@
     font-size:11px; color: var(--text-dim);
   }
   .rep-class-opt .now{ margin-left:auto; font-size:10px; color: var(--text-dim); flex:none; }
+  /* поиск новой профессии внутри попапа — свой скролл у списка, чтобы поле поиска
+     не укатывалось вместе с ним (весь попап тоже скроллится, но реже сюда доходит) */
+  .rep-class-search-list{ display:flex; flex-direction:column; gap:2px; max-height:180px; overflow-y:auto; }
   .rep-col-actions .btn{ padding:1px 7px; font-size:11px; line-height:1.6; }
   /* кнопка удаления видна только при наведении на строку, чтобы не мозолить глаза
      постоянно горящей красной кнопкой у каждого ника; кнопка восстановления —
@@ -193,6 +221,51 @@
   table.cmp-table th, table.cmp-table td{ padding:6px 8px; border-bottom:1px solid var(--border); text-align:center; white-space:nowrap; }
   table.cmp-table th:first-child, table.cmp-table td:first-child{ text-align:left; }
   table.cmp-table thead th{ color: var(--text-dim); font-size:11px; font-weight:500; }
+
+  /* ---- сравнение людей между собой (горизонтальные полосы по каждому показателю) ---- */
+  /* кнопка «весы» в строке таблицы — добавляет/убирает человека из сравнения;
+     тусклая по умолчанию, ярче при наведении на строку, золотая когда уже выбран */
+  table.rep-table th.rep-col-cmp, table.rep-table td.rep-col-cmp{ width:34px; padding-left:4px; padding-right:4px; }
+  .rep-cmp-btn{
+    width:24px; height:24px; padding:0; border-radius:5px; border:1px solid transparent;
+    background:none; color: var(--text-dim); font-size:13px; line-height:1; cursor:pointer;
+    opacity:.35; transition: opacity .12s, color .12s, border-color .12s;
+  }
+  table.rep-table tbody tr:hover .rep-cmp-btn{ opacity:.8; }
+  .rep-cmp-btn:hover{ opacity:1 !important; border-color: var(--border); }
+  .rep-cmp-btn.active{ opacity:1; color: var(--gold); border-color: var(--border-lit); background: var(--panel-2); }
+  .rep-cmp-btn:disabled{ cursor:not-allowed; opacity:.15 !important; }
+  /* «профиль» сравнения людей — один силуэт-график на человека через 5 показателей
+     (Килы/Смерти/K:D/PvP/PvE как оси в ряд), с мягким свечением и заливкой под линией;
+     точные цифры отдельно в таблице ниже, чтобы график оставался просто картинкой */
+  .ppl-chart-card{
+    background: var(--panel-2); border:1px solid var(--border); border-radius:10px;
+    padding:18px 8px 14px;
+  }
+  .ppl-linechart{ width:100%; max-width:560px; height:auto; display:block; margin:0 auto; overflow:visible; }
+  .ppl-grid-line{ stroke: var(--border); stroke-width:1; }
+  .ppl-grid-line.dashed{ stroke-dasharray:2 4; opacity:.7; }
+  .ppl-axis-tick{ stroke: var(--border-lit); stroke-width:1; opacity:.5; }
+  .ppl-axis-label{ font-size:9.5px; fill: var(--text-dim); text-transform:uppercase; letter-spacing:.05em; }
+  .ppl-series-path{ fill:none; stroke-width:2.25; stroke-linejoin:round; stroke-linecap:round; transition: opacity .15s ease; }
+  .ppl-series-area{ transition: opacity .15s ease; }
+  .ppl-series-dot{ stroke: var(--panel-2); stroke-width:1.5; transition: opacity .15s ease; }
+  .ppl-line-series.dim .ppl-series-path,
+  .ppl-line-series.dim .ppl-series-dot{ opacity:.15; }
+  .ppl-line-series.dim .ppl-series-area{ opacity:.03; }
+
+  .ppl-legend2{ display:flex; flex-wrap:wrap; gap:4px 16px; justify-content:center; margin-top:6px; }
+  .ppl-legend-item{
+    display:flex; align-items:center; gap:6px; font-size:12px; color: var(--text-dim);
+    padding:3px 6px; border-radius:5px; transition: opacity .15s ease, color .12s ease;
+  }
+  .ppl-legend-item .dot{ width:9px; height:9px; border-radius:50%; flex:none; box-shadow:0 0 6px currentColor; }
+  .ppl-legend-item.dim{ opacity:.35; }
+
+  table.ppl-stats-table{ border-collapse:separate; border-spacing:0; width:100%; font-size:12px; margin-top:14px; }
+  table.ppl-stats-table th, table.ppl-stats-table td{ padding:6px 8px; border-bottom:1px solid var(--border); text-align:center; white-space:nowrap; }
+  table.ppl-stats-table th:first-child, table.ppl-stats-table td:first-child{ text-align:left; }
+  table.ppl-stats-table thead th{ color: var(--text-dim); font-size:11px; font-weight:500; }
 </style>
 </head>
 <body>
@@ -204,8 +277,17 @@
     <section class="card rep-main">
       <div class="rep-filters">
         <div class="field">
-          <label for="weekSelect">Неделя</label>
-          <select id="weekSelect"></select>
+          <label for="weekMultiBtn">Неделя</label>
+          <div class="week-multi">
+            <button type="button" class="week-multi-btn" id="weekMultiBtn">Всё время</button>
+            <div class="week-multi-dropdown" id="weekMultiDropdown" style="display:none;">
+              <label class="week-multi-opt week-multi-all">
+                <input type="checkbox" id="weekAllTimeCheck" checked />
+                <span>Всё время</span>
+              </label>
+              <div class="week-multi-list" id="weekMultiList"></div>
+            </div>
+          </div>
         </div>
         <div class="field" id="eventFieldWrap" style="display:none;">
           <label for="eventSelect">Мероприятие</label>
@@ -262,6 +344,30 @@
         </div>
         <p class="hint" id="cmpEmpty">Отметьте хотя бы 2 пати, чтобы увидеть сравнение.</p>
       </div>
+
+      <div id="pplSection" style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
+        <h2>Сравнение людей</h2>
+        <p class="hint" style="margin:0 0 12px;">Наведите на человека в таблице слева и нажмите ⚖, чтобы добавить его в сравнение (2 и более), потом нажмите «Сравнить».</p>
+
+        <div class="chip-row" id="pplChips"></div>
+        <button class="btn btn-primary" id="pplCompareBtn" style="margin:4px 0 2px;" disabled>Сравнить</button>
+
+        <div id="pplBody" style="display:none; margin-top:14px;">
+          <div class="ppl-chart-card">
+            <div id="pplChartWrap"></div>
+            <div class="ppl-legend2" id="pplLegend"></div>
+          </div>
+          <div class="rep-table-scroll">
+            <table class="ppl-stats-table">
+              <thead>
+                <tr><th>Ник</th><th>Килы</th><th>Смерти</th><th>K:D</th><th>PvP</th><th>PvE</th></tr>
+              </thead>
+              <tbody id="pplStatsBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <p class="hint" id="pplEmpty">Пока никто не выбран.</p>
+      </div>
     </section>
   </div>
 </div>
@@ -289,7 +395,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=16"></script>
+<script src="js/supabase-client.js?v=17"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -335,9 +441,15 @@
   let events = [];                // [{id, week_start, event_date, event_name}]
   let allRawStats = [];           // [{nickname, kills, deaths, pvp, pve, event_id, week_start}]
   let activeGroupFilterId = "";
-  let selectedWeek = "";          // "" — всё время
-  let selectedEvent = "";         // "" — вся неделя целиком (актуально только если selectedWeek не пуст)
-  let periodValue = "";           // "" | "week:YYYY-MM-DD" | "event:<id>" — вычисляется из selectedWeek/selectedEvent
+  let selectedWeeks = [];         // [] — всё время; 1 элемент — обычная неделя; 2+ — сложенные вместе
+  let selectedEvent = "";         // "" — вся неделя целиком (актуально только если выбрана ровно одна неделя)
+  let periodValue = "";           // "" | "week:D" | "weeks:D,D,..." | "event:<id>" — из selectedWeeks/selectedEvent
+  function pluralWeeks(n){
+    const mod10 = n % 10, mod100 = n % 100;
+    if(mod10 === 1 && mod100 !== 11) return "неделя";
+    if(mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return "недели";
+    return "недель";
+  }
 
   // ОCR скрина со статистикой и «Перепись клана»/«Проверка буста» иногда распознают
   // один и тот же ник по-разному (регистр, дефисы/пробелы, обрезанный числовой суффикс:
@@ -500,10 +612,8 @@
       const sel = document.getElementById("eventSelect");
       return sel.options[sel.selectedIndex]?.textContent || "этого мероприятия";
     }
-    if(periodValue.startsWith("week:")){
-      const sel = document.getElementById("weekSelect");
-      return sel.options[sel.selectedIndex]?.textContent || "этой недели";
-    }
+    if(periodValue.startsWith("week:")) return weekRangeLabel(selectedWeeks[0]);
+    if(periodValue.startsWith("weeks:")) return selectedWeeks.length + " " + pluralWeeks(selectedWeeks.length);
     return "всего времени";
   }
 
@@ -540,6 +650,82 @@
     await refreshReport();
   }
 
+  // первый пустой слот (class_name/2/3/4) для новой профессии — null, если уже
+  // заняты все четыре (столько же поддерживает «Группы»)
+  function firstEmptyClassSlot(info){
+    if(!info.class_name) return "class_name";
+    if(!info.class_name_2) return "class_name_2";
+    if(!info.class_name_3) return "class_name_3";
+    if(!info.class_name_4) return "class_name_4";
+    return null;
+  }
+
+  // пишет НОВУЮ профессию человеку (это его реальный список классов из «Групп»,
+  // а не привязанный к периоду override, как у setForcedClass выше) — в первый
+  // свободный слот, остальные слоты не трогаем (upsert шлёт только этот столбец)
+  async function saveNewMemberClass(reportNick, info, slot, className){
+    const nickname = info.nickname || reportNick; // своё написание ника, если уже есть запись
+    const { error } = await db.from("member_classes").upsert(
+      { clan_id: profile.clan_id, nickname, [slot]: className },
+      { onConflict: "clan_id,nickname" }
+    );
+    if(error){ alert("Не удалось сохранить: " + error.message); return; }
+    closeClassPopup();
+    await loadMemberInfo();
+    await refreshReport();
+  }
+
+  // «+ Добавить профессию» переключает попап в поиск по всем 36 классам (как в
+  // «Группах»/«Проверке буста») — сюда попадают, если человеку нужно завести
+  // профессию, которой у него ещё вообще нет, а не просто переключиться между
+  // уже известными (это делает основной список выше через setForcedClass)
+  function renderAddClassSearch(reportNick, info, slot, picked){
+    const pop = classPopupEl;
+    pop.innerHTML = "";
+
+    const head = document.createElement("div");
+    head.className = "rep-class-popup-head";
+    head.textContent = "Новая профессия — поиск";
+    pop.appendChild(head);
+
+    const search = document.createElement("input");
+    search.type = "text";
+    search.placeholder = "Поиск класса...";
+    search.style.cssText = "margin:0 6px 4px;";
+    pop.appendChild(search);
+
+    const list = document.createElement("div");
+    list.className = "rep-class-search-list";
+    pop.appendChild(list);
+
+    const known = new Set(memberClasses(info));
+    function renderList(filterText){
+      const q = (filterText || "").trim().toLowerCase();
+      list.innerHTML = "";
+      (window.L2_CLASSES || [])
+        .filter(c => !known.has(c.name) && (!q || c.name.toLowerCase().includes(q)))
+        .forEach(c => {
+          const opt = document.createElement("button");
+          opt.className = "rep-class-opt";
+          opt.innerHTML = `<img class="ic" src="${c.icon}" alt="" /><span>${escapeHtml(c.name)}</span>`;
+          opt.addEventListener("click", () => saveNewMemberClass(reportNick, info, slot, c.name));
+          list.appendChild(opt);
+        });
+    }
+    renderList("");
+    search.addEventListener("input", (e) => renderList(e.target.value));
+
+    const backBtn = document.createElement("button");
+    backBtn.className = "rep-class-opt";
+    backBtn.style.color = "var(--text-dim)";
+    backBtn.innerHTML = "<span>← Назад</span>";
+    backBtn.addEventListener("click", () => openClassPopup(classPopupAnchor, reportNick, info, picked));
+    pop.appendChild(backBtn);
+
+    setTimeout(() => search.focus(), 0);
+    positionClassPopup();
+  }
+
   function openClassPopup(anchorEl, reportNick, info, picked){
     closeClassPopup();
     const all = memberClasses(info);
@@ -548,12 +734,15 @@
     const pop = document.createElement("div");
     pop.className = "rep-class-popup";
     pop.addEventListener("click", (e) => e.stopPropagation());
+    document.body.appendChild(pop);
+    classPopupEl = pop;
+    classPopupAnchor = anchorEl;
 
     const head = document.createElement("div");
     head.className = "rep-class-popup-head";
     head.textContent = all.length > 1
       ? "Профессия — только для «" + periodLabel() + "»"
-      : "Профессия одна";
+      : all.length === 1 ? "Профессия одна" : "Профессия не задана";
     pop.appendChild(head);
 
     if(all.length > 1){
@@ -576,17 +765,24 @@
       pop.appendChild(opt);
     });
 
-    if(all.length <= 1){
+    if(all.length === 1){
       const hint = document.createElement("p");
       hint.className = "hint";
       hint.style.cssText = "margin:4px 0 0; font-size:11.5px;";
-      hint.textContent = "Другие профессии задаются в разделе «Группы».";
+      hint.textContent = "Профессия одна — переключаться не между чем.";
       pop.appendChild(hint);
     }
 
-    document.body.appendChild(pop);
-    classPopupEl = pop;
-    classPopupAnchor = anchorEl;
+    const slot = firstEmptyClassSlot(info);
+    if(slot){
+      const addBtn = document.createElement("button");
+      addBtn.className = "rep-class-opt";
+      addBtn.style.color = "var(--gold-dim)";
+      addBtn.innerHTML = '<span class="ic">+</span><span>Добавить профессию</span>';
+      addBtn.addEventListener("click", () => renderAddClassSearch(reportNick, info, slot, picked));
+      pop.appendChild(addBtn);
+    }
+
     positionClassPopup();
   }
 
@@ -602,8 +798,13 @@
     classPopupEl.style.left = Math.round(left) + "px";
     classPopupEl.style.top = Math.round(top) + "px";
   }
-  // при прокрутке таблицы или страницы иконка уезжает — проще закрыть, чем догонять
-  window.addEventListener("scroll", closeClassPopup, true);
+  // при прокрутке таблицы или страницы иконка уезжает — проще закрыть, чем догонять;
+  // но скролл СПИСКА ВНУТРИ самого попапа (поиск новой профессии) — это не тот
+  // случай, иконка никуда не делась, попап просто закрывался бы сам под себя
+  window.addEventListener("scroll", (e) => {
+    if(classPopupEl && classPopupEl.contains(e.target)) return;
+    closeClassPopup();
+  }, true);
   window.addEventListener("resize", closeClassPopup);
 
   let groupMembersMap = new Map(); // group_id -> [nickname, ...] (полный состав, включая тех, у кого нет статистики за период)
@@ -699,17 +900,44 @@
   }
 
   function renderWeekOptions(){
-    const sel = document.getElementById("weekSelect");
-    sel.innerHTML = "";
-    const allOpt = document.createElement("option");
-    allOpt.value = ""; allOpt.textContent = "Всё время";
-    sel.appendChild(allOpt);
+    const list = document.getElementById("weekMultiList");
+    list.innerHTML = "";
     distinctWeeksDesc().forEach(w => {
-      const opt = document.createElement("option");
-      opt.value = w; opt.textContent = weekRangeLabel(w);
-      sel.appendChild(opt);
+      const label = document.createElement("label");
+      label.className = "week-multi-opt";
+      label.innerHTML = `<input type="checkbox" value="${w}" /><span>${escapeHtml(weekRangeLabel(w))}</span>`;
+      label.querySelector("input").addEventListener("change", onWeekCheckChange);
+      list.appendChild(label);
     });
-    sel.value = "";
+  }
+
+  // подпись на кнопке + видимость подфильтра «Мероприятие» (осмыслен только когда
+  // выбрана ровно одна неделя — для нескольких сразу «какое мероприятие» неоднозначно)
+  function applyWeekSelectionUI(){
+    const btn = document.getElementById("weekMultiBtn");
+    const eventWrap = document.getElementById("eventFieldWrap");
+    if(!selectedWeeks.length){
+      btn.textContent = "Всё время";
+      eventWrap.style.display = "none";
+    } else if(selectedWeeks.length === 1){
+      btn.textContent = weekRangeLabel(selectedWeeks[0]);
+      renderEventOptions(selectedWeeks[0]);
+      eventWrap.style.display = "";
+    } else {
+      btn.textContent = selectedWeeks.length + " " + pluralWeeks(selectedWeeks.length) + " выбрано";
+      eventWrap.style.display = "none";
+    }
+  }
+
+  function onWeekCheckChange(e){
+    const w = e.target.value;
+    if(e.target.checked) selectedWeeks.push(w);
+    else selectedWeeks = selectedWeeks.filter(x => x !== w);
+    document.getElementById("weekAllTimeCheck").checked = !selectedWeeks.length;
+    selectedEvent = "";
+    applyWeekSelectionUI();
+    recomputePeriodValue();
+    refreshReport();
   }
 
   function renderEventOptions(weekStart){
@@ -732,21 +960,31 @@
   }
 
   function recomputePeriodValue(){
-    if(!selectedWeek) periodValue = "";
-    else if(!selectedEvent) periodValue = "week:" + selectedWeek;
-    else periodValue = "event:" + selectedEvent;
+    if(!selectedWeeks.length) periodValue = "";
+    else if(selectedWeeks.length === 1 && !selectedEvent) periodValue = "week:" + selectedWeeks[0];
+    else if(selectedWeeks.length === 1 && selectedEvent) periodValue = "event:" + selectedEvent;
+    else periodValue = "weeks:" + selectedWeeks.slice().sort().join(",");
   }
 
-  document.getElementById("weekSelect").addEventListener("change", (e) => {
-    selectedWeek = e.target.value;
-    selectedEvent = "";
-    const eventWrap = document.getElementById("eventFieldWrap");
-    if(selectedWeek){
-      renderEventOptions(selectedWeek);
-      eventWrap.style.display = "";
-    } else {
-      eventWrap.style.display = "none";
+  document.getElementById("weekMultiBtn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const dd = document.getElementById("weekMultiDropdown");
+    dd.style.display = dd.style.display === "none" ? "" : "none";
+  });
+  document.addEventListener("click", (e) => {
+    if(!e.target.closest(".week-multi")) document.getElementById("weekMultiDropdown").style.display = "none";
+  });
+  document.getElementById("weekAllTimeCheck").addEventListener("change", (e) => {
+    if(e.target.checked){
+      selectedWeeks = [];
+      document.querySelectorAll("#weekMultiList input").forEach(cb => { cb.checked = false; });
+    } else if(!selectedWeeks.length){
+      // нельзя снять «Всё время», если больше ничего не выбрано — иначе выбор пуст
+      e.target.checked = true;
+      return;
     }
+    selectedEvent = "";
+    applyWeekSelectionUI();
     recomputePeriodValue();
     refreshReport();
   });
@@ -801,6 +1039,10 @@
   }
 
   function statsForPeriod(period, rows){
+    if(period.startsWith("weeks:")){
+      const weekSet = new Set(period.slice(6).split(","));
+      return rows.filter(r => weekSet.has(r.week_start));
+    }
     if(period.startsWith("week:")) return rows.filter(r => r.week_start === period.slice(5));
     if(period.startsWith("event:")) return rows.filter(r => r.event_id === period.slice(6));
     return rows; // "" — всё время
@@ -928,13 +1170,28 @@
     return avg;
   }
 
-  // лучшие сверху, худшие снизу — по килам, при равенстве по K:D; удалённые из явки
-  // всегда в самом низу, отдельным блоком, независимо от их статистики
+  // сортировка таблицы отчёта — по умолчанию как раньше (лучшие по килам сверху),
+  // но по клику на заголовок колонки можно пересортировать по любому столбцу;
+  // повторный клик по той же колонке переключает направление. Удалённые из явки
+  // всегда в самом низу, отдельным блоком, независимо от выбранной сортировки.
+  let sortKey = "kills";
+  let sortDir = "desc";
+  let lastPeriodRows = []; // для пересортировки по клику на заголовок без похода в БД
   function sortRows(rows){
     return rows.slice().sort((a, b) => {
       if(a.removed !== b.removed) return a.removed ? 1 : -1;
+      const mul = sortDir === "asc" ? 1 : -1;
+      const cmp = sortKey === "nickname"
+        ? a.nickname.localeCompare(b.nickname) * mul
+        : (a[sortKey] - b[sortKey]) * mul;
+      if(cmp !== 0) return cmp;
       return b.kills - a.kills || b.kd - a.kd || a.nickname.localeCompare(b.nickname);
     });
+  }
+  function sortArrow(key){ return sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : ""; }
+  function sortableTh(key, label, extraClass){
+    const cls = "rep-sortable" + (extraClass ? " " + extraClass : "");
+    return `<th class="${cls}" data-sort-key="${key}">${escapeHtml(label)}${sortArrow(key)}</th>`;
   }
 
   function applyStickyHead(){
@@ -1006,7 +1263,7 @@
     // на «Вся неделя» аватарка не кликабельна — профессия за неделю только
     // складывается из отдельных мероприятий (см. weekClassSummary), менять
     // вручную можно лишь по конкретному мероприятию в фильтре выше
-    const editable = isAdmin && !periodValue.startsWith("week:");
+    const editable = isAdmin && !periodValue.startsWith("week:") && !periodValue.startsWith("weeks:");
 
     const tdNick = document.createElement("td");
     tdNick.className = "rep-col-nick";
@@ -1039,6 +1296,18 @@
     const tdPvp = document.createElement("td"); tdPvp.textContent = r.pvp.toLocaleString("ru-RU");
     const tdPve = document.createElement("td"); tdPve.textContent = r.pve.toLocaleString("ru-RU");
     tr.append(tdNick, tdKills, tdDeaths, tdKd, tdPvp, tdPve);
+
+    const tdCmp = document.createElement("td");
+    tdCmp.className = "rep-col-cmp";
+    const cmpBtn = document.createElement("button");
+    cmpBtn.type = "button";
+    cmpBtn.className = "rep-cmp-btn" + (isPplSelected(r.nickname) ? " active" : "");
+    cmpBtn.textContent = "⚖";
+    cmpBtn.title = isPplSelected(r.nickname) ? "Убрать из сравнения" : "Добавить в сравнение";
+    if(!isPplSelected(r.nickname) && pplSelected.length >= CMP_MAX_SELECTED) cmpBtn.disabled = true;
+    cmpBtn.addEventListener("click", (e) => { e.stopPropagation(); togglePplPerson(r.nickname); });
+    tdCmp.appendChild(cmpBtn);
+    tr.appendChild(tdCmp);
 
     if(isAdmin){
       const tdActions = document.createElement("td");
@@ -1082,7 +1351,7 @@
     const tr = document.createElement("tr");
     tr.className = "rep-batch-subhead";
     const td = document.createElement("td");
-    td.colSpan = isAdmin ? 7 : 6;
+    td.colSpan = isAdmin ? 8 : 7;
 
     const labelSpan = document.createElement("span");
     labelSpan.className = "rep-batch-label";
@@ -1125,13 +1394,24 @@
   }
 
   function renderReportTable(periodRowsRaw){
+    lastPeriodRows = periodRowsRaw;
     const head = document.getElementById("repHead");
     head.innerHTML = '<tr>' +
-      '<th class="rep-col-nick">Ник</th>' +
-      '<th>Килы</th><th>Смерти</th><th>K:D</th><th>PvP урон</th><th>PvE урон</th>' +
+      sortableTh("nickname", "Ник", "rep-col-nick") +
+      sortableTh("kills", "Килы") + sortableTh("deaths", "Смерти") + sortableTh("kd", "K:D") +
+      sortableTh("pvp", "PvP урон") + sortableTh("pve", "PvE урон") +
+      '<th class="rep-col-cmp" title="Сравнение">⚖</th>' +
       (isAdmin ? '<th></th>' : '') +
       '</tr>';
     applyStickyHead();
+    head.querySelectorAll(".rep-sortable").forEach(th => {
+      th.addEventListener("click", () => {
+        const key = th.dataset.sortKey;
+        if(sortKey === key) sortDir = sortDir === "desc" ? "asc" : "desc";
+        else { sortKey = key; sortDir = key === "nickname" ? "asc" : "desc"; }
+        renderReportTable(lastPeriodRows);
+      });
+    });
 
     const body = document.getElementById("repBody");
     body.innerHTML = "";
@@ -1363,12 +1643,172 @@
     renderComparisonTable(ids, normStatsMap);
   }
 
+  // ---------- сравнение людей между собой (горизонтальные полосы по каждому показателю) ----------
+  // отмечаются кнопкой «весы» ⚖ прямо в строке таблицы (не поиском) — навёл на человека,
+  // нажал ⚖, так на нескольких, потом «Сравнить». Цвет закреплён за позицией в списке
+  // выбранных (не за ником), чтобы при добавлении/удалении человека цвета остальных
+  // не расползались хаотично — та же логика, что у CMP_PALETTE выше, просто применённая
+  // по порядку добавления, а не по общему списку.
+  let pplSelected = []; // [{nick, color}]
+  // сравнение уже показано на экране — держим его в синхроне со сменой периода сверху
+  // автоматически; а вот сам список людей (добавить/убрать) на бары не влияет сразу,
+  // только явное нажатие «Сравнить»
+  let pplBarsVisible = false;
+
+  function isPplSelected(nick){
+    return pplSelected.some(p => normalizeNick(p.nick) === normalizeNick(nick));
+  }
+
+  function renderPplChips(){
+    const wrap = document.getElementById("pplChips");
+    wrap.innerHTML = "";
+    pplSelected.forEach(p => {
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.innerHTML = `<span class="cmp-swatch" style="background:${p.color}"></span>${escapeHtml(p.nick)}`;
+      const btn = document.createElement("button");
+      btn.textContent = "×";
+      btn.title = "Убрать из сравнения";
+      btn.addEventListener("click", () => togglePplPerson(p.nick));
+      chip.appendChild(btn);
+      wrap.appendChild(chip);
+    });
+    document.getElementById("pplCompareBtn").disabled = pplSelected.length < 2;
+    if(!pplSelected.length) document.getElementById("pplEmpty").textContent = "Пока никто не выбран.";
+    else if(pplSelected.length < 2) document.getElementById("pplEmpty").textContent = "Добавьте ещё хотя бы одного человека.";
+  }
+
+  // клик по ⚖ в строке — добавляет/убирает человека из набора для сравнения;
+  // сами полосы сравнения при этом не трогаем, только шапка-чипы и кнопки в таблице
+  function togglePplPerson(nick){
+    if(isPplSelected(nick)){
+      pplSelected = pplSelected.filter(p => normalizeNick(p.nick) !== normalizeNick(nick));
+      pplSelected.forEach((p, i) => { p.color = CMP_PALETTE[i % CMP_PALETTE.length]; });
+    } else {
+      if(pplSelected.length >= CMP_MAX_SELECTED) return;
+      pplSelected.push({ nick, color: CMP_PALETTE[pplSelected.length % CMP_PALETTE.length] });
+    }
+    renderPplChips();
+    renderReportTable(lastPeriodRows); // перерисовать кнопки ⚖ в таблице (активна/недоступна)
+  }
+
+  const PPL_METRICS = [
+    { key: "kills", label: "Килы", fmt: v => Math.round(v).toLocaleString("ru-RU") },
+    { key: "deaths", label: "Смерти", fmt: v => Math.round(v).toLocaleString("ru-RU") },
+    { key: "kd", label: "K:D", fmt: v => v.toFixed(2) },
+    { key: "pvp", label: "PvP урон", fmt: v => Math.round(v).toLocaleString("ru-RU") },
+    { key: "pve", label: "PvE урон", fmt: v => Math.round(v).toLocaleString("ru-RU") },
+  ];
+
+  // «профиль» сравнения — один силуэт-график на человека сквозь все 5 показателей,
+  // разложенных по оси X в ряд (Килы → Смерти → K:D → PvP → PvE), высота точки на
+  // каждой оси — доля от максимума среди сравниваемых людей по этому показателю
+  // (та же идея нормализации по оси, что у радара сравнения пати выше). Свечение —
+  // фильтр SVG feGaussianBlur, наведение на легенду приглушает остальных.
+  const PPL_CHART_W = 460, PPL_CHART_H = 200;
+  const PPL_PAD_X = 40, PPL_TOP_Y = 22, PPL_BASE_Y = 142, PPL_LABEL_Y = 166;
+
+  function pplAxisX(i){
+    return PPL_PAD_X + i * ((PPL_CHART_W - PPL_PAD_X * 2) / (PPL_METRICS.length - 1));
+  }
+
+  function renderPeopleChart(stats){
+    const maxPerAxis = PPL_METRICS.map(m => Math.max(...stats.map(s => s[m.key]), 1e-9));
+
+    const gridLines = [0.25, 0.5, 0.75].map(frac => {
+      const y = PPL_BASE_Y - frac * (PPL_BASE_Y - PPL_TOP_Y);
+      return `<line class="ppl-grid-line dashed" x1="${PPL_PAD_X}" y1="${y.toFixed(1)}" x2="${PPL_CHART_W - PPL_PAD_X}" y2="${y.toFixed(1)}"/>`;
+    }).join("");
+    const baseline = `<line class="ppl-grid-line" x1="${PPL_PAD_X}" y1="${PPL_BASE_Y}" x2="${PPL_CHART_W - PPL_PAD_X}" y2="${PPL_BASE_Y}"/>`;
+    const axisTicks = PPL_METRICS.map((m, i) => {
+      const x = pplAxisX(i);
+      return `<line class="ppl-axis-tick" x1="${x}" y1="${PPL_TOP_Y - 6}" x2="${x}" y2="${PPL_BASE_Y}"/>` +
+        `<text class="ppl-axis-label" x="${x}" y="${PPL_LABEL_Y}" text-anchor="middle">${escapeHtml(m.label)}</text>`;
+    }).join("");
+
+    const series = stats.map((s, idx) => {
+      const pts = PPL_METRICS.map((m, i) => {
+        const frac = s[m.key] / maxPerAxis[i];
+        return { x: pplAxisX(i), y: PPL_BASE_Y - frac * (PPL_BASE_Y - PPL_TOP_Y), label: m.label, text: m.fmt(s[m.key]) };
+      });
+      const lineD = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+      const areaD = lineD + ` L${pts[pts.length - 1].x.toFixed(1)},${PPL_BASE_Y} L${pts[0].x.toFixed(1)},${PPL_BASE_Y} Z`;
+      const dots = pts.map(p =>
+        `<circle class="ppl-series-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.4" fill="${s.color}">` +
+          `<title>${escapeHtml(s.nick)} — ${escapeHtml(p.label)}: ${escapeHtml(p.text)}</title>` +
+        `</circle>`
+      ).join("");
+      return `<g class="ppl-line-series" data-idx="${idx}">` +
+        `<path class="ppl-series-area" d="${areaD}" fill="${s.color}" opacity=".12"/>` +
+        `<path class="ppl-series-path" d="${lineD}" stroke="${s.color}" filter="url(#pplGlow)"/>` +
+        dots +
+      `</g>`;
+    }).join("");
+
+    return `<svg viewBox="0 0 ${PPL_CHART_W} ${PPL_CHART_H}" class="ppl-linechart">` +
+      `<defs><filter id="pplGlow" x="-60%" y="-60%" width="220%" height="220%">` +
+        `<feGaussianBlur stdDeviation="2.4" result="blur"/>` +
+        `<feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>` +
+      `</filter></defs>` +
+      gridLines + baseline + axisTicks + series +
+    `</svg>`;
+  }
+  function renderPplLegend(stats){
+    const legend = document.getElementById("pplLegend");
+    legend.innerHTML = stats.map((s, idx) =>
+      `<span class="ppl-legend-item" data-idx="${idx}"><i class="dot" style="background:${s.color}; color:${s.color}"></i>${escapeHtml(s.nick)}</span>`
+    ).join("");
+    legend.querySelectorAll(".ppl-legend-item").forEach(item => {
+      item.addEventListener("mouseenter", () => {
+        const idx = item.dataset.idx;
+        document.querySelectorAll(".ppl-line-series, .ppl-legend-item").forEach(el => {
+          el.classList.toggle("dim", el.dataset.idx !== idx);
+        });
+      });
+      item.addEventListener("mouseleave", () => {
+        document.querySelectorAll(".ppl-line-series, .ppl-legend-item").forEach(el => el.classList.remove("dim"));
+      });
+    });
+  }
+
+  function renderPplStatsTable(stats){
+    document.getElementById("pplStatsBody").innerHTML = stats.map(s =>
+      `<tr><td><span class="cmp-swatch" style="background:${s.color}"></span>${escapeHtml(s.nick)}</td>` +
+      `<td>${s.kills.toLocaleString("ru-RU")}</td>` +
+      `<td>${s.deaths.toLocaleString("ru-RU")}</td>` +
+      `<td>${s.kd.toFixed(2)}</td>` +
+      `<td>${Math.round(s.pvp).toLocaleString("ru-RU")}</td>` +
+      `<td>${Math.round(s.pve).toLocaleString("ru-RU")}</td></tr>`
+    ).join("");
+  }
+
+  function renderPeopleComparison(){
+    const body = document.getElementById("pplBody");
+    const empty = document.getElementById("pplEmpty");
+    if(!pplBarsVisible || pplSelected.length < 2){ body.style.display = "none"; empty.style.display = ""; return; }
+    body.style.display = ""; empty.style.display = "none";
+
+    const normStatsMap = statsByNormNick(comparisonPeriodRows());
+    const stats = pplSelected.map(p => {
+      const s = normStatsMap.get(normalizeNick(p.nick)) || { kills: 0, deaths: 0, pvp: 0, pve: 0 };
+      const kd = s.deaths > 0 ? s.kills / s.deaths : s.kills;
+      return { ...p, kills: s.kills, deaths: s.deaths, pvp: s.pvp, pve: s.pve, kd };
+    });
+
+    document.getElementById("pplChartWrap").innerHTML = renderPeopleChart(stats);
+    renderPplLegend(stats);
+    renderPplStatsTable(stats);
+  }
+
   function renderSummaryHeader(){
     const title = document.getElementById("summaryTitle");
     const sub = document.getElementById("summarySubtitle");
     if(periodValue.startsWith("week:")){
       title.textContent = "Недельная эффективность";
       sub.textContent = "Выбранная неделя vs среднее за всё время";
+    } else if(periodValue.startsWith("weeks:")){
+      title.textContent = "Эффективность за несколько недель";
+      sub.textContent = selectedWeeks.length + " " + pluralWeeks(selectedWeeks.length) + " вместе vs средняя неделя";
     } else if(periodValue.startsWith("event:")){
       title.textContent = "Эффективность мероприятия";
       sub.textContent = "Мероприятие vs среднее по всем мероприятиям";
@@ -1393,11 +1833,12 @@
     renderTiles(totals(periodRows));
 
     let avg = null;
-    if(periodValue.startsWith("week:")) avg = averageOfBuckets(bucketsFor(grouped, "week_start"));
+    if(periodValue.startsWith("week:") || periodValue.startsWith("weeks:")) avg = averageOfBuckets(bucketsFor(grouped, "week_start"));
     else if(periodValue.startsWith("event:")) avg = averageOfBuckets(bucketsFor(grouped, "event_id"));
     renderRadar(totals(periodRows), avg);
 
     renderComparison();
+    renderPeopleComparison();
   }
 
   // ---------- «двигалка» между таблицей и правой панелью ----------
@@ -1465,6 +1906,12 @@
     assignGroupColors();
     renderCmpGroupPicker();
   }
+
+  renderPplChips();
+  document.getElementById("pplCompareBtn").addEventListener("click", () => {
+    pplBarsVisible = true;
+    renderPeopleComparison();
+  });
 
   await refreshReport();
 })();

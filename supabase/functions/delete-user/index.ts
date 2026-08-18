@@ -3,12 +3,19 @@
 // вторая часть уходит сама через "on delete cascade" в схеме).
 // Требует, чтобы вызывающий был главным админом. SUPABASE_URL / SUPABASE_ANON_KEY /
 // SUPABASE_SERVICE_ROLE_KEY подставляются Supabase автоматически, вручную задавать не нужно.
+//
+// Если аккаунт защищён (delete_protected), удаление всё равно возможно прямо тут,
+// одним действием — если в body.phrase передан либо пароль защиты этого же аккаунта
+// (which is what set-delete-protection сохранил как хеш), либо мастер-сид-фраза
+// DELETE_PROTECTION_SEED_PHRASE (секрет в Supabase → Edge Functions → Secrets) —
+// она работает поверх ЛЮБОГО чужого пароля защиты. Без верной фразы — отказ.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SEED_PHRASE = (Deno.env.get("DELETE_PROTECTION_SEED_PHRASE") ?? "").trim();
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -21,6 +28,12 @@ function json(body: unknown, status = 200) {
     status,
     headers: { "Content-Type": "application/json", ...CORS_HEADERS },
   });
+}
+
+async function hashPhrase(phrase: string, salt: string): Promise<string> {
+  const bytes = new TextEncoder().encode(salt + ":" + phrase);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 Deno.serve(async (req) => {
@@ -52,7 +65,7 @@ Deno.serve(async (req) => {
     return json({ error: "forbidden" }, 403);
   }
 
-  let body: { user_id?: string };
+  let body: { user_id?: string; phrase?: string };
   try {
     body = await req.json();
   } catch {
@@ -60,6 +73,7 @@ Deno.serve(async (req) => {
   }
 
   const targetId = body.user_id ?? "";
+  const phrase = (body.phrase ?? "").trim();
   if (!targetId) {
     return json({ error: "missing_user_id" }, 400);
   }
@@ -74,16 +88,23 @@ Deno.serve(async (req) => {
   // пользователя ЛЮБОГО другого клана по одному только UID.
   const { data: targetProfile, error: targetErr } = await admin
     .from("profiles")
-    .select("clan_id, delete_protected")
+    .select("clan_id, delete_protected, delete_protection_hash, delete_protection_salt")
     .eq("id", targetId)
     .single();
   if (targetErr || !targetProfile || targetProfile.clan_id !== (callerProfile as { clan_id: string }).clan_id) {
     return json({ error: "forbidden" }, 403);
   }
-  // аккаунт защищён сид-фразой (set-delete-protection) — удалить может только
-  // владелец сайта через remove-delete-protection, обычным удалением — нет
+
   if (targetProfile.delete_protected) {
-    return json({ error: "protected" }, 403);
+    const isSeedPhrase = !!SEED_PHRASE && !!phrase && phrase === SEED_PHRASE;
+    let matchesOwnPassword = false;
+    if (phrase && targetProfile.delete_protection_hash && targetProfile.delete_protection_salt) {
+      const candidate = await hashPhrase(phrase, targetProfile.delete_protection_salt);
+      matchesOwnPassword = candidate === targetProfile.delete_protection_hash;
+    }
+    if (!isSeedPhrase && !matchesOwnPassword) {
+      return json({ error: "protected" }, 403);
+    }
   }
 
   const { error: deleteErr } = await admin.auth.admin.deleteUser(targetId);

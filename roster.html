@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Участники клана — Кабинет клана</title>
+<link rel="stylesheet" href="js/theme.css?v=10" />
+<style>
+  .rw-wrap{ padding:0 0 32px; }
+
+  .rw-toolbar{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:2px 0 14px; }
+  .rw-tabs{ display:flex; gap:6px; flex-wrap:wrap; }
+  .rw-tab{
+    font-family:inherit; font-size:12.5px; padding:7px 16px;
+    border-radius:6px; border:1px solid var(--border);
+    background: var(--panel-2); color: var(--text-dim); cursor:pointer;
+    transition: border-color .12s, color .12s, background .12s;
+  }
+  .rw-tab:hover{ border-color: var(--border-lit); color: var(--text); }
+  .rw-tab.active{ background: var(--panel); border-color: var(--border-lit); color: var(--gold); }
+  .rw-search{ flex:1; min-width:160px; max-width:260px; }
+  .rw-gear-btn{
+    flex:none; width:34px; height:34px; padding:0;
+    border-radius:6px; border:1px solid var(--border); background: var(--panel-2);
+    color: var(--text-dim); font-size:15px; cursor:pointer;
+  }
+  .rw-gear-btn:hover{ border-color: var(--border-lit); color: var(--text); }
+
+  .rw-party-title{
+    display:flex; align-items:baseline; gap:8px; margin:18px 2px 6px;
+    font-size:13px; font-weight:600; color: var(--gold-dim);
+    text-transform:uppercase; letter-spacing:.04em;
+  }
+  .rw-party-title:first-child{ margin-top:0; }
+  .rw-party-count{ font-size:11px; color: var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0; }
+
+  .rw-row{ display:flex; align-items:center; gap:12px; padding:9px 6px; border-bottom:1px solid var(--border); }
+  .rw-row:last-child{ border-bottom:none; }
+  .rw-row:hover{ background: rgba(255,255,255,.03); }
+  .rw-avatar-btn{
+    position:relative; flex:none; width:38px; height:38px; border-radius:50%; padding:0;
+    border:1px solid var(--border); background: var(--panel-2); cursor:pointer; overflow:visible;
+  }
+  .rw-avatar-btn:hover{ border-color: var(--gold); }
+  .rw-avatar-btn:disabled{ cursor:default; }
+  .rw-avatar-btn:disabled:hover{ border-color: var(--border); }
+  .rw-avatar-btn img.rw-avatar-main{ width:100%; height:100%; border-radius:50%; object-fit:cover; display:block; }
+  .rw-sub-avatar-row{ position:absolute; right:-3px; bottom:-3px; display:flex; }
+  .rw-sub-avatar{
+    width:15px; height:15px; border-radius:50%; object-fit:cover; display:block;
+    border:2px solid var(--panel-2); background: var(--panel); margin-right:-5px;
+  }
+  .rw-sub-avatar:last-child{ margin-right:0; }
+  .rw-who{ display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
+  .rw-name{ color: var(--text); font-weight:600; font-size:13.5px; }
+  .rw-name-link{ cursor:pointer; }
+  .rw-name-link:hover{ color: var(--gold); text-decoration:underline; }
+  .rw-cls{ font-size:11.5px; color: var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rw-cls.rw-cls-empty{ font-style:italic; }
+  .rw-party-badge{ flex:none; font-size:11px; padding:3px 9px; border-radius:999px; border:1px solid var(--border); color: var(--text-dim); }
+  .rw-tag-badge{ flex:none; font-size:11px; padding:3px 9px; border-radius:999px; border:1px dashed var(--border-lit); color: var(--text-dim); }
+
+  /* пикер класса — тот же, что в «Группах»: кнопка с иконкой + поиск, до 4 профессий,
+     у каждой свой уровень; открытый список разворачивается на всё окно */
+  .gc-class-picker{ position:static; }
+  .gc-class-picker-btn{
+    display:flex; align-items:center; gap:8px; width:100%;
+    padding:8px 12px; border-radius:6px; border:1px solid var(--border);
+    background: var(--panel-2); color: var(--text); cursor:pointer; font-size:13px;
+    text-align:left;
+  }
+  .gc-class-picker-btn:hover{ border-color: var(--border-lit); }
+  .gc-class-picker-icon{ width:22px; height:22px; border-radius:4px; object-fit:cover; flex:none; }
+  .gc-class-dropdown{
+    position:absolute; top:68px; left:24px; right:24px; bottom:24px; z-index:10;
+    background: var(--panel); border:1px solid var(--border-lit); border-radius:8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4); padding:8px;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .gc-class-dropdown input{ width:100%; }
+  .gc-class-list{ overflow-y:auto; max-height:none; flex:1; display:flex; flex-direction:column; gap:2px; }
+  .gc-class-option{ display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:5px; cursor:pointer; font-size:13px; }
+  .gc-class-option:hover{ background: var(--panel-2); }
+  .gc-class-option img{ width:22px; height:22px; border-radius:4px; object-fit:cover; flex:none; }
+  .gc-class-option.gc-class-clear{ color: var(--text-dim); font-style:italic; }
+
+  .gc-class-row{ display:flex; align-items:center; gap:10px; }
+  .gc-class-row .gc-class-picker{ flex:1; min-width:0; }
+  .gc-class-level{
+    flex:none; width:78px; text-align:center;
+    -moz-appearance:textfield; appearance:textfield;
+  }
+  .gc-class-level::-webkit-outer-spin-button,
+  .gc-class-level::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .gc-class-level:disabled{ opacity:.4; cursor:not-allowed; }
+
+  .gc-member-modal{ width:640px; max-width:94vw; min-height:640px; display:flex; flex-direction:column; position:relative; }
+  .gc-member-modal .field{ margin:18px 0; }
+  .gc-member-modal #memberSaveBtn{ margin-top:auto; align-self:flex-start; }
+</style>
+</head>
+<body>
+
+<div class="rw-wrap" id="wrap" style="display:none;">
+  <div class="page-head">
+    <h1>Участники клана</h1>
+  </div>
+
+  <section class="card">
+    <div class="rw-toolbar">
+      <div class="rw-tabs" id="rwTabs">
+        <button type="button" class="rw-tab active" data-mode="alpha">По алфавиту</button>
+        <button type="button" class="rw-tab" data-mode="party">По пати</button>
+        <button type="button" class="rw-tab" data-mode="class">По профессиям</button>
+        <button type="button" class="rw-tab" id="tagTab" data-mode="tag" style="display:none;"></button>
+      </div>
+      <input type="text" class="rw-search" id="rwSearch" placeholder="Поиск по нику..." />
+      <button type="button" class="rw-gear-btn" id="rwSettingsBtn" title="Настройки" style="display:none;">⚙</button>
+    </div>
+
+    <div id="rwBody"></div>
+    <p class="empty-hint" id="rwEmpty" style="display:none;"></p>
+  </section>
+</div>
+
+<div class="modal-overlay" id="memberOverlay">
+  <div class="modal gc-member-modal">
+    <button class="modal-close" id="memberClose" title="Закрыть">×</button>
+    <h2 id="memberTitle"></h2>
+
+    <div class="field">
+      <label>Класс</label>
+      <div class="gc-class-row">
+        <div class="gc-class-picker" id="classPicker1">
+          <button type="button" class="gc-class-picker-btn" id="classPickerBtn1">
+            <img id="classPickerIcon1" class="gc-class-picker-icon" alt="" style="display:none;" />
+            <span id="classPickerLabel1">Не выбран</span>
+          </button>
+          <div class="gc-class-dropdown" id="classDropdown1" style="display:none;">
+            <input type="text" id="classSearchInput1" placeholder="Поиск класса..." />
+            <div class="gc-class-list" id="classDropdownList1"></div>
+          </div>
+        </div>
+        <input type="number" class="gc-class-level" id="classLevel1" min="1" max="85" placeholder="ур." title="Уровень, 1–85" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Вторая профессия (необязательно)</label>
+      <div class="gc-class-row">
+        <div class="gc-class-picker" id="classPicker2">
+          <button type="button" class="gc-class-picker-btn" id="classPickerBtn2">
+            <img id="classPickerIcon2" class="gc-class-picker-icon" alt="" style="display:none;" />
+            <span id="classPickerLabel2">Не выбрана</span>
+          </button>
+          <div class="gc-class-dropdown" id="classDropdown2" style="display:none;">
+            <input type="text" id="classSearchInput2" placeholder="Поиск класса..." />
+            <div class="gc-class-list" id="classDropdownList2"></div>
+          </div>
+        </div>
+        <input type="number" class="gc-class-level" id="classLevel2" min="1" max="85" placeholder="ур." title="Уровень, 1–85" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Третья профессия (необязательно)</label>
+      <div class="gc-class-row">
+        <div class="gc-class-picker" id="classPicker3">
+          <button type="button" class="gc-class-picker-btn" id="classPickerBtn3">
+            <img id="classPickerIcon3" class="gc-class-picker-icon" alt="" style="display:none;" />
+            <span id="classPickerLabel3">Не выбрана</span>
+          </button>
+          <div class="gc-class-dropdown" id="classDropdown3" style="display:none;">
+            <input type="text" id="classSearchInput3" placeholder="Поиск класса..." />
+            <div class="gc-class-list" id="classDropdownList3"></div>
+          </div>
+        </div>
+        <input type="number" class="gc-class-level" id="classLevel3" min="1" max="85" placeholder="ур." title="Уровень, 1–85" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Четвёртая профессия (необязательно)</label>
+      <div class="gc-class-row">
+        <div class="gc-class-picker" id="classPicker4">
+          <button type="button" class="gc-class-picker-btn" id="classPickerBtn4">
+            <img id="classPickerIcon4" class="gc-class-picker-icon" alt="" style="display:none;" />
+            <span id="classPickerLabel4">Не выбрана</span>
+          </button>
+          <div class="gc-class-dropdown" id="classDropdown4" style="display:none;">
+            <input type="text" id="classSearchInput4" placeholder="Поиск класса..." />
+            <div class="gc-class-list" id="classDropdownList4"></div>
+          </div>
+        </div>
+        <input type="number" class="gc-class-level" id="classLevel4" min="1" max="85" placeholder="ур." title="Уровень, 1–85" />
+      </div>
+    </div>
+
+    <div class="checkbox-row" id="memberTagRow" style="display:none;">
+      <label><input type="checkbox" id="memberTagCheckbox" /> <span id="memberTagLabel"></span></label>
+    </div>
+
+    <p class="error-msg" id="memberError"></p>
+    <button class="btn btn-primary" id="memberSaveBtn">Сохранить</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="tagSettingsOverlay">
+  <div class="modal">
+    <button class="modal-close" id="tagSettingsClose" title="Закрыть">×</button>
+    <h2>Настройки отдельного списка</h2>
+    <p class="hint">Свой список участников (например «неактивные, но в клане») — отдельная вкладка со своим названием, ставится/снимается прямо в окне класса участника.</p>
+    <div class="checkbox-row"><label><input type="checkbox" id="tagEnabledInput" /> Показывать эту вкладку</label></div>
+    <div class="field">
+      <label for="tagLabelInput">Название вкладки</label>
+      <input type="text" id="tagLabelInput" maxlength="40" placeholder="Например: Неактивные" />
+    </div>
+    <p class="error-msg" id="tagSettingsError"></p>
+    <button class="btn btn-primary" id="tagSettingsSaveBtn">Сохранить</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-client.js?v=17"></script>
+<script src="js/classes.js?v=1"></script>
+<script>
+(async function(){
+  const session = await L2Cabinet.requireSession();
+  if(!session) return;
+
+  const profile = await L2Cabinet.getProfile();
+  if(!profile){
+    document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
+      '<h1>⚠ Профиль не найден</h1><p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+    return;
+  }
+
+  const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
+  const db = L2Cabinet.client;
+  document.getElementById("wrap").style.display = "";
+  document.getElementById("rwSettingsBtn").style.display = isAdmin ? "" : "none";
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  }
+
+  const CYR_LOOKALIKES = { "а":"a","в":"b","е":"e","к":"k","м":"m","н":"h","о":"o","р":"p","с":"c","т":"t","у":"y","х":"x","ё":"e","0":"o" };
+  function normalizeNick(s){
+    return String(s || "")
+      .toLowerCase()
+      .split("").map(ch => CYR_LOOKALIKES[ch] || ch).join("")
+      .replace(/[^a-zа-яё0-9]/gi, "");
+  }
+  const myNorm = normalizeNick(profile.nickname || "");
+
+  function classIcon(name){ return (window.L2_CLASS_ICON && name) ? window.L2_CLASS_ICON(name) : null; }
+  const BLANK_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='38' height='38'></svg>";
+
+  let nicks = [];                 // ники последней переписи
+  let memberInfo = new Map();     // nickname -> {class_name..4, class_level..4, icon}
+  let groups = [];                // [{id, name, sort_order, leader_nickname, deputy_nickname}]
+  let membersByGroup = new Map(); // group_id -> [nickname, ...]
+  let tagSettings = { label: "Отдельный список", enabled: false };
+  let taggedSet = new Set();      // nickname (точное написание из переписи)
+  let viewMode = "alpha";         // "alpha" | "party" | "class" | "tag"
+  let searchQuery = "";
+
+  function classNameCol(n){ return n === 1 ? "class_name" : "class_name_" + n; }
+  function classLevelCol(n){ return n === 1 ? "class_level" : "class_level_" + n; }
+
+  async function loadCensus(){
+    const { data } = await db.from("census_entries").select("nickname, week_start");
+    let latest = null;
+    (data || []).forEach(r => { if(!latest || r.week_start > latest) latest = r.week_start; });
+    nicks = [...new Set((data || []).filter(r => r.week_start === latest).map(r => r.nickname))]
+      .sort((a,b)=>a.localeCompare(b));
+  }
+
+  async function loadMemberInfo(){
+    const { data } = await db.from("member_classes").select(
+      "nickname, class_name, class_name_2, class_name_3, class_name_4, " +
+      "class_level, class_level_2, class_level_3, class_level_4, icon"
+    );
+    memberInfo = new Map();
+    (data || []).forEach(r => memberInfo.set(r.nickname, r));
+  }
+
+  async function loadGroups(){
+    const [{ data: g }, { data: m }] = await Promise.all([
+      db.from("clan_groups").select("id, name, sort_order, leader_nickname, deputy_nickname").eq("hidden", false).order("sort_order").order("name"),
+      db.from("clan_group_members").select("group_id, nickname, sort_order").order("sort_order").order("nickname"),
+    ]);
+    groups = g || [];
+    membersByGroup = new Map();
+    (m || []).forEach(row => {
+      if(!membersByGroup.has(row.group_id)) membersByGroup.set(row.group_id, []);
+      membersByGroup.get(row.group_id).push(row.nickname);
+    });
+  }
+
+  async function loadTagSettings(){
+    const { data } = await db.from("roster_tag_settings").select("label, enabled").maybeSingle();
+    tagSettings = { label: data?.label || "Отдельный список", enabled: !!data?.enabled };
+  }
+  async function loadTagged(){
+    const { data } = await db.from("roster_tagged_members").select("nickname");
+    taggedSet = new Set((data || []).map(r => r.nickname));
+  }
+
+  function applyTagTabVisibility(){
+    const tab = document.getElementById("tagTab");
+    tab.style.display = tagSettings.enabled ? "" : "none";
+    tab.textContent = tagSettings.label;
+    document.getElementById("memberTagRow").style.display = tagSettings.enabled ? "" : "none";
+    document.getElementById("memberTagLabel").textContent = "В «" + tagSettings.label + "»";
+    if(!tagSettings.enabled && viewMode === "tag") setViewMode("alpha");
+  }
+
+  // ники группы в написании из переписи (в clan_group_members могло попасть другое
+  // написание), порядок — как расставлено в «Группах»
+  function partyMembers(groupId){
+    const order = new Map();
+    (membersByGroup.get(groupId) || []).forEach((n, i) => order.set(normalizeNick(n), i));
+    return nicks.filter(n => order.has(normalizeNick(n))).sort((a,b)=> order.get(normalizeNick(a)) - order.get(normalizeNick(b)));
+  }
+  function soloMembers(){
+    const grouped = new Set();
+    membersByGroup.forEach(list => list.forEach(n => grouped.add(normalizeNick(n))));
+    return nicks.filter(n => !grouped.has(normalizeNick(n))).sort((a,b)=>a.localeCompare(b));
+  }
+  function groupOfNick(nick){
+    const norm = normalizeNick(nick);
+    return groups.find(g => (membersByGroup.get(g.id) || []).some(n => normalizeNick(n) === norm)) || null;
+  }
+  function canOpenCabinetFor(nick){
+    if(isAdmin) return true;
+    if(!profile.party_id) return false;
+    const g = groupOfNick(nick);
+    if(!g || profile.party_id !== g.id) return false;
+    return (g.leader_nickname && normalizeNick(g.leader_nickname) === myNorm) ||
+           (g.deputy_nickname && normalizeNick(g.deputy_nickname) === myNorm);
+  }
+
+  function filterNicks(list){
+    if(!searchQuery) return list;
+    return list.filter(n => n.toLowerCase().includes(searchQuery));
+  }
+
+  // те, кто в отдельном списке, всегда идут последними в любой другой таблице/группе —
+  // Array.sort стабильна, так что порядок внутри каждой из двух частей не меняется
+  function sortTaggedLast(list){
+    if(!tagSettings.enabled || !taggedSet.size) return list;
+    return list.slice().sort((a,b) => (taggedSet.has(a)?1:0) - (taggedSet.has(b)?1:0));
+  }
+
+  function classLabelOf(info){
+    return [1,2,3,4]
+      .map(n => ({ name: info[classNameCol(n)], level: info[classLevelCol(n)] }))
+      .filter(c => c.name)
+      .map(c => c.name + (c.level ? ` ${c.level}` : ""))
+      .join(" / ");
+  }
+
+  function renderRow(nick){
+    const info = memberInfo.get(nick) || {};
+    const avatarSrc = info.icon || classIcon(info.class_name) || BLANK_IMG;
+    const clsText = classLabelOf(info);
+    const subAvatars = [2,3,4]
+      .map(n => classIcon(info[classNameCol(n)]))
+      .filter(Boolean)
+      .map(src => `<img class="rw-sub-avatar" src="${src}" alt="" />`)
+      .join("");
+    const badge = viewMode === "alpha"
+      ? `<span class="rw-party-badge">${escapeHtml(groupOfNick(nick)?.name || "Без пати")}</span>`
+      : "";
+    const tagBadge = (tagSettings.enabled && taggedSet.has(nick) && viewMode !== "tag")
+      ? `<span class="rw-tag-badge">${escapeHtml(tagSettings.label)}</span>`
+      : "";
+    const nameHtml = canOpenCabinetFor(nick)
+      ? `<span class="rw-name rw-name-link" data-nick="${escapeHtml(nick)}">${escapeHtml(nick)}</span>`
+      : `<span class="rw-name">${escapeHtml(nick)}</span>`;
+    return `<div class="rw-row">` +
+      `<button type="button" class="rw-avatar-btn" data-nick="${escapeHtml(nick)}" ${isAdmin ? "" : "disabled"}>` +
+      `<img class="rw-avatar-main" src="${avatarSrc}" alt="" />` +
+      (subAvatars ? `<span class="rw-sub-avatar-row">${subAvatars}</span>` : "") +
+      `</button>` +
+      `<div class="rw-who">${nameHtml}` +
+      `<span class="rw-cls${clsText ? "" : " rw-cls-empty"}">${escapeHtml(clsText || "Класс не указан")}</span></div>` +
+      tagBadge + badge +
+      `</div>`;
+  }
+
+  function renderList(){
+    const body = document.getElementById("rwBody");
+    const emptyEl = document.getElementById("rwEmpty");
+    if(!nicks.length){
+      body.innerHTML = "";
+      emptyEl.textContent = "В последней переписи нет участников — сначала заполните «Перепись клана».";
+      emptyEl.style.display = "";
+      return;
+    }
+
+    let html = "";
+    if(viewMode === "alpha"){
+      const list = sortTaggedLast(filterNicks(nicks));
+      html = list.map(renderRow).join("");
+    } else if(viewMode === "party"){
+      groups.forEach(g => {
+        const members = sortTaggedLast(filterNicks(partyMembers(g.id)));
+        if(!members.length) return;
+        html += `<div class="rw-party-title">${escapeHtml(g.name)}<span class="rw-party-count">${members.length}</span></div>`;
+        html += members.map(renderRow).join("");
+      });
+      const solo = sortTaggedLast(filterNicks(soloMembers()));
+      if(solo.length){
+        html += `<div class="rw-party-title">Без пати<span class="rw-party-count">${solo.length}</span></div>`;
+        html += solo.map(renderRow).join("");
+      }
+    } else if(viewMode === "class"){
+      const byClass = new Map();
+      const noClass = [];
+      nicks.forEach(n => {
+        const cls = (memberInfo.get(n) || {}).class_name;
+        if(!cls){ noClass.push(n); return; }
+        if(!byClass.has(cls)) byClass.set(cls, []);
+        byClass.get(cls).push(n);
+      });
+      [...byClass.keys()].sort((a,b)=>a.localeCompare(b)).forEach(cls => {
+        const members = sortTaggedLast(filterNicks(byClass.get(cls).sort((a,b)=>a.localeCompare(b))));
+        if(!members.length) return;
+        html += `<div class="rw-party-title">${escapeHtml(cls)}<span class="rw-party-count">${members.length}</span></div>`;
+        html += members.map(renderRow).join("");
+      });
+      const noClsFiltered = sortTaggedLast(filterNicks(noClass.sort((a,b)=>a.localeCompare(b))));
+      if(noClsFiltered.length){
+        html += `<div class="rw-party-title">Без профессии<span class="rw-party-count">${noClsFiltered.length}</span></div>`;
+        html += noClsFiltered.map(renderRow).join("");
+      }
+    } else if(viewMode === "tag"){
+      const list = filterNicks(nicks.filter(n => taggedSet.has(n)));
+      html = list.map(renderRow).join("");
+      if(!list.length){
+        emptyEl.textContent = `Список «${tagSettings.label}» пуст.`;
+        emptyEl.style.display = "";
+        body.innerHTML = "";
+        return;
+      }
+    }
+
+    body.innerHTML = html;
+    emptyEl.style.display = html ? "none" : "";
+    if(!html) emptyEl.textContent = "Никого не нашлось.";
+  }
+
+  function setViewMode(mode){
+    viewMode = mode;
+    document.querySelectorAll(".rw-tab").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+    renderList();
+  }
+  document.querySelectorAll(".rw-tab").forEach(btn => {
+    btn.addEventListener("click", () => setViewMode(btn.dataset.mode));
+  });
+
+  document.getElementById("rwSearch").addEventListener("input", (e) => {
+    searchQuery = e.target.value.trim().toLowerCase();
+    renderList();
+  });
+
+  document.getElementById("rwBody").addEventListener("click", (e) => {
+    const avatarBtn = e.target.closest(".rw-avatar-btn");
+    if(avatarBtn && !avatarBtn.disabled){ openMemberModal(avatarBtn.dataset.nick); return; }
+    const nameLink = e.target.closest(".rw-name-link");
+    if(nameLink && window.top && window.top.L2Nav) window.top.L2Nav.openMyCabinet(nameLink.dataset.nick, "roster");
+  });
+
+  // ---------- классы участника: 4 слота, у каждого свой уровень (как в «Группах») ----------
+  function setupClassSlot(n){
+    const picker = document.getElementById("classPicker" + n);
+    const btn = document.getElementById("classPickerBtn" + n);
+    const iconEl = document.getElementById("classPickerIcon" + n);
+    const labelEl = document.getElementById("classPickerLabel" + n);
+    const dropdown = document.getElementById("classDropdown" + n);
+    const searchEl = document.getElementById("classSearchInput" + n);
+    const listEl = document.getElementById("classDropdownList" + n);
+    const levelEl = document.getElementById("classLevel" + n);
+    const emptyLabel = n === 1 ? "Не выбран" : "Не выбрана";
+    let className = "";
+
+    function renderButton(){
+      const icon = classIcon(className);
+      if(icon){ iconEl.src = icon; iconEl.style.display = ""; } else { iconEl.style.display = "none"; }
+      labelEl.textContent = className || emptyLabel;
+      levelEl.disabled = !className;
+      if(!className) levelEl.value = "";
+    }
+    function pick(name){ className = name; renderButton(); close(); }
+    function renderListEl(filterText){
+      const q = (filterText || "").trim().toLowerCase();
+      listEl.innerHTML = "";
+      const clearOpt = document.createElement("div");
+      clearOpt.className = "gc-class-option gc-class-clear";
+      clearOpt.textContent = emptyLabel;
+      clearOpt.addEventListener("click", () => pick(""));
+      listEl.appendChild(clearOpt);
+      (window.L2_CLASSES || []).filter(c => !q || c.name.toLowerCase().includes(q)).forEach(c => {
+        const opt = document.createElement("div");
+        opt.className = "gc-class-option";
+        opt.innerHTML = `<img src="${c.icon}" alt="" /><span>${escapeHtml(c.name)}</span>`;
+        opt.addEventListener("click", () => pick(c.name));
+        listEl.appendChild(opt);
+      });
+    }
+    function open(){
+      dropdown.style.display = "";
+      searchEl.value = "";
+      renderListEl("");
+      setTimeout(() => searchEl.focus(), 0);
+    }
+    function close(){ dropdown.style.display = "none"; }
+
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if(dropdown.style.display !== "none") close(); else open();
+    });
+    searchEl.addEventListener("input", (e) => renderListEl(e.target.value));
+    document.addEventListener("click", (e) => { if(!picker.contains(e.target)) close(); });
+
+    return {
+      close,
+      name(){ return className; },
+      level(){
+        const raw = levelEl.value.trim();
+        if(!className || !raw) return null;
+        const v = Math.round(Number(raw));
+        if(!isFinite(v)) return NaN;
+        return v;
+      },
+      fill(name, level){
+        className = name || "";
+        renderButton();
+        levelEl.value = (className && level != null) ? String(level) : "";
+      },
+    };
+  }
+  const CLASS_SLOTS = [1, 2, 3, 4].map(setupClassSlot);
+
+  let memberModalNick = null;
+  function openMemberModal(nick){
+    memberModalNick = nick;
+    const info = memberInfo.get(nick) || {};
+    document.getElementById("memberTitle").textContent = nick;
+    CLASS_SLOTS.forEach((slot, i) => {
+      slot.fill(info[classNameCol(i + 1)], info[classLevelCol(i + 1)]);
+      slot.close();
+    });
+    document.getElementById("memberTagCheckbox").checked = taggedSet.has(nick);
+    document.getElementById("memberError").textContent = "";
+    document.getElementById("memberOverlay").classList.add("show");
+  }
+  document.getElementById("memberClose").addEventListener("click", () => {
+    document.getElementById("memberOverlay").classList.remove("show");
+  });
+  document.getElementById("memberOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "memberOverlay") e.currentTarget.classList.remove("show");
+  });
+  document.getElementById("memberSaveBtn").addEventListener("click", async () => {
+    const errEl = document.getElementById("memberError");
+    errEl.textContent = "";
+    const row = { clan_id: profile.clan_id, nickname: memberModalNick };
+    for(let i = 0; i < CLASS_SLOTS.length; i++){
+      const slot = CLASS_SLOTS[i];
+      const level = slot.level();
+      if(Number.isNaN(level) || (level !== null && (level < 1 || level > 85))){
+        errEl.textContent = `Уровень должен быть числом от 1 до 85 (профессия №${i + 1}).`;
+        return;
+      }
+      row[classNameCol(i + 1)] = slot.name() || null;
+      row[classLevelCol(i + 1)] = level;
+    }
+    const { error } = await db.from("member_classes").upsert(row, { onConflict: "clan_id,nickname" });
+    if(error){ errEl.textContent = error.message; return; }
+
+    if(tagSettings.enabled){
+      const checked = document.getElementById("memberTagCheckbox").checked;
+      if(checked){
+        await db.from("roster_tagged_members").upsert(
+          { clan_id: profile.clan_id, nickname: memberModalNick }, { onConflict: "clan_id,nickname" }
+        );
+      } else {
+        await db.from("roster_tagged_members").delete()
+          .eq("clan_id", profile.clan_id).eq("nickname", memberModalNick);
+      }
+      await loadTagged();
+    }
+
+    document.getElementById("memberOverlay").classList.remove("show");
+    await loadMemberInfo();
+    renderList();
+  });
+
+  // ---------- настройки отдельного списка (шестерёнка, только админ) ----------
+  document.getElementById("rwSettingsBtn").addEventListener("click", () => {
+    document.getElementById("tagLabelInput").value = tagSettings.label;
+    document.getElementById("tagEnabledInput").checked = tagSettings.enabled;
+    document.getElementById("tagSettingsError").textContent = "";
+    document.getElementById("tagSettingsOverlay").classList.add("show");
+  });
+  document.getElementById("tagSettingsClose").addEventListener("click", () => {
+    document.getElementById("tagSettingsOverlay").classList.remove("show");
+  });
+  document.getElementById("tagSettingsOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "tagSettingsOverlay") e.currentTarget.classList.remove("show");
+  });
+  document.getElementById("tagSettingsSaveBtn").addEventListener("click", async () => {
+    const errEl = document.getElementById("tagSettingsError");
+    errEl.textContent = "";
+    const label = document.getElementById("tagLabelInput").value.trim() || "Отдельный список";
+    const enabled = document.getElementById("tagEnabledInput").checked;
+    const { error } = await db.from("roster_tag_settings").upsert(
+      { clan_id: profile.clan_id, label, enabled }, { onConflict: "clan_id" }
+    );
+    if(error){ errEl.textContent = error.message; return; }
+    tagSettings = { label, enabled };
+    applyTagTabVisibility();
+    document.getElementById("tagSettingsOverlay").classList.remove("show");
+    renderList();
+  });
+
+  await Promise.all([loadCensus(), loadMemberInfo(), loadGroups(), loadTagSettings(), loadTagged()]);
+  applyTagTabVisibility();
+  renderList();
+})();
+</script>
+</body>
+</html>
