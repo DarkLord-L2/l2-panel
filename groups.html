@@ -575,7 +575,7 @@
           <span class="group-card-rank">#${rankMap.get(g.id)}</span>
         </div>
       `;
-      card.addEventListener("click", () => openDetail(g.id));
+      card.addEventListener("click", () => { openDetail(g.id); pushGroupDetailHistory(); });
       grid.appendChild(card);
     });
   }
@@ -1058,12 +1058,41 @@
     document.getElementById("detailView").style.display = "";
   }
 
-  document.getElementById("groupBackBtn").addEventListener("click", async () => {
+  // ---- кнопка «Назад» браузера должна выходить из карточки группы к списку, а не
+  // сразу улетать со страницы целиком: при входе в группу кладём отметку в историю,
+  // при выходе (хоть кнопкой «← Все группы», хоть физическим «назад») её же и снимаем.
+  // Для не-админа с назначенной пати (openDetail вызывается сам, без выбора и без
+  // кнопки назад — see isPartyRestricted ниже) историю не трогаем вообще ----
+  let groupDetailHistoryActive = false;
+  function pushGroupDetailHistory(){
+    if(isPartyRestricted || groupDetailHistoryActive) return;
+    history.pushState({ groupDetail: true }, "");
+    groupDetailHistoryActive = true;
+  }
+  async function exitGroupDetail(){
     document.getElementById("detailView").style.display = "none";
     document.getElementById("listView").style.display = "";
     document.getElementById("backToJournalBtn").style.display = "none";
+    groupDetailHistoryActive = false;
     await loadGroups();
     renderGrid(document.getElementById("groupSearch").value);
+  }
+  window.addEventListener("popstate", (e) => {
+    if(e.state && e.state.groupDetail){
+      groupDetailHistoryActive = true;
+      if(document.getElementById("detailView").style.display === "none" && currentGroupId){
+        openDetail(currentGroupId);
+      }
+    } else if(document.getElementById("detailView").style.display !== "none"){
+      exitGroupDetail();
+    } else {
+      groupDetailHistoryActive = false;
+    }
+  });
+
+  document.getElementById("groupBackBtn").addEventListener("click", async () => {
+    if(groupDetailHistoryActive) history.back();
+    else await exitGroupDetail();
   });
 
   // сюда попали кликом по «Группа» в журнале посещаемости — даём дорогу назад
@@ -1255,6 +1284,7 @@
     const wantGroupId = params.get("group");
     if(wantGroupId && groups.some(g => g.id === wantGroupId)){
       openDetail(wantGroupId);
+      pushGroupDetailHistory();
       if(params.get("from") === "attendance"){
         document.getElementById("backToJournalBtn").style.display = "";
       }

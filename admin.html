@@ -66,6 +66,15 @@
   .loot-coef-row .label{ font-size:13px; color: var(--text); }
   .loot-coef-row input{ width:80px; text-align:right; }
 
+  /* сумма недельного налога с человека («Налоги») — то же поле-число, что и у коэффициентов */
+  .tax-amount-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background: var(--panel-2); border:1px solid var(--border); border-radius:7px;
+    padding:8px 12px; max-width:420px; margin:10px 0;
+  }
+  .tax-amount-row .label{ font-size:13px; color: var(--text); }
+  .tax-amount-row input{ width:100px; text-align:right; }
+
   /* порядок разделов меню: список в том же виде, в каком меню видно слева */
   .sec-order-list{ display:flex; flex-direction:column; gap:6px; margin:10px 0; max-width:420px; }
   .sec-order-row{
@@ -191,6 +200,16 @@
     </div>
 
     <div class="admin-tab-panel" data-panel="rules">
+  <section class="card">
+    <h2>Налог за неделю</h2>
+    <p class="hint">Сумма налога с одного человека за неделю. Используется в окошке «Итого за неделю» на странице «Налоги» — просто множится на число заплативших и складывается с донатами, саму отметку «кто платил» это не меняет.</p>
+    <div class="tax-amount-row">
+      <span class="label">Сумма с человека</span>
+      <input type="number" id="weeklyTaxAmountInput" step="1" min="0" />
+    </div>
+    <p class="error-msg" id="weeklyTaxAmountError"></p>
+  </section>
+
   <section class="card">
     <h2>Коэффициент профессии для «Раздела дропа»</h2>
     <p class="hint">У каждой профессии свой множитель: финальные баллы участника в «Разделе дропа» = начальные баллы × % буста × этот коэффициент. Нет строки для класса — считается как 1.</p>
@@ -390,6 +409,28 @@
       wrap.appendChild(row);
     });
   }
+
+  // ---------- сумма недельного налога с человека ----------
+  async function loadWeeklyTaxAmount(){
+    const { data, error } = await db.from("tax_settings").select("weekly_tax_amount").eq("clan_id", profile.clan_id).maybeSingle();
+    if(error){ console.error(error); return; }
+    document.getElementById("weeklyTaxAmountInput").value = Number(data?.weekly_tax_amount) || 0;
+  }
+
+  document.getElementById("weeklyTaxAmountInput").addEventListener("change", async () => {
+    const input = document.getElementById("weeklyTaxAmountInput");
+    const errEl = document.getElementById("weeklyTaxAmountError");
+    errEl.textContent = "";
+    const val = Number(input.value);
+    if(!Number.isFinite(val) || val < 0){ errEl.textContent = "Сумма должна быть числом ≥ 0."; return; }
+    input.disabled = true;
+    const { error } = await db.from("tax_settings").upsert(
+      { clan_id: profile.clan_id, weekly_tax_amount: val },
+      { onConflict: "clan_id" }
+    );
+    if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
+    input.disabled = false;
+  });
 
   // ---------- коэффициенты профессий («Раздел дропа») ----------
   let lootCoefficients = new Map(); // class_name -> coefficient
@@ -1056,7 +1097,7 @@
   await loadLookups();
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(r.label), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
-  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients()]);
+  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadWeeklyTaxAmount()]);
   renderSectionOrder();
   renderSectionToggleList();
   renderLootCoefList();

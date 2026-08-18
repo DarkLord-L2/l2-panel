@@ -249,6 +249,7 @@
           <button class="btn" id="attNickSearchBtn">Поиск</button>
         </div>
         <div class="tools">
+          <button class="btn" id="attCopyNicksBtn" title="Скопировать список ников (то, что сейчас видно)">📋 Скопировать ники</button>
           <button class="btn" id="attShareBtn">Поделиться</button>
           <button class="btn" id="attEditBtn" style="display:none;">Изменить период</button>
           <button class="btn" id="attBackBtn">← К дням недели</button>
@@ -458,6 +459,44 @@
   document.getElementById("wrap").style.display = "";
   document.getElementById("pullPrevWeekBtn").style.display = isAdmin ? "" : "none";
   document.getElementById("settingsBtn").style.display = isAdmin ? "" : "none";
+
+  // ---- копирование списка ников из отчёта (с нумерацией, только ники) — берём то,
+  // что реально сейчас видно: таблицу (обычный вид/матрица/группировка по разделам —
+  // везде ник лежит в td.att-nick) либо чипы одного дня («Ходил/Платил») ----
+  function flashCopyBtn(btn, symbol){
+    if(!btn) return;
+    const original = btn.textContent;
+    btn.textContent = symbol;
+    btn.disabled = true;
+    setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1000);
+  }
+  function collectVisibleAttNicknames(){
+    if(document.getElementById("attTableWrap").style.display !== "none"){
+      return Array.from(document.querySelectorAll("#attReportBody td.att-nick")).map(td => td.textContent);
+    }
+    const listIds = ["dayYesList"];
+    if(document.getElementById("dayPaidCol").style.display !== "none") listIds.push("dayPaidList");
+    listIds.push("dayNoList");
+    const names = [];
+    listIds.forEach(id => {
+      document.querySelectorAll(`#${id} .chip`).forEach(chip => {
+        names.push(chip.textContent.replace(/\s*·\s*новый\s*$/, ""));
+      });
+    });
+    return names;
+  }
+  document.getElementById("attCopyNicksBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("attCopyNicksBtn");
+    const names = collectVisibleAttNicknames();
+    if(!names.length){ flashCopyBtn(btn, "∅"); return; }
+    const text = names.map((n, i) => `${i + 1}. ${n}`).join("\n");
+    try{
+      await navigator.clipboard.writeText(text);
+      flashCopyBtn(btn, "✓ Скопировано");
+    }catch(e){
+      flashCopyBtn(btn, "✗ Не удалось");
+    }
+  });
 
   const DAY_NAMES = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"];
   const DAY_SHORT = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -1250,6 +1289,42 @@
   document.getElementById("modePeriodBtn").addEventListener("click", () => setReportMode("period"));
   document.getElementById("modeDayBtn").addEventListener("click", () => setReportMode("day"));
 
+  // ---- кнопка «Назад» браузера должна выходить из полноэкранного отчёта, а не
+  // сразу улетать со страницы целиком: при входе в отчёт кладём отметку в историю,
+  // при выходе (хоть кнопкой «← К дням недели», хоть физическим «назад») её же и снимаем ----
+  let attReportHistoryActive = false;
+  function pushAttReportHistory(){
+    if(attReportHistoryActive) return;
+    history.pushState({ attReport: true }, "");
+    attReportHistoryActive = true;
+  }
+  function exitAttReportView(){
+    document.getElementById("attReportView").style.display = "none";
+    document.getElementById("daysContainer").style.display = "";
+    document.body.classList.remove("report-focus", "hide-chrome", "hide-controls");
+    attReportHistoryActive = false;
+  }
+  // popstate ловит и «назад» (уходим из состояния attReport — прячем отчёт), и
+  // «вперёд» (возвращаемся в него — перерисовываем из уже посчитанных данных,
+  // без повторного запроса к БД); state смотрим по event.state, а не по своему
+  // флагу — так работает в обе стороны одинаково
+  window.addEventListener("popstate", (e) => {
+    if(e.state && e.state.attReport){
+      attReportHistoryActive = true;
+      if(document.getElementById("attReportView").style.display === "none"){
+        document.getElementById("daysContainer").style.display = "none";
+        document.getElementById("attReportView").style.display = "";
+        document.body.classList.add("report-focus");
+        if(attReportRows.length){ renderFilterTabs(); collapseReportControls(); }
+      }
+    } else {
+      attReportHistoryActive = false;
+      if(document.getElementById("attReportView").style.display !== "none"){
+        exitAttReportView();
+      }
+    }
+  });
+
   // открывает раздел отчёта; from/to — если заданы, подставляются в поля дат
   // (кнопка за конкретную неделю), иначе — что уже было введено, либо последние 7 дней
   async function openReportView(from, to){
@@ -1280,6 +1355,7 @@
     document.getElementById("daysContainer").style.display = "none";
     document.getElementById("attReportView").style.display = "";
     document.body.classList.add("report-focus");
+    pushAttReportHistory();
     expandReportControls();
   }
 
@@ -1310,9 +1386,8 @@
     await runPeriodReport(from, to);
   });
   document.getElementById("attBackBtn").addEventListener("click", () => {
-    document.getElementById("attReportView").style.display = "none";
-    document.getElementById("daysContainer").style.display = "";
-    document.body.classList.remove("report-focus", "hide-chrome", "hide-controls");
+    if(attReportHistoryActive) history.back();
+    else exitAttReportView();
   });
 
   document.getElementById("attShareBtn").addEventListener("click", async () => {
@@ -1566,6 +1641,7 @@
     document.getElementById("daysContainer").style.display = "none";
     document.getElementById("attReportView").style.display = "";
     document.body.classList.add("report-focus");
+    pushAttReportHistory();
 
     const result = (st.mode === "day" && st.day) ? await buildAttendanceReport(st.day, st.day)
                  : (st.from && st.to) ? await buildAttendanceReport(st.from, st.to)

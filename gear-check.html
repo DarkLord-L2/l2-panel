@@ -468,8 +468,36 @@
   const db = L2Cabinet.client;
   document.getElementById("wrap").style.display = "";
   document.getElementById("addSectionBtn").style.display = isAdmin ? "" : "none";
-  document.getElementById("gcSoloBtn").addEventListener("click", () => { selectedGroupId = SOLO_KEY; showTableView("Соло"); });
-  document.getElementById("gcBackBtn").addEventListener("click", showPickerView);
+  document.getElementById("gcSoloBtn").addEventListener("click", () => { selectedGroupId = SOLO_KEY; showTableView("Соло"); pushGcHistory(); });
+
+  // ---- кнопка «Назад» браузера должна выходить из таблицы группы к экрану выбора,
+  // а не сразу улетать со страницы целиком: при входе в группу кладём отметку в
+  // историю, при выходе (хоть кнопкой, хоть физическим «назад») её же и снимаем.
+  // Для не-админа с назначенной пати (экран выбора вообще скрыт) историю не трогаем ----
+  let gcHistoryActive = false;
+  function pushGcHistory(){
+    if(isPartyRestricted || !groups.length || gcHistoryActive) return;
+    history.pushState({ gcDetail: true }, "");
+    gcHistoryActive = true;
+  }
+  window.addEventListener("popstate", (e) => {
+    if(e.state && e.state.gcDetail){
+      gcHistoryActive = true;
+      if(document.getElementById("gcTableView").style.display === "none" && selectedGroupId){
+        const g = groups.find(x => x.id === selectedGroupId);
+        showTableView(selectedGroupId === SOLO_KEY ? "Соло" : g?.name);
+      }
+    } else {
+      gcHistoryActive = false;
+      if(document.getElementById("gcTableView").style.display !== "none"){
+        showPickerView();
+      }
+    }
+  });
+  document.getElementById("gcBackBtn").addEventListener("click", () => {
+    if(gcHistoryActive) history.back();
+    else showPickerView();
+  });
 
   function escapeHtml(s){
     return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
@@ -595,7 +623,7 @@
         `<div class="gc-group-card-name">${escapeHtml(g.name)}</div>` +
         `<div class="gc-group-card-members">${members.length ? escapeHtml(preview) : "Пока никого нет"}</div>` +
         `<div class="gc-group-card-foot"><span class="badge">${members.length} участников</span></div>`;
-      card.addEventListener("click", () => { selectedGroupId = g.id; showTableView(g.name); });
+      card.addEventListener("click", () => { selectedGroupId = g.id; showTableView(g.name); pushGcHistory(); });
       grid.appendChild(card);
     });
     const grouped = new Set();
@@ -1427,6 +1455,7 @@
   } else if(wantGroup){
     selectedGroupId = wantGroup.id;
     showTableView(wantGroup.name);
+    pushGcHistory();
   } else if(groups.length){
     showPickerView();
   } else {
