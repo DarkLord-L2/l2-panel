@@ -222,7 +222,8 @@
   table.cmp-table th:first-child, table.cmp-table td:first-child{ text-align:left; }
   table.cmp-table thead th{ color: var(--text-dim); font-size:11px; font-weight:500; }
 
-  /* ---- сравнение людей между собой (горизонтальные полосы по каждому показателю) ---- */
+  /* ---- сравнение людей между собой (радар на N человек + таблица с точными цифрами,
+     та же радар-геометрия и стили cmp-*, что у «Сравнение пати» выше) ---- */
   /* кнопка «весы» в строке таблицы — добавляет/убирает человека из сравнения;
      тусклая по умолчанию, ярче при наведении на строку, золотая когда уже выбран */
   table.rep-table th.rep-col-cmp, table.rep-table td.rep-col-cmp{ width:34px; padding-left:4px; padding-right:4px; }
@@ -235,37 +236,6 @@
   .rep-cmp-btn:hover{ opacity:1 !important; border-color: var(--border); }
   .rep-cmp-btn.active{ opacity:1; color: var(--gold); border-color: var(--border-lit); background: var(--panel-2); }
   .rep-cmp-btn:disabled{ cursor:not-allowed; opacity:.15 !important; }
-  /* «профиль» сравнения людей — один силуэт-график на человека через 5 показателей
-     (Килы/Смерти/K:D/PvP/PvE как оси в ряд), с мягким свечением и заливкой под линией;
-     точные цифры отдельно в таблице ниже, чтобы график оставался просто картинкой */
-  .ppl-chart-card{
-    background: var(--panel-2); border:1px solid var(--border); border-radius:10px;
-    padding:18px 8px 14px;
-  }
-  .ppl-linechart{ width:100%; max-width:560px; height:auto; display:block; margin:0 auto; overflow:visible; }
-  .ppl-grid-line{ stroke: var(--border); stroke-width:1; }
-  .ppl-grid-line.dashed{ stroke-dasharray:2 4; opacity:.7; }
-  .ppl-axis-tick{ stroke: var(--border-lit); stroke-width:1; opacity:.5; }
-  .ppl-axis-label{ font-size:9.5px; fill: var(--text-dim); text-transform:uppercase; letter-spacing:.05em; }
-  .ppl-series-path{ fill:none; stroke-width:2.25; stroke-linejoin:round; stroke-linecap:round; transition: opacity .15s ease; }
-  .ppl-series-area{ transition: opacity .15s ease; }
-  .ppl-series-dot{ stroke: var(--panel-2); stroke-width:1.5; transition: opacity .15s ease; }
-  .ppl-line-series.dim .ppl-series-path,
-  .ppl-line-series.dim .ppl-series-dot{ opacity:.15; }
-  .ppl-line-series.dim .ppl-series-area{ opacity:.03; }
-
-  .ppl-legend2{ display:flex; flex-wrap:wrap; gap:4px 16px; justify-content:center; margin-top:6px; }
-  .ppl-legend-item{
-    display:flex; align-items:center; gap:6px; font-size:12px; color: var(--text-dim);
-    padding:3px 6px; border-radius:5px; transition: opacity .15s ease, color .12s ease;
-  }
-  .ppl-legend-item .dot{ width:9px; height:9px; border-radius:50%; flex:none; box-shadow:0 0 6px currentColor; }
-  .ppl-legend-item.dim{ opacity:.35; }
-
-  table.ppl-stats-table{ border-collapse:separate; border-spacing:0; width:100%; font-size:12px; margin-top:14px; }
-  table.ppl-stats-table th, table.ppl-stats-table td{ padding:6px 8px; border-bottom:1px solid var(--border); text-align:center; white-space:nowrap; }
-  table.ppl-stats-table th:first-child, table.ppl-stats-table td:first-child{ text-align:left; }
-  table.ppl-stats-table thead th{ color: var(--text-dim); font-size:11px; font-weight:500; }
 </style>
 </head>
 <body>
@@ -296,6 +266,10 @@
         <div class="field">
           <label for="groupFilter">Пати</label>
           <select id="groupFilter"></select>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button type="button" class="btn" id="groupByPartyBtn" title="Список ниже разобьётся на блоки по пати — как «Скрин N», только по реальной группе человека, а не по тому, с какого скрина он распознан. Кто не состоит ни в одной группе — отдельным блоком «Соло»">Смотреть по пати</button>
         </div>
       </div>
 
@@ -347,22 +321,18 @@
 
       <div id="pplSection" style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
         <h2>Сравнение людей</h2>
-        <p class="hint" style="margin:0 0 12px;">Наведите на человека в таблице слева и нажмите ⚖, чтобы добавить его в сравнение (2 и более), потом нажмите «Сравнить».</p>
+        <p class="hint" style="margin:0 0 12px;">Наведите на человека в таблице слева и нажмите ⚖, чтобы добавить его в сравнение (2 и более) — сравнение появится само.</p>
 
         <div class="chip-row" id="pplChips"></div>
-        <button class="btn btn-primary" id="pplCompareBtn" style="margin:4px 0 2px;" disabled>Сравнить</button>
 
         <div id="pplBody" style="display:none; margin-top:14px;">
-          <div class="ppl-chart-card">
-            <div id="pplChartWrap"></div>
-            <div class="ppl-legend2" id="pplLegend"></div>
-          </div>
+          <div id="pplRadarWrap"></div>
           <div class="rep-table-scroll">
-            <table class="ppl-stats-table">
+            <table class="cmp-table">
               <thead>
                 <tr><th>Ник</th><th>Килы</th><th>Смерти</th><th>K:D</th><th>PvP</th><th>PvE</th></tr>
               </thead>
-              <tbody id="pplStatsBody"></tbody>
+              <tbody id="pplTableBody"></tbody>
             </table>
           </div>
         </div>
@@ -1135,6 +1105,32 @@
     return real;
   }
 
+  // группировка по РЕАЛЬНОЙ пати человека (clan_groups, та же, что в «Группах») —
+  // в отличие от groupRowsByBatch выше, работает всегда (не только для одного
+  // мероприятия и не только когда есть скрин с привязкой к batch_id), потому что
+  // не зависит от того, как заносились данные явки. Кто не состоит ни в одной
+  // группе — отдельным блоком с меткой «Соло» (та же, что настроена в «Метках пати»)
+  function groupRowsByRealParty(rows){
+    const byGroup = new Map(); // group id ("" — соло) -> rows[]
+    const names = new Map();
+    rows.forEach(r => {
+      const g = lookupGroups(r.nickname)[0];
+      const key = g ? g.id : "";
+      if(!byGroup.has(key)) byGroup.set(key, []);
+      byGroup.get(key).push(r);
+      if(g) names.set(key, g.name);
+    });
+    const result = [...byGroup.entries()].map(([id, groupRows]) => ({
+      id, name: id ? names.get(id) : groupLabelSoloName, rows: groupRows,
+    }));
+    result.sort((a, b) => {
+      if(!a.id && b.id) return 1;
+      if(a.id && !b.id) return -1;
+      return a.name.localeCompare(b.name);
+    });
+    return result;
+  }
+
   function totals(rows){
     // normalizeNick — та же причина, что в aggregateByNickname: один человек,
     // распознанный то кириллицей, то латиницей, не должен считаться за двоих
@@ -1393,6 +1389,28 @@
     body.appendChild(tr);
   }
 
+  function renderPartySubheader(body, group){
+    const tr = document.createElement("tr");
+    tr.className = "rep-batch-subhead";
+    const td = document.createElement("td");
+    td.colSpan = isAdmin ? 8 : 7;
+    const labelSpan = document.createElement("span");
+    labelSpan.className = "rep-batch-label";
+    labelSpan.textContent = group.name;
+    td.appendChild(labelSpan);
+    tr.appendChild(td);
+    body.appendChild(tr);
+  }
+
+  // «Смотреть по пати» — не завязано на конкретное мероприятие/наличие скринов,
+  // поэтому доступно всегда (в отличие от группировки по batch_id ниже)
+  let groupByParty = false;
+  document.getElementById("groupByPartyBtn").addEventListener("click", () => {
+    groupByParty = !groupByParty;
+    document.getElementById("groupByPartyBtn").classList.toggle("btn-primary", groupByParty);
+    renderReportTable(lastPeriodRows);
+  });
+
   function renderReportTable(periodRowsRaw){
     lastPeriodRows = periodRowsRaw;
     const head = document.getElementById("repHead");
@@ -1417,7 +1435,12 @@
     body.innerHTML = "";
     document.getElementById("repEmpty").style.display = periodRowsRaw.length ? "none" : "";
 
-    if(periodValue.startsWith("event:")){
+    if(groupByParty){
+      groupRowsByRealParty(periodRowsRaw).forEach(group => {
+        renderPartySubheader(body, group);
+        sortRows(aggregateByNickname(group.rows)).forEach(r => renderPersonRow(body, r));
+      });
+    } else if(periodValue.startsWith("event:")){
       groupRowsByBatch(periodRowsRaw).forEach(batch => {
         // строки без привязки к скрину (домиграционные/добавленные вручную) —
         // без подписи-«шапки», просто обычными строками, не нужно мозолить
@@ -1643,17 +1666,12 @@
     renderComparisonTable(ids, normStatsMap);
   }
 
-  // ---------- сравнение людей между собой (горизонтальные полосы по каждому показателю) ----------
+  // ---------- сравнение людей между собой (радар на N человек + таблица с точными цифрами) ----------
   // отмечаются кнопкой «весы» ⚖ прямо в строке таблицы (не поиском) — навёл на человека,
-  // нажал ⚖, так на нескольких, потом «Сравнить». Цвет закреплён за позицией в списке
-  // выбранных (не за ником), чтобы при добавлении/удалении человека цвета остальных
-  // не расползались хаотично — та же логика, что у CMP_PALETTE выше, просто применённая
-  // по порядку добавления, а не по общему списку.
+  // нажал ⚖, так на нескольких (до CMP_MAX_SELECTED, как и у пати). Цвет закреплён за
+  // позицией в списке выбранных (не за ником), чтобы при добавлении/удалении человека
+  // цвета остальных не расползались хаотично.
   let pplSelected = []; // [{nick, color}]
-  // сравнение уже показано на экране — держим его в синхроне со сменой периода сверху
-  // автоматически; а вот сам список людей (добавить/убрать) на бары не влияет сразу,
-  // только явное нажатие «Сравнить»
-  let pplBarsVisible = false;
 
   function isPplSelected(nick){
     return pplSelected.some(p => normalizeNick(p.nick) === normalizeNick(nick));
@@ -1673,13 +1691,12 @@
       chip.appendChild(btn);
       wrap.appendChild(chip);
     });
-    document.getElementById("pplCompareBtn").disabled = pplSelected.length < 2;
     if(!pplSelected.length) document.getElementById("pplEmpty").textContent = "Пока никто не выбран.";
-    else if(pplSelected.length < 2) document.getElementById("pplEmpty").textContent = "Добавьте ещё хотя бы одного человека.";
+    else if(pplSelected.length < 2) document.getElementById("pplEmpty").textContent = "Добавьте ещё хотя бы одного человека — сравнение появится само.";
   }
 
-  // клик по ⚖ в строке — добавляет/убирает человека из набора для сравнения;
-  // сами полосы сравнения при этом не трогаем, только шапка-чипы и кнопки в таблице
+  // клик по ⚖ в строке — добавляет/убирает человека из набора для сравнения; сравнение
+  // показывается автоматически, как только выбраны хотя бы двое — отдельной кнопки нет
   function togglePplPerson(nick){
     if(isPplSelected(nick)){
       pplSelected = pplSelected.filter(p => normalizeNick(p.nick) !== normalizeNick(nick));
@@ -1690,95 +1707,38 @@
     }
     renderPplChips();
     renderReportTable(lastPeriodRows); // перерисовать кнопки ⚖ в таблице (активна/недоступна)
-    // если график уже показан («Сравнить» нажимали) — держим его в синхроне с составом;
-    // если ещё не показан, renderPeopleComparison сама ничего не отрисует (pplBarsVisible=false)
     renderPeopleComparison();
   }
 
-  const PPL_METRICS = [
-    { key: "kills", label: "Килы", fmt: v => Math.round(v).toLocaleString("ru-RU") },
-    { key: "deaths", label: "Смерти", fmt: v => Math.round(v).toLocaleString("ru-RU") },
-    { key: "kd", label: "K:D", fmt: v => v.toFixed(2) },
-    { key: "pvp", label: "PvP урон", fmt: v => Math.round(v).toLocaleString("ru-RU") },
-    { key: "pve", label: "PvE урон", fmt: v => Math.round(v).toLocaleString("ru-RU") },
-  ];
+  // тот же пятиугольник-радар, что и у «Сравнение пати» (radarGeometry, общие оси
+  // RADAR_LABELS/RADAR_ANGLES) — просто по людям вместо пати, до CMP_MAX_SELECTED
+  // человек одновременно; точные цифры отдельно в таблице под радаром
+  function renderPeopleRadar(stats){
+    const wrap = document.getElementById("pplRadarWrap");
+    const maxPerAxis = RADAR_LABELS.map((_, i) => Math.max(...stats.map(s => s.vals[i]), 1e-9));
+    const geo = radarGeometry(100, 68);
 
-  // «профиль» сравнения — один силуэт-график на человека сквозь все 5 показателей,
-  // разложенных по оси X в ряд (Килы → Смерти → K:D → PvP → PvE), высота точки на
-  // каждой оси — доля от максимума среди сравниваемых людей по этому показателю
-  // (та же идея нормализации по оси, что у радара сравнения пати выше). Свечение —
-  // фильтр SVG feGaussianBlur, наведение на легенду приглушает остальных.
-  const PPL_CHART_W = 460, PPL_CHART_H = 200;
-  const PPL_PAD_X = 40, PPL_TOP_Y = 22, PPL_BASE_Y = 142, PPL_LABEL_Y = 166;
-
-  function pplAxisX(i){
-    return PPL_PAD_X + i * ((PPL_CHART_W - PPL_PAD_X * 2) / (PPL_METRICS.length - 1));
-  }
-
-  function renderPeopleChart(stats){
-    const maxPerAxis = PPL_METRICS.map(m => Math.max(...stats.map(s => s[m.key]), 1e-9));
-
-    const gridLines = [0.25, 0.5, 0.75].map(frac => {
-      const y = PPL_BASE_Y - frac * (PPL_BASE_Y - PPL_TOP_Y);
-      return `<line class="ppl-grid-line dashed" x1="${PPL_PAD_X}" y1="${y.toFixed(1)}" x2="${PPL_CHART_W - PPL_PAD_X}" y2="${y.toFixed(1)}"/>`;
-    }).join("");
-    const baseline = `<line class="ppl-grid-line" x1="${PPL_PAD_X}" y1="${PPL_BASE_Y}" x2="${PPL_CHART_W - PPL_PAD_X}" y2="${PPL_BASE_Y}"/>`;
-    const axisTicks = PPL_METRICS.map((m, i) => {
-      const x = pplAxisX(i);
-      return `<line class="ppl-axis-tick" x1="${x}" y1="${PPL_TOP_Y - 6}" x2="${x}" y2="${PPL_BASE_Y}"/>` +
-        `<text class="ppl-axis-label" x="${x}" y="${PPL_LABEL_Y}" text-anchor="middle">${escapeHtml(m.label)}</text>`;
+    const seriesPolys = stats.map(s => {
+      const fracs = s.vals.map((v, i) => v / maxPerAxis[i]);
+      return `<polygon points="${geo.polyStr(fracs)}" fill="${s.color}1a" stroke="${s.color}" stroke-width="2"/>`;
     }).join("");
 
-    const series = stats.map((s, idx) => {
-      const pts = PPL_METRICS.map((m, i) => {
-        const frac = s[m.key] / maxPerAxis[i];
-        return { x: pplAxisX(i), y: PPL_BASE_Y - frac * (PPL_BASE_Y - PPL_TOP_Y), label: m.label, text: m.fmt(s[m.key]) };
-      });
-      const lineD = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-      const areaD = lineD + ` L${pts[pts.length - 1].x.toFixed(1)},${PPL_BASE_Y} L${pts[0].x.toFixed(1)},${PPL_BASE_Y} Z`;
-      const dots = pts.map(p =>
-        `<circle class="ppl-series-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.4" fill="${s.color}">` +
-          `<title>${escapeHtml(s.nick)} — ${escapeHtml(p.label)}: ${escapeHtml(p.text)}</title>` +
-        `</circle>`
-      ).join("");
-      return `<g class="ppl-line-series" data-idx="${idx}">` +
-        `<path class="ppl-series-area" d="${areaD}" fill="${s.color}" opacity=".12"/>` +
-        `<path class="ppl-series-path" d="${lineD}" stroke="${s.color}" filter="url(#pplGlow)"/>` +
-        dots +
-      `</g>`;
-    }).join("");
-
-    return `<svg viewBox="0 0 ${PPL_CHART_W} ${PPL_CHART_H}" class="ppl-linechart">` +
-      `<defs><filter id="pplGlow" x="-60%" y="-60%" width="220%" height="220%">` +
-        `<feGaussianBlur stdDeviation="2.4" result="blur"/>` +
-        `<feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>` +
-      `</filter></defs>` +
-      gridLines + baseline + axisTicks + series +
-    `</svg>`;
-  }
-  function renderPplLegend(stats){
-    const legend = document.getElementById("pplLegend");
-    legend.innerHTML = stats.map((s, idx) =>
-      `<span class="ppl-legend-item" data-idx="${idx}"><i class="dot" style="background:${s.color}; color:${s.color}"></i>${escapeHtml(s.nick)}</span>`
+    const legend = stats.map(s =>
+      `<span class="rep-legend-item"><i class="dot" style="background:${s.color}"></i>${escapeHtml(s.nick)}</span>`
     ).join("");
-    legend.querySelectorAll(".ppl-legend-item").forEach(item => {
-      item.addEventListener("mouseenter", () => {
-        const idx = item.dataset.idx;
-        document.querySelectorAll(".ppl-line-series, .ppl-legend-item").forEach(el => {
-          el.classList.toggle("dim", el.dataset.idx !== idx);
-        });
-      });
-      item.addEventListener("mouseleave", () => {
-        document.querySelectorAll(".ppl-line-series, .ppl-legend-item").forEach(el => el.classList.remove("dim"));
-      });
-    });
+
+    wrap.innerHTML =
+      `<svg viewBox="0 0 200 200" class="cmp-radar-svg">` +
+        geo.grid + geo.axes + seriesPolys + geo.labels +
+      `</svg>` +
+      `<div class="rep-radar-legend">${legend}</div>`;
   }
 
-  function renderPplStatsTable(stats){
-    document.getElementById("pplStatsBody").innerHTML = stats.map(s =>
+  function renderPeopleTable(stats){
+    document.getElementById("pplTableBody").innerHTML = stats.map(s =>
       `<tr><td><span class="cmp-swatch" style="background:${s.color}"></span>${escapeHtml(s.nick)}</td>` +
-      `<td>${s.kills.toLocaleString("ru-RU")}</td>` +
-      `<td>${s.deaths.toLocaleString("ru-RU")}</td>` +
+      `<td>${Math.round(s.kills).toLocaleString("ru-RU")}</td>` +
+      `<td>${Math.round(s.deaths).toLocaleString("ru-RU")}</td>` +
       `<td>${s.kd.toFixed(2)}</td>` +
       `<td>${Math.round(s.pvp).toLocaleString("ru-RU")}</td>` +
       `<td>${Math.round(s.pve).toLocaleString("ru-RU")}</td></tr>`
@@ -1788,19 +1748,18 @@
   function renderPeopleComparison(){
     const body = document.getElementById("pplBody");
     const empty = document.getElementById("pplEmpty");
-    if(!pplBarsVisible || pplSelected.length < 2){ body.style.display = "none"; empty.style.display = ""; return; }
+    if(pplSelected.length < 2){ body.style.display = "none"; empty.style.display = ""; return; }
     body.style.display = ""; empty.style.display = "none";
 
     const normStatsMap = statsByNormNick(comparisonPeriodRows());
     const stats = pplSelected.map(p => {
       const s = normStatsMap.get(normalizeNick(p.nick)) || { kills: 0, deaths: 0, pvp: 0, pve: 0 };
       const kd = s.deaths > 0 ? s.kills / s.deaths : s.kills;
-      return { ...p, kills: s.kills, deaths: s.deaths, pvp: s.pvp, pve: s.pve, kd };
+      return { ...p, kills: s.kills, deaths: s.deaths, pvp: s.pvp, pve: s.pve, kd, vals: [s.pvp, s.kills, s.deaths, kd, s.pve] };
     });
 
-    document.getElementById("pplChartWrap").innerHTML = renderPeopleChart(stats);
-    renderPplLegend(stats);
-    renderPplStatsTable(stats);
+    renderPeopleRadar(stats);
+    renderPeopleTable(stats);
   }
 
   function renderSummaryHeader(){
@@ -1911,10 +1870,6 @@
   }
 
   renderPplChips();
-  document.getElementById("pplCompareBtn").addEventListener("click", () => {
-    pplBarsVisible = true;
-    renderPeopleComparison();
-  });
 
   await refreshReport();
 })();

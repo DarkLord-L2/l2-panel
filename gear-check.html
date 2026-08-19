@@ -10,13 +10,28 @@
   .gc-avg{ display:inline-flex; align-items:center; gap:8px; font-size:13px; color: var(--text-dim); margin:0; }
   .gc-avg b{ color: var(--gold); font-size:15px; }
 
-  /* без своей высоты и скролла — низа у таблицы больше нет, длинный список просто
-     продолжается вниз, и скроллится вся страница целиком (тот же приём, что в
-     отчётах «Налоги»/«Посещаемость»: display:inline-block + overflow:visible вместо
-     overflow:auto+max-height — тогда sticky-шапка честно прилипает к окну браузера,
-     а не к границе своей коробки). Если таблица шире экрана — вбок листается тоже
-     вся страница (см. JS, колесо мыши без Shift крутит window, а не саму коробку) */
-  .gc-table-scroll{ display:inline-block; vertical-align:top; overflow:visible; position:relative; }
+  /* только overflow:auto, БЕЗ max-height — в отличие от matrix-scroll в «Налогах»/
+     «Посещаемости», здесь ещё и закреплённая по горизонтали колонка «Участники»
+     (.gc-col-nick, position:sticky;left:0) — тот трюк с display:inline-block+
+     overflow:visible+скроллом всей страницы (см. #taxReportTableWrap) ломает именно
+     её: left:0 начинает считаться не от окна браузера, а от кривой точки, колонку
+     срывает при горизонтальном скролле. Поэтому здесь коробка скроллится сама, как
+     раньше (шапка/левая колонка прилипают к её границам, не к окну) — просто без
+     потолка по высоте: раз высота не задана, внутренний вертикальный скролл никогда
+     не понадобится (контент никогда её не превышает), и страница просто продолжается
+     вниз как обычно. Горизонтальный скролл (если пунктов много) — свой, внутри коробки */
+  .gc-table-scroll{ overflow:auto; }
+
+  /* плавающий горизонтальный скроллбар, прибитый к низу окна — своя полоса
+     прокрутки, видна её ползунок пропорционально ширине таблицы (у track такая
+     же ширина, как у самой таблицы); scrollLeft синхронизируется в обе стороны
+     с .gc-table-scroll в JS. Показываем только когда таблица реально шире окна */
+  .gc-hscroll-bar{
+    position:fixed; bottom:0; z-index:40;
+    height:14px; overflow-x:auto; overflow-y:hidden;
+    background: var(--panel); border-top:1px solid var(--border);
+  }
+  .gc-hscroll-track{ height:1px; }
   /* без width:100% — таблица растёт по содержимому вправо (много пунктов = шире
      таблица + горизонтальный скролл), а не сплющивает все колонки в экран */
   table.gc-table{ border-collapse:separate; border-spacing:0; width:auto; font-size:13px; }
@@ -289,6 +304,13 @@
       </div>
       <p class="empty-hint" id="gcEmpty" style="display:none;">В последней переписи нет участников — сначала заполните «Перепись клана».</p>
     </section>
+
+    <!-- плавающий скроллбар внизу экрана — таблица может быть намного выше окна,
+         обычный горизонтальный скролл под ней тогда почти всегда не виден без
+         прокрутки до самого низа страницы; этот всегда на виду и крутит саму таблицу -->
+    <div class="gc-hscroll-bar" id="gcHScrollBar" style="display:none;">
+      <div class="gc-hscroll-track" id="gcHScrollTrack"></div>
+    </div>
   </div>
 </div>
 
@@ -513,18 +535,42 @@
     else showPickerView();
   });
 
-  // таблица может быть шире экрана (много пунктов) — крутим колесом мыши без
-  // Shift не саму коробку (у неё нет своего скролла), а всю страницу целиком
-  document.querySelector(".gc-table-scroll").addEventListener("wheel", (e) => {
-    const doc = document.documentElement;
-    if(doc.scrollWidth <= doc.clientWidth) return;
-    e.preventDefault();
-    window.scrollBy({ left: e.deltaY });
-  }, { passive: false });
-
   function escapeHtml(s){
     return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
   }
+
+  // ---- плавающий скроллбар внизу окна, крутит .gc-table-scroll ----
+  const gcTableScrollEl = document.querySelector(".gc-table-scroll");
+  const gcHScrollBarEl = document.getElementById("gcHScrollBar");
+  const gcHScrollTrackEl = document.getElementById("gcHScrollTrack");
+  let gcHScrollSyncing = false;
+
+  function syncHScrollBar(){
+    const overflowing = gcTableScrollEl.scrollWidth > gcTableScrollEl.clientWidth + 1;
+    gcHScrollBarEl.style.display = overflowing ? "" : "none";
+    if(!overflowing) return;
+    // бар должен быть той же ширины и на том же месте по горизонтали, что и сама
+    // таблица — иначе его прокрутка не 1:1 с прокруткой таблицы (на весь экран не
+    // годится: клиентская ширина не совпадает с шириной .gc-table-scroll)
+    const rect = gcTableScrollEl.getBoundingClientRect();
+    gcHScrollBarEl.style.left = rect.left + "px";
+    gcHScrollBarEl.style.width = rect.width + "px";
+    gcHScrollTrackEl.style.width = gcTableScrollEl.scrollWidth + "px";
+    gcHScrollBarEl.scrollLeft = gcTableScrollEl.scrollLeft;
+  }
+  gcTableScrollEl.addEventListener("scroll", () => {
+    if(gcHScrollSyncing) return;
+    gcHScrollSyncing = true;
+    gcHScrollBarEl.scrollLeft = gcTableScrollEl.scrollLeft;
+    gcHScrollSyncing = false;
+  });
+  gcHScrollBarEl.addEventListener("scroll", () => {
+    if(gcHScrollSyncing) return;
+    gcHScrollSyncing = true;
+    gcTableScrollEl.scrollLeft = gcHScrollBarEl.scrollLeft;
+    gcHScrollSyncing = false;
+  });
+  window.addEventListener("resize", syncHScrollBar);
 
   let nicks = [];
   let sections = [];     // [{id, name, sort_order}]
@@ -847,6 +893,7 @@
     });
 
     renderAvg();
+    syncHScrollBar();
   }
 
   function pctColor(p){
@@ -856,6 +903,11 @@
   }
 
   function renderAvg(){
+    const avgEl = document.getElementById("avgPercent").closest(".gc-avg");
+    // «Соло» — случайный набор людей без группы, общий процент по ним не значит
+    // ничего осмысленного (в отличие от реальной пати) — просто не показываем его
+    if(selectedGroupId === SOLO_KEY){ avgEl.style.display = "none"; return; }
+    avgEl.style.display = "";
     const list = currentNicks();
     if(!list.length){ document.getElementById("avgPercent").textContent = "—"; return; }
     const avg = list.reduce((s,n)=> s + percentOf(n), 0) / list.length;

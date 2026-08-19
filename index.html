@@ -47,12 +47,14 @@
     reports:     { type: "iframe", src: "reports.html" },
     gear_check:  { type: "iframe", src: "gear-check.html" },
     loot_split:  { type: "iframe", src: "loot-split.html" },
+    loot_split_party: { type: "iframe", src: "loot-split-party.html" },
   };
 
   // Чисто визуальная группировка пунктов меню — на права доступа не влияет,
   // каждый раздел внутри группы по-прежнему включается/выключается по роли отдельно.
   const NAV_GROUPS = [
     { label: "Учёт клана", keys: ["census", "taxes", "attendance"] },
+    { label: "ДКП", keys: ["loot_split", "loot_split_party"] },
   ];
 
   const profile = await L2Cabinet.getProfile();

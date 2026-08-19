@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ДКП Соло — Кабинет клана</title>
+<title>ДКП Пати — Кабинет клана</title>
 <link rel="stylesheet" href="js/theme.css?v=10" />
 <style>
   .ls-wrap{ padding:0 0 24px; }
@@ -14,12 +14,8 @@
   .ls-filters input[type="number"]{ width:140px; }
   .ls-wrap .card{ padding-top:12px; }
 
-  /* никакого overflow/скролл-бокса у обёртки — таблица продолжается вниз и вбок
-     вместе со всей страницей, а не в своём отдельном "окошке" (та же история и то
-     же решение, что для матрицы в attendance.html: сколько-то раз пробовали
-     overflow:auto — пользователь видит это как "таблица отдельно от сайта",
-     потому что position:sticky липнет к ближайшему скролл-предку, а не к окну).
-     display:inline-block — чтобы обёртка была ровно по размеру таблицы. */
+  /* тот же приём, что в «ДКП Соло»/matrix-scroll: без своего overflow — таблица
+     продолжается вниз и вбок вместе со всей страницей, не в отдельном "окошке" */
   .ls-table-scroll{ display:inline-block; vertical-align:top; overflow:visible; }
   table.ls-table{ border-collapse:separate; border-spacing:0; width:auto; font-size:13px; }
   table.ls-table th, table.ls-table td{ padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; }
@@ -37,21 +33,19 @@
     background: var(--panel-2);
     box-shadow: 2px 0 6px rgba(0,0,0,.35);
   }
-  /* тень «закреплённой колонки» нужна только у строк с данными — на шапке она
-     накладывалась поверх обычного фона и выглядела грязным пятном в углу */
   table.ls-table thead th.ls-col-nick{ z-index:3; background: var(--panel); box-shadow:none; }
   table.ls-table tbody tr:hover td{ background: rgba(255,255,255,.03); }
   table.ls-table tbody tr:hover td.ls-col-nick{ background: var(--panel-2); }
 
-  .ls-nick{ display:flex; align-items:center; gap:10px; }
-  .ls-nick .avatar{
+  .ls-party{ display:flex; align-items:center; gap:10px; }
+  .ls-party .avatar{
     width:32px; height:32px; flex:none;
     border-radius:50%; object-fit:cover;
     border:1px solid var(--border); background: var(--panel-2);
   }
-  .ls-nick .who{ display:flex; flex-direction:column; gap:1px; min-width:0; }
-  .ls-nick .name{ color: var(--text); font-weight:600; }
-  .ls-nick .cls{ font-size:11px; color: var(--text-dim); }
+  .ls-party .who{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+  .ls-party .name{ color: var(--text); font-weight:600; }
+  .ls-party .cnt{ font-size:11px; color: var(--text-dim); }
 
   .ls-num{ text-align:center; }
   .ls-final{ text-align:center; color: var(--gold); font-weight:700; }
@@ -76,7 +70,7 @@
 
 <div class="ls-wrap" id="wrap" style="display:none;">
   <div class="page-head">
-    <h1>ДКП Соло</h1>
+    <h1>ДКП Пати</h1>
   </div>
 
   <section class="card">
@@ -95,6 +89,7 @@
       </div>
       <button class="btn btn-primary" id="splitBtn">Разделить дроп</button>
     </div>
+    <p class="hint" style="margin:0 0 10px;">Тот же расчёт, что в «ДКП Соло», только по пати целиком: начальные баллы — суммарная явка всех участников пати, % буста и коэффициент — их среднее по пати, голда делится между пати пропорционально финальным баллам.</p>
     <p class="error-msg" id="lsError"></p>
 
     <div class="ls-table-scroll">
@@ -133,7 +128,7 @@
   }
 
   // перепись/явка/классы иногда пишут один и тот же ник по-разному (кириллица/латиница
-  // похожих букв, регистр) — та же схема нормализации, что в attendance.html/reports.html
+  // похожих букв, регистр) — та же схема нормализации, что в «ДКП Соло»/reports.html
   const CYR_LOOKALIKES = { "а":"a","в":"b","е":"e","к":"k","м":"m","н":"h","о":"o","р":"p","с":"c","т":"t","у":"y","х":"x","ё":"e","0":"o" };
   function normalizeNick(s){
     return String(s || "")
@@ -141,68 +136,36 @@
       .split("").map(ch => CYR_LOOKALIKES[ch] || ch).join("")
       .replace(/[^a-zа-яё0-9]/gi, "");
   }
-  function findByNormalized(map, nickname){
-    const norm = normalizeNick(nickname);
-    if(map.has(norm)) return map.get(norm);
-    // без точного совпадения — берём совпадение по префиксу, только если оно ЕДИНСТВЕННОЕ;
-    // тут результат идёт прямиком в коэффициент профессии для раздела голды, а не просто
-    // в подпись — при неоднозначности лучше явно не найти класс (коэффициент 1), чем
-    // молча приписать человеку чужую профессию
-    let found, matches = 0;
-    for(const [key, value] of map){
-      if(key && (key.startsWith(norm) || norm.startsWith(key))){
-        found = value;
-        matches++;
-        if(matches > 1) return undefined;
-      }
-    }
-    return matches === 1 ? found : undefined;
-  }
 
   const DAY_SHORT = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
   const BLANK_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'></svg>";
-
   function classIcon(name){ return name && window.L2_CLASS_ICON ? window.L2_CLASS_ICON(name) : null; }
-
-  let nicks = [];                  // ники последней переписи, по алфавиту
-  let memberClasses = new Map();   // nickname -> class_name
-  let memberClassesNorm = new Map();
-  let memberIcons = new Map();     // nickname -> data-URL своей аватарки
 
   let boostSections = [];
   let boostItems = [];
   let boostValueSet = new Set();   // `${nickname}|${item_id}`
 
-  let coefficients = new Map();    // class_name -> coefficient
+  let partyCoefficients = new Map(); // group_id -> coefficient
 
   let events = [];                 // [{id, event_date, event_name, icon}] в диапазоне, по дате
   let attendedByEvent = new Map(); // event_id -> Set(normalizeNick)
 
+  let parties = [];                // [{id, name, class_name, leader_nickname}] — видимые (не скрытые) пати
+  let membersByGroup = new Map();  // group_id -> [nickname, ...]
+
   let lastRows = [];               // последний посчитанный «Разделить дроп»
 
-  async function loadCensus(){
-    const { data } = await db.from("census_entries").select("nickname, week_start");
-    let latest = null;
-    (data || []).forEach(r => { if(!latest || r.week_start > latest) latest = r.week_start; });
-    nicks = [...new Set((data || []).filter(r => r.week_start === latest).map(r => r.nickname))]
-      .sort((a,b)=>a.localeCompare(b));
-  }
-
-  async function loadMemberClasses(){
-    const { data } = await db.from("member_classes").select("nickname, class_name, icon");
-    memberClasses = new Map();
-    memberClassesNorm = new Map();
-    memberIcons = new Map();
-    (data || []).forEach(r => {
-      memberClasses.set(r.nickname, r.class_name || null);
-      memberClassesNorm.set(normalizeNick(r.nickname), r.class_name || null);
-      if(r.icon) memberIcons.set(r.nickname, r.icon);
+  async function loadParties(){
+    const [{ data: groups }, { data: members }] = await Promise.all([
+      db.from("clan_groups").select("id, name, sort_order, class_name, leader_nickname").eq("hidden", false).order("sort_order").order("name"),
+      db.from("clan_group_members").select("group_id, nickname"),
+    ]);
+    parties = groups || [];
+    membersByGroup = new Map();
+    (members || []).forEach(r => {
+      if(!membersByGroup.has(r.group_id)) membersByGroup.set(r.group_id, []);
+      membersByGroup.get(r.group_id).push(r.nickname);
     });
-  }
-
-  function classOf(nick){
-    if(memberClasses.has(nick)) return memberClasses.get(nick);
-    return findByNormalized(memberClassesNorm, nick) || null;
   }
 
   async function loadBoostStructure(){
@@ -222,7 +185,7 @@
     (data || []).forEach(r => { if(r.enabled) boostValueSet.add(r.nickname + "|" + r.item_id); });
   }
 
-  // ---- те же формулы, что в «Проверке буста» (gear-check.html), чтобы % совпадал 1-в-1 ----
+  // ---- те же формулы, что в «Проверке буста»/«ДКП Соло», чтобы % совпадал 1-в-1 ----
   function itemsOfSection(secId){
     return boostItems.filter(i => i.section_id === secId).sort((a,b)=> a.sort_order - b.sort_order || a.name.localeCompare(b.name));
   }
@@ -257,19 +220,19 @@
     return "var(--danger-lit)";
   }
 
-  async function loadCoefficients(){
-    const { data } = await db.from("loot_class_coefficients").select("class_name, coefficient");
-    coefficients = new Map((data || []).map(r => [r.class_name, Number(r.coefficient)]));
+  // коэффициент задаётся прямо на пати (Админ-панель → «Правила клана», список
+  // рядом с коэффициентами профессий) — не считается средним по участникам
+  async function loadPartyCoefficients(){
+    const { data } = await db.from("loot_party_coefficients").select("group_id, coefficient");
+    partyCoefficients = new Map((data || []).map(r => [r.group_id, Number(r.coefficient)]));
   }
-  function coefficientOf(nick){
-    const cls = classOf(nick);
-    if(!cls) return 1;
-    const c = coefficients.get(cls);
+  function coefficientOf(partyId){
+    const c = partyCoefficients.get(partyId);
     return c === undefined ? 1 : c;
   }
 
-  // «показывать только тех, кто хоть раз ходил» — настройка из Админ-панели →
-  // «Правила клана» (по умолчанию выключена, показывает всех, как раньше)
+  // «показывать только тех, кто хоть раз ходил» — общая с «ДКП Соло» настройка из
+  // Админ-панели → «Правила клана»; здесь означает «пати, где вообще была явка»
   let hideZeroAttendance = false;
   async function loadLootSplitSettings(){
     const { data } = await db.from("loot_split_settings").select("hide_zero_attendance").eq("clan_id", profile.clan_id).maybeSingle();
@@ -304,15 +267,21 @@
 
   function fmtInt(n){ return Math.round(n).toLocaleString("ru-RU"); }
 
+  // начальные баллы пати — суммарная явка всех её участников (сколько раз кто-то
+  // из пати отметился на мероприятии, сложено по всем); % буста — среднее по
+  // участникам пати; коэффициент — не среднее, а прямая настройка на саму пати
+  // (Админ-панель → «Правила клана»)
   function computeRows(){
-    return nicks.map(nick => {
-      const norm = normalizeNick(nick);
-      const initial = events.reduce((s, e) => s + ((attendedByEvent.get(e.id) || new Set()).has(norm) ? 1 : 0), 0);
-      const pct = percentOf(nick);
-      const cls = classOf(nick);
-      const coef = coefficientOf(nick);
+    return parties.map(party => {
+      const roster = membersByGroup.get(party.id) || [];
+      const initial = roster.reduce((sum, nick) => {
+        const norm = normalizeNick(nick);
+        return sum + events.reduce((s, e) => s + ((attendedByEvent.get(e.id) || new Set()).has(norm) ? 1 : 0), 0);
+      }, 0);
+      const pct = roster.length ? roster.reduce((s, nick) => s + percentOf(nick), 0) / roster.length : 0;
+      const coef = coefficientOf(party.id);
       const final = initial * (pct / 100) * coef;
-      return { nick, norm, cls, initial, pct, coef, final };
+      return { party, roster, initial, pct, coef, final };
     });
   }
 
@@ -323,15 +292,15 @@
     return rows;
   }
 
-  // сортировка по клику на заголовок — та же схема, что в «Отчёте по мероприятиям»
-  // (reports.html): повторный клик по той же колонке переключает направление
-  let sortKey = "nick";
+  // сортировка по клику на заголовок — та же схема, что в «ДКП Соло»/«Отчёте по
+  // мероприятиям»: повторный клик по той же колонке переключает направление
+  let sortKey = "name";
   let sortDir = "asc";
   function sortRows(rows){
     return rows.slice().sort((a, b) => {
       const mul = sortDir === "asc" ? 1 : -1;
-      if(sortKey === "nick") return a.nick.localeCompare(b.nick) * mul;
-      return (a[sortKey] - b[sortKey]) * mul || a.nick.localeCompare(b.nick);
+      if(sortKey === "name") return a.party.name.localeCompare(b.party.name) * mul;
+      return (a[sortKey] - b[sortKey]) * mul || a.party.name.localeCompare(b.party.name);
     });
   }
   function sortArrow(key){ return sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : ""; }
@@ -343,7 +312,7 @@
   function renderHead(){
     const head = document.getElementById("lsHead");
     let h = '<tr>' +
-      sortableTh("nick", "Участники", "ls-col-nick") +
+      sortableTh("name", "Пати", "ls-col-nick") +
       sortableTh("initial", "Начальные баллы") +
       sortableTh("pct", "% буста") +
       sortableTh("coef", "Коэффициент") +
@@ -365,7 +334,7 @@
       th.addEventListener("click", () => {
         const key = th.dataset.sortKey;
         if(sortKey === key) sortDir = sortDir === "asc" ? "desc" : "asc";
-        else { sortKey = key; sortDir = key === "nick" ? "asc" : "desc"; }
+        else { sortKey = key; sortDir = key === "name" ? "asc" : "desc"; }
         renderTable(lastRows);
       });
     });
@@ -382,17 +351,20 @@
     body.innerHTML = "";
     rows.forEach(r => {
       const tr = document.createElement("tr");
-      const avatarSrc = memberIcons.get(r.nick) || classIcon(r.cls) || BLANK_IMG;
-      let html = `<td class="ls-col-nick"><div class="ls-nick"><img class="avatar" src="${avatarSrc}" alt="" />` +
-        `<span class="who"><span class="name">${escapeHtml(r.nick)}</span><span class="cls">${escapeHtml(r.cls || "")}</span></span></div></td>`;
+      const avatarSrc = classIcon(r.party.class_name) || BLANK_IMG;
+      const leaderText = r.party.leader_nickname ? ` · лидер ${escapeHtml(r.party.leader_nickname)}` : "";
+      let html = `<td class="ls-col-nick"><div class="ls-party"><img class="avatar" src="${avatarSrc}" alt="" />` +
+        `<span class="who"><span class="name">${escapeHtml(r.party.name)}</span>` +
+        `<span class="cnt">${r.roster.length} участников${leaderText}</span></span></div></td>`;
       html += `<td class="ls-num">${r.initial}</td>`;
       html += `<td class="ls-num" style="color:${pctColor(r.pct)}">${r.pct.toFixed(2)}%</td>`;
-      html += `<td class="ls-num">${r.coef}</td>`;
+      html += `<td class="ls-num">${r.coef.toFixed(2)}</td>`;
       html += `<td class="ls-final">${r.final.toFixed(2)}</td>`;
       html += `<td class="ls-gold">${fmtInt(r.gold)}</td>`;
       events.forEach(e => {
-        const was = (attendedByEvent.get(e.id) || new Set()).has(r.norm);
-        html += `<td class="ls-col-day ${was ? "ls-mark-yes" : "ls-mark-no"}">${was ? 1 : 0}</td>`;
+        const set = attendedByEvent.get(e.id) || new Set();
+        const count = r.roster.filter(nick => set.has(normalizeNick(nick))).length;
+        html += `<td class="ls-col-day ${count > 0 ? "ls-mark-yes" : "ls-mark-no"}">${count}</td>`;
       });
       tr.innerHTML = html;
       body.appendChild(tr);
@@ -405,8 +377,8 @@
     renderHead();
     renderBody(sortRows(rows));
     const emptyEl = document.getElementById("lsEmpty");
-    if(!nicks.length){
-      emptyEl.textContent = "В последней переписи нет участников — сначала заполните «Перепись клана».";
+    if(!parties.length){
+      emptyEl.textContent = "Пати ещё не заведены — сначала создайте их в разделе «Группы».";
       emptyEl.style.display = "";
     } else if(!hasSplit){
       emptyEl.textContent = "Укажите период и нажмите «Разделить дроп».";
@@ -415,7 +387,7 @@
       emptyEl.textContent = "За выбранный период нет мероприятий в «Журнале посещаемости».";
       emptyEl.style.display = "";
     } else if(!rows.length && hideZeroAttendance){
-      emptyEl.textContent = "Никто из последней переписи не ходил за этот период — настройка «Показывать только тех, кто хоть раз ходил» (Админ-панель → «Правила клана») скрыла всех.";
+      emptyEl.textContent = "Ни в одной пати за этот период не было явки — настройка «Показывать только тех, кто хоть раз ходил» (Админ-панель → «Правила клана») скрыла всех.";
       emptyEl.style.display = "";
     } else {
       emptyEl.style.display = "none";
@@ -448,7 +420,8 @@
     renderBody(sortRows(lastRows));
   });
 
-  // ---- иконка над столбцом мероприятия (только админ) ----
+  // ---- иконка над столбцом мероприятия (только админ) — та же attendance_events,
+  // что и в «ДКП Соло»/явке, поэтому иконка, поставленная тут, видна и там тоже ----
   let pickerTargetEventId = null;
   function openDayIconPicker(eventId){
     pickerTargetEventId = eventId;
@@ -486,7 +459,7 @@
     renderHead();
   });
 
-  await Promise.all([loadCensus(), loadMemberClasses(), loadBoostStructure(), loadBoostValues(), loadCoefficients(), loadLootSplitSettings()]);
+  await Promise.all([loadParties(), loadBoostStructure(), loadBoostValues(), loadPartyCoefficients(), loadLootSplitSettings()]);
   renderTable([]);
 })();
 </script>

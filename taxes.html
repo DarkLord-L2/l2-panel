@@ -78,27 +78,68 @@
 
   /* «Заплатили на этой неделе» — список слева, справа два маленьких окошка
      (Донаты / Наперёд-Долг) с уже существующими данными, чтобы не лазить
-     по модалкам и не листать недели, чтобы увидеть, кто платит вперёд */
+     по модалкам и не листать недели, чтобы увидеть, кто платит вперёд.
+     Сами окошки — свободно двигаемые/растягиваемые «объекты» (как окна): тянуть
+     за ⠿ в шапке — переставить, за края — растянуть. Позиция и размер каждого
+     запоминаются на аккаунт и не сбрасываются между заходами. */
   .tax-week-layout{ display:flex; align-items:flex-start; gap:18px; }
   .tax-week-main{ flex:1 1 auto; min-width:0; }
-  .tax-week-side{ flex:none; width:230px; display:flex; flex-direction:column; gap:14px; }
+  .tax-week-side{ position:relative; flex:none; width:260px; min-height:760px; }
 
   .tax-side-box{
+    position:absolute; z-index:2;
     border:1px solid var(--border); background: var(--panel-2); border-radius:8px;
     padding:12px 14px; display:flex; flex-direction:column; gap:8px;
+    box-shadow:0 6px 18px rgba(0,0,0,.3);
   }
-  .tax-side-box-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .tax-side-box-head{ display:flex; align-items:center; gap:6px; flex:none; }
   .tax-side-box-head h3{ margin:0; font-size:13.5px; color: var(--text); font-weight:600; }
-  .tax-side-box-sum{ font-size:12.5px; color: var(--ok); font-weight:600; }
+  .tax-side-box-sum{ margin-left:auto; font-size:12.5px; color: var(--ok); font-weight:600; }
+  /* ⠿ — единственное, за что реально хватаем окно (не вся шапка, чтобы клик по
+     кнопке 📋 рядом не запускал перетаскивание) */
+  .tax-side-drag-handle{
+    flex:none; cursor:move; color: var(--text-dim); font-size:13px; line-height:1;
+    padding:3px 5px; border-radius:4px; user-select:none;
+  }
+  .tax-side-drag-handle:hover{ color: var(--text); background: var(--panel); }
   /* прокрутка остаётся (колесо мыши/тач), сама полоса скролла скрыта —
-     маленькие квадратные окошки, лишняя полоса сбоку там не нужна */
+     маленькие квадратные окошки, лишняя полоса сбоку там не нужна.
+     flex:1 — список тянется на всё, что окно освободило растягиванием по высоте */
   .tax-side-box-list{
-    display:flex; flex-direction:column; gap:6px; max-height:150px; overflow-y:auto;
+    display:flex; flex-direction:column; gap:6px; flex:1; min-height:32px; overflow-y:auto;
     scrollbar-width:none; -ms-overflow-style:none;
   }
   .tax-side-box-list::-webkit-scrollbar{ display:none; }
-  .tax-side-box-empty{ margin:0; }
-  .tax-side-box-more{ align-self:flex-start; padding:4px 10px; font-size:12px; }
+  .tax-side-box-empty{ margin:0; flex:none; }
+
+  /* ручки по краям самого окна — тянуть можно всегда, без отдельного режима,
+     как у настоящего окна. Снизу — высота, слева/справа — ширина (при растягивании
+     за левый край окно ещё и сдвигается, чтобы правый край стоял на месте — левый
+     край действительно «едет» вслед за курсором, а не просто копится ширина вправо).
+     Сверху ручки нет — соседний элемент страницы всё равно не подвинуть */
+  .tax-side-box-vresize{
+    flex:none; height:9px; margin:0 -14px -12px; border-radius:4px;
+    cursor:ns-resize; background:transparent; transition: background .12s ease;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .tax-side-box-vresize::before{
+    content:""; width:32px; height:3px; border-radius:2px; background: var(--border-lit); opacity:.6;
+  }
+  .tax-side-box-vresize:hover, .tax-side-box-vresize.dragging{ background: var(--panel); }
+  .tax-side-box-vresize:hover::before, .tax-side-box-vresize.dragging::before{ background: var(--gold); opacity:1; }
+
+  .tax-side-box-hresize{
+    position:absolute; top:6px; bottom:6px; width:9px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:ew-resize; border-radius:4px; background:transparent; transition: background .12s ease;
+  }
+  .tax-side-box-hresize.left{ left:-4px; }
+  .tax-side-box-hresize.right{ right:-4px; }
+  .tax-side-box-hresize::before{ content:""; width:3px; height:28px; border-radius:2px; background: var(--border-lit); opacity:.6; }
+  .tax-side-box-hresize:hover, .tax-side-box-hresize.dragging{ background: var(--panel); }
+  .tax-side-box-hresize:hover::before, .tax-side-box-hresize.dragging::before{ background: var(--gold); opacity:1; }
+
+  .tax-side-box-more{ align-self:flex-start; padding:4px 10px; font-size:12px; flex:none; }
   .tax-side-box-row{
     display:flex; align-items:center; justify-content:space-between; gap:8px;
     padding:5px 8px; border-radius:6px; background: var(--panel);
@@ -106,18 +147,12 @@
   }
   .tax-side-box-row:hover{ border-color: var(--border-lit); }
   .tax-side-box-row .amt{ color: var(--text-dim); font-size:11.5px; white-space:nowrap; }
-  .tax-side-sub{ display:flex; flex-direction:column; gap:6px; }
+  .tax-side-sub{ display:flex; flex-direction:column; gap:6px; flex:1; min-height:48px; }
   .tax-side-sub-label{
-    display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600;
+    display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; flex:none;
     padding-bottom:4px; border-bottom:1px dashed var(--border);
   }
   .tax-side-sub-label .dot{ width:8px; height:8px; border-radius:50%; background:currentColor; }
-
-  /* «Итого за неделю» стоит в одном ряду со списком ников, справа от него,
-     занимая пустое место под кнопками «Добавить оплаты» / «Удалить списком» */
-  .tax-week-list-row{ display:flex; align-items:flex-start; gap:20px; flex-wrap:wrap; margin-top:10px; }
-  .tax-week-list-row .roster-row{ margin-top:0; flex:1 1 auto; }
-  .tax-totals-standalone{ flex:none; width:230px; }
 
   /* копирование списка ников (с нумерацией) — маленькая иконка-кнопка рядом
      с заголовком любого списка ников на этой странице */
@@ -137,8 +172,7 @@
 
   @media (max-width:760px){
     .tax-week-layout{ flex-direction:column; }
-    .tax-week-side{ width:100%; flex-direction:row; flex-wrap:wrap; }
-    .tax-side-box{ flex:1 1 220px; }
+    .tax-week-side{ width:100%; }
   }
 </style>
 </head>
@@ -179,26 +213,33 @@
           </div>
         </div>
 
-        <div class="tax-week-list-row">
-          <div class="chip-row roster-row" id="weekBody"></div>
-
-          <div class="tax-side-box tax-totals-standalone" id="totalsBoxCard">
-            <div class="tax-side-box-head"><h3>Итого за неделю</h3></div>
-            <p class="tax-totals-line" id="totalsTaxLine">Налог: —</p>
-            <p class="tax-totals-line" id="totalsDonateLine">Донат: —</p>
-            <div class="tax-totals-sum">
-              <span>Всего</span>
-              <span id="totalsSumValue">0</span>
-            </div>
-            <p class="hint" id="totalsTaxHint" style="display:none;">Сумма налога не настроена — задайте её в Админ-панели → «Правила клана».</p>
-          </div>
-        </div>
+        <div class="chip-row roster-row" id="weekBody"></div>
         <p class="empty-hint" id="emptyHint" style="display:none;">На этой неделе ещё никто не платил.</p>
       </div>
 
       <aside class="tax-week-side">
-        <div class="tax-side-box" id="donationsBoxCard">
+        <div class="tax-side-box" id="totalsBoxCard">
+          <div class="tax-side-box-hresize left" data-hfor="totalsBoxCard"></div>
+          <div class="tax-side-box-hresize right" data-hfor="totalsBoxCard"></div>
           <div class="tax-side-box-head">
+            <span class="tax-side-drag-handle" title="Перетащить">⠿</span>
+            <h3>Итого за неделю</h3>
+          </div>
+          <p class="tax-totals-line" id="totalsTaxLine">Налог: —</p>
+          <p class="tax-totals-line" id="totalsDonateLine">Донат: —</p>
+          <div class="tax-totals-sum">
+            <span>Всего</span>
+            <span id="totalsSumValue">0</span>
+          </div>
+          <p class="hint" id="totalsTaxHint" style="display:none;">Сумма налога не настроена — задайте её в Админ-панели → «Правила клана».</p>
+          <div class="tax-side-box-vresize" data-vfor="totalsBoxCard"></div>
+        </div>
+
+        <div class="tax-side-box" id="donationsBoxCard">
+          <div class="tax-side-box-hresize left" data-hfor="donationsBoxCard"></div>
+          <div class="tax-side-box-hresize right" data-hfor="donationsBoxCard"></div>
+          <div class="tax-side-box-head">
+            <span class="tax-side-drag-handle" title="Перетащить">⠿</span>
             <div class="table-head-title">
               <h3>Донаты</h3>
               <button type="button" class="copy-btn" id="copyDonorsBtn" title="Скопировать список ников">📋</button>
@@ -209,10 +250,16 @@
           <div class="tax-side-box-list" id="donationsBoxList"></div>
           <p class="hint tax-side-box-empty" id="donationsBoxEmpty" style="display:none;">На этой неделе пока никто не донатил.</p>
           <button type="button" class="btn tax-side-box-more" id="donationsBoxMoreBtn">Все донаты →</button>
+          <div class="tax-side-box-vresize" data-vfor="donationsBoxCard"></div>
         </div>
 
         <div class="tax-side-box" id="aheadDebtBoxCard">
-          <div class="tax-side-box-head"><h3>Наперёд / Долг</h3></div>
+          <div class="tax-side-box-hresize left" data-hfor="aheadDebtBoxCard"></div>
+          <div class="tax-side-box-hresize right" data-hfor="aheadDebtBoxCard"></div>
+          <div class="tax-side-box-head">
+            <span class="tax-side-drag-handle" title="Перетащить">⠿</span>
+            <h3>Наперёд / Долг</h3>
+          </div>
 
           <div class="tax-side-sub">
             <div class="tax-side-sub-label tax-chip-ahead">
@@ -228,6 +275,7 @@
             <div class="tax-side-box-list" id="debtList"></div>
             <p class="hint tax-side-box-empty" id="debtEmpty" style="display:none;">Пока никого.</p>
           </div>
+          <div class="tax-side-box-vresize" data-vfor="aheadDebtBoxCard"></div>
         </div>
       </aside>
     </div>
@@ -510,6 +558,127 @@
   bindCopyBtn("taxReportCopyBtn", () =>
     Array.from(document.querySelectorAll("#taxReportBody td.tax-nick")).map(el => el.textContent));
 
+  // ---- окошки справа (Донаты/Наперёд-Долг) — свободные «объекты»: тянуть за ⠿ в
+  // шапке — переставить куда угодно, тянуть за края — растянуть (снизу высота,
+  // слева/справа ширина). Без отдельного режима — работает всегда, как настоящее
+  // окно. Позиция и размер запоминаются на аккаунт, отдельно для каждого окошка ----
+  const TAX_SIDE_LAYOUT_KEY = "l2TaxSideLayout:" + profile.id;
+  const TAX_SIDE_DEFAULTS = {
+    totalsBoxCard: { left: 0, top: 0, width: 230, height: null },
+    donationsBoxCard: { left: 0, top: 170, width: 230, height: 230 },
+    aheadDebtBoxCard: { left: 0, top: 416, width: 230, height: 320 },
+  };
+  function readSideLayout(){
+    try{ return JSON.parse(localStorage.getItem(TAX_SIDE_LAYOUT_KEY) || "{}"); }catch(e){ return {}; }
+  }
+  function patchSideLayout(id, patch){
+    const layout = readSideLayout();
+    layout[id] = { ...(layout[id] || {}), ...patch };
+    localStorage.setItem(TAX_SIDE_LAYOUT_KEY, JSON.stringify(layout));
+  }
+  function applySideLayout(){
+    const layout = readSideLayout();
+    Object.keys(TAX_SIDE_DEFAULTS).forEach(id => {
+      const el = document.getElementById(id);
+      if(!el) return;
+      const d = { ...TAX_SIDE_DEFAULTS[id], ...(layout[id] || {}) };
+      el.style.left = d.left + "px";
+      el.style.top = d.top + "px";
+      el.style.width = d.width + "px";
+      el.style.height = d.height ? d.height + "px" : "auto";
+    });
+  }
+  applySideLayout();
+
+  // перемещение — тянем за ⠿
+  let sideDragMove = null; // { el, startX, startY, startLeft, startTop }
+  document.querySelectorAll(".tax-side-drag-handle").forEach(handle => {
+    handle.addEventListener("mousedown", (e) => {
+      const box = handle.closest(".tax-side-box");
+      sideDragMove = { el: box, startX: e.clientX, startY: e.clientY, startLeft: box.offsetLeft, startTop: box.offsetTop };
+      box.style.zIndex = 3;
+      document.body.style.userSelect = "none";
+      e.preventDefault();
+    });
+  });
+
+  // высота — тянем за полосу снизу окна
+  let sideResizeDragV = null; // { el, startY, startH }
+  document.querySelectorAll(".tax-side-box-vresize").forEach(grip => {
+    grip.addEventListener("mousedown", (e) => {
+      const el = document.getElementById(grip.dataset.vfor);
+      sideResizeDragV = { el, startY: e.clientY, startH: el.getBoundingClientRect().height };
+      grip.classList.add("dragging");
+      document.body.style.userSelect = "none";
+      e.preventDefault();
+    });
+  });
+
+  // ширина — тянем за полосу слева/справа; за левый край окно ещё и сдвигается,
+  // чтобы правый край стоял на месте (иначе рост шёл бы только вправо всегда)
+  let sideResizeDragH = null; // { el, isLeft, startX, startW, startLeft }
+  document.querySelectorAll(".tax-side-box-hresize").forEach(handle => {
+    handle.addEventListener("mousedown", (e) => {
+      const el = document.getElementById(handle.dataset.hfor);
+      sideResizeDragH = {
+        el, isLeft: handle.classList.contains("left"),
+        startX: e.clientX, startW: el.getBoundingClientRect().width, startLeft: el.offsetLeft,
+      };
+      handle.classList.add("dragging");
+      document.body.style.userSelect = "none";
+      e.preventDefault();
+    });
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    if(sideDragMove){
+      // без ограничения снизу — можно тащить и в минус, хоть влево за колонку,
+      // хоть выше самого верха; настоящее окно точно так же не упирается в стену
+      const newLeft = sideDragMove.startLeft + (e.clientX - sideDragMove.startX);
+      const newTop = sideDragMove.startTop + (e.clientY - sideDragMove.startY);
+      sideDragMove.el.style.left = newLeft + "px";
+      sideDragMove.el.style.top = newTop + "px";
+    }
+    if(sideResizeDragV){
+      const newH = Math.max(120, sideResizeDragV.startH + (e.clientY - sideResizeDragV.startY));
+      sideResizeDragV.el.style.height = newH + "px";
+    }
+    if(sideResizeDragH){
+      const dx = e.clientX - sideResizeDragH.startX;
+      if(sideResizeDragH.isLeft){
+        const newW = Math.max(160, sideResizeDragH.startW - dx);
+        sideResizeDragH.el.style.width = newW + "px";
+        sideResizeDragH.el.style.left = (sideResizeDragH.startLeft + (sideResizeDragH.startW - newW)) + "px";
+      } else {
+        const newW = Math.max(160, sideResizeDragH.startW + dx);
+        sideResizeDragH.el.style.width = newW + "px";
+      }
+    }
+  });
+  window.addEventListener("mouseup", () => {
+    if(sideDragMove){
+      sideDragMove.el.style.zIndex = "";
+      document.body.style.userSelect = "";
+      patchSideLayout(sideDragMove.el.id, { left: sideDragMove.el.offsetLeft, top: sideDragMove.el.offsetTop });
+      sideDragMove = null;
+    }
+    if(sideResizeDragV){
+      document.querySelectorAll(".tax-side-box-vresize.dragging").forEach(g => g.classList.remove("dragging"));
+      document.body.style.userSelect = "";
+      patchSideLayout(sideResizeDragV.el.id, { height: Math.round(sideResizeDragV.el.getBoundingClientRect().height) });
+      sideResizeDragV = null;
+    }
+    if(sideResizeDragH){
+      document.querySelectorAll(".tax-side-box-hresize.dragging").forEach(h => h.classList.remove("dragging"));
+      document.body.style.userSelect = "";
+      patchSideLayout(sideResizeDragH.el.id, {
+        width: Math.round(sideResizeDragH.el.getBoundingClientRect().width),
+        left: sideResizeDragH.el.offsetLeft,
+      });
+      sideResizeDragH = null;
+    }
+  });
+
   const roster = initWeekRoster({
     tableName: "tax_payments",
     profile, isAdmin, db,
@@ -649,12 +818,18 @@
     if(exErr){ errEl.textContent = exErr.message; return; }
 
     const already = new Set((existing || []).map(r => r.week_start));
+    // origin_week — неделя, что сейчас открыта в редакторе: деньги реально получены
+    // один раз, сейчас, даже если сама отметка расходится на несколько будущих/прошлых
+    // week_start — «Итого за неделю» считает налог по origin_week, а не по week_start,
+    // иначе одна и та же оплата задваивалась бы в отчётах нескольких недель подряд
+    const originWeek = isoOf(roster.getCurrentWeek());
     const rows = weeks.filter(w => !already.has(w)).map(week_start => ({
       clan_id: profile.clan_id,
       week_start,
       nickname: nickModalNick,
       created_by: profile.id,
       kind: action, // "ahead" | "debt" — красит ник в списке недели (зелёный/оранжевый)
+      origin_week: originWeek,
     }));
 
     if(!rows.length){ okEl.textContent = "Уже отмечено на все эти недели."; return; }
@@ -865,15 +1040,17 @@
     const { data, error } = await db.from("tax_payments").select("nickname, kind, week_start").in("kind", ["ahead", "debt"]);
     if(error){ console.error(error); return; }
 
-    // «наперёд» — только ещё не истекшие недели (текущая неделя считается ещё
-    // активной): просроченные строки просто пропускаем, «долг» так не фильтруем —
-    // это факт погашения в прошлом, он не «истекает»
+    // «наперёд» — из списка пропадает только тот, у кого ВСЕ недели уже прошли
+    // (человека целиком незачем показывать); пока хоть одна неделя ещё активна,
+    // сумма и дата считаются по ВСЕМ его неделям — сколько реально заплатил разом,
+    // а не только по тем, что ещё не истекли (иначе сумма таяла бы каждую неделю,
+    // хотя денег как раз получили сразу все и посчитали их один раз в origin_week).
+    // «долг» так не фильтруем вообще — это факт погашения в прошлом, не «истекает»
     const thisWeekIso = isoOf(mondayOfDate(new Date()));
 
     const aheadMap = new Map(), debtMap = new Map();
     (data || []).forEach(r => {
       if(r.kind === "ahead"){
-        if(r.week_start < thisWeekIso) return;
         if(!aheadMap.has(r.nickname)) aheadMap.set(r.nickname, []);
         aheadMap.get(r.nickname).push(r.week_start);
       } else {
@@ -881,6 +1058,9 @@
         debtMap.get(r.nickname).push(r.week_start);
       }
     });
+    for(const [nickname, weeks] of [...aheadMap.entries()]){
+      if(!weeks.some(w => w >= thisWeekIso)) aheadMap.delete(nickname);
+    }
 
     function render(listId, emptyId, countId, map, isAhead){
       const listEl = document.getElementById(listId);
@@ -890,7 +1070,11 @@
       document.getElementById(emptyId).style.display = entries.length ? "none" : "";
       entries.forEach(([nickname, weeks]) => {
         const sorted = weeks.slice().sort();
-        const badge = isAhead ? "до " + weekShortLabel(sorted[sorted.length - 1]) : "×" + weeks.length;
+        // у «наперёд» ещё и сумма — сколько недель вперёд оплачено × налог с
+        // человека, чтобы сразу было видно, сколько денег это в итоге покрывает
+        const badge = isAhead
+          ? fmtGold(weeks.length * weeklyTaxAmount) + " · до " + weekShortLabel(sorted[sorted.length - 1])
+          : "×" + weeks.length;
         listEl.appendChild(sideBoxRow(nickname, badge, () => openNickModal(nickname)));
       });
     }
@@ -915,8 +1099,12 @@
     const weekStart = roster.getCurrentWeek();
     const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 7);
 
+    // origin_week, не week_start — «наперёд»/«долг» физически лежат строками в
+    // будущих/прошлых неделях, но деньги за них получены один раз, сейчас, в неделе
+    // origin_week; считать по week_start значило бы задваивать эту сумму в отчётах
+    // всех недель, которые оплата затронула (см. schema_tax_payments_origin_week.sql)
     const [{ count, error: cntErr }, { data: donRows, error: donErr }] = await Promise.all([
-      db.from("tax_payments").select("id", { count: "exact", head: true }).eq("week_start", isoOf(weekStart)),
+      db.from("tax_payments").select("id", { count: "exact", head: true }).eq("origin_week", isoOf(weekStart)),
       db.from("tax_donations").select("amount").gte("created_at", weekStart.toISOString()).lt("created_at", weekEnd.toISOString()),
     ]);
     if(cntErr) console.error(cntErr);
@@ -933,8 +1121,12 @@
   }
 
   loadDonationsBox();
-  loadAheadDebtBox();
-  loadTaxSettings().then(loadTotalsBox);
+  // «Наперёд» показывает сумму (weeklyTaxAmount) прямо в списке — сначала должна
+  // подгрузиться настройка налога, иначе первая отрисовка покажет «0 · до ...»
+  loadTaxSettings().then(() => {
+    loadTotalsBox();
+    loadAheadDebtBox();
+  });
   document.getElementById("prevWeekBtn").addEventListener("click", loadDonationsBox);
   document.getElementById("nextWeekBtn").addEventListener("click", loadDonationsBox);
   document.getElementById("todayBtn").addEventListener("click", loadDonationsBox);

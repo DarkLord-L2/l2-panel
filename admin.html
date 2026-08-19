@@ -56,7 +56,9 @@
   .toggle-switch input:checked + .track::before{ transform: translateX(16px); background: var(--ok); }
   .toggle-switch input:disabled + .track{ opacity:.4; cursor:not-allowed; }
 
-  /* коэффициенты профессий («Раздел дропа») — список классов с полем-числом у каждого */
+  /* коэффициенты профессий (ДКП Соло) слева, коэффициенты пати (ДКП Пати) справа */
+  .admin-coef-row{ display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start; }
+  .admin-coef-row > .card{ flex:1 1 320px; min-width:280px; }
   .loot-coef-list{ display:flex; flex-direction:column; gap:6px; margin:10px 0; max-width:420px; max-height:420px; overflow-y:auto; }
   .loot-coef-row{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
@@ -211,11 +213,33 @@
   </section>
 
   <section class="card">
-    <h2>Коэффициент профессии для «Раздела дропа»</h2>
-    <p class="hint">У каждой профессии свой множитель: финальные баллы участника в «Разделе дропа» = начальные баллы × % буста × этот коэффициент. Нет строки для класса — считается как 1.</p>
-    <div class="loot-coef-list" id="lootCoefList"></div>
-    <p class="error-msg" id="lootCoefError"></p>
+    <h2>Раздел дропа</h2>
+    <div class="section-toggle-row">
+      <span class="label">Показывать только тех, кто хоть раз ходил за отмеченный период</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="lootHideZeroInput" />
+        <span class="track"></span>
+      </label>
+    </div>
+    <p class="hint">Выключено — виден весь состав из последней переписи, даже с 0 начальных баллов. Включено — те, у кого начальных баллов 0, из таблицы пропадают.</p>
+    <p class="error-msg" id="lootHideZeroError"></p>
   </section>
+
+  <div class="admin-coef-row">
+    <section class="card">
+      <h2>Коэффициент профессии для «ДКП Соло»</h2>
+      <p class="hint">У каждой профессии свой множитель: финальные баллы участника = начальные баллы × % буста × этот коэффициент. Нет строки для класса — считается как 1.</p>
+      <div class="loot-coef-list" id="lootCoefList"></div>
+      <p class="error-msg" id="lootCoefError"></p>
+    </section>
+
+    <section class="card">
+      <h2>Коэффициент пати для «ДКП Пати»</h2>
+      <p class="hint">У каждой пати свой множитель: финальные баллы пати = начальные баллы × % буста × этот коэффициент. Нет строки для пати — считается как 1.</p>
+      <div class="loot-coef-list" id="lootPartyCoefList"></div>
+      <p class="error-msg" id="lootPartyCoefError"></p>
+    </section>
+  </div>
     </div>
 
     <div class="admin-tab-panel" data-panel="sections">
@@ -432,6 +456,29 @@
     input.disabled = false;
   });
 
+  // ---------- «Раздел дропа»: показывать только тех, кто хоть раз ходил ----------
+  async function loadLootHideZero(){
+    const { data, error } = await db.from("loot_split_settings").select("hide_zero_attendance").eq("clan_id", profile.clan_id).maybeSingle();
+    if(error){ console.error(error); return; }
+    document.getElementById("lootHideZeroInput").checked = !!data?.hide_zero_attendance;
+  }
+
+  document.getElementById("lootHideZeroInput").addEventListener("change", async () => {
+    const cb = document.getElementById("lootHideZeroInput");
+    const errEl = document.getElementById("lootHideZeroError");
+    errEl.textContent = "";
+    cb.disabled = true;
+    const { error } = await db.from("loot_split_settings").upsert(
+      { clan_id: profile.clan_id, hide_zero_attendance: cb.checked },
+      { onConflict: "clan_id" }
+    );
+    if(error){
+      errEl.textContent = "Не удалось сохранить: " + error.message;
+      cb.checked = !cb.checked;
+    }
+    cb.disabled = false;
+  });
+
   // ---------- коэффициенты профессий («Раздел дропа») ----------
   let lootCoefficients = new Map(); // class_name -> coefficient
 
@@ -478,11 +525,59 @@
     });
   }
 
+  // ---------- коэффициенты пати («ДКП Пати») — тот же принцип, что у профессий
+  // выше, только ключ — group_id, а список берём из уже загруженного parties ----------
+  let lootPartyCoefficients = new Map(); // group_id -> coefficient
+
+  async function loadLootPartyCoefficients(){
+    const { data, error } = await db.from("loot_party_coefficients").select("group_id, coefficient");
+    if(error) console.error(error);
+    lootPartyCoefficients = new Map((data || []).map(r => [r.group_id, Number(r.coefficient)]));
+  }
+
+  function renderLootPartyCoefList(){
+    const wrap = document.getElementById("lootPartyCoefList");
+    wrap.innerHTML = "";
+    parties.forEach(party => {
+      const row = document.createElement("div");
+      row.className = "loot-coef-row";
+
+      const label = document.createElement("span");
+      label.className = "label";
+      label.textContent = party.name;
+
+      const input = document.createElement("input");
+      input.type = "number";
+      input.step = "0.1";
+      input.min = "0";
+      input.value = lootPartyCoefficients.get(party.id) ?? 1;
+
+      input.addEventListener("change", async () => {
+        const errEl = document.getElementById("lootPartyCoefError");
+        errEl.textContent = "";
+        const val = Number(input.value);
+        if(!Number.isFinite(val) || val < 0){ errEl.textContent = "Коэффициент должен быть числом ≥ 0."; return; }
+        input.disabled = true;
+        const { error } = await db.from("loot_party_coefficients").upsert(
+          { clan_id: profile.clan_id, group_id: party.id, coefficient: val },
+          { onConflict: "clan_id,group_id" }
+        );
+        if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
+        else lootPartyCoefficients.set(party.id, val);
+        input.disabled = false;
+      });
+
+      row.append(label, input);
+      wrap.appendChild(row);
+    });
+  }
+
   // ---------- порядок разделов в левом меню ----------
   // группировка пунктов повторяет NAV_GROUPS из index.html: в меню «Учёт клана» —
   // один пункт с подпунктами, поэтому и переставлять его надо целиком
   const NAV_GROUPS = [
     { label: "Учёт клана", keys: ["census", "taxes", "attendance"] },
+    { label: "ДКП", keys: ["loot_split", "loot_split_party"] },
   ];
 
   let menuItems = []; // [{ label, keys: [section_key, ...] }] в текущем порядке меню
@@ -1097,10 +1192,11 @@
   await loadLookups();
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(r.label), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
-  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadWeeklyTaxAmount()]);
+  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadWeeklyTaxAmount(), loadLootHideZero()]);
   renderSectionOrder();
   renderSectionToggleList();
   renderLootCoefList();
+  renderLootPartyCoefList();
   renderPresetGrid();
 })();
 </script>
