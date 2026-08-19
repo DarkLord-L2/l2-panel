@@ -48,13 +48,14 @@
     gear_check:  { type: "iframe", src: "gear-check.html" },
     loot_split:  { type: "iframe", src: "loot-split.html" },
     loot_split_party: { type: "iframe", src: "loot-split-party.html" },
+    loot_payout: { type: "iframe", src: "loot-payout.html" },
   };
 
   // Чисто визуальная группировка пунктов меню — на права доступа не влияет,
   // каждый раздел внутри группы по-прежнему включается/выключается по роли отдельно.
   const NAV_GROUPS = [
     { label: "Учёт клана", keys: ["census", "taxes", "attendance"] },
-    { label: "ДКП", keys: ["loot_split", "loot_split_party"] },
+    { label: "ДКП", keys: ["loot_split", "loot_split_party", "loot_payout"] },
   ];
 
   // Иконки меню — инлайн SVG (не картинки-файлы, чтобы не плодить запросы и чтобы
@@ -72,6 +73,7 @@
     gear_check:  '<path d="M12 3.2l6.8 2.7v4.7c0 4.7-2.8 7.9-6.8 9.2-4-1.3-6.8-4.5-6.8-9.2V5.9L12 3.2z"/><path d="m9 12.2 2 2 4-4.2"/>',
     loot_split:  '<path d="M6 3.2h12l3.6 5.3L12 21 2.4 8.5 6 3.2z"/><path d="M2.4 8.5h19.2M9 3.2l3 5.3 3-5.3"/>',
     loot_split_party: '<rect x="3.4" y="10.4" width="17.2" height="9.8" rx="1.6"/><path d="M3.4 10.4a8.6 5 0 0117.2 0"/><path d="M3.4 14.3h17.2"/><path d="M10.4 14.3v2.3a1.6 1.6 0 003.2 0v-2.3"/>',
+    loot_payout: '<circle cx="8" cy="15.3" r="4.2"/><circle cx="16" cy="8.7" r="4.2"/><path d="m10.8 12.5 2.4-2.4"/>',
     group_uchet: '<path d="M4 7.2a2 2 0 012-2h3.4l1.6 1.8H18a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V7.2z"/>',
     group_dkp:   '<path d="M6 3.2h12l3.6 5.3L12 21 2.4 8.5 6 3.2z"/><path d="M2.4 8.5h19.2M9 3.2l3 5.3 3-5.3"/>',
     default:     '<circle cx="12" cy="12" r="2.2"/>',

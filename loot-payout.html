@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Раздача — Кабинет клана</title>
+<link rel="stylesheet" href="js/theme.css?v=11" />
+<style>
+  .lp-wrap{ padding:0 0 24px; }
+  .lp-wrap .page-head{ margin-bottom:0; }
+  .lp-wrap .card{ padding-top:14px; }
+
+  .lp-filters{ display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; margin:2px 0 14px; }
+  .lp-filters .field{ margin:0; }
+  .lp-filters .field.lp-field-leader{ min-width:260px; }
+  .lp-filters input[type="date"]{ min-width:150px; }
+
+  .lp-summary{ display:flex; gap:18px; flex-wrap:wrap; margin:0 0 12px; }
+  .lp-summary .stat{ font-size:12.5px; color: var(--text-dim); }
+  .lp-summary .stat b{ color: var(--text); font-weight:600; }
+
+  table.lp-table{ border-collapse:collapse; width:100%; max-width:520px; font-size:13.5px; }
+  table.lp-table th, table.lp-table td{ padding:8px 10px; border-bottom:1px solid var(--border); }
+  table.lp-table thead th{ text-align:left; color: var(--text-dim); font-size:12px; font-weight:500; }
+  table.lp-table th.lp-num, table.lp-table td.lp-num{ text-align:right; white-space:nowrap; }
+  table.lp-table tbody tr:hover td{ background: rgba(255,255,255,.03); }
+  .lp-cnt{ color: var(--gold); font-weight:700; }
+  .lp-pct{ color: var(--text-dim); }
+
+  .lp-copy-row{ margin:12px 0 0; }
+</style>
+</head>
+<body>
+
+<div class="lp-wrap" id="wrap" style="display:none;">
+  <div class="page-head">
+    <h1>Раздача</h1>
+  </div>
+
+  <section class="card">
+    <p class="hint" style="margin:0 0 12px;">
+      На каждом скрине «Журнала посещаемости» первым в списке участников всегда стоит лидер пати —
+      отсюда и берётся привязка «кто с каким лидером сколько раз был в одной группе».
+      Помогает лидеру решить, кому и сколько передать при личной раздаче денег/дропа.
+    </p>
+    <div class="lp-filters">
+      <div class="field">
+        <label for="fromDate">С</label>
+        <input type="date" id="fromDate" />
+      </div>
+      <div class="field">
+        <label for="toDate">По</label>
+        <input type="date" id="toDate" />
+      </div>
+      <div class="field lp-field-leader">
+        <label for="leaderSelect">Пати-лидер</label>
+        <select id="leaderSelect"></select>
+      </div>
+    </div>
+    <p class="hint" style="margin:-4px 0 12px;">Даты не заданы — показывается статистика за всё время.</p>
+    <p class="error-msg" id="lpError"></p>
+
+    <div id="lpContent">
+      <div class="lp-summary" id="lpSummary"></div>
+      <table class="lp-table">
+        <thead>
+          <tr><th>Ник</th><th class="lp-num">Раз вместе</th><th class="lp-num">Доля от раздач</th></tr>
+        </thead>
+        <tbody id="lpBody"></tbody>
+      </table>
+      <div class="lp-copy-row">
+        <button class="btn" id="lpCopyBtn" title="Скопировать список ников (в порядке таблицы)">📋 Скопировать ники</button>
+      </div>
+    </div>
+    <p class="empty-hint" id="lpEmpty" style="display:none;"></p>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-client.js?v=17"></script>
+<script>
+(async function(){
+  const session = await L2Cabinet.requireSession();
+  if(!session) return;
+
+  const profile = await L2Cabinet.getProfile();
+  if(!profile){
+    document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
+      '<h1>⚠ Профиль не найден</h1><p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+    return;
+  }
+
+  const db = L2Cabinet.client;
+  document.getElementById("wrap").style.display = "";
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  }
+
+  // ---- копирование списка ников (та же схема, что в «Налогах»/«Посещаемости») ----
+  function flashCopyBtn(btn, symbol){
+    if(!btn) return;
+    const original = btn.textContent;
+    btn.textContent = symbol;
+    btn.disabled = true;
+    setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1000);
+  }
+  async function copyNumberedNicknames(names, btn){
+    if(!names.length){ flashCopyBtn(btn, "∅"); return; }
+    const text = names.map((n, i) => `${i + 1}. ${n}`).join("\n");
+    try{
+      await navigator.clipboard.writeText(text);
+      flashCopyBtn(btn, "✓");
+    }catch(e){
+      flashCopyBtn(btn, "✗");
+    }
+  }
+
+  let leaderStats = new Map(); // leaderNick -> { partyCount, members: Map(memberNick -> count) }
+  let leaderOrder = [];        // ники лидеров, отсортированные по убыванию partyCount
+  let currentRows = [];        // [{nickname, count}], в текущем отображаемом порядке (для копирования)
+
+  // лидер на скрине не распознаётся отдельным ОСР-полем — event-roster.js просто
+  // помечает is_party_leader=true у первого валидного ника скрина (лидер пати в игре
+  // всегда идёт первой строкой), группируем эти отметки по batch_id
+  async function loadPayoutStats(fromStr, toStr){
+    const errEl = document.getElementById("lpError");
+    errEl.textContent = "";
+
+    // период не обязателен целиком с обеих сторон — открытая граница просто не
+    // ограничивает соответствующую сторону (та же логика, что в датных фильтрах
+    // «Донатов» в Налогах)
+    let eventIdFilter = null;
+    if(fromStr || toStr){
+      let evQ = db.from("attendance_events").select("id");
+      if(fromStr) evQ = evQ.gte("event_date", fromStr);
+      if(toStr) evQ = evQ.lte("event_date", toStr);
+      const { data: evs, error: evErr } = await evQ;
+      if(evErr){ errEl.textContent = "Не удалось загрузить мероприятия: " + evErr.message; return; }
+      eventIdFilter = new Set((evs || []).map(e => e.id));
+    }
+
+    const { data, error } = await db
+      .from("event_stats")
+      .select("nickname, batch_id, is_party_leader, removed, event_id")
+      .not("batch_id", "is", null);
+    if(error){ errEl.textContent = "Не удалось загрузить данные: " + error.message; return; }
+
+    const byBatch = new Map();
+    (data || []).forEach(r => {
+      if(r.removed) return;
+      if(eventIdFilter && !eventIdFilter.has(r.event_id)) return;
+      if(!byBatch.has(r.batch_id)) byBatch.set(r.batch_id, []);
+      byBatch.get(r.batch_id).push(r);
+    });
+
+    leaderStats = new Map();
+    byBatch.forEach(rows => {
+      const leaderRow = rows.find(r => r.is_party_leader);
+      if(!leaderRow) return; // скрин загружен до этой фичи — лидер не отмечен, пропускаем
+      const leader = leaderRow.nickname;
+      if(!leaderStats.has(leader)) leaderStats.set(leader, { partyCount: 0, members: new Map() });
+      const entry = leaderStats.get(leader);
+      entry.partyCount += 1;
+      rows.forEach(r => {
+        if(r.nickname === leader) return;
+        entry.members.set(r.nickname, (entry.members.get(r.nickname) || 0) + 1);
+      });
+    });
+
+    leaderOrder = Array.from(leaderStats.keys())
+      .sort((a, b) => leaderStats.get(b).partyCount - leaderStats.get(a).partyCount || a.localeCompare(b));
+  }
+
+  function renderLeaderSelect(){
+    const sel = document.getElementById("leaderSelect");
+    sel.innerHTML = leaderOrder
+      .map(nick => `<option value="${escapeHtml(nick)}">${escapeHtml(nick)} — ${leaderStats.get(nick).partyCount} раздач</option>`)
+      .join("");
+  }
+
+  function renderForLeader(leader){
+    const contentEl = document.getElementById("lpContent");
+    const emptyEl = document.getElementById("lpEmpty");
+    if(!leader){
+      contentEl.style.display = "none";
+      const hasDateFilter = !!(document.getElementById("fromDate").value || document.getElementById("toDate").value);
+      emptyEl.textContent = hasDateFilter
+        ? "За выбранный период нет скринов с отмеченным пати-лидером."
+        : "Пока нет ни одного скрина с отмеченным пати-лидером — загрузите скрины в «Журнале посещаемости».";
+      emptyEl.style.display = "";
+      return;
+    }
+    contentEl.style.display = "";
+    emptyEl.style.display = "none";
+
+    const entry = leaderStats.get(leader);
+    document.getElementById("lpSummary").innerHTML =
+      `<span class="stat">Раздач под руководством: <b>${entry.partyCount}</b></span>` +
+      `<span class="stat">Разных участников: <b>${entry.members.size}</b></span>`;
+
+    currentRows = Array.from(entry.members.entries())
+      .map(([nickname, count]) => ({ nickname, count }))
+      .sort((a, b) => b.count - a.count || a.nickname.localeCompare(b.nickname));
+
+    const body = document.getElementById("lpBody");
+    body.innerHTML = currentRows.map(r => {
+      const pct = entry.partyCount ? (r.count / entry.partyCount * 100) : 0;
+      return `<tr><td>${escapeHtml(r.nickname)}</td>` +
+        `<td class="lp-num lp-cnt">${r.count}</td>` +
+        `<td class="lp-num lp-pct">${pct.toFixed(0)}%</td></tr>`;
+    }).join("");
+  }
+
+  document.getElementById("leaderSelect").addEventListener("change", (e) => renderForLeader(e.target.value));
+  document.getElementById("lpCopyBtn").addEventListener("click", (e) => {
+    copyNumberedNicknames(currentRows.map(r => r.nickname), e.currentTarget);
+  });
+
+  // смена периода пересчитывает список лидеров заново — если выбранный лидер
+  // всё ещё встречается в новом периоде, остаёмся на нём, иначе берём первого
+  async function reload(){
+    const prevLeader = document.getElementById("leaderSelect").value || null;
+    await loadPayoutStats(document.getElementById("fromDate").value, document.getElementById("toDate").value);
+    renderLeaderSelect();
+    const nextLeader = (prevLeader && leaderStats.has(prevLeader)) ? prevLeader : (leaderOrder[0] || null);
+    document.getElementById("leaderSelect").value = nextLeader || "";
+    renderForLeader(nextLeader);
+  }
+  document.getElementById("fromDate").addEventListener("change", reload);
+  document.getElementById("toDate").addEventListener("change", reload);
+
+  await reload();
+})();
+</script>
+</body>
+</html>

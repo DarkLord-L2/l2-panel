@@ -47,6 +47,10 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
   let pendingStats = new Map(); // nickname -> {kills, deaths, pvp_damage, pve_damage}, из тех же скринов
   let pendingBatchOf = new Map(); // nickname -> индекс скрина (в этой сессии загрузки), с которого он распознан
   let batchCount = 0; // сколько скринов в этой сессии дали хотя бы одного распознанного ника
+  // индекс скрина -> ник его пати-лидера (для «Раздачи»): в игре лидер пати всегда
+  // идёт первой строкой в таблице участников, поэтому берём первый валидный ник
+  // скрина, а не отдельное распознавание — тот же приём, что и с индексами скринов выше
+  let batchLeaderOf = new Map();
 
   async function load(){
     const { data, error } = await db
@@ -109,6 +113,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
       pendingStats = new Map();
       pendingBatchOf = new Map();
       batchCount = 0;
+      batchLeaderOf = new Map();
       q("file-input").value = "";
       q("status").textContent = "";
       q("error").textContent = "";
@@ -187,6 +192,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
               pvp_damage: r.pvp_damage, pve_damage: r.pve_damage,
             });
             pendingBatchOf.set(r.nickname, bIdx);
+            if(bIdx != null && !batchLeaderOf.has(bIdx)) batchLeaderOf.set(bIdx, r.nickname);
           });
           renderChips();
         }catch(err){
@@ -259,6 +265,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
               pvp_damage: s.pvp_damage,
               pve_damage: s.pve_damage,
               batch_id: (bIdx != null) ? batchIds[bIdx] : null,
+              is_party_leader: bIdx != null && batchLeaderOf.get(bIdx) === n,
               removed: false, // если ник раньше был помечен «удалён» — новое распознавание снимает пометку
               created_by: profile.id,
               updated_at: new Date().toISOString(),
