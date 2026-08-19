@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=10" />
+<link rel="stylesheet" href="js/theme.css?v=11" />
 </head>
 <body>
 
@@ -56,6 +56,32 @@
     { label: "Учёт клана", keys: ["census", "taxes", "attendance"] },
     { label: "ДКП", keys: ["loot_split", "loot_split_party"] },
   ];
+
+  // Иконки меню — инлайн SVG (не картинки-файлы, чтобы не плодить запросы и чтобы
+  // цвет (currentColor) сам подхватывал акцент текущего оформления клана: amber/azure/emerald.
+  const ICONS = {
+    my_cabinet:  '<circle cx="12" cy="8.2" r="3.4"/><path d="M5.3 20c0-3.6 3-6.3 6.7-6.3s6.7 2.7 6.7 6.3"/>',
+    groups:      '<circle cx="8.8" cy="8.3" r="3"/><path d="M3.2 19.2c0-3 2.5-5.3 5.6-5.3s5.6 2.3 5.6 5.3"/><circle cx="16.8" cy="9.1" r="2.3"/><path d="M14.9 13.7c2.5.3 4.2 2.3 4.2 5"/>',
+    skill_panel: '<path d="M12 3c.7 3.6 2.2 5.1 5.8 5.8-3.6.7-5.1 2.2-5.8 5.8-.7-3.6-2.2-5.1-5.8-5.8C9.8 8.1 11.3 6.6 12 3z"/><circle cx="18.4" cy="17.4" r="1.3"/>',
+    admin:       '<circle cx="12" cy="12" r="2.8"/><path d="M19.4 13.4a7.6 7.6 0 000-2.8l1.9-1.7-2-3.3-2.4.8a7.6 7.6 0 00-2.4-1.4L14 2.5h-4l-.5 2.5a7.6 7.6 0 00-2.4 1.4l-2.4-.8-2 3.3 1.9 1.7a7.6 7.6 0 000 2.8l-1.9 1.7 2 3.3 2.4-.8a7.6 7.6 0 002.4 1.4l.5 2.5h4l.5-2.5a7.6 7.6 0 002.4-1.4l2.4.8 2-3.3-1.9-1.7z"/>',
+    census:      '<rect x="5.2" y="3.8" width="13.6" height="16.8" rx="2"/><path d="M9 3.8V3a1 1 0 011-1h4a1 1 0 011 1v.8"/><path d="M8.5 10.8h7M8.5 14.4h7M8.5 18h4"/>',
+    roster:      '<path d="M6.2 3h8l3.6 3.6V20a1 1 0 01-1 1H6.2a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14.2 3v3.6h3.6"/><path d="M8 12.4h8M8 16h5"/>',
+    attendance:  '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/><path d="m9 15 2 2 4-4"/>',
+    taxes:       '<circle cx="12" cy="12" r="8.3"/><path d="M12 7.3v9.4"/><path d="M9.3 14.8c.3 1 1.4 1.7 2.8 1.7 1.7 0 2.9-.9 2.9-2.1s-1.1-1.8-2.9-2.1c-1.8-.3-2.8-.9-2.8-2.1s1.2-2.1 2.8-2.1c1.4 0 2.5.6 2.8 1.7"/>',
+    reports:     '<rect x="4" y="12.5" width="3.4" height="7.5" rx=".8"/><rect x="10.3" y="6.5" width="3.4" height="13.5" rx=".8"/><rect x="16.6" y="9.5" width="3.4" height="10.5" rx=".8"/>',
+    gear_check:  '<path d="M12 3.2l6.8 2.7v4.7c0 4.7-2.8 7.9-6.8 9.2-4-1.3-6.8-4.5-6.8-9.2V5.9L12 3.2z"/><path d="m9 12.2 2 2 4-4.2"/>',
+    loot_split:  '<path d="M6 3.2h12l3.6 5.3L12 21 2.4 8.5 6 3.2z"/><path d="M2.4 8.5h19.2M9 3.2l3 5.3 3-5.3"/>',
+    loot_split_party: '<rect x="3.4" y="10.4" width="17.2" height="9.8" rx="1.6"/><path d="M3.4 10.4a8.6 5 0 0117.2 0"/><path d="M3.4 14.3h17.2"/><path d="M10.4 14.3v2.3a1.6 1.6 0 003.2 0v-2.3"/>',
+    group_uchet: '<path d="M4 7.2a2 2 0 012-2h3.4l1.6 1.8H18a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V7.2z"/>',
+    group_dkp:   '<path d="M6 3.2h12l3.6 5.3L12 21 2.4 8.5 6 3.2z"/><path d="M2.4 8.5h19.2M9 3.2l3 5.3 3-5.3"/>',
+    default:     '<circle cx="12" cy="12" r="2.2"/>',
+  };
+  const GROUP_ICON = { "Учёт клана": "group_uchet", "ДКП": "group_dkp" };
+  function navIcon(key){
+    return '<svg class="nav-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" ' +
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[key] || ICONS.default) + "</svg>";
+  }
+  let navStagger = 0; // счётчик для чуть заметной анимации появления пунктов по очереди
 
   const profile = await L2Cabinet.getProfile();
   if(!profile){
@@ -131,9 +157,14 @@
   function makeNavLink(s, sub){
     const a = document.createElement("a");
     a.href = "#" + s.key;
-    a.textContent = s.label;
     a.dataset.key = s.key;
     if(sub) a.classList.add("nav-sub");
+    a.innerHTML = navIcon(s.key);
+    const label = document.createElement("span");
+    label.className = "nav-label";
+    label.textContent = s.label;
+    a.appendChild(label);
+    a.style.setProperty("--i", navStagger++);
     a.addEventListener("click", (e) => { e.preventDefault(); renderSection(s.key); });
     return a;
   }
@@ -171,7 +202,9 @@
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "nav-group-toggle" + (startsOpen ? " open" : "");
-    toggle.innerHTML = '<span>' + group.label + '</span><span class="nav-group-arrow">▸</span>';
+    toggle.innerHTML = navIcon(GROUP_ICON[group.label]) +
+      '<span class="nav-label">' + group.label + '</span><span class="nav-group-arrow">▸</span>';
+    toggle.style.setProperty("--i", navStagger++);
 
     const childWrap = document.createElement("div");
     childWrap.className = "nav-group-children" + (startsOpen ? " open" : "");

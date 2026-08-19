@@ -182,7 +182,9 @@ input[type="date"]{ color-scheme: dark; }
   gap:2px;
 }
 .sidebar-nav a{
-  display:block;
+  display:flex;
+  align-items:center;
+  gap:11px;
   margin:0 8px;
   padding:9px 12px;
   border-radius:6px;
@@ -190,14 +192,32 @@ input[type="date"]{ color-scheme: dark; }
   text-decoration:none;
   font-size:13px;
   letter-spacing:0;
+  position:relative;
+  transition: background .15s ease, color .15s ease;
 }
 .sidebar-nav a:hover{ color: var(--text); background: var(--panel-2); }
-.sidebar-nav a.active{ color: var(--gold); background: var(--panel-2); }
+.sidebar-nav a.active{ color: var(--gold); background: var(--panel-2); box-shadow: inset 3px 0 0 var(--gold); }
 .sidebar-nav .soon{ opacity:.5; cursor:default; pointer-events:none; }
+
+.nav-icon-svg{
+  width:18px;
+  height:18px;
+  flex:none;
+  color:inherit;
+  transition: transform .18s ease, filter .18s ease;
+}
+.sidebar-nav a:hover .nav-icon-svg,
+.nav-group-toggle:hover .nav-icon-svg{ transform: scale(1.14); }
+.sidebar-nav a.active .nav-icon-svg,
+.nav-group-toggle.open .nav-icon-svg{
+  filter: drop-shadow(0 0 4px currentColor);
+}
+.nav-label{ flex:1; min-width:0; }
+
 .nav-group-toggle{
   display:flex;
   align-items:center;
-  justify-content:space-between;
+  gap:11px;
   width:100%;
   margin-top:8px;
   padding:10px 20px;
@@ -208,13 +228,28 @@ input[type="date"]{ color-scheme: dark; }
   letter-spacing:.02em;
   color: var(--text-dim);
   cursor:pointer;
+  transition: color .15s ease;
 }
 .nav-group-toggle:hover{ color: var(--text); }
+.nav-group-toggle.open{ color: var(--gold); }
 .nav-group-arrow{ font-size:14px; transition: transform .15s; }
 .nav-group-toggle.open .nav-group-arrow{ transform: rotate(90deg); }
 .nav-group-children{ display:none; flex-direction:column; gap:2px; }
 .nav-group-children.open{ display:flex; }
 .sidebar-nav a.nav-sub{ padding-left:24px; }
+
+/* лёгкое появление пунктов по очереди — и при первой отрисовке, и при раскрытии
+   свёрнутой группы (children были display:none, значит анимация ещё не проигрывалась) */
+@keyframes navItemIn{ from{ opacity:0; transform:translateX(-8px); } to{ opacity:1; transform:none; } }
+.sidebar-nav > a,
+.sidebar-nav > .nav-group-toggle{
+  animation: navItemIn .3s ease both;
+  animation-delay: calc(var(--i, 0) * 35ms);
+}
+.nav-group-children a{
+  animation: navItemIn .3s ease both;
+  animation-delay: calc(var(--i, 0) * 35ms);
+}
 
 .content{ flex:1; min-width:0; overflow:auto; padding:20px 24px; }
 /* display:block — у iframe по умолчанию display:inline, из-за чего снизу оставался
