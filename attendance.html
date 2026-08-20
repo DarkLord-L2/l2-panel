@@ -218,17 +218,17 @@
 
 <div class="roster-wrap" id="wrap" style="display:none;">
   <div class="page-head">
-    <h1>Журнал посещаемости</h1>
+    <h1 data-i18n="attendance.title">Журнал посещаемости</h1>
   </div>
 
   <section class="card week-nav">
     <button class="btn" id="prevWeekBtn">◀</button>
     <div class="week-label" id="weekLabel"></div>
     <button class="btn" id="nextWeekBtn">▶</button>
-    <button class="btn" id="todayBtn">Сегодня</button>
-    <button class="btn" id="pullPrevWeekBtn" style="display:none;">Подтянуть из прошлой недели</button>
-    <button class="btn btn-primary" id="openAttReportBtn">Посещаемость</button>
-    <button class="btn week-report-btn" id="weekReportBtn" title="Отчёт сразу за эту неделю">▤</button>
+    <button class="btn" id="todayBtn" data-i18n="attendance.today">Сегодня</button>
+    <button class="btn" id="pullPrevWeekBtn" style="display:none;" data-i18n="attendance.pullPrevWeekBtn">Подтянуть из прошлой недели</button>
+    <button class="btn btn-primary" id="openAttReportBtn" data-i18n="attendance.openReportBtn">Посещаемость</button>
+    <button class="btn week-report-btn" id="weekReportBtn" data-i18n-attr="title:attendance.weekReportBtnTitle" title="Отчёт сразу за эту неделю">▤</button>
   </section>
   <p class="remember-status" id="rememberStatus" style="text-align:center;"></p>
 
@@ -239,45 +239,45 @@
       <div class="table-head-row">
         <div class="date-range-row" style="margin:0;">
           <div class="field">
-            <label for="attNickSearch">Поиск по нику</label>
-            <input type="text" id="attNickSearch" placeholder="Ник" />
+            <label for="attNickSearch" data-i18n="attendance.searchByNickLabel">Поиск по нику</label>
+            <input type="text" id="attNickSearch" data-i18n-attr="placeholder:attendance.nickPlaceholder" placeholder="Ник" />
           </div>
           <div class="field">
-            <label for="attGroupFilter">Пати</label>
-            <select id="attGroupFilter"><option value="">Все</option></select>
+            <label for="attGroupFilter" data-i18n="attendance.partyLabel">Пати</label>
+            <select id="attGroupFilter"><option value="" data-i18n="attendance.allOption">Все</option></select>
           </div>
-          <button class="btn" id="attNickSearchBtn">Поиск</button>
+          <button class="btn" id="attNickSearchBtn" data-i18n="attendance.searchBtn">Поиск</button>
         </div>
         <div class="tools">
-          <button class="btn" id="attCopyNicksBtn" title="Скопировать список ников (то, что сейчас видно)">📋 Скопировать ники</button>
-          <button class="btn" id="attShareBtn">Поделиться</button>
-          <button class="btn" id="attEditBtn" style="display:none;">Изменить период</button>
-          <button class="btn" id="attBackBtn">← К дням недели</button>
+          <button class="btn" id="attCopyNicksBtn" data-i18n-attr="title:attendance.copyNicksBtnTitle" title="Скопировать список ников (то, что сейчас видно)" data-i18n="attendance.copyNicksBtn">📋 Скопировать ники</button>
+          <button class="btn" id="attShareBtn" data-i18n="attendance.shareBtn">Поделиться</button>
+          <button class="btn" id="attEditBtn" style="display:none;" data-i18n="attendance.editPeriodBtn">Изменить период</button>
+          <button class="btn" id="attBackBtn" data-i18n="attendance.backToDaysBtn">← К дням недели</button>
         </div>
       </div>
 
       <div class="report-mode-tabs" id="reportModeTabs" style="display:none;">
-        <button class="filter-tab active" id="modePeriodBtn" type="button">Период</button>
-        <button class="filter-tab" id="modeDayBtn" type="button">Один день</button>
+        <button class="filter-tab active" id="modePeriodBtn" type="button" data-i18n="attendance.modePeriod">Период</button>
+        <button class="filter-tab" id="modeDayBtn" type="button" data-i18n="attendance.modeDay">Один день</button>
       </div>
 
       <div class="date-range-row" id="periodInputsRow">
         <div class="field">
-          <label for="attFrom">С</label>
+          <label for="attFrom" data-i18n="attendance.fromLabel">С</label>
           <input type="date" id="attFrom" />
         </div>
         <div class="field">
-          <label for="attTo">По</label>
+          <label for="attTo" data-i18n="attendance.toLabel">По</label>
           <input type="date" id="attTo" />
         </div>
-        <button class="btn btn-primary" id="attShowBtn">Показать</button>
+        <button class="btn btn-primary" id="attShowBtn" data-i18n="attendance.showBtn">Показать</button>
       </div>
       <div class="single-day-row" id="dayInputRow" style="display:none;">
         <div class="field">
-          <label for="attDay">Дата</label>
+          <label for="attDay" data-i18n="attendance.dayLabel">Дата</label>
           <input type="date" id="attDay" />
         </div>
-        <button class="btn btn-primary" id="attShowDayBtn">Показать</button>
+        <button class="btn btn-primary" id="attShowDayBtn" data-i18n="attendance.showBtn">Показать</button>
       </div>
 
       <p class="error-msg" id="attReportError" style="margin:2px 0;"></p>
@@ -287,7 +287,7 @@
       <div class="matrix-scroll" id="attTableWrap">
         <table class="report-table">
           <thead id="attReportHead">
-            <tr><th class="att-num">#</th><th class="att-nick">Никнейм</th><th>Посещено</th><th>%</th><th>В клане с</th></tr>
+            <tr><th class="att-num">#</th><th class="att-nick" data-i18n="attendance.colNickname">Никнейм</th><th data-i18n="attendance.colAttended">Посещено</th><th data-i18n="attendance.colPercent">%</th><th data-i18n="attendance.colMemberSince">В клане с</th></tr>
           </thead>
           <tbody id="attReportBody"></tbody>
         </table>
@@ -298,7 +298,7 @@
           <div class="chip-row" id="dayYesList"></div>
         </div>
         <div class="roster-col" id="dayPaidCol" style="display:none;">
-          <h3>Платил (<span id="dayPaidCount">0</span>)</h3>
+          <h3><span data-i18n="attendance.paidPrefix">Платил (</span><span id="dayPaidCount">0</span><span data-i18n="attendance.closeParen">)</span></h3>
           <div class="chip-row" id="dayPaidList"></div>
         </div>
         <div class="roster-col">
@@ -306,42 +306,42 @@
           <div class="chip-row" id="dayNoList"></div>
         </div>
       </div>
-      <p class="hint" id="attReportEmpty" style="display:none;">Никого нет под этим фильтром за выбранный период.</p>
+      <p class="hint" id="attReportEmpty" style="display:none;" data-i18n="attendance.reportEmptyHint">Никого нет под этим фильтром за выбранный период.</p>
     </section>
   </div>
 </div>
 
-<button class="settings-btn" id="settingsBtn" title="Настройки" style="display:none;">Настройки</button>
+<button class="settings-btn" id="settingsBtn" data-i18n-attr="title:attendance.settingsBtn" title="Настройки" style="display:none;" data-i18n="attendance.settingsBtn">Настройки</button>
 <div class="modal-overlay" id="settingsOverlay">
   <div class="modal">
-    <button class="modal-close" id="settingsClose" title="Закрыть">×</button>
-    <h2>Настройки посещаемости</h2>
+    <button class="modal-close" id="settingsClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 data-i18n="attendance.settingsTitle">Настройки посещаемости</h2>
 
-    <div class="settings-subhead">Дни недели</div>
-    <p class="hint">Скрытые дни не показываются в списке — включайте только те, что реально нужны.</p>
+    <div class="settings-subhead" data-i18n="attendance.daysOfWeekSubhead">Дни недели</div>
+    <p class="hint" data-i18n="attendance.daysOfWeekHint">Скрытые дни не показываются в списке — включайте только те, что реально нужны.</p>
     <div class="day-visibility-list" id="dayVisibilityList"></div>
 
-    <div class="settings-subhead">Вкладки отчёта «Посещаемость»</div>
-    <p class="hint">Выключенные вкладки не показываются в отчёте.</p>
+    <div class="settings-subhead" data-i18n="attendance.reportTabsSubhead">Вкладки отчёта «Посещаемость»</div>
+    <p class="hint" data-i18n="attendance.reportTabsHint">Выключенные вкладки не показываются в отчёте.</p>
     <div class="filter-list" id="filterVisibilityList"></div>
 
-    <div class="settings-subhead">Вид отчёта «Посещаемость»</div>
-    <p class="hint">Новый вид добавляет матрицу по дням и режим «один день» вместо обычной таблицы.</p>
+    <div class="settings-subhead" data-i18n="attendance.reportViewSubhead">Вид отчёта «Посещаемость»</div>
+    <p class="hint" data-i18n="attendance.reportViewHint">Новый вид добавляет матрицу по дням и режим «один день» вместо обычной таблицы.</p>
     <label class="advanced-view-row">
-      <input type="checkbox" id="advancedViewToggle" /> Включить новый вид
+      <input type="checkbox" id="advancedViewToggle" /> <span data-i18n="attendance.enableNewViewLabel">Включить новый вид</span>
     </label>
 
-    <div class="settings-subhead">Цвет таблицы «Посещаемость»</div>
-    <p class="hint">По умолчанию таблица светлая, как в референсе. Можно переключить на тёмную — под цвет остального сайта.</p>
+    <div class="settings-subhead" data-i18n="attendance.tableColorSubhead">Цвет таблицы «Посещаемость»</div>
+    <p class="hint" data-i18n="attendance.tableColorHint">По умолчанию таблица светлая, как в референсе. Можно переключить на тёмную — под цвет остального сайта.</p>
     <label class="advanced-view-row">
-      <input type="checkbox" id="darkMatrixToggle" /> Тёмная таблица
+      <input type="checkbox" id="darkMatrixToggle" /> <span data-i18n="attendance.darkTableLabel">Тёмная таблица</span>
     </label>
   </div>
 </div>
 
 <div class="modal-overlay" id="dayModalOverlay">
   <div class="modal">
-    <button class="modal-close" id="dayModalClose" title="Закрыть">×</button>
+    <button class="modal-close" id="dayModalClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
     <h2 id="dayModalTitle"></h2>
     <div id="dayModalBody"></div>
   </div>
@@ -349,7 +349,7 @@
 
 <div class="modal-overlay" id="nickInfoOverlay">
   <div class="modal" style="max-width:320px;">
-    <button class="modal-close" id="nickInfoClose" title="Закрыть">×</button>
+    <button class="modal-close" id="nickInfoClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
     <h2 id="nickInfoTitle"></h2>
     <p id="nickInfoStatus"></p>
   </div>
@@ -358,33 +358,33 @@
 <!-- Ссылка «Поделиться» на снимок текущего отчёта — публичная, без логина, 5 дней -->
 <div class="modal-overlay" id="shareOverlay">
   <div class="modal" style="max-width:480px;">
-    <button class="modal-close" id="shareClose" title="Закрыть">×</button>
-    <h2>Ссылка на отчёт</h2>
-    <p class="hint">Доступна 5 дней, без пароля — увидит любой, у кого есть ссылка.</p>
+    <button class="modal-close" id="shareClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 data-i18n="attendance.shareLinkModalTitle">Ссылка на отчёт</h2>
+    <p class="hint" data-i18n="attendance.shareLinkHint">Доступна 5 дней, без пароля — увидит любой, у кого есть ссылка.</p>
     <div class="field">
       <input type="text" id="shareLinkInput" readonly onclick="this.select()" />
     </div>
-    <button class="btn btn-primary" id="shareCopyBtn">Скопировать</button>
+    <button class="btn btn-primary" id="shareCopyBtn" data-i18n="attendance.copyBtn">Скопировать</button>
     <p class="error-msg" id="shareError"></p>
   </div>
 </div>
 
-<button class="help-btn" id="helpBtn" title="Как пользоваться">?</button>
+<button class="help-btn" id="helpBtn" data-i18n-attr="title:attendance.helpBtnLabel" title="Как пользоваться">?</button>
 <div class="modal-overlay" id="helpOverlay">
   <div class="modal">
-    <button class="modal-close" id="helpClose" title="Закрыть">×</button>
-    <h2>Как пользоваться журналом посещаемости</h2>
+    <button class="modal-close" id="helpClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 data-i18n="attendance.helpTitle">Как пользоваться журналом посещаемости</h2>
 
     <details class="help-section">
-      <summary>Недели и дни</summary>
-      <div class="help-body">
+      <summary data-i18n="attendance.helpWeeksSummary">Недели и дни</summary>
+      <div class="help-body" data-i18n-html="attendance.helpWeeksBody">
         <p>Каждая календарная неделя показывает семь карточек-дней. Переключайтесь между неделями стрелками ◀/▶ или кнопкой «Сегодня».</p>
       </div>
     </details>
 
     <details class="help-section">
-      <summary>Мероприятия и явка</summary>
-      <div class="help-body">
+      <summary data-i18n="attendance.helpEventsSummary">Мероприятия и явка</summary>
+      <div class="help-body" data-i18n-html="attendance.helpEventsBody">
         <p><b>Мероприятия.</b> Клик по карточке дня открывает окно со всеми мероприятиями этого дня и списками явки. Кнопка «+» на карточке добавляет новое мероприятие на этот день (только у главного админа/админа).</p>
         <p><b>Явка.</b> Внутри мероприятия — «+ Добавить явку» (подробнее о загрузке скринов ниже). Крестик у ника убирает его из явки.</p>
         <p>Удаление мероприятия (✕ в открытом окне дня) удаляет и всю явку по нему.</p>
@@ -392,8 +392,8 @@
     </details>
 
     <details class="help-section">
-      <summary>Загрузка скриншотов</summary>
-      <div class="help-body">
+      <summary data-i18n="attendance.helpUploadSummary">Загрузка скриншотов</summary>
+      <div class="help-body" data-i18n-html="attendance.helpUploadBody">
         <p><b>Загрузка.</b> Внутри мероприятия нажмите «+ Добавить явку», выберите до 9 скриншотов со списком участников — подойдёт, например, скрин окна группы клана с никами. Если на том же скрине есть ещё и таблица боя (килы, смерти, PvP/PvE урон) — эти цифры распознаются заодно и сами попадут в «Отчёты по мероприятиям», отдельно загружать их не нужно.</p>
         <img src="assets/census-example.png" alt="Пример подходящего скриншота — окно группы клана со списком участников" />
         <p>Перед сохранением проверьте распознанные ники — чипы с крестиком можно убрать, если что-то распозналось неверно, или дописать ник вручную. Затем нажмите «Сохранить».</p>
@@ -401,8 +401,8 @@
     </details>
 
     <details class="help-section">
-      <summary>Настройки (только у админа)</summary>
-      <div class="help-body">
+      <summary data-i18n="attendance.helpSettingsSummary">Настройки (только у админа)</summary>
+      <div class="help-body" data-i18n-html="attendance.helpSettingsBody">
         <ul>
           <li>Скрыть/показать дни недели, на которые у клана никогда ничего не происходит.</li>
           <li>Включить/выключить вкладки в отчёте «Посещаемость» — какие из них вообще нужны.</li>
@@ -413,22 +413,22 @@
     </details>
 
     <details class="help-section">
-      <summary>Подтянуть из прошлой недели</summary>
-      <div class="help-body">
+      <summary data-i18n="attendance.helpPullSummary">Подтянуть из прошлой недели</summary>
+      <div class="help-body" data-i18n-html="attendance.helpPullBody">
         <p><b>«Подтянуть из прошлой недели»</b> (в шапке рядом с «Сегодня») — копирует мероприятия из предыдущей недели в текущую (по тем же дням). Можно нажимать и на непустую неделю — старые мероприятия этой недели заменятся.</p>
       </div>
     </details>
 
     <details class="help-section">
-      <summary>Отчёт «Посещаемость»</summary>
-      <div class="help-body">
+      <summary data-i18n="attendance.helpReportSummary">Отчёт «Посещаемость»</summary>
+      <div class="help-body" data-i18n-html="attendance.helpReportBody">
         <p>Отчёт за произвольный период (даты «с»/«по», а не недели). Вкладки над таблицей сужают список: ходил/не ходил, новый/старый участник (по дате первого появления в переписи — «новый», если она в последние 7 дней), и сверка с налогами (кто не платит и не ходит / кто платит и ходит).</p>
       </div>
     </details>
 
     <details class="help-section">
-      <summary>Новый вид отчёта</summary>
-      <div class="help-body">
+      <summary data-i18n="attendance.helpNewViewSummary">Новый вид отчёта</summary>
+      <div class="help-body" data-i18n-html="attendance.helpNewViewBody">
         <p>Включается в настройках. Добавляет переключатель «Период / Один день»: в «Периоде» таблица становится матрицей — по колонке на каждый день с мероприятием, ✓ если был; в «Одном дне» — два списка «Пришли» / «Не пришли» за выбранную дату. Пока новый вид выключен, отчёт выглядит как раньше — обычной таблицей.</p>
       </div>
     </details>
@@ -437,7 +437,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=17"></script>
-<script src="js/event-roster.js?v=23"></script>
+<script src="js/i18n.js?v=1"></script>
+<script src="js/event-roster.js?v=24"></script>
 <script src="js/share-report.js?v=2"></script>
 <script>
 (async function(){
@@ -447,7 +448,8 @@
   const profile = await L2Cabinet.getProfile();
   if(!profile){
     document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
-      '<h1>⚠ Профиль не найден</h1><p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+      '<h1>' + L2I18n.t("shell.profileNotFoundTitle", "⚠ Профиль не найден") + '</h1>' +
+      '<p class="hint">' + L2I18n.t("common.contactLeader", "Обратитесь к клан-лидеру.") + '</p></div></div>';
     return;
   }
 
@@ -478,9 +480,10 @@
     if(document.getElementById("dayPaidCol").style.display !== "none") listIds.push("dayPaidList");
     listIds.push("dayNoList");
     const names = [];
+    const newSuffixRe = new RegExp("\\s*·\\s*" + L2I18n.t("attendance.newLabel", "новый") + "\\s*$");
     listIds.forEach(id => {
       document.querySelectorAll(`#${id} .chip`).forEach(chip => {
-        names.push(chip.textContent.replace(/\s*·\s*новый\s*$/, ""));
+        names.push(chip.textContent.replace(newSuffixRe, ""));
       });
     });
     return names;
@@ -492,30 +495,30 @@
     const text = names.map((n, i) => `${i + 1}. ${n}`).join("\n");
     try{
       await navigator.clipboard.writeText(text);
-      flashCopyBtn(btn, "✓ Скопировано");
+      flashCopyBtn(btn, "✓ " + L2I18n.t("panel.toastCopied", "Скопировано"));
     }catch(e){
-      flashCopyBtn(btn, "✗ Не удалось");
+      flashCopyBtn(btn, "✗ " + L2I18n.t("attendance.copyFailedShort", "Не удалось"));
     }
   });
 
-  const DAY_NAMES = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"];
-  const DAY_SHORT = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+  function DAY_NAMES(){ return [0,1,2,3,4,5,6].map(i => L2I18n.t("attendance.dayFull" + i, "")); }
+  function DAY_SHORT(){ return [0,1,2,3,4,5,6].map(i => L2I18n.t("attendance.dayShort" + i, "")); }
 
-  const REPORT_FILTERS = [
+  function REPORT_FILTERS(){ return [
     // особый пункт — не фильтр в один список, а три раздела подряд (см. renderAttTableFlat):
     // сначала Ходил (даже если человек ещё и платит), потом Платил (кто не ходил, но платит),
     // потом Не ходил и не платил. test не используется, group решает, в какой раздел попасть
-    { key: "attended_or_paid", label: "Ходил / Платил", test: null,
+    { key: "attended_or_paid", label: L2I18n.t("attendance.filterAttendedOrPaid", "Ходил / Платил"), test: null,
       group: r => r.attended ? "attended" : r.paid ? "paid" : "neither" },
-    { key: "attended", label: "Ходил", test: r => r.attended },
-    { key: "not_attended", label: "Не ходил", test: r => !r.attended },
-    { key: "new_attended", label: "Новый + ходил", test: r => !r.isOld && r.attended },
-    { key: "new_not_attended", label: "Новый + не ходил", test: r => !r.isOld && !r.attended },
-    { key: "old_attended", label: "Старый + ходил", test: r => r.isOld && r.attended },
-    { key: "old_not_attended", label: "Старый + не ходил", test: r => r.isOld && !r.attended },
-    { key: "no_tax_no_attend", label: "Не платит и не ходит", test: r => !r.paid && !r.attended },
-    { key: "pays_and_attends", label: "Платит и ходит", test: r => r.paid && r.attended },
-  ];
+    { key: "attended", label: L2I18n.t("attendance.filterAttended", "Ходил"), test: r => r.attended },
+    { key: "not_attended", label: L2I18n.t("attendance.filterNotAttended", "Не ходил"), test: r => !r.attended },
+    { key: "new_attended", label: L2I18n.t("attendance.filterNewAttended", "Новый + ходил"), test: r => !r.isOld && r.attended },
+    { key: "new_not_attended", label: L2I18n.t("attendance.filterNewNotAttended", "Новый + не ходил"), test: r => !r.isOld && !r.attended },
+    { key: "old_attended", label: L2I18n.t("attendance.filterOldAttended", "Старый + ходил"), test: r => r.isOld && r.attended },
+    { key: "old_not_attended", label: L2I18n.t("attendance.filterOldNotAttended", "Старый + не ходил"), test: r => r.isOld && !r.attended },
+    { key: "no_tax_no_attend", label: L2I18n.t("attendance.filterNoTaxNoAttend", "Не платит и не ходит"), test: r => !r.paid && !r.attended },
+    { key: "pays_and_attends", label: L2I18n.t("attendance.filterPaysAndAttends", "Платит и ходит"), test: r => r.paid && r.attended },
+  ]; }
 
   function mondayOf(d){
     const x = new Date(d);
@@ -602,7 +605,7 @@
     if(isPartyRestricted){
       const myGroup = groupsList.find(g => g.id === profile.party_id);
       const opt = document.createElement("option");
-      opt.value = profile.party_id; opt.textContent = myGroup?.name || "Моя пати";
+      opt.value = profile.party_id; opt.textContent = myGroup?.name || L2I18n.t("attendance.myPartyFallback", "Моя пати");
       sel.appendChild(opt);
       sel.value = profile.party_id;
       sel.disabled = true;
@@ -610,7 +613,7 @@
       return;
     }
     const allOpt = document.createElement("option");
-    allOpt.value = ""; allOpt.textContent = "Все";
+    allOpt.value = ""; allOpt.textContent = L2I18n.t("attendance.allOption", "Все");
     sel.appendChild(allOpt);
     groupsList.forEach(g => {
       const opt = document.createElement("option");
@@ -638,9 +641,9 @@
     statusEl.innerHTML = "";
     const groups = nickGroupsMap.get(nickname) || findByNormalized(nickGroupsNorm, nickname) || [];
     if(!groups.length){
-      statusEl.textContent = "Соло";
+      statusEl.textContent = L2I18n.t("attendance.soloStatus", "Соло");
     } else {
-      statusEl.appendChild(document.createTextNode("Группа: "));
+      statusEl.appendChild(document.createTextNode(L2I18n.t("attendance.groupPrefix", "Группа: ")));
       groups.forEach((g, i) => {
         const a = document.createElement("a");
         a.href = "#";
@@ -686,15 +689,15 @@
       .from("attendance_events")
       .select("event_date, event_name, sort_order")
       .eq("week_start", isoDate(prevMonday));
-    if(prevErr){ alert("Не удалось прочитать прошлую неделю: " + prevErr.message); return; }
+    if(prevErr){ alert(L2I18n.t("attendance.readPrevWeekFailed", "Не удалось прочитать прошлую неделю: ") + prevErr.message); return; }
     if(!prevEvents || !prevEvents.length){
-      alert("На прошлой неделе тоже нет мероприятий.");
+      alert(L2I18n.t("attendance.noEventsPrevWeek", "На прошлой неделе тоже нет мероприятий."));
       return;
     }
-    if(!confirm("Заменить мероприятия этой недели на мероприятия из прошлой недели? Уже отмеченная явка на этой неделе будет удалена вместе с мероприятиями.")) return;
+    if(!confirm(L2I18n.t("attendance.confirmReplaceWeekEvents", "Заменить мероприятия этой недели на мероприятия из прошлой недели? Уже отмеченная явка на этой неделе будет удалена вместе с мероприятиями."))) return;
 
     const { error: delErr } = await db.from("attendance_events").delete().eq("clan_id", profile.clan_id).eq("week_start", isoDate(currentWeek));
-    if(delErr){ alert("Не удалось очистить текущую неделю: " + delErr.message); return; }
+    if(delErr){ alert(L2I18n.t("attendance.clearCurrentWeekFailed", "Не удалось очистить текущую неделю: ") + delErr.message); return; }
 
     const rows = prevEvents.map(e => {
       const prevDate = new Date(e.event_date + "T00:00:00");
@@ -710,9 +713,9 @@
       };
     });
     const { error: insErr } = await db.from("attendance_events").insert(rows);
-    if(insErr){ alert("Не удалось скопировать мероприятия: " + insErr.message); return; }
+    if(insErr){ alert(L2I18n.t("attendance.copyEventsFailed", "Не удалось скопировать мероприятия: ") + insErr.message); return; }
 
-    document.getElementById("rememberStatus").textContent = `Подтянуто мероприятий: ${rows.length}.`;
+    document.getElementById("rememberStatus").textContent = L2I18n.t("attendance.pulledEventsCount", "Подтянуто мероприятий: {n}.").replace("{n}", rows.length);
     await loadWeek();
   }
 
@@ -736,7 +739,7 @@
       const d = new Date(currentWeek); d.setDate(d.getDate() + i);
       const dateStr = isoDate(d);
       const dayEvents = events.filter(e => e.event_date === dateStr);
-      const dayLabel = `${DAY_NAMES[i]}, ${pad2(d.getDate())}.${pad2(d.getMonth()+1)}`;
+      const dayLabel = `${DAY_NAMES()[i]}, ${pad2(d.getDate())}.${pad2(d.getMonth()+1)}`;
 
       const dayCard = document.createElement("section");
       dayCard.className = "card day-card";
@@ -749,7 +752,7 @@
       if(!dayEvents.length){
         const hint = document.createElement("p");
         hint.className = "day-empty";
-        hint.textContent = "Мероприятий нет.";
+        hint.textContent = L2I18n.t("attendance.noEventsHint", "Мероприятий нет.");
         dayCard.appendChild(hint);
       } else {
         const list = document.createElement("div");
@@ -766,7 +769,7 @@
       if(isAdmin){
         const toggle = document.createElement("button");
         toggle.className = "day-add-toggle";
-        toggle.title = "Добавить мероприятие";
+        toggle.title = L2I18n.t("attendance.addEventTitle", "Добавить мероприятие");
         toggle.textContent = "+";
         toggle.addEventListener("click", (e) => e.stopPropagation());
 
@@ -775,11 +778,11 @@
         addRow.addEventListener("click", (e) => e.stopPropagation());
         const input = document.createElement("input");
         input.type = "text";
-        input.placeholder = "Название мероприятия";
+        input.placeholder = L2I18n.t("attendance.eventNamePlaceholder", "Название мероприятия");
         input.maxLength = 60;
         const btn = document.createElement("button");
         btn.className = "btn confirm";
-        btn.textContent = "Добавить";
+        btn.textContent = L2I18n.t("attendance.addBtn", "Добавить");
         btn.addEventListener("click", async () => {
           const name = input.value.trim();
           if(!name) return;
@@ -823,17 +826,17 @@
       const delBtn = document.createElement("button");
       delBtn.className = "btn btn-danger";
       delBtn.textContent = "✕";
-      delBtn.title = "Удалить мероприятие";
+      delBtn.title = L2I18n.t("attendance.deleteEventTitle", "Удалить мероприятие");
       delBtn.addEventListener("click", async () => {
-        if(!confirm(`Удалить мероприятие «${ev.event_name}»? Явка по нему тоже удалится.`)) return;
+        if(!confirm(L2I18n.t("attendance.confirmDeleteEvent", "Удалить мероприятие «{name}»? Явка по нему тоже удалится.").replace("{name}", ev.event_name))) return;
         const { data, error } = await db.from("attendance_events").delete().eq("id", ev.id).select();
         if(error){
           console.error("delete attendance_events failed:", error);
-          alert("Не удалось удалить: " + error.message);
+          alert(L2I18n.t("attendance.deleteEventFailed", "Не удалось удалить: ") + error.message);
           return;
         }
         if(!data || !data.length){
-          alert("Строка не удалилась — не хватает прав.");
+          alert(L2I18n.t("attendance.deleteEventNoPermission", "Строка не удалилась — не хватает прав."));
           return;
         }
         closeDayModal();
@@ -856,7 +859,7 @@
     body.innerHTML = "";
     const dayEvents = events.filter(e => e.event_date === dateStr);
     if(!dayEvents.length){
-      body.innerHTML = '<p class="hint">Мероприятий нет.</p>';
+      body.innerHTML = '<p class="hint">' + L2I18n.t("attendance.noEventsHint", "Мероприятий нет.") + '</p>';
     } else {
       dayEvents.forEach(ev => renderEventBlock(body, ev));
     }
@@ -1005,7 +1008,7 @@
     wrap.classList.remove("matrix-mode");
     wrap.style.width = ""; // ручная ширина — только у матрицы, обычная таблица тянется по месту
     document.getElementById("attReportHead").innerHTML =
-      '<tr><th class="att-num">#</th><th class="att-nick">Никнейм</th><th>Посещено</th><th>%</th><th>В клане с</th></tr>';
+      `<tr><th class="att-num">#</th><th class="att-nick">${L2I18n.t("attendance.colNickname", "Никнейм")}</th><th>${L2I18n.t("attendance.colAttended", "Посещено")}</th><th>${L2I18n.t("attendance.colPercent", "%")}</th><th>${L2I18n.t("attendance.colMemberSince", "В клане с")}</th></tr>`;
     applyStickyHead();
   }
 
@@ -1019,9 +1022,9 @@
     const paidAndAttended = attended.filter(r => r.paid).length;
     const totalPaid = paidOnly.length + paidAndAttended;
     return [
-      { text: `Ходил (${attended.length})`, list: attended },
-      { text: `Платил (${paidOnly.length}) · Ходил и платил (${paidAndAttended}) · Итого платили (${totalPaid})`, list: paidOnly },
-      { text: `Не ходил и не платил (${neither.length})`, list: neither },
+      { text: L2I18n.t("attendance.attendedCount", "Ходил ({n})").replace("{n}", attended.length), list: attended },
+      { text: L2I18n.t("attendance.paidSummary", "Платил ({paid}) · Ходил и платил ({both}) · Итого платили ({total})").replace("{paid}", paidOnly.length).replace("{both}", paidAndAttended).replace("{total}", totalPaid), list: paidOnly },
+      { text: L2I18n.t("attendance.neitherCount", "Не ходил и не платил ({n})").replace("{n}", neither.length), list: neither },
     ];
   }
 
@@ -1033,7 +1036,7 @@
     tdNick.addEventListener("click", () => showNickInfo(r.nickname));
     const tdAtt = document.createElement("td"); tdAtt.textContent = `${r.attendedN}/${r.total}`;
     const tdPct = document.createElement("td"); tdPct.textContent = `${r.percent}%`;
-    const tdSince = document.createElement("td"); tdSince.textContent = r.since || "Новый";
+    const tdSince = document.createElement("td"); tdSince.textContent = r.since || L2I18n.t("attendance.newStandalone", "Новый");
     tr.append(tdNum, tdNick, tdAtt, tdPct, tdSince);
     return tr;
   }
@@ -1042,7 +1045,7 @@
 
   function renderAttTableFlat(filterKey){
     resetFlatHead();
-    const filter = REPORT_FILTERS.find(f => f.key === filterKey);
+    const filter = REPORT_FILTERS().find(f => f.key === filterKey);
     const baseRows = attReportRows
       .filter(r => !attNickFilter || r.nickname.toLowerCase().includes(attNickFilter))
       .filter(r => passesGroupFilter(r.nickname));
@@ -1100,7 +1103,7 @@
     wrapEl.classList.toggle("dark-matrix", darkMatrix);
     const savedWidth = localStorage.getItem(TABLE_WIDTH_KEY);
     if(savedWidth) wrapEl.style.width = savedWidth + "px";
-    const filter = REPORT_FILTERS.find(f => f.key === filterKey);
+    const filter = REPORT_FILTERS().find(f => f.key === filterKey);
     const baseRows = attReportRows
       .filter(r => !attNickFilter || r.nickname.toLowerCase().includes(attNickFilter))
       .filter(r => passesGroupFilter(r.nickname));
@@ -1112,12 +1115,12 @@
     const weekHeadCells = weekGroups.map((g, i) => `<th colspan="${g.days.length}"${i > 0 ? ' class="week-start"' : ""}>${g.label}</th>`).join("");
     const dayHeadCells = weekGroups.flatMap(g => g.days).map(d => {
       const dt = new Date(d + "T00:00:00");
-      const wd = DAY_SHORT[(dt.getDay() + 6) % 7];
+      const wd = DAY_SHORT()[(dt.getDay() + 6) % 7];
       const cls = weekStartDays.has(d) ? ' class="week-start"' : "";
       return `<th title="${d}"${cls}>${wd}</th>`;
     }).join("");
     document.getElementById("attReportHead").innerHTML =
-      `<tr><th class="att-num" rowspan="2">#</th><th class="att-nick" rowspan="2">Никнейм</th>${weekHeadCells}<th rowspan="2">Итого</th><th rowspan="2">%</th></tr>` +
+      `<tr><th class="att-num" rowspan="2">#</th><th class="att-nick" rowspan="2">${L2I18n.t("attendance.colNickname", "Никнейм")}</th>${weekHeadCells}<th rowspan="2">${L2I18n.t("attendance.colTotal", "Итого")}</th><th rowspan="2">${L2I18n.t("attendance.colPercent", "%")}</th></tr>` +
       `<tr class="weekday-head">${dayHeadCells}</tr>`;
     applyStickyHead();
 
@@ -1171,7 +1174,7 @@
   }
 
   function renderDayColumns(filterKey){
-    const filter = REPORT_FILTERS.find(f => f.key === filterKey);
+    const filter = REPORT_FILTERS().find(f => f.key === filterKey);
     const baseRows = attReportRows
       .filter(r => !attNickFilter || r.nickname.toLowerCase().includes(attNickFilter))
       .filter(r => passesGroupFilter(r.nickname))
@@ -1183,7 +1186,7 @@
       list.forEach(r => {
         const chip = document.createElement("div");
         chip.className = "chip roster-chip nick-click";
-        chip.textContent = r.nickname + (r.isOld ? "" : " · новый");
+        chip.textContent = r.nickname + (r.isOld ? "" : " · " + L2I18n.t("attendance.newLabel", "новый"));
         chip.addEventListener("click", () => showNickInfo(r.nickname));
         el.appendChild(chip);
       });
@@ -1197,8 +1200,8 @@
       const attended = baseRows.filter(r => filter.group(r) === "attended");
       const paid = baseRows.filter(r => filter.group(r) === "paid");
       const neither = baseRows.filter(r => filter.group(r) === "neither");
-      document.getElementById("dayCol1Label").textContent = `Ходил (${attended.length})`;
-      document.getElementById("dayCol2Label").textContent = `Не ходил и не платил (${neither.length})`;
+      document.getElementById("dayCol1Label").textContent = L2I18n.t("attendance.attendedCount", "Ходил ({n})").replace("{n}", attended.length);
+      document.getElementById("dayCol2Label").textContent = L2I18n.t("attendance.neitherCount", "Не ходил и не платил ({n})").replace("{n}", neither.length);
       document.getElementById("dayPaidCount").textContent = paid.length;
       paidCol.style.display = "";
       document.getElementById("attReportEmpty").style.display = (attended.length + paid.length + neither.length) ? "none" : "";
@@ -1212,8 +1215,8 @@
     const rows = filter ? baseRows.filter(filter.test) : [];
     const yes = rows.filter(r => r.attended);
     const no = rows.filter(r => !r.attended);
-    document.getElementById("dayCol1Label").textContent = `Пришли (${yes.length})`;
-    document.getElementById("dayCol2Label").textContent = `Не пришли (${no.length})`;
+    document.getElementById("dayCol1Label").textContent = L2I18n.t("attendance.arrivedCount", "Пришли ({n})").replace("{n}", yes.length);
+    document.getElementById("dayCol2Label").textContent = L2I18n.t("attendance.notArrivedCount", "Не пришли ({n})").replace("{n}", no.length);
     document.getElementById("attReportEmpty").style.display = rows.length ? "none" : "";
     renderList(document.getElementById("dayYesList"), yes);
     renderList(document.getElementById("dayNoList"), no);
@@ -1248,7 +1251,7 @@
   function renderFilterTabs(){
     const wrap = document.getElementById("attFilterTabs");
     wrap.innerHTML = "";
-    const visible = REPORT_FILTERS.filter(f => isFilterVisible(f.key));
+    const visible = REPORT_FILTERS().filter(f => isFilterVisible(f.key));
     visible.forEach((f, i) => {
       const btn = document.createElement("button");
       btn.className = "filter-tab" + (i === 0 ? " active" : "");
@@ -1364,8 +1367,8 @@
   async function runPeriodReport(from, to){
     const errEl = document.getElementById("attReportError");
     errEl.textContent = "";
-    if(!from || !to){ errEl.textContent = "Заполните обе даты."; return; }
-    if(from > to){ errEl.textContent = "Дата «с» позже даты «по»."; return; }
+    if(!from || !to){ errEl.textContent = L2I18n.t("attendance.fillBothDates", "Заполните обе даты."); return; }
+    if(from > to){ errEl.textContent = L2I18n.t("attendance.fromAfterTo", "Дата «с» позже даты «по»."); return; }
     const result = await buildAttendanceReport(from, to);
     attReportRows = result.rows;
     attReportDays = result.days;
@@ -1392,7 +1395,7 @@
 
   document.getElementById("attShareBtn").addEventListener("click", async () => {
     if(reportMode === "day"){
-      alert("Поделиться можно только в режиме «Период» (таблица), не в режиме «Один день».");
+      alert(L2I18n.t("attendance.shareOnlyPeriodMode", "Поделиться можно только в режиме «Период» (таблица), не в режиме «Один день»."));
       return;
     }
     const btn = document.getElementById("attShareBtn");
@@ -1400,13 +1403,13 @@
     try{
       const table = document.querySelector("#attTableWrap table");
       const url = await L2Share.createShareLink(db, {
-        table, title: "Посещаемость", clanId: profile.clan_id, createdBy: profile.id,
+        table, title: L2I18n.t("section.attendance", "Посещаемость"), clanId: profile.clan_id, createdBy: profile.id,
         nickSelector: ".att-nick",
       });
       document.getElementById("shareLinkInput").value = url;
       document.getElementById("shareOverlay").classList.add("show");
     }catch(e){
-      alert("Не удалось создать ссылку: " + e.message);
+      alert(L2I18n.t("attendance.createLinkFailed", "Не удалось создать ссылку: ") + e.message);
     }finally{
       btn.disabled = false;
     }
@@ -1443,7 +1446,7 @@
     const day = document.getElementById("attDay").value;
     const errEl = document.getElementById("attReportError");
     errEl.textContent = "";
-    if(!day){ errEl.textContent = "Выберите дату."; return; }
+    if(!day){ errEl.textContent = L2I18n.t("attendance.pickDate", "Выберите дату."); return; }
     const result = await buildAttendanceReport(day, day);
     attReportRows = result.rows;
     attReportDays = result.days;
@@ -1472,7 +1475,7 @@
         cb.disabled = false;
         renderDays();
       });
-      label.append(cb, document.createTextNode(DAY_NAMES[i]));
+      label.append(cb, document.createTextNode(DAY_NAMES()[i]));
       list.appendChild(label);
     }
   }
@@ -1481,7 +1484,7 @@
     await loadFilterVisibility();
     const list = document.getElementById("filterVisibilityList");
     list.innerHTML = "";
-    REPORT_FILTERS.forEach(f => {
+    REPORT_FILTERS().forEach(f => {
       const label = document.createElement("label");
       const cb = document.createElement("input");
       cb.type = "checkbox";
@@ -1567,7 +1570,7 @@
   // управляется CSS через #attTableWrap.matrix-mode .table-resize-handle)
   const resizeHandle = document.createElement("div");
   resizeHandle.className = "table-resize-handle";
-  resizeHandle.title = "Потяните, чтобы изменить ширину таблицы";
+  resizeHandle.title = L2I18n.t("attendance.resizeHandleTitle", "Потяните, чтобы изменить ширину таблицы");
   attTableWrapEl.appendChild(resizeHandle);
 
   let resizeStartX = 0, resizeStartWidth = 0, resizing = false;
@@ -1654,13 +1657,34 @@
     renderFilterTabs();
 
     if(st.filter){
-      const visible = REPORT_FILTERS.filter(f => isFilterVisible(f.key));
+      const visible = REPORT_FILTERS().filter(f => isFilterVisible(f.key));
       const idx = visible.findIndex(f => f.key === st.filter);
       const btns = document.getElementById("attFilterTabs").querySelectorAll(".filter-tab");
       if(idx >= 0 && btns[idx]) btns[idx].click();
     }
     if(st.collapsed) collapseReportControls();
   }
+
+  function refreshFilterTabLabels(){
+    const visible = REPORT_FILTERS().filter(f => isFilterVisible(f.key));
+    const btns = document.getElementById("attFilterTabs").querySelectorAll(".filter-tab");
+    visible.forEach((f, i) => { if(btns[i]) btns[i].textContent = f.label; });
+  }
+
+  window.addEventListener("storage", (e) => {
+    if(e.key !== "l2Lang") return;
+    renderDays();
+    if(document.getElementById("attReportView").style.display !== "none"){
+      refreshFilterTabLabels();
+      const allOpt = document.querySelector('#attGroupFilter option[value=""]');
+      if(allOpt) allOpt.textContent = L2I18n.t("attendance.allOption", "Все");
+      if(activeFilterKey) renderReportTable(activeFilterKey);
+    }
+    if(document.getElementById("settingsOverlay").classList.contains("show")){
+      renderDayVisibilityCheckboxes();
+      renderFilterVisibilityCheckboxes();
+    }
+  });
 
   await loadDayVisibility();
   renderWeekLabel();

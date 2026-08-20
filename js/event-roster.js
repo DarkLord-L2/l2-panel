@@ -20,27 +20,51 @@
 function initEventRoster({ root, eventId, profile, isAdmin, db }){
   root.innerHTML = `
     <div class="chip-row" data-role="list"></div>
-    <p class="empty-hint" data-role="empty" style="display:none;">Явка ещё не отмечена.</p>
-    ${isAdmin ? '<button class="btn" data-role="add-btn" style="margin-top:8px;">+ Добавить явку</button>' : ""}
+    <p class="empty-hint" data-role="empty" style="display:none;">${L2I18n.t("eventRoster.notMarkedHint", "Явка ещё не отмечена.")}</p>
+    ${isAdmin ? `<button class="btn" data-role="add-btn" style="margin-top:8px;">${L2I18n.t("eventRoster.addAttendanceBtn", "+ Добавить явку")}</button>` : ""}
     ${isAdmin ? `
     <div data-role="upload" style="display:none; margin-top:10px;">
       <input type="file" data-role="file-input" accept="image/*" multiple style="display:none;" />
-      <button class="btn" data-role="file-btn">Выбрать файлы…</button>
+      <button class="btn" data-role="file-btn">${L2I18n.t("eventRoster.pickFilesBtn", "Выбрать файлы…")}</button>
       <p class="upload-status" data-role="status"></p>
       <div class="chip-row" data-role="chips"></div>
       <div class="manual-add">
-        <input type="text" data-role="manual-input" placeholder="Добавить ник вручную" />
-        <button class="btn" data-role="manual-btn">Добавить</button>
+        <input type="text" data-role="manual-input" placeholder="${L2I18n.t("eventRoster.manualPlaceholder", "Добавить ник вручную")}" />
+        <button class="btn" data-role="manual-btn">${L2I18n.t("common.add", "Добавить")}</button>
       </div>
       <p class="error-msg" data-role="error"></p>
       <div style="display:flex; gap:10px; margin-top:8px;">
-        <button class="btn btn-primary" data-role="save-btn">Сохранить</button>
-        <button class="btn btn-ghost" data-role="cancel-btn">Отмена</button>
+        <button class="btn btn-primary" data-role="save-btn">${L2I18n.t("common.save", "Сохранить")}</button>
+        <button class="btn btn-ghost" data-role="cancel-btn">${L2I18n.t("common.cancel", "Отмена")}</button>
       </div>
     </div>` : ""}
   `;
 
   const q = (role) => root.querySelector(`[data-role="${role}"]`);
+
+  // язык может смениться, пока этот блок явки уже отрисован (переключатель живёт
+  // в родительском окне) — точечно обновляем статичные подписи, не перестраивая
+  // разметку целиком (иначе слетели бы уже навешанные обработчики)
+  function applyLangRefresh(){
+    q("empty").textContent = L2I18n.t("eventRoster.notMarkedHint", "Явка ещё не отмечена.");
+    if(isAdmin){
+      q("add-btn").textContent = L2I18n.t("eventRoster.addAttendanceBtn", "+ Добавить явку");
+      q("file-btn").textContent = L2I18n.t("eventRoster.pickFilesBtn", "Выбрать файлы…");
+      q("manual-input").placeholder = L2I18n.t("eventRoster.manualPlaceholder", "Добавить ник вручную");
+      q("manual-btn").textContent = L2I18n.t("common.add", "Добавить");
+      q("save-btn").textContent = L2I18n.t("common.save", "Сохранить");
+      q("cancel-btn").textContent = L2I18n.t("common.cancel", "Отмена");
+    }
+    render();
+    if(isAdmin) renderChips();
+  }
+  // root живёт только пока открыто окно этого дня — после закрытия дальше не
+  // трогаем (иначе за сессию накопились бы «зомби»-обработчики на старых блоках)
+  window.addEventListener("storage", (e) => {
+    if(e.key !== "l2Lang") return;
+    if(!document.body.contains(root)) return;
+    applyLangRefresh();
+  });
 
   let entries = [];
   let pending = [];
@@ -75,7 +99,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
       if(isAdmin){
         const x = document.createElement("button");
         x.textContent = "×";
-        x.title = "Убрать из явки";
+        x.title = L2I18n.t("eventRoster.removeFromAttendanceTitle", "Убрать из явки");
         x.addEventListener("click", async () => {
           // явку убираем, а статистику не стираем — только помечаем removed=true,
           // чтобы килы/смерти не терялись из истории; в «Отчётах» такая строка
@@ -169,10 +193,10 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
       if(!files.length) return;
       if(files.length > 9){
         files = files.slice(0, 9);
-        statusEl.textContent = "Взяты только первые 9 файлов.";
+        statusEl.textContent = L2I18n.t("eventRoster.onlyFirst9Files", "Взяты только первые 9 файлов.");
       }
       for(let i = 0; i < files.length; i++){
-        statusEl.textContent = `Распознаю скрин ${i + 1} из ${files.length}…`;
+        statusEl.textContent = L2I18n.t("eventRoster.recognizingScreen", "Распознаю скрин {i} из {n}…").replace("{i}", i + 1).replace("{n}", files.length);
         try{
           const rawDataUrl = await fileToDataUrl(files[i]);
           const dataUrl = await upscaleForOcr(rawDataUrl);
@@ -196,10 +220,10 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
           });
           renderChips();
         }catch(err){
-          errEl.textContent = `Скрин ${i + 1}: ${err.message}`;
+          errEl.textContent = L2I18n.t("eventRoster.screenError", "Скрин {i}: {msg}").replace("{i}", i + 1).replace("{msg}", err.message);
         }
       }
-      statusEl.textContent = `Готово, распознано ${pending.length} ник(ов) со статистикой — проверьте перед сохранением.`;
+      statusEl.textContent = L2I18n.t("eventRoster.doneRecognized", "Готово, распознано {n} ник(ов) со статистикой — проверьте перед сохранением.").replace("{n}", pending.length);
     });
 
     q("manual-btn").addEventListener("click", () => {
@@ -231,7 +255,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
           created_by: profile.id,
         }));
         const { error } = await db.from("attendance_entries").insert(rows);
-        if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
+        if(error){ errEl.textContent = L2I18n.t("eventRoster.saveFailed", "Не удалось сохранить: ") + error.message; return; }
       }
 
       // те же ники, для которых скрин дал цифры — сразу в event_stats, без
@@ -247,7 +271,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
             .from("event_screenshot_batches")
             .insert({ clan_id: profile.clan_id, event_id: eventId, created_by: profile.id })
             .select("id").single();
-          if(batchErr){ errEl.textContent = "Не удалось сохранить метку скрина: " + batchErr.message; return; }
+          if(batchErr){ errEl.textContent = L2I18n.t("eventRoster.batchSaveFailed", "Не удалось сохранить метку скрина: ") + batchErr.message; return; }
           batchIds.push(batchRow.id);
         }
 
@@ -273,7 +297,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
           });
 
         const { error: statsErr } = await db.from("event_stats").upsert(statRows, { onConflict: "event_id,nickname" });
-        if(statsErr){ errEl.textContent = "Явка сохранена, но статистика — нет: " + statsErr.message; return; }
+        if(statsErr){ errEl.textContent = L2I18n.t("eventRoster.statsSaveFailed", "Явка сохранена, но статистика — нет: ") + statsErr.message; return; }
       }
 
       resetUpload();

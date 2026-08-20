@@ -1066,6 +1066,206 @@
     "panel.pickThisIconTitle": ["Выбрать эту иконку", "Вибрати цю іконку", "Pick this icon"],
     "panel.emptyMacro": ["(пусто)", "(порожньо)", "(empty)"],
     "panel.shareLinkTitle": ["Ссылка на раскладку (~{kb} КБ)", "Посилання на розкладку (~{kb} КБ)", "Layout link (~{kb} KB)"],
+
+    "attendance.title": ["Журнал посещаемости", "Журнал відвідуваності", "Attendance Log"],
+    "attendance.today": ["Сегодня", "Сьогодні", "Today"],
+    "attendance.pullPrevWeekBtn": ["Подтянуть из прошлой недели", "Підтягнути з минулого тижня", "Pull from last week"],
+    "attendance.openReportBtn": ["Посещаемость", "Відвідуваність", "Attendance"],
+    "attendance.weekReportBtnTitle": ["Отчёт сразу за эту неделю", "Звіт одразу за цей тиждень", "Report for this week right away"],
+
+    "attendance.searchByNickLabel": ["Поиск по нику", "Пошук за ніком", "Search by nickname"],
+    "attendance.nickPlaceholder": ["Ник", "Нік", "Nickname"],
+    "attendance.partyLabel": ["Пати", "Паті", "Party"],
+    "attendance.allOption": ["Все", "Всі", "All"],
+    "attendance.searchBtn": ["Поиск", "Пошук", "Search"],
+    "attendance.copyNicksBtn": ["📋 Скопировать ники", "📋 Скопіювати ніки", "📋 Copy nicknames"],
+    "attendance.copyNicksBtnTitle": ["Скопировать список ников (то, что сейчас видно)", "Скопіювати список ніків (те, що зараз видно)", "Copy the nickname list (whatever is currently visible)"],
+    "attendance.shareBtn": ["Поделиться", "Поділитися", "Share"],
+    "attendance.editPeriodBtn": ["Изменить период", "Змінити період", "Change period"],
+    "attendance.backToDaysBtn": ["← К дням недели", "← До днів тижня", "← Back to the week's days"],
+    "attendance.modePeriod": ["Период", "Період", "Period"],
+    "attendance.modeDay": ["Один день", "Один день", "One day"],
+    "attendance.fromLabel": ["С", "Від", "From"],
+    "attendance.toLabel": ["По", "До", "To"],
+    "attendance.showBtn": ["Показать", "Показати", "Show"],
+    "attendance.dayLabel": ["Дата", "Дата", "Date"],
+    "attendance.colNickname": ["Никнейм", "Нікнейм", "Nickname"],
+    "attendance.colAttended": ["Посещено", "Відвідано", "Attended"],
+    "attendance.colPercent": ["%", "%", "%"],
+    "attendance.colMemberSince": ["В клане с", "У клані з", "In clan since"],
+    "attendance.colTotal": ["Итого", "Разом", "Total"],
+    "attendance.reportEmptyHint": ["Никого нет под этим фильтром за выбранный период.", "Нікого немає під цим фільтром за обраний період.", "No one matches this filter for the selected period."],
+
+    "attendance.settingsBtn": ["Настройки", "Налаштування", "Settings"],
+    "attendance.settingsTitle": ["Настройки посещаемости", "Налаштування відвідуваності", "Attendance settings"],
+    "attendance.daysOfWeekSubhead": ["Дни недели", "Дні тижня", "Days of the week"],
+    "attendance.daysOfWeekHint": ["Скрытые дни не показываются в списке — включайте только те, что реально нужны.", "Приховані дні не показуються у списку — вмикайте тільки ті, що реально потрібні.", "Hidden days aren't shown in the list — enable only the ones you actually need."],
+    "attendance.reportTabsSubhead": ["Вкладки отчёта «Посещаемость»", "Вкладки звіту «Відвідуваність»", "“Attendance” report tabs"],
+    "attendance.reportTabsHint": ["Выключенные вкладки не показываются в отчёте.", "Вимкнені вкладки не показуються у звіті.", "Disabled tabs aren't shown in the report."],
+    "attendance.reportViewSubhead": ["Вид отчёта «Посещаемость»", "Вигляд звіту «Відвідуваність»", "“Attendance” report view"],
+    "attendance.reportViewHint": ["Новый вид добавляет матрицу по дням и режим «один день» вместо обычной таблицы.", "Новий вигляд додає матрицю по днях і режим «один день» замість звичайної таблиці.", "The new view adds a day-by-day matrix and a “one day” mode instead of a plain table."],
+    "attendance.enableNewViewLabel": ["Включить новый вид", "Увімкнути новий вигляд", "Enable the new view"],
+    "attendance.tableColorSubhead": ["Цвет таблицы «Посещаемость»", "Колір таблиці «Відвідуваність»", "“Attendance” table color"],
+    "attendance.tableColorHint": ["По умолчанию таблица светлая, как в референсе. Можно переключить на тёмную — под цвет остального сайта.", "За замовчуванням таблиця світла, як у референсі. Можна перемкнути на темну — під колір решти сайту.", "By default the table is light, matching the reference. You can switch it to dark, matching the rest of the site."],
+    "attendance.darkTableLabel": ["Тёмная таблица", "Темна таблиця", "Dark table"],
+
+    "attendance.shareLinkModalTitle": ["Ссылка на отчёт", "Посилання на звіт", "Link to the report"],
+    "attendance.shareLinkHint": ["Доступна 5 дней, без пароля — увидит любой, у кого есть ссылка.", "Доступне 5 днів, без пароля — побачить будь-хто, у кого є посилання.", "Available for 5 days, no password — anyone with the link can see it."],
+    "attendance.copyBtn": ["Скопировать", "Скопіювати", "Copy"],
+
+    "attendance.helpBtnLabel": ["Как пользоваться", "Як користуватись", "How to use"],
+    "attendance.helpTitle": ["Как пользоваться журналом посещаемости", "Як користуватись журналом відвідуваності", "How to use the attendance log"],
+    "attendance.helpWeeksSummary": ["Недели и дни", "Тижні і дні", "Weeks and days"],
+    "attendance.helpWeeksBody": [
+      "<p>Каждая календарная неделя показывает семь карточек-дней. Переключайтесь между неделями стрелками ◀/▶ или кнопкой «Сегодня».</p>",
+      "<p>Кожен календарний тиждень показує сім карток-днів. Перемикайтесь між тижнями стрілками ◀/▶ або кнопкою «Сьогодні».</p>",
+      "<p>Every calendar week shows seven day cards. Switch between weeks with the ◀/▶ arrows or the “Today” button.</p>",
+    ],
+    "attendance.helpEventsSummary": ["Мероприятия и явка", "Заходи і явка", "Events and attendance"],
+    "attendance.helpEventsBody": [
+      "<p><b>Мероприятия.</b> Клик по карточке дня открывает окно со всеми мероприятиями этого дня и списками явки. Кнопка «+» на карточке добавляет новое мероприятие на этот день (только у главного админа/админа).</p>" +
+      "<p><b>Явка.</b> Внутри мероприятия — «+ Добавить явку» (подробнее о загрузке скринов ниже). Крестик у ника убирает его из явки.</p>" +
+      "<p>Удаление мероприятия (✕ в открытом окне дня) удаляет и всю явку по нему.</p>",
+      "<p><b>Заходи.</b> Клік по картці дня відкриває вікно з усіма заходами цього дня і списками явки. Кнопка «+» на картці додає новий захід на цей день (тільки у головного адміна/адміна).</p>" +
+      "<p><b>Явка.</b> Всередині заходу — «+ Додати явку» (детальніше про завантаження скринів нижче). Хрестик біля ніка прибирає його з явки.</p>" +
+      "<p>Видалення заходу (✕ у відкритому вікні дня) видаляє і всю явку по ньому.</p>",
+      "<p><b>Events.</b> Clicking a day card opens a window with all of that day's events and attendance lists. The “+” button on the card adds a new event for that day (main admin/admin only).</p>" +
+      "<p><b>Attendance.</b> Inside an event — “+ Add attendance” (more on uploading screenshots below). The × next to a nickname removes it from attendance.</p>" +
+      "<p>Deleting an event (✕ in the open day window) also deletes all its attendance.</p>",
+    ],
+    "attendance.helpUploadSummary": ["Загрузка скриншотов", "Завантаження скриншотів", "Uploading screenshots"],
+    "attendance.helpUploadBody": [
+      "<p><b>Загрузка.</b> Внутри мероприятия нажмите «+ Добавить явку», выберите до 9 скриншотов со списком участников — подойдёт, например, скрин окна группы клана с никами. Если на том же скрине есть ещё и таблица боя (килы, смерти, PvP/PvE урон) — эти цифры распознаются заодно и сами попадут в «Отчёты по мероприятиям», отдельно загружать их не нужно.</p>" +
+      "<img src=\"assets/census-example.png\" alt=\"Пример подходящего скриншота — окно группы клана со списком участников\" />" +
+      "<p>Перед сохранением проверьте распознанные ники — чипы с крестиком можно убрать, если что-то распозналось неверно, или дописать ник вручную. Затем нажмите «Сохранить».</p>",
+      "<p><b>Завантаження.</b> Всередині заходу натисніть «+ Додати явку», оберіть до 9 скриншотів зі списком учасників — підійде, наприклад, скрин вікна групи клану з ніками. Якщо на тому ж скрині є ще й таблиця бою (кили, смерті, PvP/PvE урон) — ці цифри розпізнаються заодно і самі потраплять у «Звіти по заходах», окремо завантажувати їх не потрібно.</p>" +
+      "<img src=\"assets/census-example.png\" alt=\"Приклад придатного скриншота — вікно групи клану зі списком учасників\" />" +
+      "<p>Перед збереженням перевірте розпізнані ніки — чипи з хрестиком можна прибрати, якщо щось розпізналося невірно, або дописати нік вручну. Потім натисніть «Зберегти».</p>",
+      "<p><b>Uploading.</b> Inside an event, click “+ Add attendance”, choose up to 9 screenshots with a member list — e.g. a screenshot of the clan party window with nicknames works fine. If the same screenshot also has a combat table (kills, deaths, PvP/PvE damage), those numbers are recognized too and land in “Event Reports” automatically — no need to upload them separately.</p>" +
+      "<img src=\"assets/census-example.png\" alt=\"Example of a suitable screenshot — the clan party window with a member list\" />" +
+      "<p>Before saving, check the recognized nicknames — chips with an × can be removed if something was misread, or you can add a nickname manually. Then click “Save”.</p>",
+    ],
+    "attendance.helpSettingsSummary": ["Настройки (только у админа)", "Налаштування (тільки у адміна)", "Settings (admin only)"],
+    "attendance.helpSettingsBody": [
+      "<ul>" +
+      "<li>Скрыть/показать дни недели, на которые у клана никогда ничего не происходит.</li>" +
+      "<li>Включить/выключить вкладки в отчёте «Посещаемость» — какие из них вообще нужны.</li>" +
+      "<li>Включить новый вид отчёта «Посещаемость» (матрица по дням + режим «один день»).</li>" +
+      "<li>Переключить таблицу «Посещаемость» между светлой (по умолчанию) и тёмной раскраской.</li>" +
+      "</ul>",
+      "<ul>" +
+      "<li>Сховати/показати дні тижня, на які у клану ніколи нічого не відбувається.</li>" +
+      "<li>Увімкнути/вимкнути вкладки у звіті «Відвідуваність» — які з них взагалі потрібні.</li>" +
+      "<li>Увімкнути новий вигляд звіту «Відвідуваність» (матриця по днях + режим «один день»).</li>" +
+      "<li>Перемкнути таблицю «Відвідуваність» між світлим (за замовчуванням) і темним забарвленням.</li>" +
+      "</ul>",
+      "<ul>" +
+      "<li>Show/hide days of the week the clan never has anything happening on.</li>" +
+      "<li>Enable/disable tabs in the “Attendance” report — which ones are actually needed.</li>" +
+      "<li>Enable the new “Attendance” report view (day-by-day matrix + “one day” mode).</li>" +
+      "<li>Switch the “Attendance” table between light (default) and dark coloring.</li>" +
+      "</ul>",
+    ],
+    "attendance.helpPullSummary": ["Подтянуть из прошлой недели", "Підтягнути з минулого тижня", "Pull from last week"],
+    "attendance.helpPullBody": [
+      "<p><b>«Подтянуть из прошлой недели»</b> (в шапке рядом с «Сегодня») — копирует мероприятия из предыдущей недели в текущую (по тем же дням). Можно нажимать и на непустую неделю — старые мероприятия этой недели заменятся.</p>",
+      "<p><b>«Підтягнути з минулого тижня»</b> (у шапці поруч із «Сьогодні») — копіює заходи з попереднього тижня в поточний (за тими самими днями). Можна натискати і на непорожній тиждень — старі заходи цього тижня заміняться.</p>",
+      "<p><b>“Pull from last week”</b> (in the header next to “Today”) — copies events from the previous week into the current one (on the same days). You can click it on a non-empty week too — that week's old events get replaced.</p>",
+    ],
+    "attendance.helpReportSummary": ["Отчёт «Посещаемость»", "Звіт «Відвідуваність»", "“Attendance” report"],
+    "attendance.helpReportBody": [
+      "<p>Отчёт за произвольный период (даты «с»/«по», а не недели). Вкладки над таблицей сужают список: ходил/не ходил, новый/старый участник (по дате первого появления в переписи — «новый», если она в последние 7 дней), и сверка с налогами (кто не платит и не ходит / кто платит и ходит).</p>",
+      "<p>Звіт за довільний період (дати «з»/«по», а не тижні). Вкладки над таблицею звужують список: ходив/не ходив, новий/старий учасник (за датою першої появи в переписі — «новий», якщо вона в останні 7 днів), і звірка з податками (хто не платить і не ходить / хто платить і ходить).</p>",
+      "<p>A report for an arbitrary period (“from”/“to” dates, not weeks). The tabs above the table narrow the list: attended/didn't attend, new/old member (by the date first seen in the census — “new” if that's within the last 7 days), and a cross-check with taxes (who doesn't pay and doesn't attend / who pays and attends).</p>",
+    ],
+    "attendance.helpNewViewSummary": ["Новый вид отчёта", "Новий вигляд звіту", "The new report view"],
+    "attendance.helpNewViewBody": [
+      "<p>Включается в настройках. Добавляет переключатель «Период / Один день»: в «Периоде» таблица становится матрицей — по колонке на каждый день с мероприятием, ✓ если был; в «Одном дне» — два списка «Пришли» / «Не пришли» за выбранную дату. Пока новый вид выключен, отчёт выглядит как раньше — обычной таблицей.</p>",
+      "<p>Вмикається в налаштуваннях. Додає перемикач «Період / Один день»: у «Періоді» таблиця стає матрицею — по колонці на кожен день із заходом, ✓ якщо був; в «Одному дні» — два списки «Прийшли» / «Не прийшли» за обрану дату. Поки новий вигляд вимкнено, звіт виглядає як раніше — звичайною таблицею.</p>",
+      "<p>Enabled in settings. Adds a “Period / One day” switch: in “Period” the table becomes a matrix — one column per day with an event, ✓ if attended; in “One day” — two lists, “Arrived” / “Didn't arrive”, for the selected date. While the new view is off, the report looks as before — a plain table.</p>",
+    ],
+
+    "attendance.dayFull0": ["Понедельник", "Понеділок", "Monday"],
+    "attendance.dayFull1": ["Вторник", "Вівторок", "Tuesday"],
+    "attendance.dayFull2": ["Среда", "Середа", "Wednesday"],
+    "attendance.dayFull3": ["Четверг", "Четвер", "Thursday"],
+    "attendance.dayFull4": ["Пятница", "П'ятниця", "Friday"],
+    "attendance.dayFull5": ["Суббота", "Субота", "Saturday"],
+    "attendance.dayFull6": ["Воскресенье", "Неділя", "Sunday"],
+    "attendance.dayShort0": ["Пн", "Пн", "Mon"],
+    "attendance.dayShort1": ["Вт", "Вт", "Tue"],
+    "attendance.dayShort2": ["Ср", "Ср", "Wed"],
+    "attendance.dayShort3": ["Чт", "Чт", "Thu"],
+    "attendance.dayShort4": ["Пт", "Пт", "Fri"],
+    "attendance.dayShort5": ["Сб", "Сб", "Sat"],
+    "attendance.dayShort6": ["Вс", "Нд", "Sun"],
+
+    "attendance.filterAttendedOrPaid": ["Ходил / Платил", "Ходив / Платив", "Attended / Paid"],
+    "attendance.filterAttended": ["Ходил", "Ходив", "Attended"],
+    "attendance.filterNotAttended": ["Не ходил", "Не ходив", "Didn't attend"],
+    "attendance.filterNewAttended": ["Новый + ходил", "Новий + ходив", "New + attended"],
+    "attendance.filterNewNotAttended": ["Новый + не ходил", "Новий + не ходив", "New + didn't attend"],
+    "attendance.filterOldAttended": ["Старый + ходил", "Старий + ходив", "Old + attended"],
+    "attendance.filterOldNotAttended": ["Старый + не ходил", "Старий + не ходив", "Old + didn't attend"],
+    "attendance.filterNoTaxNoAttend": ["Не платит и не ходит", "Не платить і не ходить", "Doesn't pay, doesn't attend"],
+    "attendance.filterPaysAndAttends": ["Платит и ходит", "Платить і ходить", "Pays and attends"],
+
+    "attendance.readPrevWeekFailed": ["Не удалось прочитать прошлую неделю: ", "Не вдалося прочитати минулий тиждень: ", "Failed to read last week: "],
+    "attendance.noEventsPrevWeek": ["На прошлой неделе тоже нет мероприятий.", "На минулому тижні теж немає заходів.", "There are no events last week either."],
+    "attendance.confirmReplaceWeekEvents": [
+      "Заменить мероприятия этой недели на мероприятия из прошлой недели? Уже отмеченная явка на этой неделе будет удалена вместе с мероприятиями.",
+      "Замінити заходи цього тижня на заходи з минулого тижня? Уже відмічена явка на цьому тижні буде видалена разом із заходами.",
+      "Replace this week's events with last week's events? Attendance already marked this week will be deleted along with the events.",
+    ],
+    "attendance.clearCurrentWeekFailed": ["Не удалось очистить текущую неделю: ", "Не вдалося очистити поточний тиждень: ", "Failed to clear the current week: "],
+    "attendance.copyEventsFailed": ["Не удалось скопировать мероприятия: ", "Не вдалося скопіювати заходи: ", "Failed to copy events: "],
+    "attendance.pulledEventsCount": ["Подтянуто мероприятий: {n}.", "Підтягнуто заходів: {n}.", "Pulled events: {n}."],
+    "attendance.noEventsHint": ["Мероприятий нет.", "Заходів немає.", "There are no events."],
+    "attendance.addEventTitle": ["Добавить мероприятие", "Додати захід", "Add event"],
+    "attendance.eventNamePlaceholder": ["Название мероприятия", "Назва заходу", "Event name"],
+    "attendance.addBtn": ["Добавить", "Додати", "Add"],
+    "attendance.deleteEventTitle": ["Удалить мероприятие", "Видалити захід", "Delete event"],
+    "attendance.confirmDeleteEvent": ["Удалить мероприятие «{name}»? Явка по нему тоже удалится.", "Видалити захід «{name}»? Явка по ньому теж видалиться.", "Delete the event “{name}”? Its attendance will be deleted too."],
+    "attendance.deleteEventFailed": ["Не удалось удалить: ", "Не вдалося видалити: ", "Failed to delete: "],
+    "attendance.deleteEventNoPermission": ["Строка не удалилась — не хватает прав.", "Рядок не видалився — не вистачає прав.", "The row wasn't deleted — insufficient permissions."],
+
+    "attendance.newLabel": ["новый", "новий", "new"],
+    "attendance.newStandalone": ["Новый", "Новий", "New"],
+    "attendance.attendedCount": ["Ходил ({n})", "Ходив ({n})", "Attended ({n})"],
+    "attendance.paidSummary": ["Платил ({paid}) · Ходил и платил ({both}) · Итого платили ({total})", "Платив ({paid}) · Ходив і платив ({both}) · Разом платили ({total})", "Paid ({paid}) · Attended and paid ({both}) · Total paid ({total})"],
+    "attendance.neitherCount": ["Не ходил и не платил ({n})", "Не ходив і не платив ({n})", "Didn't attend or pay ({n})"],
+    "attendance.arrivedCount": ["Пришли ({n})", "Прийшли ({n})", "Arrived ({n})"],
+    "attendance.notArrivedCount": ["Не пришли ({n})", "Не прийшли ({n})", "Didn't arrive ({n})"],
+
+    "attendance.fillBothDates": ["Заполните обе даты.", "Заповніть обидві дати.", "Fill in both dates."],
+    "attendance.fromAfterTo": ["Дата «с» позже даты «по».", "Дата «з» пізніша за дату «по».", "The “from” date is after the “to” date."],
+    "attendance.pickDate": ["Выберите дату.", "Оберіть дату.", "Pick a date."],
+    "attendance.shareOnlyPeriodMode": ["Поделиться можно только в режиме «Период» (таблица), не в режиме «Один день».", "Поділитися можна тільки в режимі «Період» (таблиця), не в режимі «Один день».", "You can only share in “Period” mode (table), not in “One day” mode."],
+    "attendance.createLinkFailed": ["Не удалось создать ссылку: ", "Не вдалося створити посилання: ", "Failed to create the link: "],
+    "attendance.resizeHandleTitle": ["Потяните, чтобы изменить ширину таблицы", "Потягніть, щоб змінити ширину таблиці", "Drag to resize the table"],
+    "attendance.myPartyFallback": ["Моя пати", "Моя паті", "My party"],
+    "attendance.paidPrefix": ["Платил (", "Платив (", "Paid ("],
+    "attendance.closeParen": [")", ")", ")"],
+    "attendance.copyFailedShort": ["Не удалось", "Не вдалося", "Failed"],
+    "attendance.soloStatus": ["Соло", "Соло", "Solo"],
+    "attendance.groupPrefix": ["Группа: ", "Група: ", "Group: "],
+
+    "eventRoster.notMarkedHint": ["Явка ещё не отмечена.", "Явку ще не відмічено.", "Attendance isn't marked yet."],
+    "eventRoster.addAttendanceBtn": ["+ Добавить явку", "+ Додати явку", "+ Add attendance"],
+    "eventRoster.pickFilesBtn": ["Выбрать файлы…", "Вибрати файли…", "Choose files…"],
+    "eventRoster.manualPlaceholder": ["Добавить ник вручную", "Додати нік вручну", "Add nickname manually"],
+    "eventRoster.removeFromAttendanceTitle": ["Убрать из явки", "Прибрати з явки", "Remove from attendance"],
+    "eventRoster.onlyFirst9Files": ["Взяты только первые 9 файлов.", "Взято тільки перші 9 файлів.", "Only the first 9 files were taken."],
+    "eventRoster.recognizingScreen": ["Распознаю скрин {i} из {n}…", "Розпізнаю скрин {i} з {n}…", "Recognizing screenshot {i} of {n}…"],
+    "eventRoster.screenError": ["Скрин {i}: {msg}", "Скрин {i}: {msg}", "Screenshot {i}: {msg}"],
+    "eventRoster.doneRecognized": [
+      "Готово, распознано {n} ник(ов) со статистикой — проверьте перед сохранением.",
+      "Готово, розпізнано {n} нік(ів) зі статистикою — перевірте перед збереженням.",
+      "Done — {n} nickname(s) recognized with stats, review before saving.",
+    ],
+    "eventRoster.saveFailed": ["Не удалось сохранить: ", "Не вдалося зберегти: ", "Failed to save: "],
+    "eventRoster.batchSaveFailed": ["Не удалось сохранить метку скрина: ", "Не вдалося зберегти мітку скрина: ", "Failed to save the screenshot marker: "],
+    "eventRoster.statsSaveFailed": ["Явка сохранена, но статистика — нет: ", "Явку збережено, але статистику — ні: ", "Attendance saved, but the stats weren't: "],
   };
 
   function getLang(){
