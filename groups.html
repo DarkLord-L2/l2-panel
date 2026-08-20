@@ -173,60 +173,60 @@
 
   <div id="listView">
     <div class="page-head">
-      <h1>Все группы</h1>
+      <h1 data-i18n="groups.allGroupsTitle">Все группы</h1>
     </div>
     <div class="groups-toolbar">
-      <input type="text" class="search" id="groupSearch" placeholder="Поиск групп..." />
+      <input type="text" class="search" id="groupSearch" data-i18n-attr="placeholder:groups.searchPlaceholder" placeholder="Поиск групп..." />
       <div style="display:flex; gap:8px;">
-        <button class="btn" id="hiddenGroupsBtn" style="display:none;">Скрытые группы</button>
-        <button class="btn btn-primary" id="createGroupBtn" style="display:none;">+ Создать группу</button>
+        <button class="btn" id="hiddenGroupsBtn" style="display:none;" data-i18n="groups.hiddenGroupsBtn">Скрытые группы</button>
+        <button class="btn btn-primary" id="createGroupBtn" style="display:none;" data-i18n="groups.createGroupBtn">+ Создать группу</button>
       </div>
     </div>
     <div class="group-grid" id="groupGrid"></div>
-    <p class="empty-hint" id="groupsEmpty" style="display:none;">Групп ещё нет.</p>
+    <p class="empty-hint" id="groupsEmpty" style="display:none;" data-i18n="groups.noGroupsYet">Групп ещё нет.</p>
   </div>
 
   <div id="detailView" style="display:none;">
     <div class="group-detail-head">
       <div class="group-name-row">
-        <button class="btn" id="backToJournalBtn" style="display:none;">← Вернуться в журнал</button>
-        <button class="btn btn-ghost" id="groupBackBtn">← Все группы</button>
+        <button class="btn" id="backToJournalBtn" style="display:none;" data-i18n="groups.backToJournal">← Вернуться в журнал</button>
+        <button class="btn btn-ghost" id="groupBackBtn" data-i18n="groups.allGroupsBack">← Все группы</button>
         <h2 id="groupNameView" style="margin:0;"></h2>
         <input type="text" id="groupNameEdit" style="display:none;" />
       </div>
       <div class="group-detail-tools" id="groupDetailTools" style="display:none;">
-        <button class="btn" id="groupRenameBtn">Переименовать</button>
-        <button class="btn btn-primary" id="groupSaveNameBtn" style="display:none;">Сохранить</button>
-        <button class="btn btn-danger" id="groupHideBtn">Скрыть группу</button>
+        <button class="btn" id="groupRenameBtn" data-i18n="groups.renameBtn">Переименовать</button>
+        <button class="btn btn-primary" id="groupSaveNameBtn" style="display:none;" data-i18n="common.save">Сохранить</button>
+        <button class="btn btn-danger" id="groupHideBtn" data-i18n="groups.hideGroupBtn">Скрыть группу</button>
       </div>
     </div>
     <div class="group-leader-row">
-      <span>👑 Пати лидер: <span class="val" id="groupLeaderView">не назначен</span></span>
-      <span>🥈 Зам: <span class="val" id="groupDeputyView">не назначен</span></span>
+      <span><span data-i18n="groups.partyLeaderPrefix">👑 Пати лидер: </span><span class="val" id="groupLeaderView" data-i18n="groups.notAssigned">не назначен</span></span>
+      <span><span data-i18n="groups.deputyPrefix">🥈 Зам: </span><span class="val" id="groupDeputyView" data-i18n="groups.notAssigned">не назначен</span></span>
     </div>
     <div class="group-leader-row" id="groupClassRow" style="display:none;">
-      <span>Иконка группы:</span>
+      <span data-i18n="groups.groupIconLabel">Иконка группы:</span>
       <div class="gc-class-picker" id="groupClassPicker">
         <button type="button" class="gc-class-picker-btn" id="groupClassPickerBtn" style="width:auto; padding:6px 10px;">
           <img id="groupClassPickerIcon" class="gc-class-picker-icon" alt="" style="display:none;" />
-          <span id="groupClassPickerLabel">Не выбрана</span>
+          <span id="groupClassPickerLabel" data-i18n="roster.notChosenF">Не выбрана</span>
         </button>
         <div class="gc-class-dropdown" id="groupClassDropdown" style="display:none; min-width:220px;">
-          <input type="text" id="groupClassSearchInput" placeholder="Поиск класса..." />
+          <input type="text" id="groupClassSearchInput" data-i18n-attr="placeholder:roster.classSearchPlaceholder" placeholder="Поиск класса..." />
           <div class="gc-class-list" id="groupClassDropdownList"></div>
         </div>
       </div>
     </div>
 
     <section class="card" style="margin-top:16px;">
-      <h2>Участники <span class="badge" id="groupMemberCount"></span></h2>
+      <h2><span data-i18n="groups.membersTitle">Участники</span> <span class="badge" id="groupMemberCount"></span></h2>
       <div class="gm-member-grid" id="groupMembers"></div>
-      <p class="hint" id="groupMembersEmpty" style="display:none;">В группе пока никого нет.</p>
+      <p class="hint" id="groupMembersEmpty" style="display:none;" data-i18n="groups.noMembersYet">В группе пока никого нет.</p>
 
       <div class="manual-add" id="addMemberRow" style="display:none;">
-        <input type="text" id="newMemberNick" list="nickList" placeholder="Ник участника" />
+        <input type="text" id="newMemberNick" list="nickList" data-i18n-attr="placeholder:groups.nickPlaceholder" placeholder="Ник участника" />
         <datalist id="nickList"></datalist>
-        <button class="btn" id="addMemberBtn">Добавить</button>
+        <button class="btn" id="addMemberBtn" data-i18n="common.add">Добавить</button>
       </div>
       <p class="error-msg" id="groupError"></p>
     </section>
@@ -236,147 +236,147 @@
 
 <div class="modal-overlay" id="createOverlay">
   <div class="modal">
-    <button class="modal-close" id="createClose" title="Закрыть">×</button>
-    <h2>Новая группа</h2>
+    <button class="modal-close" id="createClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 data-i18n="groups.newGroupTitle">Новая группа</h2>
     <div class="field">
-      <label for="createGroupName">Название</label>
+      <label for="createGroupName" data-i18n="groups.nameLabel">Название</label>
       <input type="text" id="createGroupName" />
     </div>
     <p class="error-msg" id="createGroupError"></p>
-    <button class="btn btn-primary" id="createGroupConfirm">Создать</button>
+    <button class="btn btn-primary" id="createGroupConfirm" data-i18n="oc.create">Создать</button>
   </div>
 </div>
 
 <!-- Скрытые группы: вернуть обратно либо удалить навсегда (с подтверждением по имени) -->
 <div class="modal-overlay" id="hiddenGroupsOverlay">
   <div class="modal">
-    <button class="modal-close" id="hiddenGroupsClose" title="Закрыть">×</button>
-    <h2>Скрытые группы</h2>
-    <p class="hint">Скрытая группа не показывается в общем списке и в фильтрах «Пати» на других страницах, но участники и их данные никуда не деваются. Отсюда можно вернуть группу обратно либо удалить её навсегда.</p>
+    <button class="modal-close" id="hiddenGroupsClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 data-i18n="groups.hiddenGroupsTitle">Скрытые группы</h2>
+    <p class="hint" data-i18n="groups.hiddenGroupsHint">Скрытая группа не показывается в общем списке и в фильтрах «Пати» на других страницах, но участники и их данные никуда не деваются. Отсюда можно вернуть группу обратно либо удалить её навсегда.</p>
     <div id="hiddenGroupsList"></div>
-    <p class="hint" id="hiddenGroupsEmpty" style="display:none;">Скрытых групп нет.</p>
+    <p class="hint" id="hiddenGroupsEmpty" style="display:none;" data-i18n="groups.noHiddenGroups">Скрытых групп нет.</p>
   </div>
 </div>
 
 <div class="modal-overlay" id="confirmDeleteGroupOverlay">
   <div class="modal" style="max-width:400px;">
-    <button class="modal-close" id="confirmDeleteGroupClose" title="Закрыть">×</button>
-    <h2>Удалить группу навсегда?</h2>
-    <p class="hint">Это необратимо — участники клана никуда не денутся, но сама группа исчезнет без возможности восстановить. Чтобы подтвердить, впишите точное название группы: <b id="confirmDeleteGroupName"></b></p>
+    <button class="modal-close" id="confirmDeleteGroupClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 data-i18n="groups.deleteForeverTitle">Удалить группу навсегда?</h2>
+    <p class="hint"><span data-i18n="groups.deleteForeverHint">Это необратимо — участники клана никуда не денутся, но сама группа исчезнет без возможности восстановить. Чтобы подтвердить, впишите точное название группы: </span><b id="confirmDeleteGroupName"></b></p>
     <div class="field">
-      <input type="text" id="confirmDeleteGroupInput" placeholder="Название группы" />
+      <input type="text" id="confirmDeleteGroupInput" data-i18n-attr="placeholder:groups.deleteForeverPlaceholder" placeholder="Название группы" />
     </div>
     <p class="error-msg" id="confirmDeleteGroupError"></p>
-    <button class="btn btn-danger" id="confirmDeleteGroupBtn" disabled>Удалить навсегда</button>
+    <button class="btn btn-danger" id="confirmDeleteGroupBtn" disabled data-i18n="groups.deleteForeverBtn">Удалить навсегда</button>
   </div>
 </div>
 
 <!-- Класс участника — то же самое окно, что в «Проверке буста» -->
 <div class="modal-overlay" id="memberOverlay">
   <div class="modal gc-member-modal" style="width:640px; max-width:94vw;">
-    <button class="modal-close" id="memberClose" title="Закрыть">×</button>
+    <button class="modal-close" id="memberClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
     <h2 id="memberTitle"></h2>
 
     <div class="field">
-      <label>Класс</label>
+      <label data-i18n="groups.classFieldLabel">Класс</label>
       <div class="gc-class-row">
         <div class="gc-class-picker" id="classPicker1">
           <button type="button" class="gc-class-picker-btn" id="classPickerBtn1">
             <img id="classPickerIcon1" class="gc-class-picker-icon" alt="" style="display:none;" />
-            <span id="classPickerLabel1">Не выбран</span>
+            <span id="classPickerLabel1" data-i18n="roster.notChosenM">Не выбран</span>
           </button>
           <div class="gc-class-dropdown" id="classDropdown1" style="display:none;">
-            <input type="text" id="classSearchInput1" placeholder="Поиск класса..." />
+            <input type="text" id="classSearchInput1" data-i18n-attr="placeholder:roster.classSearchPlaceholder" placeholder="Поиск класса..." />
             <div class="gc-class-list" id="classDropdownList1"></div>
           </div>
         </div>
-        <input type="number" class="gc-class-level" id="classLevel1" min="1" max="85" placeholder="ур." title="Уровень, 1–85" />
+        <input type="number" class="gc-class-level" id="classLevel1" min="1" max="85" data-i18n-attr="placeholder:groups.levelPlaceholder;title:groups.levelTitle" placeholder="ур." title="Уровень, 1–85" />
       </div>
     </div>
 
     <div class="field">
-      <label>Вторая профессия (необязательно)</label>
+      <label data-i18n="groups.secondClassLabel">Вторая профессия (необязательно)</label>
       <div class="gc-class-row">
         <div class="gc-class-picker" id="classPicker2">
           <button type="button" class="gc-class-picker-btn" id="classPickerBtn2">
             <img id="classPickerIcon2" class="gc-class-picker-icon" alt="" style="display:none;" />
-            <span id="classPickerLabel2">Не выбрана</span>
+            <span id="classPickerLabel2" data-i18n="roster.notChosenF">Не выбрана</span>
           </button>
           <div class="gc-class-dropdown" id="classDropdown2" style="display:none;">
-            <input type="text" id="classSearchInput2" placeholder="Поиск класса..." />
+            <input type="text" id="classSearchInput2" data-i18n-attr="placeholder:roster.classSearchPlaceholder" placeholder="Поиск класса..." />
             <div class="gc-class-list" id="classDropdownList2"></div>
           </div>
         </div>
-        <input type="number" class="gc-class-level" id="classLevel2" min="1" max="85" placeholder="ур." title="Уровень, 1–85" />
+        <input type="number" class="gc-class-level" id="classLevel2" min="1" max="85" data-i18n-attr="placeholder:groups.levelPlaceholder;title:groups.levelTitle" placeholder="ур." title="Уровень, 1–85" />
       </div>
     </div>
 
     <div class="field">
-      <label>Третья профессия (необязательно)</label>
+      <label data-i18n="groups.thirdClassLabel">Третья профессия (необязательно)</label>
       <div class="gc-class-row">
         <div class="gc-class-picker" id="classPicker3">
           <button type="button" class="gc-class-picker-btn" id="classPickerBtn3">
             <img id="classPickerIcon3" class="gc-class-picker-icon" alt="" style="display:none;" />
-            <span id="classPickerLabel3">Не выбрана</span>
+            <span id="classPickerLabel3" data-i18n="roster.notChosenF">Не выбрана</span>
           </button>
           <div class="gc-class-dropdown" id="classDropdown3" style="display:none;">
-            <input type="text" id="classSearchInput3" placeholder="Поиск класса..." />
+            <input type="text" id="classSearchInput3" data-i18n-attr="placeholder:roster.classSearchPlaceholder" placeholder="Поиск класса..." />
             <div class="gc-class-list" id="classDropdownList3"></div>
           </div>
         </div>
-        <input type="number" class="gc-class-level" id="classLevel3" min="1" max="85" placeholder="ур." title="Уровень, 1–85" />
+        <input type="number" class="gc-class-level" id="classLevel3" min="1" max="85" data-i18n-attr="placeholder:groups.levelPlaceholder;title:groups.levelTitle" placeholder="ур." title="Уровень, 1–85" />
       </div>
     </div>
 
     <div class="field">
-      <label>Четвёртая профессия (необязательно)</label>
+      <label data-i18n="groups.fourthClassLabel">Четвёртая профессия (необязательно)</label>
       <div class="gc-class-row">
         <div class="gc-class-picker" id="classPicker4">
           <button type="button" class="gc-class-picker-btn" id="classPickerBtn4">
             <img id="classPickerIcon4" class="gc-class-picker-icon" alt="" style="display:none;" />
-            <span id="classPickerLabel4">Не выбрана</span>
+            <span id="classPickerLabel4" data-i18n="roster.notChosenF">Не выбрана</span>
           </button>
           <div class="gc-class-dropdown" id="classDropdown4" style="display:none;">
-            <input type="text" id="classSearchInput4" placeholder="Поиск класса..." />
+            <input type="text" id="classSearchInput4" data-i18n-attr="placeholder:roster.classSearchPlaceholder" placeholder="Поиск класса..." />
             <div class="gc-class-list" id="classDropdownList4"></div>
           </div>
         </div>
-        <input type="number" class="gc-class-level" id="classLevel4" min="1" max="85" placeholder="ур." title="Уровень, 1–85" />
+        <input type="number" class="gc-class-level" id="classLevel4" min="1" max="85" data-i18n-attr="placeholder:groups.levelPlaceholder;title:groups.levelTitle" placeholder="ур." title="Уровень, 1–85" />
       </div>
     </div>
 
     <p class="error-msg" id="memberError"></p>
-    <button class="btn btn-primary" id="memberSaveBtn">Сохранить</button>
+    <button class="btn btn-primary" id="memberSaveBtn" data-i18n="common.save">Сохранить</button>
   </div>
 </div>
 
-<button class="help-btn" id="helpBtn" title="Как пользоваться">?</button>
+<button class="help-btn" id="helpBtn" data-i18n-attr="title:common.howToUse" title="Как пользоваться">?</button>
 <div class="modal-overlay" id="helpOverlay">
   <div class="modal">
-    <button class="modal-close" id="helpClose" title="Закрыть">×</button>
-    <h2>Как пользоваться группами</h2>
+    <button class="modal-close" id="helpClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 data-i18n="groups.helpTitle">Как пользоваться группами</h2>
 
     <details class="help-section">
-      <summary>Группы</summary>
+      <summary data-i18n="groups.helpGroupsSummary">Группы</summary>
       <div class="help-body">
-        <p>Карточки — это группы клана (например, под ивенты). Клик по карточке открывает список участников.</p>
+        <p data-i18n="groups.helpGroupsBody">Карточки — это группы клана (например, под ивенты). Клик по карточке открывает список участников.</p>
       </div>
     </details>
 
     <details class="help-section">
-      <summary>Управление (главный админ и админ)</summary>
+      <summary data-i18n="groups.helpManageSummary">Управление (главный админ и админ)</summary>
       <div class="help-body">
-        <p>Можно создавать группы («+ Создать группу»), переименовывать их, удалять и добавлять/убирать участников по нику (с подсказками из последней переписи).</p>
-        <p>Остальным группы видны только для просмотра.</p>
+        <p data-i18n="groups.helpManageBody1">Можно создавать группы («+ Создать группу»), переименовывать их, удалять и добавлять/убирать участников по нику (с подсказками из последней переписи).</p>
+        <p data-i18n="groups.helpManageBody2">Остальным группы видны только для просмотра.</p>
       </div>
     </details>
 
     <details class="help-section">
-      <summary>Классы и уровни участника</summary>
+      <summary data-i18n="groups.helpClassesSummary">Классы и уровни участника</summary>
       <div class="help-body">
-        <p>«⋮» у карточки участника → «Класс…» открывает окно, где можно задать до четырёх профессий. Рядом с каждой — поле уровня от 1 до 85 (необязательное; поле включается, только когда профессия выбрана).</p>
-        <p>Первая профессия становится большой аватаркой участника, остальные — маленькими кружочками рядом с ней; при наведении на кружок видно название и уровень. Под ником профессии перечислены через «/» вместе с уровнями.</p>
-        <p>Уровень пока показывается только здесь, в «Группах» — в отчётах и «Проверке буста» он не участвует.</p>
+        <p data-i18n="groups.helpClassesBody1">«⋮» у карточки участника → «Класс…» открывает окно, где можно задать до четырёх профессий. Рядом с каждой — поле уровня от 1 до 85 (необязательное; поле включается, только когда профессия выбрана).</p>
+        <p data-i18n="groups.helpClassesBody2">Первая профессия становится большой аватаркой участника, остальные — маленькими кружочками рядом с ней; при наведении на кружок видно название и уровень. Под ником профессии перечислены через «/» вместе с уровнями.</p>
+        <p data-i18n="groups.helpClassesBody3">Уровень пока показывается только здесь, в «Группах» — в отчётах и «Проверке буста» он не участвует.</p>
       </div>
     </details>
   </div>
@@ -384,6 +384,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=17"></script>
+<script src="js/i18n.js?v=1"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -393,7 +394,8 @@
   const profile = await L2Cabinet.getProfile();
   if(!profile){
     document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
-      '<h1>⚠ Профиль не найден</h1><p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+      '<h1>' + L2I18n.t("shell.profileNotFoundTitle", "⚠ Профиль не найден") + '</h1>' +
+      '<p class="hint">' + L2I18n.t("common.contactLeader", "Обратитесь к клан-лидеру.") + '</p></div></div>';
     return;
   }
 
@@ -475,7 +477,7 @@
     if(n >= 1e9) return (n / 1e9).toFixed(1) + "B";
     if(n >= 1e6) return (n / 1e6).toFixed(1) + "M";
     if(n >= 1e3) return (n / 1e3).toFixed(1) + "K";
-    return Math.round(n).toLocaleString("ru-RU");
+    return Math.round(n).toLocaleString(L2I18n.locale());
   }
 
   async function loadNickOptions(){
@@ -563,15 +565,15 @@
           <img class="group-card-icon" src="${iconSrc}" alt="" />
           <div class="group-card-titles">
             <div class="group-card-name">${escapeHtml(g.name)}</div>
-            <div class="group-card-leader">${escapeHtml(g.leader_nickname || "лидер не назначен")}</div>
+            <div class="group-card-leader">${escapeHtml(g.leader_nickname || L2I18n.t("groups.leaderNotAssignedFallback", "лидер не назначен"))}</div>
           </div>
         </div>
         <div class="group-card-stats">
-          <div class="group-card-stat"><div class="lbl">Ср. К/Д</div><div class="val">${avgKd.toFixed(2)}</div></div>
-          <div class="group-card-stat"><div class="lbl">Ср. Урон</div><div class="val">${formatShort(avgPvp)}</div></div>
+          <div class="group-card-stat"><div class="lbl">${L2I18n.t("groups.avgKd", "Ср. К/Д")}</div><div class="val">${avgKd.toFixed(2)}</div></div>
+          <div class="group-card-stat"><div class="lbl">${L2I18n.t("groups.avgDamage", "Ср. Урон")}</div><div class="val">${formatShort(avgPvp)}</div></div>
         </div>
         <div class="group-card-foot">
-          <span class="group-card-count">👥 ${nicks.length} участников</span>
+          <span class="group-card-count">👥 ${nicks.length}${L2I18n.t("groups.membersCountSuffix", " участников")}</span>
           <span class="group-card-rank">#${rankMap.get(g.id)}</span>
         </div>
       `;
@@ -602,8 +604,8 @@
   // (назначение теперь делается через меню «⋮» конкретного участника)
   function renderGroupLeaderRow(){
     const g = groups.find(x => x.id === currentGroupId);
-    document.getElementById("groupLeaderView").textContent = g?.leader_nickname || "не назначен";
-    document.getElementById("groupDeputyView").textContent = g?.deputy_nickname || "не назначен";
+    document.getElementById("groupLeaderView").textContent = g?.leader_nickname || L2I18n.t("groups.notAssigned", "не назначен");
+    document.getElementById("groupDeputyView").textContent = g?.deputy_nickname || L2I18n.t("groups.notAssigned", "не назначен");
   }
 
   // назначить/снять роль лидера или зама пати для конкретного ника — если он уже
@@ -623,7 +625,7 @@
     }
     const { error } = await db.from("clan_groups").update(patch).eq("id", currentGroupId);
     closeMemberMenu();
-    if(error){ alert("Не удалось сохранить назначение: " + error.message); return; }
+    if(error){ alert(L2I18n.t("groups.assignFailed", "Не удалось сохранить назначение: ") + error.message); return; }
     if(g) Object.assign(g, patch);
     renderGroupLeaderRow();
     renderMembers();
@@ -639,19 +641,19 @@
     list.className = "move-list";
 
     const leaderBtn = document.createElement("button");
-    leaderBtn.textContent = "👑 Пати Лидер";
+    leaderBtn.textContent = L2I18n.t("groups.partyLeaderOption", "👑 Пати Лидер");
     leaderBtn.addEventListener("click", (e) => { e.stopPropagation(); assignPartyRole(nick, "leader"); });
     list.appendChild(leaderBtn);
 
     const deputyBtn = document.createElement("button");
-    deputyBtn.textContent = "🥈 Зам пати лидера";
+    deputyBtn.textContent = L2I18n.t("groups.partyDeputyOption", "🥈 Зам пати лидера");
     deputyBtn.addEventListener("click", (e) => { e.stopPropagation(); assignPartyRole(nick, "deputy"); });
     list.appendChild(deputyBtn);
 
     if(g?.leader_nickname === nick || g?.deputy_nickname === nick){
       const clearBtn = document.createElement("button");
       clearBtn.className = "danger";
-      clearBtn.textContent = "Снять назначение";
+      clearBtn.textContent = L2I18n.t("groups.clearAssignment", "Снять назначение");
       clearBtn.addEventListener("click", (e) => { e.stopPropagation(); assignPartyRole(nick, null); });
       list.appendChild(clearBtn);
     }
@@ -659,7 +661,7 @@
 
     const backBtn = document.createElement("button");
     backBtn.className = "move-back";
-    backBtn.textContent = "← Назад";
+    backBtn.textContent = L2I18n.t("groups.backOption", "← Назад");
     backBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       const card = menu.parentElement;
@@ -675,7 +677,7 @@
     const icon = classIcon(g?.class_name);
     const iconEl = document.getElementById("groupClassPickerIcon");
     if(icon){ iconEl.src = icon; iconEl.style.display = ""; } else { iconEl.style.display = "none"; }
-    document.getElementById("groupClassPickerLabel").textContent = g?.class_name || "Не выбрана";
+    document.getElementById("groupClassPickerLabel").textContent = g?.class_name || L2I18n.t("roster.notChosenF", "Не выбрана");
   }
   function renderGroupClassDropdownList(filterText){
     const list = document.getElementById("groupClassDropdownList");
@@ -683,7 +685,7 @@
     list.innerHTML = "";
     const clearOpt = document.createElement("div");
     clearOpt.className = "gc-class-option gc-class-clear";
-    clearOpt.textContent = "Не выбрана";
+    clearOpt.textContent = L2I18n.t("roster.notChosenF", "Не выбрана");
     clearOpt.addEventListener("click", () => setGroupClass(""));
     list.appendChild(clearOpt);
     (window.L2_CLASSES || []).filter(c => !q || c.name.toLowerCase().includes(q)).forEach(c => {
@@ -713,7 +715,7 @@
   async function setGroupClass(className){
     closeGroupClassDropdown();
     const { error } = await db.from("clan_groups").update({ class_name: className || null }).eq("id", currentGroupId);
-    if(error){ alert("Не удалось сохранить иконку группы: " + error.message); return; }
+    if(error){ alert(L2I18n.t("groups.iconSaveFailed", "Не удалось сохранить иконку группы: ") + error.message); return; }
     const g = groups.find(x => x.id === currentGroupId);
     if(g) g.class_name = className || null;
     renderGroupClassPickerButton();
@@ -734,7 +736,7 @@
     menu.className = "gm-member-menu";
 
     const boostBtn = document.createElement("button");
-    boostBtn.textContent = "Показать буст";
+    boostBtn.textContent = L2I18n.t("groups.showBoost", "Показать буст");
     boostBtn.addEventListener("click", () => {
       closeMemberMenu();
       if(window.top && window.top.L2Nav) window.top.L2Nav.openGearCheck(currentGroupId);
@@ -745,7 +747,7 @@
     // любого участника своей группы — остальным пункт не показываем
     if(canOpenCabinets()){
       const cabinetBtn = document.createElement("button");
-      cabinetBtn.textContent = "Личный кабинет";
+      cabinetBtn.textContent = L2I18n.t("groups.myCabinetOption", "Личный кабинет");
       cabinetBtn.addEventListener("click", () => {
         closeMemberMenu();
         if(window.top && window.top.L2Nav) window.top.L2Nav.openMyCabinet(nick, "groups");
@@ -755,7 +757,7 @@
 
     if(isAdmin){
       const classBtn = document.createElement("button");
-      classBtn.textContent = "Класс…";
+      classBtn.textContent = L2I18n.t("groups.classOption", "Класс…");
       classBtn.addEventListener("click", () => {
         closeMemberMenu();
         openMemberModal(nick);
@@ -763,7 +765,7 @@
       menu.appendChild(classBtn);
 
       const assignBtn = document.createElement("button");
-      assignBtn.textContent = "Назначить…";
+      assignBtn.textContent = L2I18n.t("groups.assignOption", "Назначить…");
       assignBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         renderAssignSubmenu(menu, nick);
@@ -771,7 +773,7 @@
       menu.appendChild(assignBtn);
 
       const moveBtn = document.createElement("button");
-      moveBtn.textContent = "Переместить в группу…";
+      moveBtn.textContent = L2I18n.t("groups.moveOption", "Переместить в группу…");
       moveBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         renderMoveSubmenu(menu, nick);
@@ -780,7 +782,7 @@
 
       const delBtn = document.createElement("button");
       delBtn.className = "danger";
-      delBtn.textContent = "Убрать из группы";
+      delBtn.textContent = L2I18n.t("groups.removeOption", "Убрать из группы");
       delBtn.addEventListener("click", async () => {
         closeMemberMenu();
         await db.from("clan_group_members").delete().eq("group_id", currentGroupId).eq("nickname", nick);
@@ -805,13 +807,13 @@
     const searchEl = document.getElementById("classSearchInput" + n);
     const listEl = document.getElementById("classDropdownList" + n);
     const levelEl = document.getElementById("classLevel" + n);
-    const emptyLabel = n === 1 ? "Не выбран" : "Не выбрана";
+    function emptyLabel(){ return n === 1 ? L2I18n.t("roster.notChosenM", "Не выбран") : L2I18n.t("roster.notChosenF", "Не выбрана"); }
     let className = "";
 
     function renderButton(){
       const icon = classIcon(className);
       if(icon){ iconEl.src = icon; iconEl.style.display = ""; } else { iconEl.style.display = "none"; }
-      labelEl.textContent = className || emptyLabel;
+      labelEl.textContent = className || emptyLabel();
       // уровень без класса смысла не имеет — поле гаснет и очищается
       levelEl.disabled = !className;
       if(!className) levelEl.value = "";
@@ -822,7 +824,7 @@
       listEl.innerHTML = "";
       const clearOpt = document.createElement("div");
       clearOpt.className = "gc-class-option gc-class-clear";
-      clearOpt.textContent = emptyLabel;
+      clearOpt.textContent = emptyLabel();
       clearOpt.addEventListener("click", () => pick(""));
       listEl.appendChild(clearOpt);
       (window.L2_CLASSES || []).filter(c => !q || c.name.toLowerCase().includes(q)).forEach(c => {
@@ -897,7 +899,7 @@
       const slot = CLASS_SLOTS[i];
       const level = slot.level();
       if(Number.isNaN(level) || (level !== null && (level < 1 || level > 85))){
-        errEl.textContent = `Уровень должен быть числом от 1 до 85 (профессия №${i + 1}).`;
+        errEl.textContent = L2I18n.t("groups.levelRangeError", "Уровень должен быть числом от 1 до 85 (профессия №{n}).").replace("{n}", i + 1);
         return;
       }
       row[classNameCol(i + 1)] = slot.name() || null;
@@ -922,7 +924,7 @@
       const p = document.createElement("p");
       p.className = "hint";
       p.style.cssText = "padding:6px 10px; margin:0; font-size:12px;";
-      p.textContent = "Других групп нет.";
+      p.textContent = L2I18n.t("groups.noOtherGroups", "Других групп нет.");
       list.appendChild(p);
     } else {
       others.forEach(g => {
@@ -939,7 +941,7 @@
 
     const backBtn = document.createElement("button");
     backBtn.className = "move-back";
-    backBtn.textContent = "← Назад";
+    backBtn.textContent = L2I18n.t("groups.backOption", "← Назад");
     backBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       const card = menu.parentElement;
@@ -956,7 +958,7 @@
     const { error: insErr } = await db.from("clan_group_members").insert({ group_id: targetGroupId, nickname: nick });
     if(insErr){
       closeMemberMenu();
-      alert(insErr.code === "23505" ? `«${nick}» уже есть в этой группе.` : ("Не удалось переместить: " + insErr.message));
+      alert(insErr.code === "23505" ? L2I18n.t("groups.alreadyInGroup", "«{nick}» уже есть в этой группе.").replace("{nick}", nick) : (L2I18n.t("groups.moveFailed", "Не удалось переместить: ") + insErr.message));
       return;
     }
     await db.from("clan_group_members").delete().eq("group_id", currentGroupId).eq("nickname", nick);
@@ -998,8 +1000,8 @@
       card.className = "gm-member-card";
       card.innerHTML =
         `<div class="avatar-wrap"><img class="avatar" src="${avatarSrc}" alt="" />` +
-        (isLeader ? `<span class="crown-badge" title="Пати лидер">👑</span>` : "") +
-        (isDeputy ? `<span class="crown-badge deputy" title="Зам пати лидера">👑</span>` : "") +
+        (isLeader ? `<span class="crown-badge" title="${escapeHtml(L2I18n.t("groups.partyLeaderTitle", "Пати лидер"))}">👑</span>` : "") +
+        (isDeputy ? `<span class="crown-badge deputy" title="${escapeHtml(L2I18n.t("groups.partyDeputyTitle", "Зам пати лидера"))}">👑</span>` : "") +
         (subAvatars ? `<span class="sub-avatar-row">${subAvatars}</span>` : "") +
         `</div>` +
         `<span class="who"><span class="name">${escapeHtml(nick)}</span>` +
@@ -1007,14 +1009,14 @@
       const menuBtn = document.createElement("button");
       menuBtn.className = "gm-member-menu-btn";
       menuBtn.textContent = "⋮";
-      menuBtn.title = "Действия";
+      menuBtn.title = L2I18n.t("groups.actionsTitle", "Действия");
       menuBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleMemberMenu(card, nick); });
       card.appendChild(menuBtn);
 
       if(isAdmin){
         card.classList.add("draggable");
         card.draggable = true;
-        card.title = "Перетащите на другого участника, чтобы поменять местами";
+        card.title = L2I18n.t("groups.dragToSwapTitle", "Перетащите на другого участника, чтобы поменять местами");
         card.addEventListener("dragstart", (e) => {
           e.dataTransfer.setData("text/plain", nick);
           e.dataTransfer.effectAllowed = "move";
@@ -1117,7 +1119,7 @@
   document.getElementById("createGroupConfirm").addEventListener("click", async () => {
     const name = document.getElementById("createGroupName").value.trim();
     const errEl = document.getElementById("createGroupError");
-    if(!name){ errEl.textContent = "Введите название."; return; }
+    if(!name){ errEl.textContent = L2I18n.t("groups.enterNamePrompt", "Введите название."); return; }
     const { error } = await db.from("clan_groups").insert({ clan_id: profile.clan_id, name, created_by: profile.id });
     if(error){ errEl.textContent = error.message; return; }
     document.getElementById("createOverlay").classList.remove("show");
@@ -1136,7 +1138,7 @@
   document.getElementById("groupSaveNameBtn").addEventListener("click", async () => {
     const name = document.getElementById("groupNameEdit").value.trim();
     const errEl = document.getElementById("groupError");
-    if(!name){ errEl.textContent = "Название не может быть пустым."; return; }
+    if(!name){ errEl.textContent = L2I18n.t("groups.nameCannotBeEmpty", "Название не может быть пустым."); return; }
     const { error } = await db.from("clan_groups").update({ name }).eq("id", currentGroupId);
     if(error){ errEl.textContent = error.message; return; }
     errEl.textContent = "";
@@ -1152,7 +1154,7 @@
   // ---- скрытие группы (удалить навсегда можно только из «Скрытые группы») ----
   document.getElementById("groupHideBtn").addEventListener("click", async () => {
     const g = groups.find(x => x.id === currentGroupId);
-    if(!confirm(`Скрыть группу «${g?.name}»? Она пропадёт из общего списка и фильтров «Пати», но данные участников сохранятся — вернуть или удалить навсегда можно в «Скрытые группы».`)) return;
+    if(!confirm(L2I18n.t("groups.confirmHide", "Скрыть группу «{name}»? Она пропадёт из общего списка и фильтров «Пати», но данные участников сохранятся — вернуть или удалить навсегда можно в «Скрытые группы».").replace("{name}", g?.name))) return;
     await db.from("clan_groups").update({ hidden: true }).eq("id", currentGroupId);
     document.getElementById("detailView").style.display = "none";
     document.getElementById("listView").style.display = "";
@@ -1179,7 +1181,7 @@
 
       const showBtn = document.createElement("button");
       showBtn.className = "btn";
-      showBtn.textContent = "Показать";
+      showBtn.textContent = L2I18n.t("groups.showBtn", "Показать");
       showBtn.addEventListener("click", async () => {
         await db.from("clan_groups").update({ hidden: false }).eq("id", g.id);
         await loadGroups();
@@ -1189,7 +1191,7 @@
 
       const delBtn = document.createElement("button");
       delBtn.className = "btn btn-danger";
-      delBtn.textContent = "Удалить навсегда";
+      delBtn.textContent = L2I18n.t("groups.deleteForeverBtn", "Удалить навсегда");
       delBtn.addEventListener("click", () => openConfirmDeleteGroup(g));
 
       actions.append(showBtn, delBtn);
@@ -1247,7 +1249,7 @@
     errEl.textContent = "";
     if(!nick) return;
     const existing = membersByGroup.get(currentGroupId) || [];
-    if(existing.includes(nick)){ errEl.textContent = "Этот ник уже в группе."; return; }
+    if(existing.includes(nick)){ errEl.textContent = L2I18n.t("groups.nickAlreadyInGroup", "Этот ник уже в группе."); return; }
     const { error } = await db.from("clan_group_members").insert({ group_id: currentGroupId, nickname: nick });
     if(error){ errEl.textContent = error.message; return; }
     membersByGroup.set(currentGroupId, [...existing, nick]);
@@ -1266,6 +1268,19 @@
   });
   document.getElementById("helpOverlay").addEventListener("click", (e) => {
     if(e.target.id === "helpOverlay") e.currentTarget.classList.remove("show");
+  });
+
+  window.addEventListener("storage", (e) => {
+    if(e.key !== "l2Lang") return;
+    closeMemberMenu();
+    if(document.getElementById("detailView").style.display !== "none"){
+      renderGroupLeaderRow();
+      renderGroupClassPickerButton();
+      renderMembers();
+    } else {
+      renderGrid(document.getElementById("groupSearch").value);
+    }
+    if(document.getElementById("hiddenGroupsOverlay").classList.contains("show")) renderHiddenGroupsList();
   });
 
   await loadNickOptions();
