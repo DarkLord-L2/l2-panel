@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=11" />
+<link rel="stylesheet" href="js/theme.css?v=12" />
 </head>
 <body>
 
@@ -12,12 +12,13 @@
   <div class="topbar">
     <div class="brand" id="brand">
       <img id="brandLogo" alt="" style="display:none; height:22px; border-radius:4px; vertical-align:-6px; margin-right:8px;" />
-      <span id="brandName">Кабинет клана</span>
+      <span id="brandName" data-i18n="shell.defaultBrandName">Кабинет клана</span>
     </div>
     <div class="who">
+      <div class="lang-switch" id="langSwitch"></div>
       <span class="name" id="whoName"></span>
       <span class="badge" id="whoRole"></span>
-      <button class="btn btn-ghost" id="signOutBtn">Выйти</button>
+      <button class="btn btn-ghost" id="signOutBtn" data-i18n="shell.signOut">Выйти</button>
     </div>
   </div>
   <div class="app-body">
@@ -28,6 +29,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=17"></script>
+<script src="js/i18n.js?v=1"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -54,8 +56,8 @@
   // Чисто визуальная группировка пунктов меню — на права доступа не влияет,
   // каждый раздел внутри группы по-прежнему включается/выключается по роли отдельно.
   const NAV_GROUPS = [
-    { label: "Учёт клана", keys: ["census", "taxes", "attendance"] },
-    { label: "ДКП", keys: ["loot_split", "loot_split_party", "loot_payout"] },
+    { label: "Учёт клана", i18nKey: "navgroup.uchet", keys: ["census", "taxes", "attendance"] },
+    { label: "ДКП", i18nKey: "navgroup.dkp", keys: ["loot_split", "loot_split_party", "loot_payout"] },
   ];
 
   // Иконки меню — инлайн SVG (не картинки-файлы, чтобы не плодить запросы и чтобы
@@ -89,9 +91,9 @@
   if(!profile){
     // сессия есть, а профиля нет — учётку создали не полностью, работать нельзя
     document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
-      '<h1>⚠ Профиль не найден</h1>' +
-      '<p class="hint">Ваш логин существует, но для него не создана запись профиля. Обратитесь к клан-лидеру.</p>' +
-      '<button class="btn" onclick="L2Cabinet.signOut()">Выйти</button>' +
+      '<h1>' + L2I18n.t("shell.profileNotFoundTitle", "⚠ Профиль не найден") + '</h1>' +
+      '<p class="hint">' + L2I18n.t("shell.profileNotFoundHint", "Ваш логин существует, но для него не создана запись профиля. Обратитесь к клан-лидеру.") + '</p>' +
+      '<button class="btn" onclick="L2Cabinet.signOut()">' + L2I18n.t("shell.signOut", "Выйти") + '</button>' +
       "</div></div>";
     return;
   }
@@ -101,9 +103,9 @@
     // не отдадутся ни по одному запросу (RLS), но так у человека есть понятное
     // сообщение вместо пустого зависшего интерфейса
     document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
-      '<h1>⛔ Доступ приостановлен</h1>' +
-      '<p class="hint">Доступ к кабинету клана временно отключён. Обратитесь к клан-лидеру.</p>' +
-      '<button class="btn" onclick="L2Cabinet.signOut()">Выйти</button>' +
+      '<h1>' + L2I18n.t("shell.accessSuspendedTitle", "⛔ Доступ приостановлен") + '</h1>' +
+      '<p class="hint">' + L2I18n.t("shell.accessSuspendedHint", "Доступ к кабинету клана временно отключён. Обратитесь к клан-лидеру.") + '</p>' +
+      '<button class="btn" onclick="L2Cabinet.signOut()">' + L2I18n.t("shell.signOut", "Выйти") + '</button>' +
       "</div></div>";
     return;
   }
@@ -112,7 +114,13 @@
     return;
   }
 
-  if(profile.clans?.display_name) document.getElementById("brandName").textContent = profile.clans.display_name;
+  L2I18n.renderSwitcher(document.getElementById("langSwitch"));
+
+  if(profile.clans?.display_name){
+    const brandNameEl = document.getElementById("brandName");
+    brandNameEl.textContent = profile.clans.display_name;
+    brandNameEl.removeAttribute("data-i18n"); // реальное имя клана — не переводим при смене языка
+  }
   if(profile.clans?.logo_url){
     const logo = document.getElementById("brandLogo");
     logo.src = profile.clans.logo_url;
@@ -132,7 +140,7 @@
   function renderSection(key, extra){
     const view = SECTION_VIEWS[key];
     content.innerHTML = "";
-    if(!view){ content.innerHTML = '<p class="hint">Раздел не найден.</p>'; return; }
+    if(!view){ content.innerHTML = '<p class="hint">' + L2I18n.t("shell.sectionNotFound", "Раздел не найден.") + '</p>'; return; }
 
     if(view.type === "iframe"){
       const frame = document.createElement("iframe");
@@ -143,10 +151,11 @@
       frame.src = src;
       content.appendChild(frame);
     } else {
-      const label = sections.find(s => s.key === key)?.label || key;
+      const label = L2I18n.t("section." + key, sections.find(s => s.key === key)?.label || key);
       const stub = document.createElement("div");
       stub.className = "card";
-      stub.innerHTML = "<h2>" + label + "</h2><p class=\"hint\">Этот раздел скоро появится.</p>";
+      stub.innerHTML = "<h2></h2><p class=\"hint\">" + L2I18n.t("shell.sectionComingSoon", "Этот раздел скоро появится.") + "</p>";
+      stub.querySelector("h2").textContent = label;
       content.appendChild(stub);
     }
 
@@ -164,7 +173,9 @@
     a.innerHTML = navIcon(s.key);
     const label = document.createElement("span");
     label.className = "nav-label";
-    label.textContent = s.label;
+    label.dataset.i18n = "section." + s.key;
+    label.dataset.i18nFallback = s.label;
+    label.textContent = L2I18n.t("section." + s.key, s.label);
     a.appendChild(label);
     a.style.setProperty("--i", navStagger++);
     a.addEventListener("click", (e) => { e.preventDefault(); renderSection(s.key); });
@@ -205,7 +216,8 @@
     toggle.type = "button";
     toggle.className = "nav-group-toggle" + (startsOpen ? " open" : "");
     toggle.innerHTML = navIcon(GROUP_ICON[group.label]) +
-      '<span class="nav-label">' + group.label + '</span><span class="nav-group-arrow">▸</span>';
+      '<span class="nav-label" data-i18n="' + group.i18nKey + '" data-i18n-fallback="' + group.label + '">' +
+      L2I18n.t(group.i18nKey, group.label) + '</span><span class="nav-group-arrow">▸</span>';
     toggle.style.setProperty("--i", navStagger++);
 
     const childWrap = document.createElement("div");
@@ -222,7 +234,7 @@
   });
 
   if(startKey) renderSection(startKey);
-  else content.innerHTML = '<p class="hint">Для вашей роли пока не открыто ни одного раздела.</p>';
+  else content.innerHTML = '<p class="hint">' + L2I18n.t("shell.noSectionsForRole", "Для вашей роли пока не открыто ни одного раздела.") + '</p>';
 
   document.getElementById("appShell").style.display = "";
 })();

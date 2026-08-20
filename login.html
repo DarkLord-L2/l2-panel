@@ -4,41 +4,46 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Вход — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=11" />
+<link rel="stylesheet" href="js/theme.css?v=12" />
 </head>
 <body>
 
+<div class="lang-switch" id="langSwitch" style="position:fixed; top:16px; right:16px;"></div>
+
 <div class="login-wrap">
   <form class="card login-card" id="loginForm" autocomplete="on">
-    <h1>Кабинет клана</h1>
-    <p class="hint">Войдите под логином и паролем, которые вам выдал клан-лидер.</p>
+    <h1 data-i18n="login.title">Кабинет клана</h1>
+    <p class="hint" data-i18n="login.hint">Войдите под логином и паролем, которые вам выдал клан-лидер.</p>
 
     <div class="field">
-      <label for="username">Логин</label>
+      <label for="username" data-i18n="login.usernameLabel">Логин</label>
       <input type="text" id="username" name="username" autocomplete="username" required autofocus />
     </div>
     <div class="field">
-      <label for="password">Пароль</label>
+      <label for="password" data-i18n="login.passwordLabel">Пароль</label>
       <input type="password" id="password" name="password" autocomplete="current-password" required />
     </div>
 
     <label class="checkbox-row">
       <input type="checkbox" id="remember" checked />
-      Запомнить меня на этом устройстве
+      <span data-i18n="login.rememberMe">Запомнить меня на этом устройстве</span>
     </label>
 
     <p class="error-msg" id="loginError"></p>
 
-    <button type="submit" class="btn btn-primary" id="loginSubmit" style="width:100%;">Войти</button>
+    <button type="submit" class="btn btn-primary" id="loginSubmit" style="width:100%;" data-i18n="login.submit">Войти</button>
   </form>
 
-  <p class="login-footnote">Нет логина и пароля? Обратитесь к клан-лидеру.</p>
+  <p class="login-footnote" data-i18n="login.footnote">Нет логина и пароля? Обратитесь к клан-лидеру.</p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=17"></script>
+<script src="js/i18n.js?v=1"></script>
 <script>
 (async function(){
+  L2I18n.renderSwitcher(document.getElementById("langSwitch"));
+
   // уже вошли — сразу в кабинет
   const { data: { session } } = await L2Cabinet.client.auth.getSession();
   if(session){ location.href = "index.html"; return; }
@@ -51,7 +56,7 @@
     e.preventDefault();
     errorEl.textContent = "";
     submitBtn.disabled = true;
-    submitBtn.textContent = "Входим…";
+    submitBtn.textContent = L2I18n.t("login.submitting", "Входим…");
 
     const username = document.getElementById("username").value;
     const password = document.getElementById("password").value;
@@ -62,9 +67,9 @@
       if(error) throw error;
       location.href = "index.html";
     }catch(err){
-      errorEl.textContent = "Неверный логин или пароль";
+      errorEl.textContent = L2I18n.t("login.error", "Неверный логин или пароль");
       submitBtn.disabled = false;
-      submitBtn.textContent = "Войти";
+      submitBtn.textContent = L2I18n.t("login.submit", "Войти");
     }
   });
 })();
