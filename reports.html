@@ -241,35 +241,35 @@
 <body>
 
 <div class="rep-wrap" id="wrap" style="display:none;">
-  <div class="page-head"><h1>Отчёты по мероприятиям</h1></div>
+  <div class="page-head"><h1 data-i18n="reports.title">Отчёты по мероприятиям</h1></div>
 
   <div class="rep-layout">
     <section class="card rep-main">
       <div class="rep-filters">
         <div class="field">
-          <label for="weekMultiBtn">Неделя</label>
+          <label for="weekMultiBtn" data-i18n="reports.weekLabel">Неделя</label>
           <div class="week-multi">
-            <button type="button" class="week-multi-btn" id="weekMultiBtn">Всё время</button>
+            <button type="button" class="week-multi-btn" id="weekMultiBtn" data-i18n="reports.allTime">Всё время</button>
             <div class="week-multi-dropdown" id="weekMultiDropdown" style="display:none;">
               <label class="week-multi-opt week-multi-all">
                 <input type="checkbox" id="weekAllTimeCheck" checked />
-                <span>Всё время</span>
+                <span data-i18n="reports.allTime">Всё время</span>
               </label>
               <div class="week-multi-list" id="weekMultiList"></div>
             </div>
           </div>
         </div>
         <div class="field" id="eventFieldWrap" style="display:none;">
-          <label for="eventSelect">Мероприятие</label>
+          <label for="eventSelect" data-i18n="reports.eventLabel">Мероприятие</label>
           <select id="eventSelect"></select>
         </div>
         <div class="field">
-          <label for="groupFilter">Пати</label>
+          <label for="groupFilter" data-i18n="reports.partyLabel">Пати</label>
           <select id="groupFilter"></select>
         </div>
         <div class="field">
           <label>&nbsp;</label>
-          <button type="button" class="btn" id="groupByPartyBtn" title="Список ниже разобьётся на блоки по пати — как «Скрин N», только по реальной группе человека, а не по тому, с какого скрина он распознан. Кто не состоит ни в одной группе — отдельным блоком «Соло»">Смотреть по пати</button>
+          <button type="button" class="btn" id="groupByPartyBtn" data-i18n-attr="title:reports.groupByPartyBtnTitle" title="Список ниже разобьётся на блоки по пати — как «Скрин N», только по реальной группе человека, а не по тому, с какого скрина он распознан. Кто не состоит ни в одной группе — отдельным блоком «Соло»" data-i18n="reports.groupByPartyBtn">Смотреть по пати</button>
         </div>
       </div>
 
@@ -279,29 +279,29 @@
           <tbody id="repBody"></tbody>
         </table>
       </div>
-      <p class="empty-hint" id="repEmpty" style="display:none;">За выбранный период данных нет.</p>
+      <p class="empty-hint" id="repEmpty" style="display:none;" data-i18n="reports.emptyPeriodHint">За выбранный период данных нет.</p>
     </section>
 
-    <div class="rep-splitter" id="repSplitter" title="Потяните влево-вправо, чтобы изменить ширину панели. Двойной клик — вернуть как было."><i></i></div>
+    <div class="rep-splitter" id="repSplitter" data-i18n-attr="title:reports.splitterTitle" title="Потяните влево-вправо, чтобы изменить ширину панели. Двойной клик — вернуть как было."><i></i></div>
 
     <section class="card rep-summary" id="repSummary">
-      <h2 id="summaryTitle">Общая статистика</h2>
-      <p class="sub" id="summarySubtitle">За всё время</p>
+      <h2 id="summaryTitle" data-i18n="reports.overallTitle">Общая статистика</h2>
+      <p class="sub" id="summarySubtitle" data-i18n="reports.overallSub">За всё время</p>
 
       <div id="radarWrap"></div>
 
       <div class="rep-tiles">
-        <div class="rep-tile"><div class="val" id="sumKills">0</div><div class="lbl">Всего убийств</div></div>
-        <div class="rep-tile"><div class="val" id="sumDeaths">0</div><div class="lbl">Всего смертей</div></div>
-        <div class="rep-tile"><div class="val" id="sumKd">0.00</div><div class="lbl">Ср. K:D</div></div>
-        <div class="rep-tile"><div class="val" id="sumPvp">0</div><div class="lbl">Всего PvP урона</div></div>
-        <div class="rep-tile"><div class="val" id="sumPve">0</div><div class="lbl">Всего PvE урона</div></div>
-        <div class="rep-tile" style="grid-column:1 / -1;"><div class="val" id="sumActive">0</div><div class="lbl">Всего активных</div></div>
+        <div class="rep-tile"><div class="val" id="sumKills">0</div><div class="lbl" data-i18n="reports.tileKills">Всего убийств</div></div>
+        <div class="rep-tile"><div class="val" id="sumDeaths">0</div><div class="lbl" data-i18n="reports.tileDeaths">Всего смертей</div></div>
+        <div class="rep-tile"><div class="val" id="sumKd">0.00</div><div class="lbl" data-i18n="reports.tileKd">Ср. K:D</div></div>
+        <div class="rep-tile"><div class="val" id="sumPvp">0</div><div class="lbl" data-i18n="reports.tilePvp">Всего PvP урона</div></div>
+        <div class="rep-tile"><div class="val" id="sumPve">0</div><div class="lbl" data-i18n="reports.tilePve">Всего PvE урона</div></div>
+        <div class="rep-tile" style="grid-column:1 / -1;"><div class="val" id="sumActive">0</div><div class="lbl" data-i18n="reports.tileActive">Всего активных</div></div>
       </div>
 
       <div id="cmpSection" style="display:none; margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
-        <h2>Сравнение пати</h2>
-        <p class="hint" style="margin:0 0 12px;">Отметьте 2 и более пати — за тот же период, что выбран выше, в среднем на участника.</p>
+        <h2 data-i18n="reports.cmpPartiesTitle">Сравнение пати</h2>
+        <p class="hint" style="margin:0 0 12px;" data-i18n="reports.cmpPartiesHint">Отметьте 2 и более пати — за тот же период, что выбран выше, в среднем на участника.</p>
 
         <div class="cmp-group-picker" id="cmpGroupPicker"></div>
 
@@ -310,18 +310,18 @@
           <div class="rep-table-scroll">
             <table class="cmp-table">
               <thead>
-                <tr><th>Пати</th><th>Килы</th><th>Смерти</th><th>K:D</th><th>PvP</th><th>PvE</th><th>Чел.</th></tr>
+                <tr><th data-i18n="reports.colParty">Пати</th><th data-i18n="reports.colKills">Килы</th><th data-i18n="reports.colDeaths">Смерти</th><th data-i18n="reports.colKd">K:D</th><th data-i18n="reports.colPvp">PvP</th><th data-i18n="reports.colPve">PvE</th><th data-i18n="reports.colPeople">Чел.</th></tr>
               </thead>
               <tbody id="cmpTableBody"></tbody>
             </table>
           </div>
         </div>
-        <p class="hint" id="cmpEmpty">Отметьте хотя бы 2 пати, чтобы увидеть сравнение.</p>
+        <p class="hint" id="cmpEmpty" data-i18n="reports.cmpPartiesEmpty">Отметьте хотя бы 2 пати, чтобы увидеть сравнение.</p>
       </div>
 
       <div id="pplSection" style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
-        <h2>Сравнение людей</h2>
-        <p class="hint" style="margin:0 0 12px;">Наведите на человека в таблице слева и нажмите ⚖, чтобы добавить его в сравнение (2 и более) — сравнение появится само.</p>
+        <h2 data-i18n="reports.cmpPeopleTitle">Сравнение людей</h2>
+        <p class="hint" style="margin:0 0 12px;" data-i18n="reports.cmpPeopleHint">Наведите на человека в таблице слева и нажмите ⚖, чтобы добавить его в сравнение (2 и более) — сравнение появится само.</p>
 
         <div class="chip-row" id="pplChips"></div>
 
@@ -330,42 +330,43 @@
           <div class="rep-table-scroll">
             <table class="cmp-table">
               <thead>
-                <tr><th>Ник</th><th>Килы</th><th>Смерти</th><th>K:D</th><th>PvP</th><th>PvE</th></tr>
+                <tr><th data-i18n="reports.colNick">Ник</th><th data-i18n="reports.colKills">Килы</th><th data-i18n="reports.colDeaths">Смерти</th><th data-i18n="reports.colKd">K:D</th><th data-i18n="reports.colPvp">PvP</th><th data-i18n="reports.colPve">PvE</th></tr>
               </thead>
               <tbody id="pplTableBody"></tbody>
             </table>
           </div>
         </div>
-        <p class="hint" id="pplEmpty">Пока никто не выбран.</p>
+        <p class="hint" id="pplEmpty" data-i18n="reports.cmpPeopleEmptyDefault">Пока никто не выбран.</p>
       </div>
     </section>
   </div>
 </div>
 
-<button class="settings-btn" id="groupLabelSettingsBtn" title="Настройки меток пати" style="display:none;">⚙ Метки пати</button>
+<button class="settings-btn" id="groupLabelSettingsBtn" data-i18n-attr="title:reports.groupLabelSettingsBtnTitle" title="Настройки меток пати" style="display:none;" data-i18n="reports.groupLabelSettingsBtn">⚙ Метки пати</button>
 <div class="modal-overlay" id="groupLabelSettingsOverlay">
   <div class="modal">
-    <button class="modal-close" id="groupLabelSettingsClose" title="Закрыть">×</button>
-    <h2>Метки пати на скринах явки</h2>
-    <p class="hint">Если среди ников, распознанных на скрине явки, минимум столько-то состоят
+    <button class="modal-close" id="groupLabelSettingsClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 data-i18n="reports.groupLabelSettingsTitle">Метки пати на скринах явки</h2>
+    <p class="hint" data-i18n="reports.groupLabelSettingsHint">Если среди ников, распознанных на скрине явки, минимум столько-то состоят
       в одной группе клана — блок подписывается её названием; иначе — названием ниже.
       Это правило пересчитывается на лету и задним числом переподписывает уже сохранённые
       скрины (кроме тех, что переименованы вручную).</p>
     <div class="field">
-      <label for="minGroupCountInput">Минимум ников из одной группы (макс. 9 на скрине)</label>
+      <label for="minGroupCountInput" data-i18n="reports.minGroupCountLabel">Минимум ников из одной группы (макс. 9 на скрине)</label>
       <input type="number" id="minGroupCountInput" min="1" max="9" />
     </div>
     <div class="field">
-      <label for="soloLabelInput">Название, если группа не набралась</label>
+      <label for="soloLabelInput" data-i18n="reports.soloLabelLabel">Название, если группа не набралась</label>
       <input type="text" id="soloLabelInput" maxlength="40" />
     </div>
-    <button class="btn btn-primary" id="groupLabelSettingsSaveBtn">Сохранить</button>
+    <button class="btn btn-primary" id="groupLabelSettingsSaveBtn" data-i18n="reports.saveBtn">Сохранить</button>
     <p class="error-msg" id="groupLabelSettingsError"></p>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=17"></script>
+<script src="js/i18n.js?v=1"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -375,7 +376,8 @@
   const profile = await L2Cabinet.getProfile();
   if(!profile){
     document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
-      '<h1>⚠ Профиль не найден</h1><p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+      '<h1>' + L2I18n.t("shell.profileNotFoundTitle", "⚠ Профиль не найден") + '</h1>' +
+      '<p class="hint">' + L2I18n.t("common.contactLeader", "Обратитесь к клан-лидеру.") + '</p></div></div>';
     return;
   }
 
@@ -415,10 +417,13 @@
   let selectedEvent = "";         // "" — вся неделя целиком (актуально только если выбрана ровно одна неделя)
   let periodValue = "";           // "" | "week:D" | "weeks:D,D,..." | "event:<id>" — из selectedWeeks/selectedEvent
   function pluralWeeks(n){
+    if(L2I18n.getLang() === "en"){
+      return n === 1 ? L2I18n.t("reports.weekOne", "week") : L2I18n.t("reports.weekFew", "weeks");
+    }
     const mod10 = n % 10, mod100 = n % 100;
-    if(mod10 === 1 && mod100 !== 11) return "неделя";
-    if(mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return "недели";
-    return "недель";
+    if(mod10 === 1 && mod100 !== 11) return L2I18n.t("reports.weekOne", "неделя");
+    if(mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return L2I18n.t("reports.weekFew", "недели");
+    return L2I18n.t("reports.weekMany", "недель");
   }
 
   // ОCR скрина со статистикой и «Перепись клана»/«Проверка буста» иногда распознают
@@ -580,11 +585,11 @@
   function periodLabel(){
     if(periodValue.startsWith("event:")){
       const sel = document.getElementById("eventSelect");
-      return sel.options[sel.selectedIndex]?.textContent || "этого мероприятия";
+      return sel.options[sel.selectedIndex]?.textContent || L2I18n.t("reports.thisEventFallback", "этого мероприятия");
     }
     if(periodValue.startsWith("week:")) return weekRangeLabel(selectedWeeks[0]);
     if(periodValue.startsWith("weeks:")) return selectedWeeks.length + " " + pluralWeeks(selectedWeeks.length);
-    return "всего времени";
+    return L2I18n.t("reports.allTimeFallback", "всего времени");
   }
 
   async function loadForcedClasses(){
@@ -616,7 +621,7 @@
         )
       : await db.from("report_class_overrides").delete()
           .eq("clan_id", profile.clan_id).eq("nickname_norm", norm).eq("period_key", periodKey());
-    if(error){ alert("Не удалось сохранить: " + error.message); return; }
+    if(error){ alert(L2I18n.t("reports.saveFailed", "Не удалось сохранить: ") + error.message); return; }
     await refreshReport();
   }
 
@@ -639,7 +644,7 @@
       { clan_id: profile.clan_id, nickname, [slot]: className },
       { onConflict: "clan_id,nickname" }
     );
-    if(error){ alert("Не удалось сохранить: " + error.message); return; }
+    if(error){ alert(L2I18n.t("reports.saveFailed", "Не удалось сохранить: ") + error.message); return; }
     closeClassPopup();
     await loadMemberInfo();
     await refreshReport();
@@ -655,12 +660,12 @@
 
     const head = document.createElement("div");
     head.className = "rep-class-popup-head";
-    head.textContent = "Новая профессия — поиск";
+    head.textContent = L2I18n.t("reports.newClassSearchHead", "Новая профессия — поиск");
     pop.appendChild(head);
 
     const search = document.createElement("input");
     search.type = "text";
-    search.placeholder = "Поиск класса...";
+    search.placeholder = L2I18n.t("reports.classSearchPlaceholder", "Поиск класса...");
     search.style.cssText = "margin:0 6px 4px;";
     pop.appendChild(search);
 
@@ -688,7 +693,7 @@
     const backBtn = document.createElement("button");
     backBtn.className = "rep-class-opt";
     backBtn.style.color = "var(--text-dim)";
-    backBtn.innerHTML = "<span>← Назад</span>";
+    backBtn.innerHTML = "<span>" + escapeHtml(L2I18n.t("reports.backOption", "← Назад")) + "</span>";
     backBtn.addEventListener("click", () => openClassPopup(classPopupAnchor, reportNick, info, picked));
     pop.appendChild(backBtn);
 
@@ -711,14 +716,14 @@
     const head = document.createElement("div");
     head.className = "rep-class-popup-head";
     head.textContent = all.length > 1
-      ? "Профессия — только для «" + periodLabel() + "»"
-      : all.length === 1 ? "Профессия одна" : "Профессия не задана";
+      ? L2I18n.t("reports.classForPeriodHead", "Профессия — только для «{period}»").replace("{period}", periodLabel())
+      : all.length === 1 ? L2I18n.t("reports.classSingleHead", "Профессия одна") : L2I18n.t("reports.classNotSetHead", "Профессия не задана");
     pop.appendChild(head);
 
     if(all.length > 1){
       const autoOpt = document.createElement("button");
       autoOpt.className = "rep-class-opt" + (forced ? "" : " active");
-      autoOpt.innerHTML = '<span class="ic">А</span><span>Авто (основная профессия)</span>';
+      autoOpt.innerHTML = '<span class="ic">А</span><span>' + escapeHtml(L2I18n.t("reports.autoClassOption", "Авто (основная профессия)")) + '</span>';
       autoOpt.addEventListener("click", () => { closeClassPopup(); setForcedClass(reportNick, ""); });
       pop.appendChild(autoOpt);
     }
@@ -730,7 +735,7 @@
       opt.innerHTML =
         (icon ? `<img class="ic" src="${icon}" alt="" />` : '<span class="ic"></span>') +
         `<span>${escapeHtml(name)}</span>` +
-        (name === picked.name ? '<span class="now">сейчас</span>' : "");
+        (name === picked.name ? '<span class="now">' + escapeHtml(L2I18n.t("reports.nowBadge", "сейчас")) + '</span>' : "");
       opt.addEventListener("click", () => { closeClassPopup(); setForcedClass(reportNick, name); });
       pop.appendChild(opt);
     });
@@ -739,7 +744,7 @@
       const hint = document.createElement("p");
       hint.className = "hint";
       hint.style.cssText = "margin:4px 0 0; font-size:11.5px;";
-      hint.textContent = "Профессия одна — переключаться не между чем.";
+      hint.textContent = L2I18n.t("reports.classSingleHint", "Профессия одна — переключаться не между чем.");
       pop.appendChild(hint);
     }
 
@@ -748,7 +753,7 @@
       const addBtn = document.createElement("button");
       addBtn.className = "rep-class-opt";
       addBtn.style.color = "var(--gold-dim)";
-      addBtn.innerHTML = '<span class="ic">+</span><span>Добавить профессию</span>';
+      addBtn.innerHTML = '<span class="ic">+</span><span>' + escapeHtml(L2I18n.t("reports.addClassOption", "Добавить профессию")) + '</span>';
       addBtn.addEventListener("click", () => renderAddClassSearch(reportNick, info, slot, picked));
       pop.appendChild(addBtn);
     }
@@ -832,7 +837,7 @@
     const { data, error } = await db.from("group_label_settings").select("min_group_count, solo_label").maybeSingle();
     if(error) console.error(error);
     groupLabelMinCount = data?.min_group_count ?? 5;
-    groupLabelSoloName = data?.solo_label ?? "Соло";
+    groupLabelSoloName = data?.solo_label ?? L2I18n.t("reports.soloDefaultLabel", "Соло");
   }
 
   function passesGroupFilter(nickname){
@@ -847,7 +852,7 @@
     if(isPartyRestricted){
       const myGroup = groups.find(g => g.id === profile.party_id);
       const opt = document.createElement("option");
-      opt.value = profile.party_id; opt.textContent = myGroup?.name || "Моя пати";
+      opt.value = profile.party_id; opt.textContent = myGroup?.name || L2I18n.t("reports.myPartyFallback", "Моя пати");
       sel.appendChild(opt);
       sel.value = profile.party_id;
       sel.disabled = true;
@@ -855,7 +860,7 @@
       return;
     }
     const allOpt = document.createElement("option");
-    allOpt.value = ""; allOpt.textContent = "Все";
+    allOpt.value = ""; allOpt.textContent = L2I18n.t("reports.allOption", "Все");
     sel.appendChild(allOpt);
     groups.forEach(g => {
       const opt = document.createElement("option");
@@ -887,14 +892,14 @@
     const btn = document.getElementById("weekMultiBtn");
     const eventWrap = document.getElementById("eventFieldWrap");
     if(!selectedWeeks.length){
-      btn.textContent = "Всё время";
+      btn.textContent = L2I18n.t("reports.allTime", "Всё время");
       eventWrap.style.display = "none";
     } else if(selectedWeeks.length === 1){
       btn.textContent = weekRangeLabel(selectedWeeks[0]);
       renderEventOptions(selectedWeeks[0]);
       eventWrap.style.display = "";
     } else {
-      btn.textContent = selectedWeeks.length + " " + pluralWeeks(selectedWeeks.length) + " выбрано";
+      btn.textContent = selectedWeeks.length + " " + pluralWeeks(selectedWeeks.length) + L2I18n.t("reports.weeksSelectedSuffix", " выбрано");
       eventWrap.style.display = "none";
     }
   }
@@ -914,7 +919,7 @@
     const sel = document.getElementById("eventSelect");
     sel.innerHTML = "";
     const wholeWeekOpt = document.createElement("option");
-    wholeWeekOpt.value = ""; wholeWeekOpt.textContent = "Вся неделя";
+    wholeWeekOpt.value = ""; wholeWeekOpt.textContent = L2I18n.t("reports.wholeWeekOption", "Вся неделя");
     sel.appendChild(wholeWeekOpt);
     events
       .filter(e => e.week_start === weekStart)
@@ -987,18 +992,18 @@
     const minCount = Number(document.getElementById("minGroupCountInput").value);
     const soloLabel = document.getElementById("soloLabelInput").value.trim();
     if(!Number.isInteger(minCount) || minCount < 1 || minCount > 9){
-      errEl.textContent = "Минимум ников — целое число от 1 до 9.";
+      errEl.textContent = L2I18n.t("reports.minCountRangeError", "Минимум ников — целое число от 1 до 9.");
       return;
     }
     if(!soloLabel){
-      errEl.textContent = "Название не может быть пустым.";
+      errEl.textContent = L2I18n.t("reports.soloNameEmptyError", "Название не может быть пустым.");
       return;
     }
     const { error } = await db.from("group_label_settings").upsert(
       { clan_id: profile.clan_id, min_group_count: minCount, solo_label: soloLabel },
       { onConflict: "clan_id" }
     );
-    if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
+    if(error){ errEl.textContent = L2I18n.t("reports.saveFailed", "Не удалось сохранить: ") + error.message; return; }
     document.getElementById("groupLabelSettingsOverlay").classList.remove("show");
     await loadGroupLabelSettings();
     await refreshReport();
@@ -1221,7 +1226,7 @@
       )
     );
     const failed = results.find(r => r.error);
-    if(failed){ console.error(failed.error); alert("Не удалось сохранить: " + failed.error.message); return; }
+    if(failed){ console.error(failed.error); alert(L2I18n.t("reports.saveFailed", "Не удалось сохранить: ") + failed.error.message); return; }
     await loadAllStats();
     refreshReport();
   }
@@ -1237,7 +1242,7 @@
       )
     );
     const failed = results.find(r => r.error);
-    if(failed){ console.error(failed.error); alert("Не удалось удалить: " + failed.error.message); return; }
+    if(failed){ console.error(failed.error); alert(L2I18n.t("reports.deleteFailed", "Не удалось удалить: ") + failed.error.message); return; }
     await loadAllStats();
     refreshReport();
   }
@@ -1264,14 +1269,14 @@
     const tdNick = document.createElement("td");
     tdNick.className = "rep-col-nick";
     const dotTitle = picked.forced
-      ? "Профессия выбрана вручную — только для этого периода"
-      : "Профессия по умолчанию";
+      ? L2I18n.t("reports.manualClassTitle", "Профессия выбрана вручную — только для этого периода")
+      : L2I18n.t("reports.defaultClassTitle", "Профессия по умолчанию");
     tdNick.innerHTML = `<div class="rep-nick"><span class="avatar-wrap"><img class="avatar${editable ? " rep-avatar-btn" : ""}" src="${avatarSrc}" alt=""` +
-      `${editable ? ' title="Сменить профессию"' : ""} />` +
+      `${editable ? ' title="' + escapeHtml(L2I18n.t("reports.changeClassTitle", "Сменить профессию")) + '"' : ""} />` +
       (subAvatars ? `<span class="sub-avatar-row">${subAvatars}</span>` : "") +
       `</span>` +
       `<span class="who"><span class="name">${escapeHtml(r.nickname)}` +
-      `${r.removed ? ' <span class="rep-removed-badge">удалён</span>' : ""}` +
+      `${r.removed ? ' <span class="rep-removed-badge">' + escapeHtml(L2I18n.t("reports.removedBadge", "удалён")) + '</span>' : ""}` +
       `${picked.swapped ? ` <span class="rep-swap-dot${picked.forced ? " forced" : ""}" title="${dotTitle}"></span>` : ""}</span>` +
       `<span class="cls">${escapeHtml(picked.name || "")}</span></span></div>`;
 
@@ -1286,11 +1291,11 @@
       });
     }
 
-    const tdKills = document.createElement("td"); tdKills.textContent = r.kills.toLocaleString("ru-RU");
-    const tdDeaths = document.createElement("td"); tdDeaths.textContent = r.deaths.toLocaleString("ru-RU");
+    const tdKills = document.createElement("td"); tdKills.textContent = r.kills.toLocaleString(L2I18n.locale());
+    const tdDeaths = document.createElement("td"); tdDeaths.textContent = r.deaths.toLocaleString(L2I18n.locale());
     const tdKd = document.createElement("td"); tdKd.textContent = r.kd.toFixed(2);
-    const tdPvp = document.createElement("td"); tdPvp.textContent = r.pvp.toLocaleString("ru-RU");
-    const tdPve = document.createElement("td"); tdPve.textContent = r.pve.toLocaleString("ru-RU");
+    const tdPvp = document.createElement("td"); tdPvp.textContent = r.pvp.toLocaleString(L2I18n.locale());
+    const tdPve = document.createElement("td"); tdPve.textContent = r.pve.toLocaleString(L2I18n.locale());
     tr.append(tdNick, tdKills, tdDeaths, tdKd, tdPvp, tdPve);
 
     const tdCmp = document.createElement("td");
@@ -1299,7 +1304,7 @@
     cmpBtn.type = "button";
     cmpBtn.className = "rep-cmp-btn" + (isPplSelected(r.nickname) ? " active" : "");
     cmpBtn.textContent = "⚖";
-    cmpBtn.title = isPplSelected(r.nickname) ? "Убрать из сравнения" : "Добавить в сравнение";
+    cmpBtn.title = isPplSelected(r.nickname) ? L2I18n.t("reports.removeFromCmpTitle", "Убрать из сравнения") : L2I18n.t("reports.addToCmpTitle", "Добавить в сравнение");
     if(!isPplSelected(r.nickname) && pplSelected.length >= CMP_MAX_SELECTED) cmpBtn.disabled = true;
     cmpBtn.addEventListener("click", (e) => { e.stopPropagation(); togglePplPerson(r.nickname); });
     tdCmp.appendChild(cmpBtn);
@@ -1312,15 +1317,15 @@
       if(r.removed){
         const restoreBtn = document.createElement("button");
         restoreBtn.className = "btn btn-ghost";
-        restoreBtn.textContent = "Восстановить";
+        restoreBtn.textContent = L2I18n.t("reports.restoreBtn", "Восстановить");
         restoreBtn.addEventListener("click", () => setNicknameRemoved(r.entries, false));
         tdActions.appendChild(restoreBtn);
 
         const purgeBtn = document.createElement("button");
         purgeBtn.className = "btn btn-danger";
-        purgeBtn.textContent = "Удалить навсегда";
+        purgeBtn.textContent = L2I18n.t("reports.deleteForeverBtn", "Удалить навсегда");
         purgeBtn.addEventListener("click", () => {
-          if(confirm(`Удалить ${r.nickname} навсегда? Статистика будет стёрта без возможности восстановления.`)){
+          if(confirm(L2I18n.t("reports.confirmDeleteForever", "Удалить {name} навсегда? Статистика будет стёрта без возможности восстановления.").replace("{name}", r.nickname))){
             deleteNicknamePermanently(r.entries);
           }
         });
@@ -1328,9 +1333,9 @@
       } else {
         const btn = document.createElement("button");
         btn.className = "btn btn-danger";
-        btn.textContent = "Удалить";
+        btn.textContent = L2I18n.t("reports.deleteBtn", "Удалить");
         btn.addEventListener("click", () => {
-          if(confirm(`Удалить ${r.nickname} из этого отчёта?`)) setNicknameRemoved(r.entries, true);
+          if(confirm(L2I18n.t("reports.confirmDeleteFromReport", "Удалить {name} из этого отчёта?").replace("{name}", r.nickname))) setNicknameRemoved(r.entries, true);
         });
         tdActions.appendChild(btn);
       }
@@ -1351,14 +1356,14 @@
 
     const labelSpan = document.createElement("span");
     labelSpan.className = "rep-batch-label";
-    labelSpan.textContent = batch.ordinal ? `Скрин ${batch.ordinal}: ${batchDisplayLabel(batch)}` : "Без привязки к скрину";
+    labelSpan.textContent = batch.ordinal ? L2I18n.t("reports.screenLabel", "Скрин {n}: {label}").replace("{n}", batch.ordinal).replace("{label}", batchDisplayLabel(batch)) : L2I18n.t("reports.noScreenBinding", "Без привязки к скрину");
     td.appendChild(labelSpan);
 
     if(isAdmin && batch.id){
       const gearBtn = document.createElement("button");
       gearBtn.className = "rep-batch-gear";
       gearBtn.textContent = "⚙";
-      gearBtn.title = "Переименовать метку скрина";
+      gearBtn.title = L2I18n.t("reports.renameBatchTitle", "Переименовать метку скрина");
       gearBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         const input = document.createElement("input");
@@ -1368,12 +1373,12 @@
         input.value = batch.manual_label || batchDisplayLabel(batch);
         const saveBtn = document.createElement("button");
         saveBtn.className = "btn btn-primary rep-batch-rename-save";
-        saveBtn.textContent = "OK";
+        saveBtn.textContent = L2I18n.t("reports.okBtn", "OK");
         saveBtn.addEventListener("click", async () => {
           const val = input.value.trim();
           const { error } = await db.from("event_screenshot_batches")
             .update({ manual_label: val || null }).eq("id", batch.id);
-          if(error){ alert("Не удалось сохранить: " + error.message); return; }
+          if(error){ alert(L2I18n.t("reports.saveFailed", "Не удалось сохранить: ") + error.message); return; }
           await loadAllStats();
           refreshReport();
         });
@@ -1415,10 +1420,10 @@
     lastPeriodRows = periodRowsRaw;
     const head = document.getElementById("repHead");
     head.innerHTML = '<tr>' +
-      sortableTh("nickname", "Ник", "rep-col-nick") +
-      sortableTh("kills", "Килы") + sortableTh("deaths", "Смерти") + sortableTh("kd", "K:D") +
-      sortableTh("pvp", "PvP урон") + sortableTh("pve", "PvE урон") +
-      '<th class="rep-col-cmp" title="Сравнение">⚖</th>' +
+      sortableTh("nickname", L2I18n.t("reports.colNick", "Ник"), "rep-col-nick") +
+      sortableTh("kills", L2I18n.t("reports.colKills", "Килы")) + sortableTh("deaths", L2I18n.t("reports.colDeaths", "Смерти")) + sortableTh("kd", L2I18n.t("reports.colKd", "K:D")) +
+      sortableTh("pvp", L2I18n.t("reports.radarLabelPvp", "PvP урон")) + sortableTh("pve", L2I18n.t("reports.radarLabelPve", "PvE урон")) +
+      '<th class="rep-col-cmp" title="' + escapeHtml(L2I18n.t("reports.colComparison", "Сравнение")) + '">⚖</th>' +
       (isAdmin ? '<th></th>' : '') +
       '</tr>';
     applyStickyHead();
@@ -1454,19 +1459,27 @@
   }
 
   function renderTiles(t){
-    document.getElementById("sumKills").textContent = t.kills.toLocaleString("ru-RU");
-    document.getElementById("sumDeaths").textContent = t.deaths.toLocaleString("ru-RU");
+    document.getElementById("sumKills").textContent = t.kills.toLocaleString(L2I18n.locale());
+    document.getElementById("sumDeaths").textContent = t.deaths.toLocaleString(L2I18n.locale());
     document.getElementById("sumKd").textContent = t.kd.toFixed(2);
-    document.getElementById("sumPvp").textContent = t.pvp.toLocaleString("ru-RU");
-    document.getElementById("sumPve").textContent = t.pve.toLocaleString("ru-RU");
+    document.getElementById("sumPvp").textContent = t.pvp.toLocaleString(L2I18n.locale());
+    document.getElementById("sumPve").textContent = t.pve.toLocaleString(L2I18n.locale());
     document.getElementById("sumActive").textContent = String(t.active);
   }
 
   // ---------- общий каркас радара (пятиугольник: PvP, Килы, Смерти, K:D, PvE) ----------
   // оба радара на странице рисуются по одним и тем же осям, чтобы «звезда» сверху
   // и «звезда» в сравнении пати читались одинаково
-  const RADAR_LABELS = ["PvP урон", "Килы", "Смерти", "K:D", "PvE урон"];
-  const RADAR_ANGLES = RADAR_LABELS.map((_, i) => i * (360 / RADAR_LABELS.length));
+  function RADAR_LABELS_(){
+    return [
+      L2I18n.t("reports.radarLabelPvp", "PvP урон"),
+      L2I18n.t("reports.radarLabelKills", "Килы"),
+      L2I18n.t("reports.radarLabelDeaths", "Смерти"),
+      L2I18n.t("reports.radarLabelKd", "K:D"),
+      L2I18n.t("reports.radarLabelPve", "PvE урон"),
+    ];
+  }
+  const RADAR_ANGLES = RADAR_LABELS_().map((_, i) => i * (360 / RADAR_LABELS_().length));
 
   function radarGeometry(cx, r){
     function toPoint(angleDeg, frac){
@@ -1489,7 +1502,7 @@
       const p = toPoint(a, 1.2);
       const dx = p.x - cx;
       const anchor = Math.abs(dx) < 1 ? "middle" : (dx > 0 ? "start" : "end");
-      return `<text x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle" class="rep-radar-label">${RADAR_LABELS[i]}</text>`;
+      return `<text x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle" class="rep-radar-label">${RADAR_LABELS_()[i]}</text>`;
     }).join("");
     return { polyStr, grid, axes, labels };
   }
@@ -1497,7 +1510,7 @@
   function renderRadar(current, avg){
     const wrap = document.getElementById("radarWrap");
     if(!avg){
-      wrap.innerHTML = '<p class="hint" style="text-align:center;">Сравнение доступно, если выбрана неделя или конкретное мероприятие.</p>';
+      wrap.innerHTML = '<p class="hint" style="text-align:center;">' + L2I18n.t("reports.radarUnavailableHint", "Сравнение доступно, если выбрана неделя или конкретное мероприятие.") + '</p>';
       return;
     }
 
@@ -1516,8 +1529,8 @@
         geo.labels +
       `</svg>` +
       `<div class="rep-radar-legend">` +
-        `<span class="rep-legend-item"><i class="dot"></i>Текущий период</span>` +
-        `<span class="rep-legend-item"><i class="dot avg"></i>Среднее</span>` +
+        `<span class="rep-legend-item"><i class="dot"></i>${escapeHtml(L2I18n.t("reports.legendCurrentPeriod", "Текущий период"))}</span>` +
+        `<span class="rep-legend-item"><i class="dot avg"></i>${escapeHtml(L2I18n.t("reports.legendAverage", "Среднее"))}</span>` +
       `</div>`;
   }
 
@@ -1607,7 +1620,7 @@
     });
     // нормализация каждой оси на максимум среди сравниваемых пати — иначе разные по
     // масштабу метрики (урон в миллионах vs K:D в единицах) сплющили бы мелкие оси
-    const maxPerAxis = RADAR_LABELS.map((_, i) => Math.max(...series.map(s => s.vals[i]), 1e-9));
+    const maxPerAxis = RADAR_LABELS_().map((_, i) => Math.max(...series.map(s => s.vals[i]), 1e-9));
 
     const geo = radarGeometry(100, 68);
 
@@ -1643,8 +1656,8 @@
         `<td>${avg.kills.toFixed(1)}</td>` +
         `<td>${avg.deaths.toFixed(1)}</td>` +
         `<td>${avg.kd.toFixed(2)}</td>` +
-        `<td>${Math.round(avg.pvp).toLocaleString("ru-RU")}</td>` +
-        `<td>${Math.round(avg.pve).toLocaleString("ru-RU")}</td>` +
+        `<td>${Math.round(avg.pvp).toLocaleString(L2I18n.locale())}</td>` +
+        `<td>${Math.round(avg.pve).toLocaleString(L2I18n.locale())}</td>` +
         `<td>${roster.length}</td>`;
       body.appendChild(tr);
     });
@@ -1686,13 +1699,13 @@
       chip.innerHTML = `<span class="cmp-swatch" style="background:${p.color}"></span>${escapeHtml(p.nick)}`;
       const btn = document.createElement("button");
       btn.textContent = "×";
-      btn.title = "Убрать из сравнения";
+      btn.title = L2I18n.t("reports.removeFromCmpTitle", "Убрать из сравнения");
       btn.addEventListener("click", () => togglePplPerson(p.nick));
       chip.appendChild(btn);
       wrap.appendChild(chip);
     });
-    if(!pplSelected.length) document.getElementById("pplEmpty").textContent = "Пока никто не выбран.";
-    else if(pplSelected.length < 2) document.getElementById("pplEmpty").textContent = "Добавьте ещё хотя бы одного человека — сравнение появится само.";
+    if(!pplSelected.length) document.getElementById("pplEmpty").textContent = L2I18n.t("reports.cmpPeopleEmptyDefault", "Пока никто не выбран.");
+    else if(pplSelected.length < 2) document.getElementById("pplEmpty").textContent = L2I18n.t("reports.addMorePeopleHint", "Добавьте ещё хотя бы одного человека — сравнение появится само.");
   }
 
   // клик по ⚖ в строке — добавляет/убирает человека из набора для сравнения; сравнение
@@ -1715,7 +1728,7 @@
   // человек одновременно; точные цифры отдельно в таблице под радаром
   function renderPeopleRadar(stats){
     const wrap = document.getElementById("pplRadarWrap");
-    const maxPerAxis = RADAR_LABELS.map((_, i) => Math.max(...stats.map(s => s.vals[i]), 1e-9));
+    const maxPerAxis = RADAR_LABELS_().map((_, i) => Math.max(...stats.map(s => s.vals[i]), 1e-9));
     const geo = radarGeometry(100, 68);
 
     const seriesPolys = stats.map(s => {
@@ -1737,11 +1750,11 @@
   function renderPeopleTable(stats){
     document.getElementById("pplTableBody").innerHTML = stats.map(s =>
       `<tr><td><span class="cmp-swatch" style="background:${s.color}"></span>${escapeHtml(s.nick)}</td>` +
-      `<td>${Math.round(s.kills).toLocaleString("ru-RU")}</td>` +
-      `<td>${Math.round(s.deaths).toLocaleString("ru-RU")}</td>` +
+      `<td>${Math.round(s.kills).toLocaleString(L2I18n.locale())}</td>` +
+      `<td>${Math.round(s.deaths).toLocaleString(L2I18n.locale())}</td>` +
       `<td>${s.kd.toFixed(2)}</td>` +
-      `<td>${Math.round(s.pvp).toLocaleString("ru-RU")}</td>` +
-      `<td>${Math.round(s.pve).toLocaleString("ru-RU")}</td></tr>`
+      `<td>${Math.round(s.pvp).toLocaleString(L2I18n.locale())}</td>` +
+      `<td>${Math.round(s.pve).toLocaleString(L2I18n.locale())}</td></tr>`
     ).join("");
   }
 
@@ -1766,17 +1779,18 @@
     const title = document.getElementById("summaryTitle");
     const sub = document.getElementById("summarySubtitle");
     if(periodValue.startsWith("week:")){
-      title.textContent = "Недельная эффективность";
-      sub.textContent = "Выбранная неделя vs среднее за всё время";
+      title.textContent = L2I18n.t("reports.weeklyEffTitle", "Недельная эффективность");
+      sub.textContent = L2I18n.t("reports.weeklyEffSub", "Выбранная неделя vs среднее за всё время");
     } else if(periodValue.startsWith("weeks:")){
-      title.textContent = "Эффективность за несколько недель";
-      sub.textContent = selectedWeeks.length + " " + pluralWeeks(selectedWeeks.length) + " вместе vs средняя неделя";
+      title.textContent = L2I18n.t("reports.multiWeekEffTitle", "Эффективность за несколько недель");
+      sub.textContent = L2I18n.t("reports.multiWeekEffSub", "{n} {weekWord} вместе vs средняя неделя")
+        .replace("{n}", selectedWeeks.length).replace("{weekWord}", pluralWeeks(selectedWeeks.length));
     } else if(periodValue.startsWith("event:")){
-      title.textContent = "Эффективность мероприятия";
-      sub.textContent = "Мероприятие vs среднее по всем мероприятиям";
+      title.textContent = L2I18n.t("reports.eventEffTitle", "Эффективность мероприятия");
+      sub.textContent = L2I18n.t("reports.eventEffSub", "Мероприятие vs среднее по всем мероприятиям");
     } else {
-      title.textContent = "Общая статистика";
-      sub.textContent = "За всё время";
+      title.textContent = L2I18n.t("reports.overallTitle", "Общая статистика");
+      sub.textContent = L2I18n.t("reports.overallSub", "За всё время");
     }
   }
 
@@ -1872,6 +1886,17 @@
   renderPplChips();
 
   await refreshReport();
+
+  window.addEventListener("storage", (e) => {
+    if(e.key !== "l2Lang") return;
+    const allOpt = document.querySelector('#groupFilter option[value=""]');
+    if(allOpt) allOpt.textContent = L2I18n.t("reports.allOption", "Все");
+    const wholeWeekOpt = document.querySelector('#eventSelect option[value=""]');
+    if(wholeWeekOpt) wholeWeekOpt.textContent = L2I18n.t("reports.wholeWeekOption", "Вся неделя");
+    applyWeekSelectionUI();
+    renderPplChips();
+    refreshReport();
+  });
 })();
 </script>
 </body>
