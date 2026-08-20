@@ -279,22 +279,22 @@
 <div class="gc-wrap" id="wrap" style="display:none;">
   <div class="page-head">
     <div class="gc-title-row">
-      <button type="button" class="gc-back-arrow" id="gcBackBtn" title="Выбрать другую группу" style="display:none;">←</button>
-      <h1>Проверка буста</h1>
+      <button type="button" class="gc-back-arrow" id="gcBackBtn" data-i18n-attr="title:gearCheck.backBtnTitle" title="Выбрать другую группу" style="display:none;">←</button>
+      <h1 data-i18n="gearCheck.title">Проверка буста</h1>
     </div>
   </div>
 
   <div id="gcPickView">
-    <p class="hint" style="margin:2px 0 16px;">Выберите группу, чтобы проверить буст только её участников, либо посмотрите тех, кто не состоит ни в одной группе.</p>
+    <p class="hint" style="margin:2px 0 16px;" data-i18n="gearCheck.pickHint">Выберите группу, чтобы проверить буст только её участников, либо посмотрите тех, кто не состоит ни в одной группе.</p>
     <div class="gc-group-grid" id="gcGroupGrid"></div>
-    <button class="btn" id="gcSoloBtn">Соло — участники без группы</button>
+    <button class="btn" id="gcSoloBtn" data-i18n="gearCheck.soloBtn">Соло — участники без группы</button>
   </div>
 
   <div id="gcTableView" style="display:none;">
     <section class="card">
       <div class="gc-table-head-row">
         <h2 class="gc-group-name" id="gcCurrentLabel"></h2>
-        <p class="gc-avg">Средний процент буста: <b id="avgPercent">—</b></p>
+        <p class="gc-avg"><span data-i18n="gearCheck.avgPercentLabel">Средний процент буста: </span><b id="avgPercent">—</b></p>
       </div>
       <div class="gc-table-scroll">
         <table class="gc-table">
@@ -302,7 +302,7 @@
           <tbody id="gcBody"></tbody>
         </table>
       </div>
-      <p class="empty-hint" id="gcEmpty" style="display:none;">В последней переписи нет участников — сначала заполните «Перепись клана».</p>
+      <p class="empty-hint" id="gcEmpty" style="display:none;" data-i18n="gearCheck.censusEmptyHint">В последней переписи нет участников — сначала заполните «Перепись клана».</p>
     </section>
 
     <!-- плавающий скроллбар внизу экрана — таблица может быть намного выше окна,
@@ -323,47 +323,47 @@
   <div class="gc-drawer-body" id="drawerBody"></div>
   <div class="gc-drawer-foot">
     <div class="gc-foot-tools" id="footTools">
-      <button class="btn" id="classValuesBtn" style="display:none;">Значения по классам</button>
-      <button class="btn" id="editModeBtn" style="display:none;">✎ Редактировать</button>
-      <button class="btn btn-primary" id="addSectionBtn" style="display:none;">+ Раздел</button>
+      <button class="btn" id="classValuesBtn" style="display:none;" data-i18n="gearCheck.classValuesBtn">Значения по классам</button>
+      <button class="btn" id="editModeBtn" style="display:none;" data-i18n="gearCheck.editModeBtn">✎ Редактировать</button>
+      <button class="btn btn-primary" id="addSectionBtn" style="display:none;" data-i18n="gearCheck.addSectionBtn">+ Раздел</button>
     </div>
-    <button class="gc-foot-toggle" id="footToggleBtn" title="Инструменты" style="display:none;"><span class="arrow">▸</span></button>
-    <button class="btn" id="drawerClose">Закрыть</button>
+    <button class="gc-foot-toggle" id="footToggleBtn" data-i18n-attr="title:gearCheck.toolsBtnTitle" title="Инструменты" style="display:none;"><span class="arrow">▸</span></button>
+    <button class="btn" id="drawerClose" data-i18n="gearCheck.closeBtn">Закрыть</button>
   </div>
 </div>
 
-<button class="help-btn" id="helpBtn" title="Как пользоваться">?</button>
+<button class="help-btn" id="helpBtn" data-i18n-attr="title:gearCheck.helpBtnLabel" title="Как пользоваться">?</button>
 <div class="modal-overlay" id="helpOverlay">
   <div class="modal">
-    <button class="modal-close" id="helpClose" title="Закрыть">×</button>
-    <h2>Как пользоваться проверкой буста</h2>
+    <button class="modal-close" id="helpClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 data-i18n="gearCheck.helpTitle">Как пользоваться проверкой буста</h2>
     <details class="help-section">
-      <summary>Выбор группы</summary>
-      <div class="help-body">
+      <summary data-i18n="gearCheck.helpPickSummary">Выбор группы</summary>
+      <div class="help-body" data-i18n-html="gearCheck.helpPickBody">
         <p>Если в разделе «Группы» есть хотя бы одна группа, при входе сначала показывается выбор: карточка группы открывает таблицу только для её участников, кнопка «Соло» — для тех, кто не состоит ни в одной группе. Кнопка «← Выбрать другую группу» над таблицей возвращает к выбору. Если групп нет вообще, таблица сразу показывает всех.</p>
       </div>
     </details>
     <details class="help-section">
-      <summary>Таблица</summary>
-      <div class="help-body">
+      <summary data-i18n="gearCheck.helpTableSummary">Таблица</summary>
+      <div class="help-body" data-i18n-html="gearCheck.helpTableBody">
         <p>Участники берутся из последней «Переписи клана». Столбцы — пункты буста (Бафф, Зілля и т.д.), у каждого свой вес (число-бейдж в шапке). «Общие баллы» — сумма веса включённых пунктов, «Процент буста» — эти баллы от максимума по всем пунктам.</p>
       </div>
     </details>
     <details class="help-section">
-      <summary>Карточка участника (клик по строке)</summary>
-      <div class="help-body">
+      <summary data-i18n="gearCheck.helpCardSummary">Карточка участника (клик по строке)</summary>
+      <div class="help-body" data-i18n-html="gearCheck.helpCardBody">
         <p>Открывает панель справа: тумблеры включают/выключают пункты у этого участника. Баллы и процент пересчитываются сразу.</p>
       </div>
     </details>
     <details class="help-section">
-      <summary>Класс участника</summary>
-      <div class="help-body">
+      <summary data-i18n="gearCheck.helpClassSummary">Класс участника</summary>
+      <div class="help-body" data-i18n-html="gearCheck.helpClassBody">
         <p>Кнопка «⋮» справа от ника (у админа) открывает окно выбора класса — он показывается подписью под ником, а его иконка становится аватаркой участника. Отдельно загружать фото не нужно.</p>
       </div>
     </details>
     <details class="help-section">
-      <summary>Настройка столбцов (главный админ и админ)</summary>
-      <div class="help-body">
+      <summary data-i18n="gearCheck.helpColumnsSummary">Настройка столбцов (главный админ и админ)</summary>
+      <div class="help-body" data-i18n-html="gearCheck.helpColumnsBody">
         <p>Кнопка «+» в шапке таблицы, последним столбцом, добавляет новый пункт: имя, вес, потом можно загрузить картинку. Если разделов ещё нет, автоматически создастся раздел «Общая»; если разделов несколько — спросит, в какой добавить.</p>
         <p>То же самое можно делать в панели справа: внизу кнопка «✎ Редактировать» показывает у разделов и пунктов кружок (скрыть/показать), карандаш (имя/вес/фото) и крестик (удалить совсем); «+ Раздел» тоже внизу. Пока «Редактировать» не нажат, панель чистая — видны только тумблеры.</p>
         <p><b>Скрыть</b> — пункт пропадает из таблицы и не считается в баллах, но тумблеры участников по нему сохраняются: в любой момент можно снова показать, ничего не переделывая. <b>Удалить</b> — совсем, без возврата.</p>
@@ -376,108 +376,108 @@
 
 <div class="modal-overlay" id="itemOverlay">
   <div class="modal" style="max-width:400px;">
-    <button class="modal-close" id="itemClose" title="Закрыть">×</button>
-    <h2 id="itemModalTitle">Пункт</h2>
+    <button class="modal-close" id="itemClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 id="itemModalTitle" data-i18n="gearCheck.itemModalDefaultTitle">Пункт</h2>
 
     <div class="field">
-      <label for="itemName">Название</label>
-      <input type="text" id="itemName" placeholder="Например, Бафф" />
+      <label for="itemName" data-i18n="gearCheck.nameLabel">Название</label>
+      <input type="text" id="itemName" data-i18n-attr="placeholder:gearCheck.namePlaceholder" placeholder="Например, Бафф" />
     </div>
 
     <div class="field">
-      <label for="itemWeight">Вес (баллы)</label>
+      <label for="itemWeight" data-i18n="gearCheck.weightLabel">Вес (баллы)</label>
       <input type="number" id="itemWeight" step="0.25" value="1" />
     </div>
 
     <div class="field">
-      <label for="itemSubtitle">Подпись под названием</label>
-      <input type="text" id="itemSubtitle" placeholder="Например, код баффа" />
+      <label for="itemSubtitle" data-i18n="gearCheck.subtitleLabel">Подпись под названием</label>
+      <input type="text" id="itemSubtitle" data-i18n-attr="placeholder:gearCheck.subtitlePlaceholder" placeholder="Например, код баффа" />
     </div>
 
     <label class="checkbox-row">
-      <input type="checkbox" id="itemPerClass" /> Своя подпись для каждого класса
+      <input type="checkbox" id="itemPerClass" /> <span data-i18n="gearCheck.perClassCheckbox">Своя подпись для каждого класса</span>
     </label>
-    <p class="hint" id="perClassHint">Пока отмечено — поле «Подпись под названием» выше не используется, показывается значение из «Значения по классам» для класса участника.</p>
+    <p class="hint" id="perClassHint" data-i18n="gearCheck.perClassHint">Пока отмечено — поле «Подпись под названием» выше не используется, показывается значение из «Значения по классам» для класса участника.</p>
 
     <label class="checkbox-row">
-      <input type="checkbox" id="itemFullWidth" /> Широкая ячейка (на всю строку)
+      <input type="checkbox" id="itemFullWidth" /> <span data-i18n="gearCheck.fullWidthCheckbox">Широкая ячейка (на всю строку)</span>
     </label>
 
     <label class="checkbox-row">
-      <input type="checkbox" id="itemMerge" /> Склеить с предыдущим пунктом
+      <input type="checkbox" id="itemMerge" /> <span data-i18n="gearCheck.mergeCheckbox">Склеить с предыдущим пунктом</span>
     </label>
-    <p class="hint">Пункт срастётся с идущим перед ним пунктом того же раздела и подраздела: в таблице они станут одной колонкой с общим весом и одним баллом, в панели участника — одной карточкой со своими тумблерами.</p>
+    <p class="hint" data-i18n="gearCheck.mergeHint">Пункт срастётся с идущим перед ним пунктом того же раздела и подраздела: в таблице они станут одной колонкой с общим весом и одним баллом, в панели участника — одной карточкой со своими тумблерами.</p>
 
     <label class="checkbox-row">
-      <input type="checkbox" id="itemMergeAll" /> Балл только если включено всё склеенное
+      <input type="checkbox" id="itemMergeAll" /> <span data-i18n="gearCheck.mergeAllCheckbox">Балл только если включено всё склеенное</span>
     </label>
-    <p class="hint">Для склеенной группы: если у участника выключен хотя бы один пункт из неё, вся группа даёт 0 баллов. Без этой галочки считается сумма того, что включено. Отметить достаточно у любого пункта группы — действует на всю.</p>
+    <p class="hint" data-i18n="gearCheck.mergeAllHint">Для склеенной группы: если у участника выключен хотя бы один пункт из неё, вся группа даёт 0 баллов. Без этой галочки считается сумма того, что включено. Отметить достаточно у любого пункта группы — действует на всю.</p>
 
     <div class="field">
-      <label for="itemSubgroup">Подраздел внутри раздела (необязательно)</label>
-      <input type="text" id="itemSubgroup" placeholder="Например, Еліксири" />
+      <label for="itemSubgroup" data-i18n="gearCheck.subgroupLabel">Подраздел внутри раздела (необязательно)</label>
+      <input type="text" id="itemSubgroup" data-i18n-attr="placeholder:gearCheck.subgroupPlaceholder" placeholder="Например, Еліксири" />
     </div>
-    <p class="hint">Пункты с одинаковым подразделом группируются под общей подписью, отдельно от остальных пунктов раздела.</p>
+    <p class="hint" data-i18n="gearCheck.subgroupHint">Пункты с одинаковым подразделом группируются под общей подписью, отдельно от остальных пунктов раздела.</p>
 
     <div class="field">
-      <label>Картинка</label>
+      <label data-i18n="gearCheck.pictureLabel">Картинка</label>
       <div style="display:flex; align-items:center; gap:10px;">
         <img id="itemIconPreview" alt="" style="width:40px; height:40px; border-radius:7px; object-fit:cover; border:1px solid var(--border); background: var(--panel-2);" />
-        <button class="btn" id="itemIconBtn">Загрузить</button>
-        <button class="btn btn-danger" id="itemIconClearBtn">Убрать</button>
+        <button class="btn" id="itemIconBtn" data-i18n="gearCheck.uploadBtn">Загрузить</button>
+        <button class="btn btn-danger" id="itemIconClearBtn" data-i18n="gearCheck.removeBtn">Убрать</button>
       </div>
     </div>
 
     <p class="error-msg" id="itemError"></p>
-    <button class="btn btn-primary" id="itemSaveBtn">Сохранить</button>
+    <button class="btn btn-primary" id="itemSaveBtn" data-i18n="gearCheck.saveBtn">Сохранить</button>
   </div>
 </div>
 
 <div class="modal-overlay" id="classValuesOverlay">
   <div class="modal" style="max-width:480px;">
-    <button class="modal-close" id="classValuesClose" title="Закрыть">×</button>
-    <h2>Значения по классам</h2>
-    <p class="hint">Для пунктов с отметкой «Своя подпись для каждого класса»: у баффа — свой код, у тату — свои статы.</p>
+    <button class="modal-close" id="classValuesClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 data-i18n="gearCheck.classValuesTitle">Значения по классам</h2>
+    <p class="hint" data-i18n="gearCheck.classValuesHint">Для пунктов с отметкой «Своя подпись для каждого класса»: у баффа — свой код, у тату — свои статы.</p>
 
     <div class="field">
-      <label for="cvItemSelect">Пункт</label>
+      <label for="cvItemSelect" data-i18n="gearCheck.itemLabel">Пункт</label>
       <select id="cvItemSelect"></select>
     </div>
 
     <div id="cvList"></div>
 
     <div class="manual-add" style="max-width:none;">
-      <input type="text" id="cvNewClass" placeholder="Добавить профессию" />
-      <button class="btn" id="cvAddClassBtn">Добавить</button>
+      <input type="text" id="cvNewClass" data-i18n-attr="placeholder:gearCheck.addClassPlaceholder" placeholder="Добавить профессию" />
+      <button class="btn" id="cvAddClassBtn" data-i18n="gearCheck.addBtn">Добавить</button>
     </div>
 
     <p class="error-msg" id="cvError"></p>
     <p class="ok-msg" id="cvOk"></p>
-    <button class="btn btn-primary" id="cvSaveBtn">Сохранить</button>
+    <button class="btn btn-primary" id="cvSaveBtn" data-i18n="gearCheck.saveBtn">Сохранить</button>
   </div>
 </div>
 
 <div class="modal-overlay" id="memberOverlay">
   <div class="modal gc-member-modal" style="width:640px; max-width:94vw;">
-    <button class="modal-close" id="memberClose" title="Закрыть">×</button>
+    <button class="modal-close" id="memberClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
     <h2 id="memberTitle"></h2>
 
     <div class="field">
-      <label>Класс</label>
+      <label data-i18n="gearCheck.classLabel">Класс</label>
       <div class="gc-class-picker" id="classPicker">
         <button type="button" class="gc-class-picker-btn" id="classPickerBtn">
           <img id="classPickerIcon" class="gc-class-picker-icon" alt="" style="display:none;" />
-          <span id="classPickerLabel">Не выбран</span>
+          <span id="classPickerLabel" data-i18n="gearCheck.notSelectedM">Не выбран</span>
         </button>
         <div class="gc-class-dropdown" id="classDropdown" style="display:none;">
-          <input type="text" id="classSearchInput" placeholder="Поиск класса..." />
+          <input type="text" id="classSearchInput" data-i18n-attr="placeholder:gearCheck.classSearchPlaceholder" placeholder="Поиск класса..." />
           <div class="gc-class-list" id="classDropdownList"></div>
         </div>
       </div>
     </div>
 
     <p class="error-msg" id="memberError"></p>
-    <button class="btn btn-primary" id="memberSaveBtn">Сохранить</button>
+    <button class="btn btn-primary" id="memberSaveBtn" data-i18n="gearCheck.saveBtn">Сохранить</button>
   </div>
 </div>
 
@@ -485,6 +485,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=17"></script>
+<script src="js/i18n.js?v=1"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -494,7 +495,8 @@
   const profile = await L2Cabinet.getProfile();
   if(!profile){
     document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
-      '<h1>⚠ Профиль не найден</h1><p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+      '<h1>' + L2I18n.t("shell.profileNotFoundTitle", "⚠ Профиль не найден") + '</h1>' +
+      '<p class="hint">' + L2I18n.t("common.contactLeader", "Обратитесь к клан-лидеру.") + '</p></div></div>';
     return;
   }
 
@@ -504,7 +506,7 @@
   const db = L2Cabinet.client;
   document.getElementById("wrap").style.display = "";
   document.getElementById("addSectionBtn").style.display = isAdmin ? "" : "none";
-  document.getElementById("gcSoloBtn").addEventListener("click", () => { selectedGroupId = SOLO_KEY; showTableView("Соло"); pushGcHistory(); });
+  document.getElementById("gcSoloBtn").addEventListener("click", () => { selectedGroupId = SOLO_KEY; showTableView(L2I18n.t("gearCheck.soloLabel", "Соло")); pushGcHistory(); });
 
   // ---- кнопка «Назад» браузера должна выходить из таблицы группы к экрану выбора,
   // а не сразу улетать со страницы целиком: при входе в группу кладём отметку в
@@ -521,7 +523,7 @@
       gcHistoryActive = true;
       if(document.getElementById("gcTableView").style.display === "none" && selectedGroupId){
         const g = groups.find(x => x.id === selectedGroupId);
-        showTableView(selectedGroupId === SOLO_KEY ? "Соло" : g?.name);
+        showTableView(selectedGroupId === SOLO_KEY ? L2I18n.t("gearCheck.soloLabel", "Соло") : g?.name);
       }
     } else {
       gcHistoryActive = false;
@@ -690,15 +692,15 @@
       card.className = "gc-group-card";
       card.innerHTML =
         `<div class="gc-group-card-name">${escapeHtml(g.name)}</div>` +
-        `<div class="gc-group-card-members">${members.length ? escapeHtml(preview) : "Пока никого нет"}</div>` +
-        `<div class="gc-group-card-foot"><span class="badge">${members.length} участников</span></div>`;
+        `<div class="gc-group-card-members">${members.length ? escapeHtml(preview) : L2I18n.t("gearCheck.noMembersYet", "Пока никого нет")}</div>` +
+        `<div class="gc-group-card-foot"><span class="badge">${members.length}${L2I18n.t("gearCheck.membersCountSuffix", " участников")}</span></div>`;
       card.addEventListener("click", () => { selectedGroupId = g.id; showTableView(g.name); pushGcHistory(); });
       grid.appendChild(card);
     });
     const grouped = new Set();
     membersByGroup.forEach(list => list.forEach(n => grouped.add(n)));
     const soloCount = nicks.filter(n => !grouped.has(n)).length;
-    document.getElementById("gcSoloBtn").textContent = `Соло — участники без группы (${soloCount})`;
+    document.getElementById("gcSoloBtn").textContent = L2I18n.t("gearCheck.soloBtnWithCount", "Соло — участники без группы ({n})").replace("{n}", soloCount);
   }
 
   function showPickerView(){
@@ -714,7 +716,7 @@
     const hasGroups = groups.length > 0;
     document.getElementById("gcBackBtn").style.display = hasGroups ? "" : "none";
     document.getElementById("gcCurrentLabel").textContent = hasGroups
-      ? (label != null ? label : (selectedGroupId === SOLO_KEY ? "Соло" : ""))
+      ? (label != null ? label : (selectedGroupId === SOLO_KEY ? L2I18n.t("gearCheck.soloLabel", "Соло") : ""))
       : "";
     renderTable();
   }
@@ -812,19 +814,19 @@
     const list = currentNicks();
     const emptyEl = document.getElementById("gcEmpty");
     if(!nicks.length){
-      emptyEl.textContent = "В последней переписи нет участников — сначала заполните «Перепись клана».";
+      emptyEl.textContent = L2I18n.t("gearCheck.censusEmptyHint", "В последней переписи нет участников — сначала заполните «Перепись клана».");
       emptyEl.style.display = "";
     } else if(!list.length){
       emptyEl.textContent = selectedGroupId === SOLO_KEY
-        ? "Участников без группы нет — все состоят в группах."
-        : "В этой группе нет участников из последней переписи.";
+        ? L2I18n.t("gearCheck.noSoloMembers", "Участников без группы нет — все состоят в группах.")
+        : L2I18n.t("gearCheck.noGroupMembers", "В этой группе нет участников из последней переписи.");
       emptyEl.style.display = "";
     } else {
       emptyEl.style.display = "none";
     }
 
     const colGroups = mergeGroups(cols);
-    let h = '<tr><th class="gc-col-nick">Участники</th><th>Общие баллы</th><th>Процент буста</th>';
+    let h = `<tr><th class="gc-col-nick">${L2I18n.t("gearCheck.colMembers", "Участники")}</th><th>${L2I18n.t("gearCheck.colTotalPoints", "Общие баллы")}</th><th>${L2I18n.t("gearCheck.colBoostPercent", "Процент буста")}</th>`;
     colGroups.forEach(group => {
       // склеенные пункты — одна колонка на всех: иконки в ряд, названия через «+»,
       // вес в шапке общий (сумма), балл в строке участника тоже один на группу
@@ -836,7 +838,7 @@
            `<span class="nm">${names}</span></div></th>`;
     });
     // последний столбец — добавить пункт (у админа), чтобы колонки заводились прямо из таблицы
-    if(isAdmin) h += '<th><button class="btn gc-add-col-btn" id="addColBtn" title="Добавить столбец">+</button></th>';
+    if(isAdmin) h += `<th><button class="btn gc-add-col-btn" id="addColBtn" title="${escapeHtml(L2I18n.t("gearCheck.addColumnTitle", "Добавить столбец"))}">+</button></th>`;
     h += "</tr>";
     head.innerHTML = h;
     if(isAdmin) document.getElementById("addColBtn").addEventListener("click", addColumn);
@@ -863,7 +865,7 @@
         const menuBtn = document.createElement("button");
         menuBtn.className = "gc-row-menu";
         menuBtn.textContent = "⋮";
-        menuBtn.title = "Класс";
+        menuBtn.title = L2I18n.t("gearCheck.classMenuTitle", "Класс");
         menuBtn.addEventListener("click", (e) => { e.stopPropagation(); openMemberModal(nick); });
         wrap.appendChild(menuBtn);
       }
@@ -879,8 +881,8 @@
         const cls = "gc-cell" + (onItems.length === group.length ? " on" : "") + (group.length > 1 ? " gc-merged" : "");
         const title = group.length > 1
           ? ' title="' + escapeHtml(
-              group.map(i => `${i.name}: ${valueSet.has(keyOf(nick, i.id)) ? "есть" : "нет"}`).join(", ") +
-              (isAllRequired(group) ? " — балл только если есть всё" : "")
+              group.map(i => `${i.name}: ${valueSet.has(keyOf(nick, i.id)) ? L2I18n.t("gearCheck.hasValue", "есть") : L2I18n.t("gearCheck.noValue", "нет")}`).join(", ") +
+              (isAllRequired(group) ? L2I18n.t("gearCheck.mergedAllRequiredHint", " — балл только если есть всё") : "")
             ) + '"'
           : "";
         rest += `<td class="${cls}"${title}>${groupScore(group, nick).toFixed(2)}</td>`;
@@ -928,7 +930,7 @@
     document.getElementById("footTools").classList.remove("open");
     document.getElementById("footToggleBtn").classList.remove("open");
     editMode = false;
-    document.getElementById("editModeBtn").textContent = "✎ Редактировать";
+    document.getElementById("editModeBtn").textContent = L2I18n.t("gearCheck.editModeBtn", "✎ Редактировать");
     renderDrawerBody();
     document.getElementById("drawerOverlay").classList.add("show");
     document.getElementById("drawer").classList.add("show");
@@ -947,7 +949,7 @@
     const body = document.getElementById("drawerBody");
     body.innerHTML = "";
     if(!sections.length){
-      body.innerHTML = '<p class="hint">' + (isAdmin ? "Разделов ещё нет — нажмите «+ Раздел» внизу." : "Разделы ещё не настроены.") + "</p>";
+      body.innerHTML = '<p class="hint">' + (isAdmin ? L2I18n.t("gearCheck.noSectionsAdminHint", "Разделов ещё нет — нажмите «+ Раздел» внизу.") : L2I18n.t("gearCheck.noSectionsHint", "Разделы ещё не настроены.")) + "</p>";
       return;
     }
     sections.forEach(sec => {
@@ -962,13 +964,13 @@
         const tools = document.createElement("div");
         tools.className = "sec-tools";
         const addItemBtn = document.createElement("button");
-        addItemBtn.className = "btn icon-mini-btn"; addItemBtn.textContent = "+"; addItemBtn.title = "Добавить пункт";
+        addItemBtn.className = "btn icon-mini-btn"; addItemBtn.textContent = "+"; addItemBtn.title = L2I18n.t("gearCheck.addItemTitle", "Добавить пункт");
         addItemBtn.addEventListener("click", () => addItem(sec.id));
         const renSec = document.createElement("button");
-        renSec.className = "btn icon-mini-btn"; renSec.textContent = "✎"; renSec.title = "Переименовать раздел";
+        renSec.className = "btn icon-mini-btn"; renSec.textContent = "✎"; renSec.title = L2I18n.t("gearCheck.renameSectionTitle", "Переименовать раздел");
         renSec.addEventListener("click", () => renameSection(sec));
         const delSec = document.createElement("button");
-        delSec.className = "btn btn-danger icon-mini-btn"; delSec.textContent = "×"; delSec.title = "Удалить раздел";
+        delSec.className = "btn btn-danger icon-mini-btn"; delSec.textContent = "×"; delSec.title = L2I18n.t("gearCheck.deleteSectionTitle", "Удалить раздел");
         delSec.addEventListener("click", () => deleteSection(sec));
         tools.append(addItemBtn, renSec, delSec);
         title.appendChild(tools);
@@ -983,7 +985,7 @@
       grid.className = "gc-item-grid";
       if(!secItems.length){
         const empty = document.createElement("p");
-        empty.className = "hint"; empty.style.gridColumn = "1 / -1"; empty.textContent = "Пунктов нет.";
+        empty.className = "hint"; empty.style.gridColumn = "1 / -1"; empty.textContent = L2I18n.t("gearCheck.noItemsHint", "Пунктов нет.");
         grid.appendChild(empty);
       }
       mergeGroups(mainItems).forEach(group => grid.appendChild(makeItemCard(group)));
@@ -1000,7 +1002,7 @@
         sgTitle.appendChild(sgName);
         if(isAdmin && editMode){
           const addBtn = document.createElement("button");
-          addBtn.className = "btn icon-mini-btn"; addBtn.textContent = "+"; addBtn.title = "Добавить пункт в этот подраздел";
+          addBtn.className = "btn icon-mini-btn"; addBtn.textContent = "+"; addBtn.title = L2I18n.t("gearCheck.addItemToSubgroupTitle", "Добавить пункт в этот подраздел");
           addBtn.addEventListener("click", () => addItem(sec.id, sg));
           sgTitle.appendChild(addBtn);
         }
@@ -1039,8 +1041,8 @@
     const onCount = group.filter(i => valueSet.has(keyOf(currentNick, i.id))).length;
     const all = onCount === group.length;
     note.textContent = all
-      ? "Засчитано полностью"
-      : `Балл только если включено всё (сейчас ${onCount} из ${group.length})`;
+      ? L2I18n.t("gearCheck.fullyCounted", "Засчитано полностью")
+      : L2I18n.t("gearCheck.scoreOnlyIfAll", "Балл только если включено всё (сейчас {on} из {total})").replace("{on}", onCount).replace("{total}", group.length);
     note.classList.toggle("ok", all);
   }
 
@@ -1064,7 +1066,7 @@
 
     const meta = document.createElement("div");
     meta.className = "meta";
-    meta.innerHTML = `<div class="nm">${escapeHtml(item.name)}${item.hidden ? ' <span class="hint">(скрыто)</span>' : ""}</div>`;
+    meta.innerHTML = `<div class="nm">${escapeHtml(item.name)}${item.hidden ? ' <span class="hint">' + escapeHtml(L2I18n.t("gearCheck.hiddenTag", "(скрыто)")) + '</span>' : ""}</div>`;
     top.appendChild(meta);
 
     if(isAdmin && editMode){
@@ -1073,13 +1075,13 @@
       const hideBtn = document.createElement("button");
       hideBtn.className = "btn icon-mini-btn";
       hideBtn.textContent = item.hidden ? "◎" : "◍";
-      hideBtn.title = item.hidden ? "Показать пункт" : "Скрыть пункт (данные не удаляются)";
+      hideBtn.title = item.hidden ? L2I18n.t("gearCheck.showItemTitle", "Показать пункт") : L2I18n.t("gearCheck.hideItemTitle", "Скрыть пункт (данные не удаляются)");
       hideBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleItemHidden(item); });
       const edit = document.createElement("button");
-      edit.className = "btn icon-mini-btn"; edit.textContent = "✎"; edit.title = "Изменить";
+      edit.className = "btn icon-mini-btn"; edit.textContent = "✎"; edit.title = L2I18n.t("gearCheck.editTitle", "Изменить");
       edit.addEventListener("click", (e) => { e.stopPropagation(); editItem(item); });
       const del = document.createElement("button");
-      del.className = "btn btn-danger icon-mini-btn"; del.textContent = "×"; del.title = "Удалить совсем";
+      del.className = "btn btn-danger icon-mini-btn"; del.textContent = "×"; del.title = L2I18n.t("gearCheck.deleteForeverTitle", "Удалить совсем");
       del.addEventListener("click", (e) => { e.stopPropagation(); deleteItem(item); });
       tools.append(hideBtn, edit, del);
       top.appendChild(tools);
@@ -1110,7 +1112,7 @@
       const copyBtn = document.createElement("button");
       copyBtn.className = "copy";
       copyBtn.type = "button";
-      copyBtn.title = "Скопировать";
+      copyBtn.title = L2I18n.t("gearCheck.copyTitle", "Скопировать");
       copyBtn.textContent = "⧉";
       copyBtn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1122,7 +1124,7 @@
       card.appendChild(subRow);
     } else if(item.per_class){
       subRow.innerHTML = `<span class="txt">${
-        (memberInfo.get(currentNick) || {}).class_name ? "нет значения для этого класса" : "класс участника не задан"
+        (memberInfo.get(currentNick) || {}).class_name ? L2I18n.t("gearCheck.noValueForClass", "нет значения для этого класса") : L2I18n.t("gearCheck.classNotSet", "класс участника не задан")
       }</span>`;
       card.appendChild(subRow);
     }
@@ -1143,7 +1145,7 @@
       { clan_id: profile.clan_id, nickname: currentNick, item_id: itemId, enabled: on },
       { onConflict: "nickname,item_id" }
     );
-    if(error){ alert("Не удалось сохранить: " + error.message); return; }
+    if(error){ alert(L2I18n.t("gearCheck.saveValueFailed", "Не удалось сохранить: ") + error.message); return; }
     const k = keyOf(currentNick, itemId);
     if(on) valueSet.add(k); else valueSet.delete(k);
     refreshMergeNotes();
@@ -1152,7 +1154,7 @@
 
   // ---------- конструктор (только админ) ----------
   async function addSection(){
-    const name = prompt("Название раздела:");
+    const name = prompt(L2I18n.t("gearCheck.sectionNamePrompt", "Название раздела:"));
     if(!name || !name.trim()) return;
     const sort = sections.length ? Math.max(...sections.map(s=>s.sort_order)) + 1 : 0;
     const { error } = await db.from("boost_sections").insert({ clan_id: profile.clan_id, name: name.trim(), sort_order: sort });
@@ -1166,12 +1168,12 @@
   });
   document.getElementById("editModeBtn").addEventListener("click", () => {
     editMode = !editMode;
-    document.getElementById("editModeBtn").textContent = editMode ? "✓ Готово" : "✎ Редактировать";
+    document.getElementById("editModeBtn").textContent = editMode ? L2I18n.t("gearCheck.editModeDoneBtn", "✓ Готово") : L2I18n.t("gearCheck.editModeBtn", "✎ Редактировать");
     renderDrawerBody();
   });
 
   async function renameSection(sec){
-    const name = prompt("Новое название раздела:", sec.name);
+    const name = prompt(L2I18n.t("gearCheck.sectionRenamePrompt", "Новое название раздела:"), sec.name);
     if(!name || !name.trim()) return;
     const { error } = await db.from("boost_sections").update({ name: name.trim() }).eq("id", sec.id);
     if(error){ alert(error.message); return; }
@@ -1179,7 +1181,7 @@
   }
 
   async function deleteSection(sec){
-    if(!confirm(`Удалить раздел «${sec.name}» со всеми его пунктами?`)) return;
+    if(!confirm(L2I18n.t("gearCheck.confirmDeleteSection", "Удалить раздел «{name}» со всеми его пунктами?").replace("{name}", sec.name))) return;
     const { error } = await db.from("boost_sections").delete().eq("id", sec.id);
     if(error){ alert(error.message); return; }
     await loadStructure(); await loadValues(); renderDrawerBody(); renderTable();
@@ -1204,7 +1206,7 @@
     itemModalItem = opts.item || null;
     itemModalSectionId = opts.sectionId || (opts.item ? opts.item.section_id : null);
     itemModalPendingIcon = null;
-    document.getElementById("itemModalTitle").textContent = mode === "edit" ? "Изменить пункт" : "Новый пункт";
+    document.getElementById("itemModalTitle").textContent = mode === "edit" ? L2I18n.t("gearCheck.itemEditTitle", "Изменить пункт") : L2I18n.t("gearCheck.itemNewTitle", "Новый пункт");
     document.getElementById("itemName").value = opts.item?.name || "";
     document.getElementById("itemWeight").value = opts.item ? opts.item.weight : 1;
     document.getElementById("itemSubtitle").value = opts.item?.subtitle || "";
@@ -1245,7 +1247,7 @@
     errEl.textContent = "";
     const name = document.getElementById("itemName").value.trim();
     const weight = Number(document.getElementById("itemWeight").value);
-    if(!name || !isFinite(weight)){ errEl.textContent = "Проверьте название и вес."; return; }
+    if(!name || !isFinite(weight)){ errEl.textContent = L2I18n.t("gearCheck.checkNameAndWeight", "Проверьте название и вес."); return; }
 
     const row = {
       name, weight,
@@ -1275,7 +1277,7 @@
   });
 
   async function deleteItem(item){
-    if(!confirm(`Удалить пункт «${item.name}»?`)) return;
+    if(!confirm(L2I18n.t("gearCheck.confirmDeleteItem", "Удалить пункт «{name}»?").replace("{name}", item.name))) return;
     const { error } = await db.from("boost_items").delete().eq("id", item.id);
     if(error){ alert(error.message); return; }
     await loadStructure(); await loadValues(); renderDrawerBody(); renderTable();
@@ -1287,7 +1289,7 @@
     if(!sections.length){
       // без разделов пункту негде жить — заводим общий на лету
       const { data, error } = await db.from("boost_sections")
-        .insert({ clan_id: profile.clan_id, name: "Общая", sort_order: 0 })
+        .insert({ clan_id: profile.clan_id, name: L2I18n.t("gearCheck.generalSectionName", "Общая"), sort_order: 0 })
         .select("id").single();
       if(error){ alert(error.message); return; }
       sectionId = data.id;
@@ -1296,10 +1298,10 @@
       sectionId = sections[0].id;
     } else {
       const list = sections.map((s, i) => `${i + 1}. ${s.name}`).join("\n");
-      const pick = prompt("В какой раздел добавить столбец?\n" + list, "1");
+      const pick = prompt(L2I18n.t("gearCheck.pickSectionPrompt", "В какой раздел добавить столбец?\n{list}").replace("{list}", list), "1");
       if(pick === null) return;
       const idx = Number(pick) - 1;
-      if(!(idx >= 0 && idx < sections.length)){ alert("Нет такого раздела."); return; }
+      if(!(idx >= 0 && idx < sections.length)){ alert(L2I18n.t("gearCheck.noSuchSection", "Нет такого раздела.")); return; }
       sectionId = sections[idx].id;
     }
     await addItem(sectionId);
@@ -1316,7 +1318,7 @@
     const icon = classIcon(memberModalClassName);
     const iconEl = document.getElementById("classPickerIcon");
     if(icon){ iconEl.src = icon; iconEl.style.display = ""; } else { iconEl.style.display = "none"; }
-    document.getElementById("classPickerLabel").textContent = memberModalClassName || "Не выбран";
+    document.getElementById("classPickerLabel").textContent = memberModalClassName || L2I18n.t("gearCheck.notSelectedM", "Не выбран");
   }
   function renderClassDropdownList(filterText){
     const list = document.getElementById("classDropdownList");
@@ -1324,7 +1326,7 @@
     list.innerHTML = "";
     const clearOpt = document.createElement("div");
     clearOpt.className = "gc-class-option gc-class-clear";
-    clearOpt.textContent = "Не выбран";
+    clearOpt.textContent = L2I18n.t("gearCheck.notSelectedM", "Не выбран");
     clearOpt.addEventListener("click", () => { memberModalClassName = ""; renderClassPickerButton(); closeClassDropdown(); });
     list.appendChild(clearOpt);
     (window.L2_CLASSES || []).filter(c => !q || c.name.toLowerCase().includes(q)).forEach(c => {
@@ -1392,7 +1394,7 @@
     const list = document.getElementById("cvList");
     const classes = knownClasses();
     if(!classes.length){
-      list.innerHTML = '<p class="hint">Классы ещё не заданы ни одному участнику — впишите класс через «⋮» у ника в таблице, либо добавьте профессию вручную ниже.</p>';
+      list.innerHTML = '<p class="hint">' + L2I18n.t("gearCheck.noClassesYetHint", "Классы ещё не заданы ни одному участнику — впишите класс через «⋮» у ника в таблице, либо добавьте профессию вручную ниже.") + '</p>';
       return;
     }
     list.innerHTML = "";
@@ -1406,7 +1408,7 @@
       input.type = "text";
       input.dataset.cls = cls;
       input.value = classValues.get(itemId + "|" + cls) || "";
-      input.placeholder = "Значение для «" + cls + "» (не название класса)";
+      input.placeholder = L2I18n.t("gearCheck.classValuePlaceholder", "Значение для «{cls}» (не название класса)").replace("{cls}", cls);
       row.append(label, input);
       list.appendChild(row);
     });
@@ -1420,7 +1422,7 @@
     if(!items2.length){
       sel.innerHTML = "";
       document.getElementById("cvList").innerHTML =
-        '<p class="hint">Нет пунктов с отметкой «Своя подпись для каждого класса» — включите её в окне пункта (карандаш у пункта в разделах ниже).</p>';
+        '<p class="hint">' + L2I18n.t("gearCheck.noPerClassItemsHint", "Нет пунктов с отметкой «Своя подпись для каждого класса» — включите её в окне пункта (карандаш у пункта в разделах ниже).") + '</p>';
     } else {
       sel.innerHTML = items2.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join("");
       renderClassValuesList();
@@ -1462,7 +1464,7 @@
     if(!rows.length) return;
     const { error } = await db.from("boost_class_values").upsert(rows, { onConflict: "item_id,class_name" });
     if(error){ errEl.textContent = error.message; return; }
-    okEl.textContent = "Сохранено.";
+    okEl.textContent = L2I18n.t("gearCheck.saved", "Сохранено.");
     await loadClassValues();
     renderDrawerBody();
     renderTable();
@@ -1523,7 +1525,7 @@
     // экран выбора и кнопка возврата к нему скрыты
     const myGroup = groups.find(g => g.id === profile.party_id);
     selectedGroupId = profile.party_id;
-    showTableView(myGroup?.name || "Моя пати");
+    showTableView(myGroup?.name || L2I18n.t("gearCheck.myPartyFallback", "Моя пати"));
     document.getElementById("gcBackBtn").style.display = "none";
   } else if(wantGroup){
     selectedGroupId = wantGroup.id;
@@ -1534,6 +1536,13 @@
   } else {
     showTableView();
   }
+
+  window.addEventListener("storage", (e) => {
+    if(e.key !== "l2Lang") return;
+    if(document.getElementById("gcPickView").style.display !== "none") renderPicker();
+    if(document.getElementById("gcTableView").style.display !== "none") renderTable();
+    if(document.getElementById("drawer").classList.contains("show")) renderDrawerBody();
+  });
 })();
 </script>
 </body>

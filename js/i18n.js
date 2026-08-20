@@ -1266,6 +1266,188 @@
     "eventRoster.saveFailed": ["Не удалось сохранить: ", "Не вдалося зберегти: ", "Failed to save: "],
     "eventRoster.batchSaveFailed": ["Не удалось сохранить метку скрина: ", "Не вдалося зберегти мітку скрина: ", "Failed to save the screenshot marker: "],
     "eventRoster.statsSaveFailed": ["Явка сохранена, но статистика — нет: ", "Явку збережено, але статистику — ні: ", "Attendance saved, but the stats weren't: "],
+
+    "gearCheck.title": ["Проверка буста", "Перевірка бусту", "Gear Check"],
+    "gearCheck.backBtnTitle": ["Выбрать другую группу", "Обрати іншу групу", "Choose another group"],
+    "gearCheck.pickHint": [
+      "Выберите группу, чтобы проверить буст только её участников, либо посмотрите тех, кто не состоит ни в одной группе.",
+      "Оберіть групу, щоб перевірити буст тільки її учасників, або подивіться тих, хто не перебуває в жодній групі.",
+      "Pick a group to check the gear of just its members, or view those who aren't in any group.",
+    ],
+    "gearCheck.soloBtn": ["Соло — участники без группы", "Соло — учасники без групи", "Solo — members without a group"],
+    "gearCheck.soloLabel": ["Соло", "Соло", "Solo"],
+    "gearCheck.avgPercentLabel": ["Средний процент буста: ", "Середній відсоток бусту: ", "Average gear %: "],
+    "gearCheck.censusEmptyHint": [
+      "В последней переписи нет участников — сначала заполните «Перепись клана».",
+      "В останньому переписі немає учасників — спершу заповніть «Перепис клану».",
+      "There are no members in the latest census — fill out “Clan Census” first.",
+    ],
+    "gearCheck.noSoloMembers": ["Участников без группы нет — все состоят в группах.", "Учасників без групи немає — всі перебувають у групах.", "There are no members without a group — everyone is in a group."],
+    "gearCheck.noGroupMembers": ["В этой группе нет участников из последней переписи.", "У цій групі немає учасників з останнього перепису.", "This group has no members from the latest census."],
+    "gearCheck.classValuesBtn": ["Значения по классам", "Значення по класах", "Values by class"],
+    "gearCheck.editModeBtn": ["✎ Редактировать", "✎ Редагувати", "✎ Edit"],
+    "gearCheck.editModeDoneBtn": ["✓ Готово", "✓ Готово", "✓ Done"],
+    "gearCheck.addSectionBtn": ["+ Раздел", "+ Розділ", "+ Section"],
+    "gearCheck.toolsBtnTitle": ["Инструменты", "Інструменти", "Tools"],
+    "gearCheck.closeBtn": ["Закрыть", "Закрити", "Close"],
+    "gearCheck.helpBtnLabel": ["Как пользоваться", "Як користуватись", "How to use"],
+    "gearCheck.helpTitle": ["Как пользоваться проверкой буста", "Як користуватись перевіркою бусту", "How to use gear check"],
+    "gearCheck.helpPickSummary": ["Выбор группы", "Вибір групи", "Choosing a group"],
+    "gearCheck.helpPickBody": [
+      "<p>Если в разделе «Группы» есть хотя бы одна группа, при входе сначала показывается выбор: карточка группы открывает таблицу только для её участников, кнопка «Соло» — для тех, кто не состоит ни в одной группе. Кнопка «← Выбрать другую группу» над таблицей возвращает к выбору. Если групп нет вообще, таблица сразу показывает всех.</p>",
+      "<p>Якщо в розділі «Групи» є хоча б одна група, при вході спершу показується вибір: картка групи відкриває таблицю тільки для її учасників, кнопка «Соло» — для тих, хто не перебуває в жодній групі. Кнопка «← Обрати іншу групу» над таблицею повертає до вибору. Якщо груп немає взагалі, таблиця одразу показує всіх.</p>",
+      "<p>If there's at least one group in “Groups”, entering the page first shows a picker: a group card opens the table for just its members, the “Solo” button — for those in no group. The “← Choose another group” button above the table returns to the picker. If there are no groups at all, the table shows everyone right away.</p>",
+    ],
+    "gearCheck.helpTableSummary": ["Таблица", "Таблиця", "Table"],
+    "gearCheck.helpTableBody": [
+      "<p>Участники берутся из последней «Переписи клана». Столбцы — пункты буста (Бафф, Зілля и т.д.), у каждого свой вес (число-бейдж в шапке). «Общие баллы» — сумма веса включённых пунктов, «Процент буста» — эти баллы от максимума по всем пунктам.</p>",
+      "<p>Учасники беруться з останнього «Перепису клану». Стовпці — пункти бусту (Бафф, Зілля тощо), у кожного свою вагу (число-бейдж у шапці). «Загальні бали» — сума ваги увімкнених пунктів, «Відсоток бусту» — ці бали від максимуму по всіх пунктах.</p>",
+      "<p>Members are taken from the latest “Clan Census”. Columns are gear items (Buff, Potion, etc.), each with its own weight (the number badge in the header). “Total points” is the sum of enabled items' weight, “Gear %” is those points against the maximum across all items.</p>",
+    ],
+    "gearCheck.helpCardSummary": ["Карточка участника (клик по строке)", "Картка учасника (клік по рядку)", "Member card (click a row)"],
+    "gearCheck.helpCardBody": [
+      "<p>Открывает панель справа: тумблеры включают/выключают пункты у этого участника. Баллы и процент пересчитываются сразу.</p>",
+      "<p>Відкриває панель праворуч: тумблери вмикають/вимикають пункти в цього учасника. Бали і відсоток перераховуються одразу.</p>",
+      "<p>Opens the panel on the right: toggles turn this member's items on/off. Points and percentage are recalculated immediately.</p>",
+    ],
+    "gearCheck.helpClassSummary": ["Класс участника", "Клас учасника", "Member class"],
+    "gearCheck.helpClassBody": [
+      "<p>Кнопка «⋮» справа от ника (у админа) открывает окно выбора класса — он показывается подписью под ником, а его иконка становится аватаркой участника. Отдельно загружать фото не нужно.</p>",
+      "<p>Кнопка «⋮» праворуч від ніка (в адміна) відкриває вікно вибору класу — він показується підписом під ніком, а його іконка стає аватаркою учасника. Окремо завантажувати фото не потрібно.</p>",
+      "<p>The “⋮” button to the right of a nickname (admin only) opens the class picker — it's shown as a caption under the nickname, and its icon becomes the member's avatar. There's no need to upload a photo separately.</p>",
+    ],
+    "gearCheck.helpColumnsSummary": ["Настройка столбцов (главный админ и админ)", "Налаштування стовпців (головний адмін і адмін)", "Configuring columns (main admin and admin)"],
+    "gearCheck.helpColumnsBody": [
+      "<p>Кнопка «+» в шапке таблицы, последним столбцом, добавляет новый пункт: имя, вес, потом можно загрузить картинку. Если разделов ещё нет, автоматически создастся раздел «Общая»; если разделов несколько — спросит, в какой добавить.</p>" +
+      "<p>То же самое можно делать в панели справа: внизу кнопка «✎ Редактировать» показывает у разделов и пунктов кружок (скрыть/показать), карандаш (имя/вес/фото) и крестик (удалить совсем); «+ Раздел» тоже внизу. Пока «Редактировать» не нажат, панель чистая — видны только тумблеры.</p>" +
+      "<p><b>Скрыть</b> — пункт пропадает из таблицы и не считается в баллах, но тумблеры участников по нему сохраняются: в любой момент можно снова показать, ничего не переделывая. <b>Удалить</b> — совсем, без возврата.</p>" +
+      "<p><b>Склеить с предыдущим пунктом</b> (галочка в окне пункта) — соседние пункты одного раздела становятся одной колонкой: общий вес в шапке и один балл в строке участника, в панели — одна карточка со своими тумблерами. Склеивать можно и больше двух: отмечайте галочку у каждого следующего пункта цепочки.</p>" +
+      "<p><b>Балл только если включено всё склеенное</b> — вторая галочка рядом. С ней группа даёт баллы, лишь когда у участника отмечены все её пункты; не хватает хотя бы одного — 0 баллов за всю группу. Без неё считается сумма того, что включено. Достаточно отметить у любого пункта группы.</p>",
+      "<p>Кнопка «+» у шапці таблиці, останнім стовпцем, додає новий пункт: ім'я, вага, потім можна завантажити картинку. Якщо розділів ще немає, автоматично створиться розділ «Загальна»; якщо розділів декілька — запитає, в який додати.</p>" +
+      "<p>Те саме можна робити в панелі праворуч: внизу кнопка «✎ Редагувати» показує в розділів і пунктів кружечок (сховати/показати), олівець (ім'я/вага/фото) і хрестик (видалити зовсім); «+ Розділ» теж внизу. Поки «Редагувати» не натиснуто, панель чиста — видно тільки тумблери.</p>" +
+      "<p><b>Сховати</b> — пункт зникає з таблиці і не рахується в балах, але тумблери учасників по ньому зберігаються: у будь-який момент можна знову показати, нічого не переробляючи. <b>Видалити</b> — зовсім, без повернення.</p>" +
+      "<p><b>Склеїти з попереднім пунктом</b> (галочка у вікні пункту) — сусідні пункти одного розділу стають однією колонкою: загальна вага в шапці і один бал у рядку учасника, у панелі — одна картка зі своїми тумблерами. Склеювати можна й більше двох: відмічайте галочку в кожного наступного пункту ланцюжка.</p>" +
+      "<p><b>Бал тільки якщо увімкнено все склеєне</b> — друга галочка поруч. З нею група дає бали, лише коли в учасника відмічені всі її пункти; не вистачає хоча б одного — 0 балів за всю групу. Без неї рахується сума того, що увімкнено. Достатньо відмітити в будь-якого пункту групи.</p>",
+      "<p>The “+” button in the table header, as the last column, adds a new item: name, weight, then you can upload a picture. If there are no sections yet, a “General” section is created automatically; if there are several, it asks which one to add to.</p>" +
+      "<p>The same can be done in the panel on the right: the “✎ Edit” button at the bottom shows a circle (hide/show), a pencil (name/weight/photo), and an × (delete completely) next to sections and items; “+ Section” is at the bottom too. Until “Edit” is clicked, the panel is clean — only toggles are visible.</p>" +
+      "<p><b>Hide</b> — the item disappears from the table and isn't counted in points, but members' toggles for it are kept: you can show it again at any time without redoing anything. <b>Delete</b> — permanently, no way back.</p>" +
+      "<p><b>Merge with the previous item</b> (a checkbox in the item window) — adjacent items in the same section become one column: a combined weight in the header and a single score in a member's row, and one card with its own toggles in the panel. You can merge more than two: check the box on each following item in the chain.</p>" +
+      "<p><b>Score only if everything merged is on</b> — a second checkbox next to it. With it, the group only gives points once all its items are checked for a member; missing even one means 0 points for the whole group. Without it, the sum of what's enabled is counted. Checking it on any item in the group is enough.</p>",
+    ],
+
+    "gearCheck.itemModalDefaultTitle": ["Пункт", "Пункт", "Item"],
+    "gearCheck.itemEditTitle": ["Изменить пункт", "Змінити пункт", "Edit item"],
+    "gearCheck.itemNewTitle": ["Новый пункт", "Новий пункт", "New item"],
+    "gearCheck.nameLabel": ["Название", "Назва", "Name"],
+    "gearCheck.namePlaceholder": ["Например, Бафф", "Наприклад, Бафф", "E.g., Buff"],
+    "gearCheck.weightLabel": ["Вес (баллы)", "Вага (бали)", "Weight (points)"],
+    "gearCheck.subtitleLabel": ["Подпись под названием", "Підпис під назвою", "Caption under the name"],
+    "gearCheck.subtitlePlaceholder": ["Например, код баффа", "Наприклад, код баффа", "E.g., buff code"],
+    "gearCheck.perClassCheckbox": ["Своя подпись для каждого класса", "Свій підпис для кожного класу", "Own caption per class"],
+    "gearCheck.perClassHint": [
+      "Пока отмечено — поле «Подпись под названием» выше не используется, показывается значение из «Значения по классам» для класса участника.",
+      "Поки відмічено — поле «Підпис під назвою» вище не використовується, показується значення з «Значення по класах» для класу учасника.",
+      "While checked, the “Caption under the name” field above isn't used — the value from “Values by class” for the member's class is shown instead.",
+    ],
+    "gearCheck.fullWidthCheckbox": ["Широкая ячейка (на всю строку)", "Широка клітинка (на весь рядок)", "Wide cell (full row)"],
+    "gearCheck.mergeCheckbox": ["Склеить с предыдущим пунктом", "Склеїти з попереднім пунктом", "Merge with the previous item"],
+    "gearCheck.mergeHint": [
+      "Пункт срастётся с идущим перед ним пунктом того же раздела и подраздела: в таблице они станут одной колонкой с общим весом и одним баллом, в панели участника — одной карточкой со своими тумблерами.",
+      "Пункт зростеться з тим, що йде перед ним, того ж розділу і підрозділу: у таблиці вони стануть однією колонкою із загальною вагою й одним балом, у панелі учасника — однією карткою зі своїми тумблерами.",
+      "The item will merge with the one before it in the same section and subgroup: in the table they become one column with a combined weight and a single score, and one card with its own toggles in the member panel.",
+    ],
+    "gearCheck.mergeAllCheckbox": ["Балл только если включено всё склеенное", "Бал тільки якщо увімкнено все склеєне", "Score only if everything merged is on"],
+    "gearCheck.mergeAllHint": [
+      "Для склеенной группы: если у участника выключен хотя бы один пункт из неё, вся группа даёт 0 баллов. Без этой галочки считается сумма того, что включено. Отметить достаточно у любого пункта группы — действует на всю.",
+      "Для склеєної групи: якщо в учасника вимкнено хоча б один пункт з неї, вся група дає 0 балів. Без цієї галочки рахується сума того, що увімкнено. Відмітити достатньо в будь-якого пункту групи — діє на всю.",
+      "For a merged group: if a member has even one item from it turned off, the whole group gives 0 points. Without this checkbox, the sum of what's enabled is counted. Checking it on any item in the group is enough — it applies to the whole group.",
+    ],
+    "gearCheck.subgroupLabel": ["Подраздел внутри раздела (необязательно)", "Підрозділ усередині розділу (необов'язково)", "Subgroup within the section (optional)"],
+    "gearCheck.subgroupPlaceholder": ["Например, Еліксири", "Наприклад, Еліксири", "E.g., Elixirs"],
+    "gearCheck.subgroupHint": [
+      "Пункты с одинаковым подразделом группируются под общей подписью, отдельно от остальных пунктов раздела.",
+      "Пункти з однаковим підрозділом групуються під загальним підписом, окремо від решти пунктів розділу.",
+      "Items with the same subgroup are grouped under a shared caption, separate from the rest of the section's items.",
+    ],
+    "gearCheck.pictureLabel": ["Картинка", "Картинка", "Picture"],
+    "gearCheck.uploadBtn": ["Загрузить", "Завантажити", "Upload"],
+    "gearCheck.removeBtn": ["Убрать", "Прибрати", "Remove"],
+    "gearCheck.saveBtn": ["Сохранить", "Зберегти", "Save"],
+
+    "gearCheck.classValuesTitle": ["Значения по классам", "Значення по класах", "Values by class"],
+    "gearCheck.classValuesHint": [
+      "Для пунктов с отметкой «Своя подпись для каждого класса»: у баффа — свой код, у тату — свои статы.",
+      "Для пунктів з відміткою «Свій підпис для кожного класу»: у баффа — свій код, у тату — свої стати.",
+      "For items marked “Own caption per class”: a buff has its own code, a tattoo has its own stats.",
+    ],
+    "gearCheck.itemLabel": ["Пункт", "Пункт", "Item"],
+    "gearCheck.addClassPlaceholder": ["Добавить профессию", "Додати професію", "Add a class"],
+    "gearCheck.addBtn": ["Добавить", "Додати", "Add"],
+
+    "gearCheck.classLabel": ["Класс", "Клас", "Class"],
+    "gearCheck.classSearchPlaceholder": ["Поиск класса...", "Пошук класу...", "Search class..."],
+
+    "gearCheck.membersCountSuffix": [" участников", " учасників", " members"],
+    "gearCheck.noMembersYet": ["Пока никого нет", "Поки нікого немає", "No one yet"],
+    "gearCheck.soloBtnWithCount": ["Соло — участники без группы ({n})", "Соло — учасники без групи ({n})", "Solo — members without a group ({n})"],
+    "gearCheck.colMembers": ["Участники", "Учасники", "Members"],
+    "gearCheck.colTotalPoints": ["Общие баллы", "Загальні бали", "Total points"],
+    "gearCheck.colBoostPercent": ["Процент буста", "Відсоток бусту", "Gear %"],
+    "gearCheck.addColumnTitle": ["Добавить столбец", "Додати стовпець", "Add column"],
+    "gearCheck.classMenuTitle": ["Класс", "Клас", "Class"],
+    "gearCheck.hasValue": ["есть", "є", "yes"],
+    "gearCheck.noValue": ["нет", "немає", "no"],
+    "gearCheck.mergedAllRequiredHint": [" — балл только если есть всё", " — бал тільки якщо є все", " — score only if all are on"],
+
+    "gearCheck.myPartyFallback": ["Моя пати", "Моя паті", "My party"],
+
+    "gearCheck.noSectionsAdminHint": ["Разделов ещё нет — нажмите «+ Раздел» внизу.", "Розділів ще немає — натисніть «+ Розділ» внизу.", "There are no sections yet — click “+ Section” below."],
+    "gearCheck.noSectionsHint": ["Разделы ещё не настроены.", "Розділи ще не налаштовано.", "Sections haven't been set up yet."],
+    "gearCheck.addItemTitle": ["Добавить пункт", "Додати пункт", "Add item"],
+    "gearCheck.renameSectionTitle": ["Переименовать раздел", "Перейменувати розділ", "Rename section"],
+    "gearCheck.deleteSectionTitle": ["Удалить раздел", "Видалити розділ", "Delete section"],
+    "gearCheck.noItemsHint": ["Пунктов нет.", "Пунктів немає.", "There are no items."],
+    "gearCheck.addItemToSubgroupTitle": ["Добавить пункт в этот подраздел", "Додати пункт у цей підрозділ", "Add an item to this subgroup"],
+
+    "gearCheck.fullyCounted": ["Засчитано полностью", "Зараховано повністю", "Fully counted"],
+    "gearCheck.scoreOnlyIfAll": [
+      "Балл только если включено всё (сейчас {on} из {total})",
+      "Бал тільки якщо увімкнено все (зараз {on} з {total})",
+      "Score only if everything is on (currently {on} of {total})",
+    ],
+
+    "gearCheck.hiddenTag": ["(скрыто)", "(сховано)", "(hidden)"],
+    "gearCheck.showItemTitle": ["Показать пункт", "Показати пункт", "Show item"],
+    "gearCheck.hideItemTitle": ["Скрыть пункт (данные не удаляются)", "Сховати пункт (дані не видаляються)", "Hide item (data isn't deleted)"],
+    "gearCheck.editTitle": ["Изменить", "Змінити", "Edit"],
+    "gearCheck.deleteForeverTitle": ["Удалить совсем", "Видалити зовсім", "Delete permanently"],
+    "gearCheck.copyTitle": ["Скопировать", "Скопіювати", "Copy"],
+    "gearCheck.noValueForClass": ["нет значения для этого класса", "немає значення для цього класу", "no value for this class"],
+    "gearCheck.classNotSet": ["класс участника не задан", "клас учасника не задано", "the member's class isn't set"],
+
+    "gearCheck.saveValueFailed": ["Не удалось сохранить: ", "Не вдалося зберегти: ", "Failed to save: "],
+    "gearCheck.sectionNamePrompt": ["Название раздела:", "Назва розділу:", "Section name:"],
+    "gearCheck.sectionRenamePrompt": ["Новое название раздела:", "Нова назва розділу:", "New section name:"],
+    "gearCheck.confirmDeleteSection": ["Удалить раздел «{name}» со всеми его пунктами?", "Видалити розділ «{name}» з усіма його пунктами?", "Delete the section “{name}” along with all its items?"],
+    "gearCheck.checkNameAndWeight": ["Проверьте название и вес.", "Перевірте назву і вагу.", "Check the name and weight."],
+    "gearCheck.confirmDeleteItem": ["Удалить пункт «{name}»?", "Видалити пункт «{name}»?", "Delete the item “{name}”?"],
+    "gearCheck.generalSectionName": ["Общая", "Загальна", "General"],
+    "gearCheck.pickSectionPrompt": ["В какой раздел добавить столбец?\n{list}", "У який розділ додати стовпець?\n{list}", "Which section should the column be added to?\n{list}"],
+    "gearCheck.noSuchSection": ["Нет такого раздела.", "Немає такого розділу.", "There's no such section."],
+
+    "gearCheck.notSelectedM": ["Не выбран", "Не обрано", "Not selected"],
+    "gearCheck.noClassesYetHint": [
+      "Классы ещё не заданы ни одному участнику — впишите класс через «⋮» у ника в таблице, либо добавьте профессию вручную ниже.",
+      "Класи ще не задані жодному учаснику — впишіть клас через «⋮» у ніка в таблиці, або додайте професію вручну нижче.",
+      "No classes have been set for any member yet — set one via “⋮” next to a nickname in the table, or add a class manually below.",
+    ],
+    "gearCheck.classValuePlaceholder": ["Значение для «{cls}» (не название класса)", "Значення для «{cls}» (не назва класу)", "Value for “{cls}” (not the class name)"],
+    "gearCheck.noPerClassItemsHint": [
+      "Нет пунктов с отметкой «Своя подпись для каждого класса» — включите её в окне пункта (карандаш у пункта в разделах ниже).",
+      "Немає пунктів з відміткою «Свій підпис для кожного класу» — увімкніть її у вікні пункту (олівець у пункту в розділах нижче).",
+      "There are no items marked “Own caption per class” — enable it in the item window (the pencil next to an item in the sections below).",
+    ],
+    "gearCheck.saved": ["Сохранено.", "Збережено.", "Saved."],
   };
 
   function getLang(){
