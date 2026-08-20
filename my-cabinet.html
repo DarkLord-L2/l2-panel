@@ -22,51 +22,6 @@
   .cab-head .name{ font-size:19px; font-weight:700; color: var(--text); }
   .cab-head .cls{ font-size:13px; color: var(--text-dim); }
 
-  /* ---- кнопка «Инвентарь» (мешок) и выезжающая панель слотов экипировки ---- */
-  .cab-inv-toggle{
-    margin-left:auto; flex:none;
-    width:40px; height:40px; padding:0;
-    display:flex; align-items:center; justify-content:center;
-    border-radius:8px; border:1px solid var(--border); background: var(--panel-2);
-    color: var(--text-dim); cursor:pointer;
-    transition: color .15s ease, border-color .15s ease, background .15s ease;
-  }
-  .cab-inv-toggle svg{ width:22px; height:22px; }
-  .cab-inv-toggle:hover{ color: var(--text); border-color: var(--border-lit); }
-  .cab-inv-toggle.active{ color: var(--gold); border-color: var(--gold); background: var(--panel); }
-
-  .cab-row{ display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap; }
-  .cab-stats-card{ flex:1 1 320px; min-width:0; }
-
-  .cab-inv-panel{
-    flex:none; width:0; overflow:hidden; opacity:0;
-    border:0 solid var(--border); border-radius:8px; background: var(--panel);
-    box-sizing:border-box;
-    transition: width .32s ease, opacity .22s ease, border-width .32s ease;
-  }
-  .cab-inv-panel.open{ width:260px; opacity:1; border-width:1px; }
-  .cab-inv-panel .cab-inv-inner{ width:260px; padding:16px; display:flex; flex-direction:column; align-items:center; }
-  .cab-inv-panel h2{ margin-bottom:14px; align-self:flex-start; }
-
-  /* тот самый скрин окна экипировки (assets/equipment-slots.png), персонажа в
-     центре вырезали — остались только квадратики слотов, силуэт «бумажной куклы».
-     Клики ловит прозрачная сетка поверх картинки — координаты слотов (в %) сняты
-     с реальных границ квадратов на этом самом файле */
-  .cab-inv-img-wrap{ position:relative; width:228px; }
-  .cab-inv-img{ width:100%; height:auto; display:block; border-radius:4px; }
-  .cab-inv-hotspots{ position:absolute; inset:0; }
-  .cab-inv-hot{
-    position:absolute; cursor:pointer; border-radius:3px;
-    transition: background .15s ease, box-shadow .15s ease;
-  }
-  .cab-inv-hot:hover{ background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px rgba(255,255,255,.3); }
-  .cab-inv-hot.selected{ background: rgba(224,165,42,.16); box-shadow: inset 0 0 0 2px var(--gold); }
-
-  @media (max-width: 720px){
-    .cab-inv-panel.open{ width:100%; }
-    .cab-inv-panel .cab-inv-inner{ width:100%; }
-  }
-
   .rep-filters{ display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; }
   .rep-filters .field{ margin:0; min-width:220px; }
   .rep-tiles{ display:grid; grid-template-columns:repeat(auto-fit, minmax(120px,1fr)); gap:8px; }
@@ -118,51 +73,33 @@
         <div class="name" id="cabNickname"></div>
         <div class="cls" id="cabClass"></div>
       </div>
-      <button type="button" class="cab-inv-toggle" id="invToggleBtn" title="Инвентарь">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 8c0-2.2 1.3-4 3-4s3 1.8 3 4"/>
-          <path d="M7 8h10l1.4 10.5a2 2 0 01-2 2.5H7.6a2 2 0 01-2-2.5L7 8z"/>
-        </svg>
-      </button>
     </section>
 
-    <div class="cab-row">
-      <section class="card cab-stats-card">
-        <h2>Статистика по мероприятиям</h2>
-        <div class="rep-filters">
-          <div class="field">
-            <label for="cabPeriodSelect">Период</label>
-            <select id="cabPeriodSelect"></select>
-          </div>
+    <section class="card">
+      <h2>Статистика по мероприятиям</h2>
+      <div class="rep-filters">
+        <div class="field">
+          <label for="cabPeriodSelect">Период</label>
+          <select id="cabPeriodSelect"></select>
         </div>
+      </div>
 
-        <div class="rep-tiles" style="margin-top:14px;">
-          <div class="rep-tile"><div class="val" id="cabKills">0</div><div class="lbl">Килы</div></div>
-          <div class="rep-tile"><div class="val" id="cabDeaths">0</div><div class="lbl">Смерти</div></div>
-          <div class="rep-tile"><div class="val" id="cabKd">0.00</div><div class="lbl">K:D</div></div>
-          <div class="rep-tile"><div class="val" id="cabPvp">0</div><div class="lbl">PvP урон</div></div>
-          <div class="rep-tile"><div class="val" id="cabPve">0</div><div class="lbl">PvE урон</div></div>
-        </div>
+      <div class="rep-tiles" style="margin-top:14px;">
+        <div class="rep-tile"><div class="val" id="cabKills">0</div><div class="lbl">Килы</div></div>
+        <div class="rep-tile"><div class="val" id="cabDeaths">0</div><div class="lbl">Смерти</div></div>
+        <div class="rep-tile"><div class="val" id="cabKd">0.00</div><div class="lbl">K:D</div></div>
+        <div class="rep-tile"><div class="val" id="cabPvp">0</div><div class="lbl">PvP урон</div></div>
+        <div class="rep-tile"><div class="val" id="cabPve">0</div><div class="lbl">PvE урон</div></div>
+      </div>
 
-        <div class="cab-history-scroll">
-          <table class="cab-history-table">
-            <thead><tr><th>Дата</th><th>Мероприятие</th><th>Килы</th><th>Смерти</th><th>K:D</th><th>PvP</th><th>PvE</th></tr></thead>
-            <tbody id="cabHistoryBody"></tbody>
-          </table>
-        </div>
-        <p class="hint" id="cabHistoryEmpty" style="display:none;">За выбранный период данных нет.</p>
-      </section>
-
-      <aside class="cab-inv-panel" id="invPanel">
-        <div class="cab-inv-inner">
-          <h2>Инвентарь</h2>
-          <div class="cab-inv-img-wrap">
-            <img class="cab-inv-img" src="assets/equipment-slots.png" alt="Слоты экипировки" />
-            <div class="cab-inv-hotspots" id="invHotspots"></div>
-          </div>
-        </div>
-      </aside>
-    </div>
+      <div class="cab-history-scroll">
+        <table class="cab-history-table">
+          <thead><tr><th>Дата</th><th>Мероприятие</th><th>Килы</th><th>Смерти</th><th>K:D</th><th>PvP</th><th>PvE</th></tr></thead>
+          <tbody id="cabHistoryBody"></tbody>
+        </table>
+      </div>
+      <p class="hint" id="cabHistoryEmpty" style="display:none;">За выбранный период данных нет.</p>
+    </section>
 
     <section class="card">
       <h2>Проверка буста</h2>
@@ -276,67 +213,6 @@
     const n = normalizeNick(nickname);
     return n === myNorm || n.startsWith(myNorm) || myNorm.startsWith(n);
   }
-
-  // ---------- инвентарь: картинка окна экипировки (assets/equipment-slots.png — тот самый
-  // присланный скрин, персонажа вырезали редактированием, остались только квадратики) +
-  // прозрачная сетка кликабельных зон поверх неё. Границы (в % от размера картинки 203×367)
-  // сняты не на глаз, а по перепаду яркости между соседними строками/колонками (проверено
-  // оверлеем — линии легли ровно по границам квадратов), поэтому строки НЕ строго равные —
-  // 4 колонки: внешняя-левая/внутренняя-левая/внутренняя-правая/внешняя-правая; внутренние
-  // есть только в верхних 3 строках — там, где раньше был персонаж, и в нижней строке
-  // (доп. слоты рядом с оружием/щитом) ----------
-  const INV_COL = {
-    outerLeft:  { left: 3.941,  width: 17.734 },
-    innerLeft:  { left: 21.675, width: 16.749 },
-    innerRight: { left: 61.084, width: 17.734 },
-    outerRight: { left: 78.818, width: 17.734 },
-  };
-  const INV_ROWS = [
-    { top: 2.452,  height: 9.946 },
-    { top: 12.398, height: 10.627 },
-    { top: 23.025, height: 10.627 },
-    { top: 33.651, height: 10.627 },
-    { top: 44.278, height: 10.899 },
-    { top: 55.177, height: 10.763 },
-    { top: 65.940, height: 10.763 },
-    { top: 76.703, height: 10.763 },
-    { top: 87.466, height: 10.082 },
-  ];
-  const INV_HOTSPOTS = [
-    ...["Шлем", "Броня", "Штаны", "Наручи", "Сапоги", "Плащ", "Аксессуар", "Пояс", "Оружие"]
-      .map((label, row) => ({ label, col: "outerLeft", row })),
-    ...["Аксессуар", "Маска", "Серьга", "Серьга", "Ожерелье", "Кольцо", "Браслет", "Браслет", "Щит"]
-      .map((label, row) => ({ label, col: "outerRight", row })),
-    { label: "Аксессуар", col: "innerLeft", row: 0 },
-    { label: "Слот", col: "innerLeft", row: 1 },
-    { label: "Слот", col: "innerLeft", row: 2 },
-    { label: "Аксессуар", col: "innerRight", row: 0 },
-    { label: "Аксессуар", col: "innerRight", row: 1 },
-    { label: "Слот", col: "innerRight", row: 2 },
-    { label: "Доп. слот", col: "innerLeft", row: 8 },
-    { label: "Доп. слот", col: "innerRight", row: 8 },
-  ];
-  function renderInvHotspots(){
-    const wrap = document.getElementById("invHotspots");
-    wrap.innerHTML = INV_HOTSPOTS.map(s => {
-      const c = INV_COL[s.col];
-      const r = INV_ROWS[s.row];
-      return `<div class="cab-inv-hot" title="${escapeHtml(s.label)}" data-slot="${escapeHtml(s.label)}" ` +
-        `style="left:${c.left}%;width:${c.width}%;top:${r.top}%;height:${r.height}%;"></div>`;
-    }).join("");
-    wrap.querySelectorAll(".cab-inv-hot").forEach(el => {
-      el.addEventListener("click", () => {
-        wrap.querySelectorAll(".cab-inv-hot.selected").forEach(s => s.classList.remove("selected"));
-        el.classList.add("selected");
-        // TODO: следующий шаг — открыть выбор предмета для el.dataset.slot
-      });
-    });
-  }
-  renderInvHotspots();
-  document.getElementById("invToggleBtn").addEventListener("click", (e) => {
-    document.getElementById("invPanel").classList.toggle("open");
-    e.currentTarget.classList.toggle("active");
-  });
 
   // ---------- шапка: класс/аватарка ----------
   async function loadMyMemberInfo(){
