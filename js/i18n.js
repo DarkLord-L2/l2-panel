@@ -765,6 +765,307 @@
     "admin.hiddenParty": ["Скрытая пати", "Прихована паті", "Hidden party"],
     "admin.noRole": ["Без роли", "Без ролі", "No role"],
     "admin.noParty": ["Без пати", "Без паті", "No party"],
+
+    "panel.title": ["Панель скилов", "Панель скілів", "Skill Panel"],
+    "panel.menuBtnTitle": ["Меню", "Меню", "Menu"],
+    "panel.menuAddIcons": ["Добавить иконки", "Додати іконки", "Add icons"],
+    "panel.menuAddMacro": ["➕ Добавить макрос", "➕ Додати макрос", "➕ Add macro"],
+    "panel.menuExport": ["Экспорт в файл", "Експорт у файл", "Export to file"],
+    "panel.menuImport": ["Импорт из файла", "Імпорт з файлу", "Import from file"],
+    "panel.menuClearAll": ["Очистить панель класса", "Очистити панель класу", "Clear the class panel"],
+    "panel.raceTitle": ["Раса", "Раса", "Race"],
+    "panel.classTitle": ["Класс", "Клас", "Class"],
+    "panel.shareBtn": ["Поделиться", "Поділитися", "Share"],
+    "panel.shareBtnTitle": ["Скопировать ссылку на раскладку", "Скопіювати посилання на розкладку", "Copy a link to the layout"],
+    "panel.arrowUpTitle": ["Открыть ряд выше", "Відкрити ряд вище", "Open the row above"],
+    "panel.arrowDownTitle": ["Скрыть верхний ряд", "Сховати верхній ряд", "Hide the top row"],
+    "panel.mainGripTitle": ["Перетащить панель (двойной клик — вернуть на место)", "Перетягнути панель (подвійний клік — повернути на місце)", "Drag the panel (double-click to reset position)"],
+    "panel.floatsBtnTitle": ["Доп. панели 11–13: добавить / убрать", "Дод. панелі 11–13: додати / прибрати", "Extra panels 11–13: add / remove"],
+    "panel.orientBtnTitle": ["Горизонтально / вертикально", "Горизонтально / вертикально", "Horizontal / vertical"],
+    "panel.lockBtnTitle": ["Закрыть панель (замок)", "Закрити панель (замок)", "Lock the panel"],
+    "panel.libCollapseExpandTitle": ["Развернуть панель иконок", "Розгорнути панель іконок", "Expand the icon panel"],
+    "panel.libCollapseCollapseTitle": ["Свернуть панель иконок", "Згорнути панель іконок", "Collapse the icon panel"],
+    "panel.libTrashBtnTitle": ["Показать/скрыть удаление иконок", "Показати/сховати видалення іконок", "Show/hide icon deletion"],
+    "panel.myMacros": ["Мои макросы", "Мої макроси", "My macros"],
+
+    "panel.addIconsTitle": ["Добавить иконки", "Додати іконки", "Add icons"],
+    "panel.scopeClass": ["Для одного класса", "Для одного класу", "For one class"],
+    "panel.scopeGlobal": ["Общая для всех классов", "Спільна для всіх класів", "Shared across all classes"],
+    "panel.groupHeading": ["Группа", "Група", "Group"],
+    "panel.newGroupNamePlaceholder": ["Название новой группы", "Назва нової групи", "New group name"],
+    "panel.pickFilesBtn": ["Выбрать файлы…", "Вибрати файли…", "Choose files…"],
+    "panel.newGroupOption": ["➕ Новая группа…", "➕ Нова група…", "➕ New group…"],
+
+    "panel.newMacroTitle": ["Новый макрос", "Новий макрос", "New macro"],
+    "panel.macroIntro": [
+      "Макросы может создавать любой, кто открыл панель — они хранятся только у вас в браузере. А вот иконки для них выдаёт владелец панели.",
+      "Макроси може створювати будь-хто, хто відкрив панель — вони зберігаються тільки у вас у браузері. А от іконки для них видає власник панелі.",
+      "Anyone who opens the panel can create macros — they're stored only in your browser. But the icons for them are supplied by the panel's owner.",
+    ],
+    "panel.iconHeading": ["Иконка", "Іконка", "Icon"],
+    "panel.addMacroIconBtn": ["+ Добавить иконку для макросов", "+ Додати іконку для макросів", "+ Add an icon for macros"],
+    "panel.macroIconHint": [
+      "Пополнить этот набор может только владелец панели — если нужной иконки нет, обратитесь к нему.",
+      "Поповнити цей набір може тільки власник панелі — якщо потрібної іконки немає, зверніться до нього.",
+      "Only the panel's owner can add to this set — if the icon you need isn't there, contact them.",
+    ],
+    "panel.nameHeading": ["Название", "Назва", "Name"],
+    "panel.macroNamePlaceholder": ["Например: Бафф-сет", "Наприклад: Бафф-сет", "E.g.: Buff set"],
+    "panel.macroTextHeading": ["Текст (до 12 строк, каждая до 25 символов)", "Текст (до 12 рядків, кожен до 25 символів)", "Text (up to 12 lines, up to 25 characters each)"],
+    "panel.saveMacroBtn": ["Сохранить макрос", "Зберегти макрос", "Save macro"],
+    "panel.macroViewDefaultTitle": ["Макрос", "Макрос", "Macro"],
+
+    "panel.confirmDefaultTitle": ["Подтвердите", "Підтвердіть", "Confirm"],
+    "panel.yes": ["Да", "Так", "Yes"],
+    "panel.cancel": ["Отмена", "Скасувати", "Cancel"],
+    "panel.copyTitleDefault": ["Скопируйте", "Скопіюйте", "Copy this"],
+    "panel.copyBtn": ["Скопировать", "Скопіювати", "Copy"],
+    "panel.close": ["Закрыть", "Закрити", "Close"],
+    "panel.copyHint": [
+      "Если кнопка не сработала — выделите текст выше и нажмите Ctrl+C (⌘+C на Mac).",
+      "Якщо кнопка не спрацювала — виділіть текст вище і натисніть Ctrl+C (⌘+C на Mac).",
+      "If the button didn't work — select the text above and press Ctrl+C (⌘+C on Mac).",
+    ],
+
+    "panel.helpBtnTitle": ["Руководство", "Посібник", "Guide"],
+    "panel.helpTitle": ["Как пользоваться панелью", "Як користуватися панеллю", "How to use the panel"],
+    "panel.helpCharsSummary": ["Персонажи", "Персонажі", "Characters"],
+    "panel.helpCharsBody": [
+      "<p>Сверху выбираете расу и класс. У каждого класса — своя панель и своя библиотека иконок: переключаетесь между персонажами, и всё остаётся на своих местах.</p>",
+      "<p>Зверху обираєте расу і клас. У кожного класу — своя панель і своя бібліотека іконок: перемикаєтесь між персонажами, і все залишається на своїх місцях.</p>",
+      "<p>Pick a race and class at the top. Each class has its own panel and its own icon library: switch between characters and everything stays right where it was.</p>",
+    ],
+    "panel.helpIconsSummary": ["Иконки и группы", "Іконки і групи", "Icons and groups"],
+    "panel.helpIconsBody": [
+      "<ul>" +
+      "<li>Меню ☰ → «Добавить иконки»: выбираете «Для одного класса» или «Общая для всех классов», выбираете группу (существующую или создаёте новую по имени) и жмёте «Выбрать файлы…».</li>" +
+      "<li>Группа «для одного класса» видна только на панели этого класса. Группа «общая для всех» появляется у каждого персонажа автоматически, без повторной загрузки.</li>" +
+      "<li>Иконки показываются полоской из подписанных групп под панелью — у общих групп рядом с названием значок «общая».</li>" +
+      "<li>Из группы перетащите иконку на любую ячейку — она там останется. Одну иконку можно ставить в несколько ячеек.</li>" +
+      "<li>Файл из проводника можно бросить и сразу на ячейку — он попадёт и туда, и в группу «Иконки» текущего класса.</li>" +
+      "<li>Иконку можно перетащить с одной ячейки на другую: пустая ячейка её примет, а если там уже есть иконка — они поменяются местами.</li>" +
+      "<li>Перетащите иконку с ячейки в пустое место страницы — она уберётся с панели (в группе останется).</li>" +
+      "<li>Крестик на иконке убирает её из группы, крестик у названия группы — удаляет всю группу (на уже расставленные ячейки это не влияет). Эти крестики, как и само добавление иконок, доступны только владельцу панели. У остальных их нет вообще.</li>" +
+      "<li>У владельца внизу колонки с иконками есть кнопка 🗑 — по умолчанию крестики удаления скрыты, чтобы не мешали смотреть иконки; кнопка их показывает и прячет обратно.</li>" +
+      "<li>Кнопка «‹» вверху колонки сворачивает её в узкую полоску (нажмите «›», чтобы развернуть обратно) — иконки при этом никуда не пропадают, просто скрыты из вида. Браузер запоминает, свёрнута она или нет.</li>" +
+      "</ul>",
+      "<ul>" +
+      "<li>Меню ☰ → «Додати іконки»: обираєте «Для одного класу» або «Спільна для всіх класів», обираєте групу (наявну або створюєте нову за назвою) і тиснете «Вибрати файли…».</li>" +
+      "<li>Група «для одного класу» видна тільки на панелі цього класу. Група «спільна для всіх» з'являється у кожного персонажа автоматично, без повторного завантаження.</li>" +
+      "<li>Іконки показуються смугою з підписаних груп під панеллю — у спільних груп поруч із назвою значок «спільна».</li>" +
+      "<li>З групи перетягніть іконку на будь-яку клітинку — вона там залишиться. Одну іконку можна ставити в кілька клітинок.</li>" +
+      "<li>Файл із провідника можна кинути й одразу на клітинку — він потрапить і туди, і в групу «Іконки» поточного класу.</li>" +
+      "<li>Іконку можна перетягнути з однієї клітинки на іншу: порожня клітинка її прийме, а якщо там уже є іконка — вони поміняються місцями.</li>" +
+      "<li>Перетягніть іконку з клітинки в порожнє місце сторінки — вона прибереться з панелі (у групі залишиться).</li>" +
+      "<li>Хрестик на іконці прибирає її з групи, хрестик біля назви групи — видаляє всю групу (на вже розставлені клітинки це не впливає). Ці хрестики, як і саме додавання іконок, доступні тільки власнику панелі. В інших їх немає взагалі.</li>" +
+      "<li>У власника внизу колонки з іконками є кнопка 🗑 — за замовчуванням хрестики видалення сховані, щоб не заважали дивитися іконки; кнопка їх показує і ховає назад.</li>" +
+      "<li>Кнопка «‹» вгорі колонки згортає її у вузьку смужку (натисніть «›», щоб розгорнути назад) — іконки при цьому нікуди не зникають, просто сховані з вигляду. Браузер пам'ятає, згорнута вона чи ні.</li>" +
+      "</ul>",
+      "<ul>" +
+      "<li>Menu ☰ → “Add icons”: choose “For one class” or “Shared across all classes”, pick a group (existing or create a new one by name) and click “Choose files…”.</li>" +
+      "<li>A “for one class” group is only visible on that class's panel. A “shared” group appears for every character automatically, with no need to re-upload.</li>" +
+      "<li>Icons are shown as a strip of labeled groups below the panel — shared groups have a “shared” badge next to their name.</li>" +
+      "<li>Drag an icon from a group onto any cell — it stays there. One icon can be placed on several cells.</li>" +
+      "<li>You can also drop a file from your file explorer straight onto a cell — it lands there and in the current class's “Icons” group.</li>" +
+      "<li>An icon can be dragged from one cell to another: an empty cell accepts it, and if that cell already has an icon, they swap places.</li>" +
+      "<li>Drag an icon from a cell onto an empty spot on the page — it's removed from the panel (it stays in the group).</li>" +
+      "<li>The × on an icon removes it from the group; the × next to a group's name deletes the whole group (already-placed cells aren't affected). These × buttons, like adding icons itself, are only available to the panel's owner. No one else has them at all.</li>" +
+      "<li>The owner has a 🗑 button at the bottom of the icon column — deletion × marks are hidden by default so they don't get in the way of browsing icons; the button shows and hides them.</li>" +
+      "<li>The “‹” button at the top of the column collapses it into a narrow strip (press “›” to expand it again) — the icons don't go anywhere, they're just hidden from view. The browser remembers whether it's collapsed.</li>" +
+      "</ul>",
+    ],
+    "panel.helpMacrosSummary": ["Макросы", "Макроси", "Macros"],
+    "panel.helpMacrosBody": [
+      "<ul>" +
+      "<li>☰ → «➕ Добавить макрос» — доступно каждому, кто открыл панель, и хранится только в его браузере.</li>" +
+      "<li>Иконку для макроса выбираете из набора, который выдаёт владелец панели (кнопка «+ Добавить иконку для макросов» пополняет этот набор).</li>" +
+      "<li>В самом макросе — до 12 строк текста, в каждой до 25 символов.</li>" +
+      "<li>Готовые макросы показываются полоской «Мои макросы» под иконками — перетаскиваются на ячейки панели так же, как обычные иконки.</li>" +
+      "<li>Клик по ячейке с макросом (не перетаскивание) показывает его текст.</li>" +
+      "</ul>",
+      "<ul>" +
+      "<li>☰ → «➕ Додати макрос» — доступно кожному, хто відкрив панель, і зберігається тільки в його браузері.</li>" +
+      "<li>Іконку для макросу обираєте з набору, який видає власник панелі (кнопка «+ Додати іконку для макросів» поповнює цей набір).</li>" +
+      "<li>У самому макросі — до 12 рядків тексту, у кожному до 25 символів.</li>" +
+      "<li>Готові макроси показуються смугою «Мої макроси» під іконками — перетягуються на клітинки панелі так само, як звичайні іконки.</li>" +
+      "<li>Клік по клітинці з макросом (не перетягування) показує його текст.</li>" +
+      "</ul>",
+      "<ul>" +
+      "<li>☰ → “➕ Add macro” — available to anyone who has the panel open, and stored only in their own browser.</li>" +
+      "<li>You pick a macro icon from the set the panel's owner provides (the “+ Add an icon for macros” button adds to that set).</li>" +
+      "<li>A macro itself holds up to 12 lines of text, up to 25 characters each.</li>" +
+      "<li>Finished macros appear in the “My macros” strip below the icons — drag them onto panel cells just like regular icons.</li>" +
+      "<li>Clicking a cell with a macro (not dragging it) shows its text.</li>" +
+      "</ul>",
+    ],
+    "panel.helpKeysSummary": ["Клавиши", "Клавіші", "Keys"],
+    "panel.helpKeysBody": [
+      "<ul>" +
+      "<li>Клик по бейджу в углу ячейки — панель ждёт нажатия. Нажмите любую клавишу (буква, цифра, F1–F12…), и она привяжется.</li>" +
+      "<li>Нажмите ту же клавишу ещё раз на той же ячейке — бинд снимется, бейдж снова пустой.</li>" +
+      "<li><span class=\"kbd\">Esc</span> — отменить выбор клавиши.</li>" +
+      "</ul>",
+      "<ul>" +
+      "<li>Клік по бейджу в кутку клітинки — панель чекає на натискання. Натисніть будь-яку клавішу (літера, цифра, F1–F12…), і вона прив'яжеться.</li>" +
+      "<li>Натисніть ту саму клавішу ще раз на тій самій клітинці — бінд зніметься, бейдж знову порожній.</li>" +
+      "<li><span class=\"kbd\">Esc</span> — скасувати вибір клавіші.</li>" +
+      "</ul>",
+      "<ul>" +
+      "<li>Click the badge in the corner of a cell — the panel waits for a keypress. Press any key (letter, digit, F1–F12…) and it gets bound.</li>" +
+      "<li>Press the same key again on the same cell — the binding is removed, the badge goes empty again.</li>" +
+      "<li><span class=\"kbd\">Esc</span> — cancel the key selection.</li>" +
+      "</ul>",
+    ],
+    "panel.helpRowsSummary": ["Ряды и строки", "Ряди і рядки", "Rows and bars"],
+    "panel.helpRowsBody": [
+      "<ul>" +
+      "<li>Всего у класса <b>10 строк</b> по 12 ячеек, на экране видно до <b>6 рядов</b>.</li>" +
+      "<li>Кнопки «двойные стрелки» слева от нижнего ряда открывают ряд выше и скрывают верхний.</li>" +
+      "<li>Маленькие стрелки ▲/▼ с номером слева от каждого ряда перелистывают этот ряд по строкам 1–10 (после 10 идёт снова 1). Сам ряд остаётся на месте, соседние ряды не меняются.</li>" +
+      "</ul>",
+      "<ul>" +
+      "<li>Всього у класу <b>10 рядків</b> по 12 клітинок, на екрані видно до <b>6 рядів</b>.</li>" +
+      "<li>Кнопки «подвійні стрілки» зліва від нижнього ряду відкривають ряд вище і ховають верхній.</li>" +
+      "<li>Маленькі стрілки ▲/▼ з номером зліва від кожного ряду гортають цей ряд по рядках 1–10 (після 10 знову йде 1). Сам ряд лишається на місці, сусідні ряди не змінюються.</li>" +
+      "</ul>",
+      "<ul>" +
+      "<li>A class has <b>10 bars</b> of 12 cells each in total; up to <b>6 rows</b> are visible on screen.</li>" +
+      "<li>The “double arrow” buttons to the left of the bottom row open the row above and hide the top one.</li>" +
+      "<li>The small ▲/▼ arrows with a number to the left of each row flip that row through bars 1–10 (after 10 it wraps back to 1). The row itself stays put — neighboring rows don't change.</li>" +
+      "</ul>",
+    ],
+    "panel.helpFloatsSummary": ["Доп. панели 11–13", "Дод. панелі 11–13", "Extra panels 11–13"],
+    "panel.helpFloatsBody": [
+      "<ul>" +
+      "<li>Кнопка <b>«</b> справа от панели добавляет плавающие панели — строки 11, 12 и 13, по одной за нажатие. Когда открыты все три, следующее нажатие убирает их.</li>" +
+      "<li>Перетаскивайте их за ручку ≣ куда угодно — за край экрана они не уйдут.</li>" +
+      "<li>Кнопка ▦ на панели меняет форму: 1×12 → 2×6 → 3×4 → 4×3 → 6×2 → 12×1.</li>" +
+      "<li>Иконки и клавиши на них вешаются так же, как на основной панели. Перелистать эти строки нельзя.</li>" +
+      "</ul>",
+      "<ul>" +
+      "<li>Кнопка <b>«</b> праворуч від панелі додає плаваючі панелі — рядки 11, 12 і 13, по одному за натискання. Коли відкриті всі три, наступне натискання прибирає їх.</li>" +
+      "<li>Перетягуйте їх за ручку ≣ куди завгодно — за край екрана вони не підуть.</li>" +
+      "<li>Кнопка ▦ на панелі змінює форму: 1×12 → 2×6 → 3×4 → 4×3 → 6×2 → 12×1.</li>" +
+      "<li>Іконки і клавіші на них вішаються так само, як на основній панелі. Перегорнути ці рядки не можна.</li>" +
+      "</ul>",
+      "<ul>" +
+      "<li>The <b>«</b> button to the right of the panel adds floating panels — bars 11, 12 and 13, one per click. Once all three are open, the next click removes them.</li>" +
+      "<li>Drag them by the ≣ handle anywhere you like — they won't go off-screen.</li>" +
+      "<li>The ▦ button on a panel changes its shape: 1×12 → 2×6 → 3×4 → 4×3 → 6×2 → 12×1.</li>" +
+      "<li>Icons and keys attach to them the same way as on the main panel. These bars can't be flipped through.</li>" +
+      "</ul>",
+    ],
+    "panel.helpMoveSummary": ["Перенос, поворот и замок", "Перенесення, поворот і замок", "Moving, rotating and locking"],
+    "panel.helpMoveBody": [
+      "<ul>" +
+      "<li>Ручка <b>≣</b> в столбике кнопок — перетащить основную панель в любое место экрана. Двойной клик по ручке возвращает её на стандартное место.</li>" +
+      "<li>Кнопка <b>⇄</b> ставит основную панель вертикально и обратно.</li>" +
+      "<li>Кнопка <b>🔓/🔒</b> — замок: пока он закрыт, ничего нельзя добавить или убрать (иконки, клавиши, очистка). Перелистывание и перетаскивание панелей работают.</li>" +
+      "</ul>",
+      "<ul>" +
+      "<li>Ручка <b>≣</b> у стовпчику кнопок — перетягнути основну панель в будь-яке місце екрана. Подвійний клік по ручці повертає її на стандартне місце.</li>" +
+      "<li>Кнопка <b>⇄</b> ставить основну панель вертикально і назад.</li>" +
+      "<li>Кнопка <b>🔓/🔒</b> — замок: поки він закритий, нічого не можна додати чи прибрати (іконки, клавіші, очищення). Перегортання і перетягування панелей працюють.</li>" +
+      "</ul>",
+      "<ul>" +
+      "<li>The <b>≣</b> handle in the button column — drag the main panel anywhere on screen. Double-click the handle to reset it to its default spot.</li>" +
+      "<li>The <b>⇄</b> button switches the main panel between vertical and horizontal.</li>" +
+      "<li>The <b>🔓/🔒</b> button is a lock: while it's closed, nothing can be added or removed (icons, keys, clearing). Flipping through rows and dragging panels still work.</li>" +
+      "</ul>",
+    ],
+    "panel.helpClearSummary": ["Очистка", "Очищення", "Clearing"],
+    "panel.helpClearBody": [
+      "<p>Правый клик по ячейке — убрать картинку, убрать клавишу или очистить ячейку целиком.</p>",
+      "<p>Правий клік по клітинці — прибрати картинку, прибрати клавішу або очистити клітинку цілком.</p>",
+      "<p>Right-click a cell to remove its picture, remove its key, or clear the cell entirely.</p>",
+    ],
+    "panel.helpShareSummary": ["Поделиться (одна ссылка, один класс)", "Поділитися (одне посилання, один клас)", "Sharing (one link, one class)"],
+    "panel.helpShareBody": [
+      "<ul>" +
+      "<li>Кнопка «Поделиться» снизу слева копирует ссылку, внутри которой зашита вся раскладка текущего класса — картинки, клавиши и ряды.</li>" +
+      "<li>Получатель открывает ссылку, подтверждает — и раскладка загружается ему в тот же класс, а картинки попадают в его библиотеку.</li>" +
+      "<li>Чем больше картинок на панели, тем длиннее ссылка. Если мессенджер обрезает её — передайте раскладку файлом через ☰ Экспорт/Импорт.</li>" +
+      "</ul>",
+      "<ul>" +
+      "<li>Кнопка «Поділитися» знизу зліва копіює посилання, всередині якого зашита вся розкладка поточного класу — картинки, клавіші і ряди.</li>" +
+      "<li>Отримувач відкриває посилання, підтверджує — і розкладка завантажується йому в той самий клас, а картинки потрапляють у його бібліотеку.</li>" +
+      "<li>Чим більше картинок на панелі, тим довше посилання. Якщо месенджер обрізає його — передайте розкладку файлом через ☰ Експорт/Імпорт.</li>" +
+      "</ul>",
+      "<ul>" +
+      "<li>The “Share” button at the bottom left copies a link containing the current class's entire layout — pictures, keys and rows.</li>" +
+      "<li>The recipient opens the link, confirms — and the layout loads into the same class for them, with the pictures landing in their library.</li>" +
+      "<li>The more pictures on the panel, the longer the link. If a messenger app truncates it, send the layout as a file instead via ☰ Export/Import.</li>" +
+      "</ul>",
+    ],
+    "panel.helpMenuSummary": ["Меню ☰ (сверху слева)", "Меню ☰ (зверху зліва)", "Menu ☰ (top left)"],
+    "panel.helpMenuBody": [
+      "<p>«Добавить иконки» — выбрать расу и класс, загрузить картинки умений. Экспорт всех классов в один файл, импорт из файла и очистка панели текущего класса. Экспорт нужен для бэкапа или переноса на другой компьютер — в остальном всё сохраняется автоматически.</p>",
+      "<p>«Додати іконки» — обрати расу і клас, завантажити картинки умінь. Експорт усіх класів в один файл, імпорт з файлу і очищення панелі поточного класу. Експорт потрібен для бекапу або перенесення на інший комп'ютер — в іншому все зберігається автоматично.</p>",
+      "<p>“Add icons” — pick a race and class, upload skill pictures. Export all classes to a single file, import from a file, and clear the current class's panel. Export is for backups or moving to another computer — otherwise everything saves automatically.</p>",
+    ],
+    "panel.helpThemeSummary": ["Тема", "Тема", "Theme"],
+    "panel.helpThemeBody": [
+      "<p>Кнопка ☾/☀ сверху справа переключает тёмную и светлую тему.</p>",
+      "<p>Кнопка ☾/☀ зверху справа перемикає темну і світлу тему.</p>",
+      "<p>The ☾/☀ button at the top right switches between dark and light theme.</p>",
+    ],
+
+    "panel.ctxClearImg": ["Убрать картинку", "Прибрати картинку", "Remove picture"],
+    "panel.ctxClearKey": ["Убрать клавишу", "Прибрати клавішу", "Remove key"],
+    "panel.ctxClearAll": ["Очистить ячейку", "Очистити клітинку", "Clear cell"],
+
+    "panel.toastLocked": ["Панель закрыта — снимите замок", "Панель закрита — зніміть замок", "The panel is locked — unlock it first"],
+    "panel.toastPressKey": ["Нажмите клавишу для привязки… (Esc — отмена)", "Натисніть клавішу для прив'язки… (Esc — скасувати)", "Press a key to bind it… (Esc to cancel)"],
+    "panel.toastKeyUnbound": ["Клавиша «{key}» снята", "Клавішу «{key}» знято", "Key “{key}” unbound"],
+    "panel.toastKeyBound": ["Клавиша «{key}» привязана", "Клавішу «{key}» прив'язано", "Key “{key}” bound"],
+    "panel.toastPanelCleared": ["Панель очищена", "Панель очищено", "Panel cleared"],
+    "panel.toastImported": ["Импортировано", "Імпортовано", "Imported"],
+    "panel.toastImportFailed": ["Не удалось прочитать файл настроек", "Не вдалося прочитати файл налаштувань", "Failed to read the settings file"],
+    "panel.toastCopied": ["Скопировано", "Скопійовано", "Copied"],
+    "panel.toastIconRemovedFromPanel": ["Иконка убрана с панели", "Іконку прибрано з панелі", "Icon removed from the panel"],
+    "panel.toastFloatsRemoved": ["Доп. панели убраны", "Дод. панелі прибрано", "Extra panels removed"],
+    "panel.toastFloatAdded": ["Добавлена панель {n}", "Додано панель {n}", "Panel {n} added"],
+    "panel.toastPanelReset": ["Панель вернулась на место", "Панель повернулась на місце", "Panel reset to its default position"],
+    "panel.toastLockedChanges": ["Панель закрыта — изменения запрещены", "Панель закрита — зміни заборонені", "The panel is locked — changes are disabled"],
+    "panel.toastUnlocked": ["Панель открыта", "Панель відкрита", "The panel is unlocked"],
+    "panel.toastEnterGroupName": ["Введите название группы", "Введіть назву групи", "Enter a group name"],
+    "panel.toastIconsAddedToGroup": ["Иконки добавлены в группу «{name}»", "Іконки додано в групу «{name}»", "Icons added to the “{name}” group"],
+    "panel.toastEmptyPanel": ["Панель пустая — нечем делиться", "Панель порожня — нічим ділитися", "The panel is empty — nothing to share"],
+    "panel.toastLayoutLoaded": ["Раскладка загружена", "Розкладку завантажено", "Layout loaded"],
+    "panel.toastLayoutLinkFailed": ["Не удалось прочитать ссылку с раскладкой", "Не вдалося прочитати посилання з розкладкою", "Failed to read the layout link"],
+    "panel.toastGroupDeleted": ["Группа удалена", "Групу видалено", "Group deleted"],
+    "panel.toastIconRemovedFromGroup": ["Иконка убрана из группы", "Іконку прибрано з групи", "Icon removed from the group"],
+    "panel.toastPickMacroIcon": ["Выберите иконку для макроса", "Виберіть іконку для макросу", "Pick an icon for the macro"],
+    "panel.toastMacroSaved": ["Макрос «{name}» сохранён", "Макрос «{name}» збережено", "Macro “{name}” saved"],
+    "panel.toastMacroDeleted": ["Макрос удалён", "Макрос видалено", "Macro deleted"],
+
+    "panel.confirmDeleteGroup": ["Удалить группу «{name}» со всеми иконками?", "Видалити групу «{name}» з усіма іконками?", "Delete the group “{name}” along with all its icons?"],
+    "panel.confirmClearPanel": ["Очистить панель класса «{class}»?", "Очистити панель класу «{class}»?", "Clear the panel for class “{class}”?"],
+    "panel.confirmDeleteMacro": ["Удалить макрос «{name}»?", "Видалити макрос «{name}»?", "Delete the macro “{name}”?"],
+    "panel.confirmLoadShared": [
+      "Вам поделились раскладкой: {race} — {cls}. Загрузить её? Панель этого класса будет заменена.",
+      "Вам поділились розкладкою: {race} — {cls}. Завантажити її? Панель цього класу буде замінено.",
+      "A layout was shared with you: {race} — {cls}. Load it? This class's panel will be replaced.",
+    ],
+    "panel.deleteBtn": ["Удалить", "Видалити", "Delete"],
+    "panel.clearBtn": ["Очистить", "Очистити", "Clear"],
+    "panel.loadBtn": ["Загрузить", "Завантажити", "Load"],
+
+    "panel.nextRowTitle": ["Следующая строка (1–{n})", "Наступний рядок (1–{n})", "Next bar (1–{n})"],
+    "panel.prevRowTitle": ["Предыдущая строка (1–{n})", "Попередній рядок (1–{n})", "Previous bar (1–{n})"],
+    "panel.deleteGroupTitle": ["Удалить группу со всеми иконками", "Видалити групу з усіма іконками", "Delete the group along with all its icons"],
+    "panel.dragToCellTitle": ["Перетащите на ячейку панели", "Перетягніть на клітинку панелі", "Drag onto a panel cell"],
+    "panel.removeIconFromGroupTitle": ["Убрать иконку из группы", "Прибрати іконку з групи", "Remove icon from the group"],
+    "panel.globalBadge": ["общая", "спільна", "shared"],
+    "panel.defaultGroupName": ["Группа", "Група", "Group"],
+    "panel.defaultIconsGroupName": ["Иконки", "Іконки", "Icons"],
+    "panel.dragFloatPanelTitle": ["Перетащить панель", "Перетягнути панель", "Drag the panel"],
+    "panel.changeShapeTitle": ["Изменить форму (1×12, 2×6, 3×4…)", "Змінити форму (1×12, 2×6, 3×4…)", "Change shape (1×12, 2×6, 3×4…)"],
+    "panel.macroDragTitle": ["{name} — перетащите на ячейку", "{name} — перетягніть на клітинку", "{name} — drag onto a cell"],
+    "panel.deleteMacroTitle": ["Удалить макрос", "Видалити макрос", "Delete macro"],
+    "panel.pickThisIconTitle": ["Выбрать эту иконку", "Вибрати цю іконку", "Pick this icon"],
+    "panel.emptyMacro": ["(пусто)", "(порожньо)", "(empty)"],
+    "panel.shareLinkTitle": ["Ссылка на раскладку (~{kb} КБ)", "Посилання на розкладку (~{kb} КБ)", "Layout link (~{kb} KB)"],
   };
 
   function getLang(){

@@ -6,6 +6,7 @@
 <title>Панель скилов</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=17"></script>
+<script src="js/i18n.js?v=1"></script>
 <script>
   // Раздел кабинета — без сессии сюда попадать нельзя, даже по прямой ссылке.
   (function(){ L2Cabinet.requireSession(); })();
@@ -843,43 +844,43 @@
 </head>
 <body>
 
-<button class="menu-btn" id="menuBtn" title="Меню">☰</button>
+<button class="menu-btn" id="menuBtn" data-i18n-attr="title:panel.menuBtnTitle" title="Меню">☰</button>
 <div class="menu-panel" id="menuPanel">
-  <button id="menuAddIcons">Добавить иконки</button>
-  <button id="menuAddMacro">➕ Добавить макрос</button>
+  <button id="menuAddIcons" data-i18n="panel.menuAddIcons">Добавить иконки</button>
+  <button id="menuAddMacro" data-i18n="panel.menuAddMacro">➕ Добавить макрос</button>
   <hr />
-  <button id="btnExport">Экспорт в файл</button>
-  <button id="btnImport">Импорт из файла</button>
+  <button id="btnExport" data-i18n="panel.menuExport">Экспорт в файл</button>
+  <button id="btnImport" data-i18n="panel.menuImport">Импорт из файла</button>
   <hr />
-  <button class="danger" id="btnClearAll">Очистить панель класса</button>
+  <button class="danger" id="btnClearAll" data-i18n="panel.menuClearAll">Очистить панель класса</button>
   <input type="file" id="importFile" accept="application/json" />
 </div>
 
 <header>
-  <h1>Панель скилов</h1>
+  <h1 data-i18n="panel.title">Панель скилов</h1>
 </header>
 
 <div class="char-nav">
-  <select id="raceSelect" title="Раса"></select>
-  <select id="classSelect" title="Класс"></select>
+  <select id="raceSelect" data-i18n-attr="title:panel.raceTitle" title="Раса"></select>
+  <select id="classSelect" data-i18n-attr="title:panel.classTitle" title="Класс"></select>
 </div>
 
-<button id="btnShare" class="share-btn" title="Скопировать ссылку на раскладку">Поделиться</button>
+<button id="btnShare" class="share-btn" data-i18n-attr="title:panel.shareBtnTitle" title="Скопировать ссылку на раскладку" data-i18n="panel.shareBtn">Поделиться</button>
 
 <div class="flex-spacer"></div>
 
 <div class="stage">
   <div class="sidebar" id="sidebar">
     <div class="sidebar-spacer"></div>
-    <button class="arrow-btn" id="arrowUp" title="Открыть ряд выше"><span class="rot">«</span></button>
-    <button class="arrow-btn" id="arrowDown" title="Скрыть верхний ряд"><span class="rot rot-dn">«</span></button>
+    <button class="arrow-btn" id="arrowUp" data-i18n-attr="title:panel.arrowUpTitle" title="Открыть ряд выше"><span class="rot">«</span></button>
+    <button class="arrow-btn" id="arrowDown" data-i18n-attr="title:panel.arrowDownTitle" title="Скрыть верхний ряд"><span class="rot rot-dn">«</span></button>
   </div>
   <div class="grid" id="grid"></div>
   <div class="panel-controls">
-    <button class="ctl-btn" id="mainGrip" title="Перетащить панель (двойной клик — вернуть на место)">≣</button>
-    <button class="ctl-btn" id="btnFloats" title="Доп. панели 11–13: добавить / убрать">«</button>
-    <button class="ctl-btn" id="btnOrient" title="Горизонтально / вертикально">⇄</button>
-    <button class="ctl-btn" id="btnLock" title="Закрыть панель (замок)">🔓</button>
+    <button class="ctl-btn" id="mainGrip" data-i18n-attr="title:panel.mainGripTitle" title="Перетащить панель (двойной клик — вернуть на место)">≣</button>
+    <button class="ctl-btn" id="btnFloats" data-i18n-attr="title:panel.floatsBtnTitle" title="Доп. панели 11–13: добавить / убрать">«</button>
+    <button class="ctl-btn" id="btnOrient" data-i18n-attr="title:panel.orientBtnTitle" title="Горизонтально / вертикально">⇄</button>
+    <button class="ctl-btn" id="btnLock" data-i18n-attr="title:panel.lockBtnTitle" title="Закрыть панель (замок)">🔓</button>
   </div>
 </div>
 
@@ -887,15 +888,15 @@
 
 <div class="library" id="library">
   <div class="library-head">
-    <button class="lib-collapse-btn" id="libCollapseBtn" title="Свернуть панель иконок">‹</button>
+    <button class="lib-collapse-btn" id="libCollapseBtn" data-i18n-attr="title:panel.libCollapseCollapseTitle" title="Свернуть панель иконок">‹</button>
   </div>
   <div class="library-scroll" id="libraryScroll"></div>
-  <button class="lib-trash-btn" id="libTrashBtn" title="Показать/скрыть удаление иконок">🗑</button>
+  <button class="lib-trash-btn" id="libTrashBtn" data-i18n-attr="title:panel.libTrashBtnTitle" title="Показать/скрыть удаление иконок">🗑</button>
 </div>
 
 <div class="library" id="macroLibrary">
   <div class="lib-group">
-    <div class="lib-group-head"><span class="lib-group-name">Мои макросы</span></div>
+    <div class="lib-group-head"><span class="lib-group-name" data-i18n="panel.myMacros">Мои макросы</span></div>
     <div class="lib-grid" id="macroGrid"></div>
   </div>
 </div>
@@ -908,98 +909,98 @@
 
 <div class="modal-overlay" id="addIconsOverlay">
   <div class="modal">
-    <button class="modal-close" id="addIconsClose" title="Закрыть">×</button>
-    <h2>Добавить иконки</h2>
+    <button class="modal-close" id="addIconsClose" data-i18n-attr="title:panel.close" title="Закрыть">×</button>
+    <h2 data-i18n="panel.addIconsTitle">Добавить иконки</h2>
 
     <div class="scope-row">
-      <label><input type="radio" name="addScope" id="addScopeClass" checked /> Для одного класса</label>
-      <label><input type="radio" name="addScope" id="addScopeGlobal" /> Общая для всех классов</label>
+      <label><input type="radio" name="addScope" id="addScopeClass" checked /> <span data-i18n="panel.scopeClass">Для одного класса</span></label>
+      <label><input type="radio" name="addScope" id="addScopeGlobal" /> <span data-i18n="panel.scopeGlobal">Общая для всех классов</span></label>
     </div>
 
     <div class="char-nav" id="addRaceClassRow">
-      <select id="addRaceSelect" title="Раса"></select>
-      <select id="addClassSelect" title="Класс"></select>
+      <select id="addRaceSelect" data-i18n-attr="title:panel.raceTitle" title="Раса"></select>
+      <select id="addClassSelect" data-i18n-attr="title:panel.classTitle" title="Класс"></select>
     </div>
 
-    <h3>Группа</h3>
+    <h3 data-i18n="panel.groupHeading">Группа</h3>
     <select id="addGroupSelect"></select>
-    <input type="text" id="addGroupName" class="gh-input" placeholder="Название новой группы" maxlength="40" style="margin-top:6px;" />
+    <input type="text" id="addGroupName" class="gh-input" data-i18n-attr="placeholder:panel.newGroupNamePlaceholder" placeholder="Название новой группы" maxlength="40" style="margin-top:6px;" />
 
-    <button class="action-btn" id="addIconsPick">Выбрать файлы…</button>
+    <button class="action-btn" id="addIconsPick" data-i18n="panel.pickFilesBtn">Выбрать файлы…</button>
   </div>
 </div>
 
 <div class="modal-overlay" id="macroOverlay">
   <div class="modal">
-    <button class="modal-close" id="macroClose" title="Закрыть">×</button>
-    <h2>Новый макрос</h2>
-    <p>Макросы может создавать любой, кто открыл панель — они хранятся только у вас в браузере. А вот иконки для них выдаёт владелец панели.</p>
+    <button class="modal-close" id="macroClose" data-i18n-attr="title:panel.close" title="Закрыть">×</button>
+    <h2 data-i18n="panel.newMacroTitle">Новый макрос</h2>
+    <p data-i18n="panel.macroIntro">Макросы может создавать любой, кто открыл панель — они хранятся только у вас в браузере. А вот иконки для них выдаёт владелец панели.</p>
 
-    <h3>Иконка</h3>
+    <h3 data-i18n="panel.iconHeading">Иконка</h3>
     <div class="lib-grid" id="macroIconPicker"></div>
     <div class="gh-row">
-      <button class="action-btn" id="macroAddIconBtn">+ Добавить иконку для макросов</button>
+      <button class="action-btn" id="macroAddIconBtn" data-i18n="panel.addMacroIconBtn">+ Добавить иконку для макросов</button>
     </div>
-    <p class="gh-hint">Пополнить этот набор может только владелец панели — если нужной иконки нет, обратитесь к нему.</p>
+    <p class="gh-hint" data-i18n="panel.macroIconHint">Пополнить этот набор может только владелец панели — если нужной иконки нет, обратитесь к нему.</p>
     <input type="file" id="macroIconFile" accept="image/*" multiple />
 
-    <h3>Название</h3>
-    <input type="text" id="macroNameInput" class="gh-input" placeholder="Например: Бафф-сет" maxlength="30" />
+    <h3 data-i18n="panel.nameHeading">Название</h3>
+    <input type="text" id="macroNameInput" class="gh-input" data-i18n-attr="placeholder:panel.macroNamePlaceholder" placeholder="Например: Бафф-сет" maxlength="30" />
 
-    <h3>Текст (до 12 строк, каждая до 25 символов)</h3>
+    <h3 data-i18n="panel.macroTextHeading">Текст (до 12 строк, каждая до 25 символов)</h3>
     <div id="macroLines"></div>
 
-    <button class="action-btn" id="macroSaveBtn">Сохранить макрос</button>
+    <button class="action-btn" id="macroSaveBtn" data-i18n="panel.saveMacroBtn">Сохранить макрос</button>
   </div>
 </div>
 
 <div class="modal-overlay" id="macroViewOverlay">
   <div class="modal">
-    <button class="modal-close" id="macroViewClose" title="Закрыть">×</button>
-    <h2 id="macroViewTitle">Макрос</h2>
+    <button class="modal-close" id="macroViewClose" data-i18n-attr="title:panel.close" title="Закрыть">×</button>
+    <h2 id="macroViewTitle" data-i18n="panel.macroViewDefaultTitle">Макрос</h2>
     <div class="macro-view-lines" id="macroViewLines"></div>
   </div>
 </div>
 
 <div class="modal-overlay" id="confirmOverlay">
   <div class="modal confirm-modal">
-    <h2 id="confirmTitle">Подтвердите</h2>
+    <h2 id="confirmTitle" data-i18n="panel.confirmDefaultTitle">Подтвердите</h2>
     <p id="confirmMsg"></p>
     <div class="gh-row">
-      <button class="action-btn danger-btn" id="confirmYes">Да</button>
-      <button class="action-btn" id="confirmNo">Отмена</button>
+      <button class="action-btn danger-btn" id="confirmYes" data-i18n="panel.yes">Да</button>
+      <button class="action-btn" id="confirmNo" data-i18n="panel.cancel">Отмена</button>
     </div>
   </div>
 </div>
 
 <div class="modal-overlay" id="copyTextOverlay">
   <div class="modal confirm-modal">
-    <h2 id="copyTextTitle">Скопируйте</h2>
+    <h2 id="copyTextTitle" data-i18n="panel.copyTitleDefault">Скопируйте</h2>
     <input type="text" id="copyTextInput" class="gh-input" readonly />
     <div class="gh-row">
-      <button class="action-btn" id="copyTextBtn">Скопировать</button>
-      <button class="action-btn" id="copyTextClose">Закрыть</button>
+      <button class="action-btn" id="copyTextBtn" data-i18n="panel.copyBtn">Скопировать</button>
+      <button class="action-btn" id="copyTextClose" data-i18n="panel.close">Закрыть</button>
     </div>
-    <p class="gh-hint">Если кнопка не сработала — выделите текст выше и нажмите Ctrl+C (⌘+C на Mac).</p>
+    <p class="gh-hint" data-i18n="panel.copyHint">Если кнопка не сработала — выделите текст выше и нажмите Ctrl+C (⌘+C на Mac).</p>
   </div>
 </div>
 
-<button class="help-btn" id="helpBtn" title="Руководство">?</button>
+<button class="help-btn" id="helpBtn" data-i18n-attr="title:panel.helpBtnTitle" title="Руководство">?</button>
 <div class="modal-overlay" id="helpOverlay">
   <div class="modal">
-    <button class="modal-close" id="helpClose" title="Закрыть">×</button>
-    <h2>Как пользоваться панелью</h2>
+    <button class="modal-close" id="helpClose" data-i18n-attr="title:panel.close" title="Закрыть">×</button>
+    <h2 data-i18n="panel.helpTitle">Как пользоваться панелью</h2>
 
     <details class="help-section">
-      <summary>Персонажи</summary>
-      <div class="help-body">
+      <summary data-i18n="panel.helpCharsSummary">Персонажи</summary>
+      <div class="help-body" data-i18n-html="panel.helpCharsBody">
         <p>Сверху выбираете расу и класс. У каждого класса — своя панель и своя библиотека иконок: переключаетесь между персонажами, и всё остаётся на своих местах.</p>
       </div>
     </details>
 
     <details class="help-section">
-      <summary>Иконки и группы</summary>
-      <div class="help-body">
+      <summary data-i18n="panel.helpIconsSummary">Иконки и группы</summary>
+      <div class="help-body" data-i18n-html="panel.helpIconsBody">
         <ul>
           <li>Меню ☰ → «Добавить иконки»: выбираете «Для одного класса» или «Общая для всех классов», выбираете группу (существующую или создаёте новую по имени) и жмёте «Выбрать файлы…».</li>
           <li>Группа «для одного класса» видна только на панели этого класса. Группа «общая для всех» появляется у каждого персонажа автоматически, без повторной загрузки.</li>
@@ -1016,8 +1017,8 @@
     </details>
 
     <details class="help-section">
-      <summary>Макросы</summary>
-      <div class="help-body">
+      <summary data-i18n="panel.helpMacrosSummary">Макросы</summary>
+      <div class="help-body" data-i18n-html="panel.helpMacrosBody">
         <ul>
           <li>☰ → «➕ Добавить макрос» — доступно каждому, кто открыл панель, и хранится только в его браузере.</li>
           <li>Иконку для макроса выбираете из набора, который выдаёт владелец панели (кнопка «+ Добавить иконку для макросов» пополняет этот набор).</li>
@@ -1029,8 +1030,8 @@
     </details>
 
     <details class="help-section">
-      <summary>Клавиши</summary>
-      <div class="help-body">
+      <summary data-i18n="panel.helpKeysSummary">Клавиши</summary>
+      <div class="help-body" data-i18n-html="panel.helpKeysBody">
         <ul>
           <li>Клик по бейджу в углу ячейки — панель ждёт нажатия. Нажмите любую клавишу (буква, цифра, F1–F12…), и она привяжется.</li>
           <li>Нажмите ту же клавишу ещё раз на той же ячейке — бинд снимется, бейдж снова пустой.</li>
@@ -1040,8 +1041,8 @@
     </details>
 
     <details class="help-section">
-      <summary>Ряды и строки</summary>
-      <div class="help-body">
+      <summary data-i18n="panel.helpRowsSummary">Ряды и строки</summary>
+      <div class="help-body" data-i18n-html="panel.helpRowsBody">
         <ul>
           <li>Всего у класса <b>10 строк</b> по 12 ячеек, на экране видно до <b>6 рядов</b>.</li>
           <li>Кнопки «двойные стрелки» слева от нижнего ряда открывают ряд выше и скрывают верхний.</li>
@@ -1051,8 +1052,8 @@
     </details>
 
     <details class="help-section">
-      <summary>Доп. панели 11–13</summary>
-      <div class="help-body">
+      <summary data-i18n="panel.helpFloatsSummary">Доп. панели 11–13</summary>
+      <div class="help-body" data-i18n-html="panel.helpFloatsBody">
         <ul>
           <li>Кнопка <b>«</b> справа от панели добавляет плавающие панели — строки 11, 12 и 13, по одной за нажатие. Когда открыты все три, следующее нажатие убирает их.</li>
           <li>Перетаскивайте их за ручку ≣ куда угодно — за край экрана они не уйдут.</li>
@@ -1063,8 +1064,8 @@
     </details>
 
     <details class="help-section">
-      <summary>Перенос, поворот и замок</summary>
-      <div class="help-body">
+      <summary data-i18n="panel.helpMoveSummary">Перенос, поворот и замок</summary>
+      <div class="help-body" data-i18n-html="panel.helpMoveBody">
         <ul>
           <li>Ручка <b>≣</b> в столбике кнопок — перетащить основную панель в любое место экрана. Двойной клик по ручке возвращает её на стандартное место.</li>
           <li>Кнопка <b>⇄</b> ставит основную панель вертикально и обратно.</li>
@@ -1074,15 +1075,15 @@
     </details>
 
     <details class="help-section">
-      <summary>Очистка</summary>
-      <div class="help-body">
+      <summary data-i18n="panel.helpClearSummary">Очистка</summary>
+      <div class="help-body" data-i18n-html="panel.helpClearBody">
         <p>Правый клик по ячейке — убрать картинку, убрать клавишу или очистить ячейку целиком.</p>
       </div>
     </details>
 
     <details class="help-section">
-      <summary>Поделиться (одна ссылка, один класс)</summary>
-      <div class="help-body">
+      <summary data-i18n="panel.helpShareSummary">Поделиться (одна ссылка, один класс)</summary>
+      <div class="help-body" data-i18n-html="panel.helpShareBody">
         <ul>
           <li>Кнопка «Поделиться» снизу слева копирует ссылку, внутри которой зашита вся раскладка текущего класса — картинки, клавиши и ряды.</li>
           <li>Получатель открывает ссылку, подтверждает — и раскладка загружается ему в тот же класс, а картинки попадают в его библиотеку.</li>
@@ -1092,15 +1093,15 @@
     </details>
 
     <details class="help-section">
-      <summary>Меню ☰ (сверху слева)</summary>
-      <div class="help-body">
+      <summary data-i18n="panel.helpMenuSummary">Меню ☰ (сверху слева)</summary>
+      <div class="help-body" data-i18n-html="panel.helpMenuBody">
         <p>«Добавить иконки» — выбрать расу и класс, загрузить картинки умений. Экспорт всех классов в один файл, импорт из файла и очистка панели текущего класса. Экспорт нужен для бэкапа или переноса на другой компьютер — в остальном всё сохраняется автоматически.</p>
       </div>
     </details>
 
     <details class="help-section">
-      <summary>Тема</summary>
-      <div class="help-body">
+      <summary data-i18n="panel.helpThemeSummary">Тема</summary>
+      <div class="help-body" data-i18n-html="panel.helpThemeBody">
         <p>Кнопка ☾/☀ сверху справа переключает тёмную и светлую тему.</p>
       </div>
     </details>
@@ -1108,10 +1109,10 @@
 </div>
 
 <div class="ctx" id="ctxMenu">
-  <button id="ctxClearImg">Убрать картинку</button>
-  <button id="ctxClearKey">Убрать клавишу</button>
+  <button id="ctxClearImg" data-i18n="panel.ctxClearImg">Убрать картинку</button>
+  <button id="ctxClearKey" data-i18n="panel.ctxClearKey">Убрать клавишу</button>
   <hr />
-  <button class="danger" id="ctxClearAll">Очистить ячейку</button>
+  <button class="danger" id="ctxClearAll" data-i18n="panel.ctxClearAll">Очистить ячейку</button>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -1181,7 +1182,7 @@
     st.globalGroups.forEach(g => {
       if(!g.id) g.id = uid();
       if(!Array.isArray(g.icons)) g.icons = [];
-      if(!g.name) g.name = "Группа";
+      if(!g.name) g.name = L2I18n.t("panel.defaultGroupName", "Группа");
     });
     if(!Array.isArray(st.macros)) st.macros = [];
     st.macros.forEach(m => {
@@ -1189,7 +1190,7 @@
       if(!Array.isArray(m.lines)) m.lines = [];
       while(m.lines.length < 12) m.lines.push("");
       m.lines = m.lines.slice(0, 12).map(l => String(l || "").slice(0, 25));
-      if(!m.name) m.name = "Макрос";
+      if(!m.name) m.name = L2I18n.t("panel.macroViewDefaultTitle", "Макрос");
     });
     if(!Array.isArray(st.macroIcons)) st.macroIcons = [];
     return st;
@@ -1234,14 +1235,14 @@
     if(!Array.isArray(p.groups)){
       // миграция со старого плоского списка иконок
       p.groups = Array.isArray(p.library) && p.library.length
-        ? [{ id: "default", name: "Иконки", icons: p.library }]
+        ? [{ id: "default", name: L2I18n.t("panel.defaultIconsGroupName", "Иконки"), icons: p.library }]
         : [];
     }
     delete p.library;
     p.groups.forEach(g => {
       if(!g.id) g.id = uid();
       if(!Array.isArray(g.icons)) g.icons = [];
-      if(!g.name) g.name = "Группа";
+      if(!g.name) g.name = L2I18n.t("panel.defaultGroupName", "Группа");
     });
     return p;
   }
@@ -1290,12 +1291,12 @@
 
     badge.addEventListener("click", (e) => {
       e.stopPropagation();
-      if(state.locked){ showToast("Панель закрыта — снимите замок"); return; }
+      if(state.locked){ showToast(L2I18n.t("panel.toastLocked", "Панель закрыта — снимите замок")); return; }
       armKeyCapture(key);
     });
     cell.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-      if(state.locked){ showToast("Панель закрыта — снимите замок"); return; }
+      if(state.locked){ showToast(L2I18n.t("panel.toastLocked", "Панель закрыта — снимите замок")); return; }
       openContextMenu(e.clientX, e.clientY, key);
     });
     cell.addEventListener("dragover", (e) => {
@@ -1397,14 +1398,14 @@
       const up = document.createElement("button");
       up.className = "pg";
       up.textContent = "▲";
-      up.title = "Следующая строка (1–" + BARS + ")";
+      up.title = L2I18n.t("panel.nextRowTitle", "Следующая строка (1–{n})").replace("{n}", BARS);
       up.addEventListener("click", () => flipBar(r, +1));
       const num = document.createElement("div");
       num.className = "pg-num";
       const dn = document.createElement("button");
       dn.className = "pg";
       dn.textContent = "▼";
-      dn.title = "Предыдущая строка (1–" + BARS + ")";
+      dn.title = L2I18n.t("panel.prevRowTitle", "Предыдущая строка (1–{n})").replace("{n}", BARS);
       dn.addEventListener("click", () => flipBar(r, -1));
       pager.appendChild(up);
       pager.appendChild(num);
@@ -1527,7 +1528,9 @@
     libraryEl.classList.toggle("collapsed", libraryCollapsed);
     document.body.classList.toggle("sidebar-collapsed", libraryCollapsed);
     libCollapseBtn.textContent = libraryCollapsed ? "›" : "‹";
-    libCollapseBtn.title = libraryCollapsed ? "Развернуть панель иконок" : "Свернуть панель иконок";
+    libCollapseBtn.title = libraryCollapsed
+      ? L2I18n.t("panel.libCollapseExpandTitle", "Развернуть панель иконок")
+      : L2I18n.t("panel.libCollapseCollapseTitle", "Свернуть панель иконок");
   }
   libCollapseBtn.addEventListener("click", () => {
     libraryCollapsed = !libraryCollapsed;
@@ -1549,7 +1552,7 @@
     const list = findGroupList(scope);
     let g = list.find(x => x.id === groupId);
     if(!g){
-      g = { id: groupId || uid(), name: name || "Группа", icons: [] };
+      g = { id: groupId || uid(), name: name || L2I18n.t("panel.defaultGroupName", "Группа"), icons: [] };
       list.push(g);
     }
     return g;
@@ -1561,7 +1564,7 @@
     saveState();
   }
   function addFileDropToDefaultGroup(dataUrl){
-    addToGroup("c", "default", "Иконки", dataUrl);
+    addToGroup("c", "default", L2I18n.t("panel.defaultIconsGroupName", "Иконки"), dataUrl);
   }
 
   function renderLibrary(){
@@ -1586,24 +1589,24 @@
       if(g.scope === "g"){
         const badge = document.createElement("span");
         badge.className = "lib-group-badge";
-        badge.textContent = "общая";
+        badge.textContent = L2I18n.t("panel.globalBadge", "общая");
         head.appendChild(badge);
       }
       if(isOwner()){
         const del = document.createElement("button");
         del.className = "lib-group-del";
         del.textContent = "×";
-        del.title = "Удалить группу со всеми иконками";
+        del.title = L2I18n.t("panel.deleteGroupTitle", "Удалить группу со всеми иконками");
         del.addEventListener("click", async (e) => {
           e.stopPropagation();
-          const ok = await showConfirm('Удалить группу "' + g.name + '" со всеми иконками?', { yesLabel: "Удалить" });
+          const ok = await showConfirm(L2I18n.t("panel.confirmDeleteGroup", "Удалить группу «{name}» со всеми иконками?").replace("{name}", g.name), { yesLabel: L2I18n.t("panel.deleteBtn", "Удалить") });
           if(!ok) return;
           const list = g.scope === "g" ? state.globalGroups : prof.groups;
           const idx = list.findIndex(x => x.id === g.id);
           if(idx >= 0) list.splice(idx, 1);
           renderLibrary();
           saveState();
-          showToast("Группа удалена");
+          showToast(L2I18n.t("panel.toastGroupDeleted", "Группа удалена"));
         });
         head.appendChild(del);
       }
@@ -1616,7 +1619,7 @@
         item.className = "lib-item";
         item.draggable = true;
         item.style.backgroundImage = 'url("' + src + '")';
-        item.title = "Перетащите на ячейку панели";
+        item.title = L2I18n.t("panel.dragToCellTitle", "Перетащите на ячейку панели");
         item.addEventListener("dragstart", (e) => {
           e.dataTransfer.setData("text/plain", "lib:" + g.scope + ":" + g.id + ":" + i);
           e.dataTransfer.effectAllowed = "copy";
@@ -1625,7 +1628,7 @@
           const rm = document.createElement("div");
           rm.className = "remove";
           rm.textContent = "×";
-          rm.title = "Убрать иконку из группы";
+          rm.title = L2I18n.t("panel.removeIconFromGroupTitle", "Убрать иконку из группы");
           rm.addEventListener("click", (e) => {
             e.stopPropagation();
             const list = g.scope === "g" ? state.globalGroups : prof.groups;
@@ -1633,7 +1636,7 @@
             if(grp) grp.icons.splice(i, 1);
             renderLibrary();
             saveState();
-            showToast("Иконка убрана из группы");
+            showToast(L2I18n.t("panel.toastIconRemovedFromGroup", "Иконка убрана из группы"));
           });
           item.appendChild(rm);
         }
@@ -1669,7 +1672,7 @@
     }
     armedCell = key;
     cellEls[key].cell.classList.add("armed");
-    showToast("Нажмите клавишу для привязки… (Esc — отмена)");
+    showToast(L2I18n.t("panel.toastPressKey", "Нажмите клавишу для привязки… (Esc — отмена)"));
   }
 
   function keyLabel(e){
@@ -1703,10 +1706,10 @@
     if(prof.cells[dk].key === label){
       // та же клавиша на той же ячейке — снимаем бинд
       delete prof.cells[dk].key;
-      showToast('Клавиша "' + label + '" снята');
+      showToast(L2I18n.t("panel.toastKeyUnbound", "Клавиша «{key}» снята").replace("{key}", label));
     } else {
       prof.cells[dk].key = label;
-      showToast('Клавиша "' + label + '" привязана');
+      showToast(L2I18n.t("panel.toastKeyBound", "Клавиша «{key}» привязана").replace("{key}", label));
     }
     renderAllCells();
     saveState();
@@ -1762,13 +1765,13 @@
 
   // ---- toolbar ----
   document.getElementById("btnClearAll").addEventListener("click", async () => {
-    if(state.locked){ showToast("Панель закрыта — снимите замок"); return; }
-    const ok = await showConfirm("Очистить панель класса «" + state.currentClass + "»?", { yesLabel: "Очистить" });
+    if(state.locked){ showToast(L2I18n.t("panel.toastLocked", "Панель закрыта — снимите замок")); return; }
+    const ok = await showConfirm(L2I18n.t("panel.confirmClearPanel", "Очистить панель класса «{class}»?").replace("{class}", state.currentClass), { yesLabel: L2I18n.t("panel.clearBtn", "Очистить") });
     if(!ok) return;
     prof.cells = {};
     renderAllCells();
     saveState();
-    showToast("Панель очищена");
+    showToast(L2I18n.t("panel.toastPanelCleared", "Панель очищена"));
   });
   document.getElementById("btnExport").addEventListener("click", () => {
     const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
@@ -1811,9 +1814,9 @@
         renderFloats();
         applyOrient();
         applyLock();
-        showToast("Импортировано");
+        showToast(L2I18n.t("panel.toastImported", "Импортировано"));
       }catch(err){
-        showToast("Не удалось прочитать файл настроек");
+        showToast(L2I18n.t("panel.toastImportFailed", "Не удалось прочитать файл настроек"));
       }
     };
     reader.readAsText(file);
@@ -1838,9 +1841,9 @@
   const confirmNo = document.getElementById("confirmNo");
   function showConfirm(message, opts){
     opts = opts || {};
-    confirmTitle.textContent = opts.title || "Подтвердите";
+    confirmTitle.textContent = opts.title || L2I18n.t("panel.confirmDefaultTitle", "Подтвердите");
     confirmMsg.textContent = message;
-    confirmYes.textContent = opts.yesLabel || "Да";
+    confirmYes.textContent = opts.yesLabel || L2I18n.t("panel.yes", "Да");
     confirmOverlay.classList.add("show");
     return new Promise((resolve) => {
       function onYes(){ cleanup(true); }
@@ -1865,9 +1868,9 @@
   async function copyOrShow(text, title){
     try{
       await navigator.clipboard.writeText(text);
-      showToast("Скопировано");
+      showToast(L2I18n.t("panel.toastCopied", "Скопировано"));
     }catch(err){
-      copyTextTitle.textContent = title || "Скопируйте";
+      copyTextTitle.textContent = title || L2I18n.t("panel.copyTitleDefault", "Скопируйте");
       copyTextInput.value = text;
       copyTextOverlay.classList.add("show");
       copyTextInput.focus();
@@ -1879,7 +1882,7 @@
     copyTextInput.select();
     try{
       await navigator.clipboard.writeText(copyTextInput.value);
-      showToast("Скопировано");
+      showToast(L2I18n.t("panel.toastCopied", "Скопировано"));
       copyTextOverlay.classList.remove("show");
     }catch(err){
       document.execCommand("copy");
@@ -1903,7 +1906,7 @@
       delete prof.cells[dk].macroName;
       renderAllCells();
       saveState();
-      showToast("Иконка убрана с панели");
+      showToast(L2I18n.t("panel.toastIconRemovedFromPanel", "Иконка убрана с панели"));
     }
     draggingFromCell = null;
   });
@@ -1955,14 +1958,14 @@
       const grip = document.createElement("div");
       grip.className = "float-grip";
       grip.textContent = "≣";
-      grip.title = "Перетащить панель";
+      grip.title = L2I18n.t("panel.dragFloatPanelTitle", "Перетащить панель");
       const numEl = document.createElement("div");
       numEl.className = "float-num";
       numEl.textContent = bar;
       const shapeBtn = document.createElement("button");
       shapeBtn.className = "float-shape";
       shapeBtn.textContent = "▦";
-      shapeBtn.title = "Изменить форму (1×12, 2×6, 3×4…)";
+      shapeBtn.title = L2I18n.t("panel.changeShapeTitle", "Изменить форму (1×12, 2×6, 3×4…)");
       shapeBtn.addEventListener("click", () => {
         cfg.shape = SHAPES[(SHAPES.indexOf(cfg.shape) + 1) % SHAPES.length];
         applyShape(panel, cfg);
@@ -1996,11 +1999,11 @@
   document.getElementById("btnFloats").addEventListener("click", () => {
     if(state.floats.length >= FLOAT_MAX){
       state.floats = [];
-      showToast("Доп. панели убраны");
+      showToast(L2I18n.t("panel.toastFloatsRemoved", "Доп. панели убраны"));
     } else {
       const i = state.floats.length;
       state.floats.push({ x: 60 + i * 40, y: 80 + i * 50, shape: "12x1" });
-      showToast("Добавлена панель " + (BARS + 1 + i));
+      showToast(L2I18n.t("panel.toastFloatAdded", "Добавлена панель {n}").replace("{n}", BARS + 1 + i));
     }
     renderFloats();
     saveState();
@@ -2059,7 +2062,7 @@
     state.mainPos = null;
     applyMainPos();
     saveState();
-    showToast("Панель вернулась на место");
+    showToast(L2I18n.t("panel.toastPanelReset", "Панель вернулась на место"));
   });
 
   // ---- orientation & lock ----
@@ -2080,7 +2083,7 @@
     state.locked = !state.locked;
     applyLock();
     saveState();
-    showToast(state.locked ? "Панель закрыта — изменения запрещены" : "Панель открыта");
+    showToast(state.locked ? L2I18n.t("panel.toastLockedChanges", "Панель закрыта — изменения запрещены") : L2I18n.t("panel.toastUnlocked", "Панель открыта"));
   });
 
   // ---- hamburger menu ----
@@ -2142,7 +2145,7 @@
     addGroupSelect.innerHTML = "";
     const optNew = document.createElement("option");
     optNew.value = "__new__";
-    optNew.textContent = "➕ Новая группа…";
+    optNew.textContent = L2I18n.t("panel.newGroupOption", "➕ Новая группа…");
     addGroupSelect.appendChild(optNew);
     list.forEach(g => {
       const o = document.createElement("option");
@@ -2191,7 +2194,7 @@
     let groupId = addGroupSelect.value;
     let groupName = addGroupName.value.trim();
     if(groupId === "__new__"){
-      if(!groupName){ showToast("Введите название группы"); return; }
+      if(!groupName){ showToast(L2I18n.t("panel.toastEnterGroupName", "Введите название группы")); return; }
       groupId = uid();
     } else {
       const list = scope === "g" ? state.globalGroups : groupsForClassKey(addRaceSelect.value + "|" + addClassSelect.value);
@@ -2207,7 +2210,7 @@
     }
     files.forEach(f => fileToIcon(f, (dataUrl) => addToGroup(scope, groupId, groupName, dataUrl)));
     addIconsOverlay.classList.remove("show");
-    showToast("Иконки добавлены в группу «" + groupName + "»");
+    showToast(L2I18n.t("panel.toastIconsAddedToGroup", "Иконки добавлены в группу «{name}»").replace("{name}", groupName));
   });
 
   // ---- character switcher ----
@@ -2275,7 +2278,7 @@
   document.getElementById("btnShare").addEventListener("click", async () => {
     const hasImg = Object.values(prof.cells).some(cd => cd && cd.img);
     if(!hasImg){
-      showToast("Панель пустая — нечем делиться");
+      showToast(L2I18n.t("panel.toastEmptyPanel", "Панель пустая — нечем делиться"));
       return;
     }
     const payload = {
@@ -2290,7 +2293,7 @@
     const json = new TextEncoder().encode(JSON.stringify(payload));
     const packed = await deflateBytes(json);
     const link = location.href.split("#")[0] + "#s=" + (packed ? "d" : "u") + b64urlEncode(packed || json);
-    await copyOrShow(link, "Ссылка на раскладку (~" + Math.max(1, Math.round(link.length / 1024)) + " КБ)");
+    await copyOrShow(link, L2I18n.t("panel.shareLinkTitle", "Ссылка на раскладку (~{kb} КБ)").replace("{kb}", Math.max(1, Math.round(link.length / 1024))));
   });
 
   async function tryLoadShared(){
@@ -2304,8 +2307,8 @@
         throw new Error("bad payload");
       }
       const ok = await showConfirm(
-        "Вам поделились раскладкой: " + payload.r + " — " + payload.c + ". Загрузить её? Панель этого класса будет заменена.",
-        { yesLabel: "Загрузить" }
+        L2I18n.t("panel.confirmLoadShared", "Вам поделились раскладкой: {race} — {cls}. Загрузить её? Панель этого класса будет заменена.").replace("{race}", payload.r).replace("{cls}", payload.c),
+        { yesLabel: L2I18n.t("panel.loadBtn", "Загрузить") }
       );
       if(ok){
         state.currentRace = payload.r;
@@ -2314,7 +2317,7 @@
         const groups = Array.isArray(existing.groups) ? existing.groups.slice() : [];
         let defaultGroup = groups.find(g => g.id === "default");
         if(!defaultGroup){
-          defaultGroup = { id: "default", name: "Иконки", icons: [] };
+          defaultGroup = { id: "default", name: L2I18n.t("panel.defaultIconsGroupName", "Иконки"), icons: [] };
           groups.push(defaultGroup);
         }
         Object.values(payload.cells).forEach(cd => {
@@ -2333,10 +2336,10 @@
         switchProfile();
         renderFloats();
         applyOrient();
-        showToast("Раскладка загружена");
+        showToast(L2I18n.t("panel.toastLayoutLoaded", "Раскладка загружена"));
       }
     }catch(err){
-      showToast("Не удалось прочитать ссылку с раскладкой");
+      showToast(L2I18n.t("panel.toastLayoutLinkFailed", "Не удалось прочитать ссылку с раскладкой"));
     }
     history.replaceState(null, "", location.pathname + location.search);
   }
@@ -2419,7 +2422,7 @@
       const item = document.createElement("div");
       item.className = "lib-item";
       item.style.backgroundImage = 'url("' + src + '")';
-      item.title = "Выбрать эту иконку";
+      item.title = L2I18n.t("panel.pickThisIconTitle", "Выбрать эту иконку");
       if(macroSelectedIcon === src) item.classList.add("selected");
       item.addEventListener("click", () => {
         macroSelectedIcon = src;
@@ -2479,14 +2482,14 @@
   macroOverlay.addEventListener("click", (e) => { if(e.target === macroOverlay) macroOverlay.classList.remove("show"); });
 
   document.getElementById("macroSaveBtn").addEventListener("click", () => {
-    if(!macroSelectedIcon){ showToast("Выберите иконку для макроса"); return; }
-    const name = macroNameInput.value.trim() || "Макрос";
+    if(!macroSelectedIcon){ showToast(L2I18n.t("panel.toastPickMacroIcon", "Выберите иконку для макроса")); return; }
+    const name = macroNameInput.value.trim() || L2I18n.t("panel.macroViewDefaultTitle", "Макрос");
     const lines = Array.from(macroLinesWrap.querySelectorAll(".macro-line-input")).map(inp => inp.value.slice(0, 25));
     state.macros.push({ id: uid(), name, icon: macroSelectedIcon, lines });
     saveState();
     renderMacros();
     macroOverlay.classList.remove("show");
-    showToast("Макрос «" + name + "» сохранён");
+    showToast(L2I18n.t("panel.toastMacroSaved", "Макрос «{name}» сохранён").replace("{name}", name));
   });
 
   function renderMacros(){
@@ -2497,7 +2500,7 @@
       item.className = "lib-item";
       item.draggable = true;
       item.style.backgroundImage = 'url("' + m.icon + '")';
-      item.title = m.name + " — перетащите на ячейку";
+      item.title = L2I18n.t("panel.macroDragTitle", "{name} — перетащите на ячейку").replace("{name}", m.name);
       item.addEventListener("dragstart", (e) => {
         e.dataTransfer.setData("text/plain", "macro:" + m.id);
         e.dataTransfer.effectAllowed = "copy";
@@ -2505,15 +2508,15 @@
       const rm = document.createElement("div");
       rm.className = "remove";
       rm.textContent = "×";
-      rm.title = "Удалить макрос";
+      rm.title = L2I18n.t("panel.deleteMacroTitle", "Удалить макрос");
       rm.addEventListener("click", async (e) => {
         e.stopPropagation();
-        const ok = await showConfirm('Удалить макрос "' + m.name + '"?', { yesLabel: "Удалить" });
+        const ok = await showConfirm(L2I18n.t("panel.confirmDeleteMacro", "Удалить макрос «{name}»?").replace("{name}", m.name), { yesLabel: L2I18n.t("panel.deleteBtn", "Удалить") });
         if(!ok) return;
         state.macros = state.macros.filter(x => x.id !== m.id);
         renderMacros();
         saveState();
-        showToast("Макрос удалён");
+        showToast(L2I18n.t("panel.toastMacroDeleted", "Макрос удалён"));
       });
       item.appendChild(rm);
       macroGridEl.appendChild(item);
@@ -2521,9 +2524,9 @@
   }
 
   function showMacroPopup(name, lines){
-    document.getElementById("macroViewTitle").textContent = name || "Макрос";
+    document.getElementById("macroViewTitle").textContent = name || L2I18n.t("panel.macroViewDefaultTitle", "Макрос");
     const nonEmpty = lines.filter(l => l && l.trim());
-    document.getElementById("macroViewLines").textContent = nonEmpty.length ? nonEmpty.join("\n") : "(пусто)";
+    document.getElementById("macroViewLines").textContent = nonEmpty.length ? nonEmpty.join("\n") : L2I18n.t("panel.emptyMacro", "(пусто)");
     macroViewOverlay.classList.add("show");
   }
   document.getElementById("macroViewClose").addEventListener("click", () => macroViewOverlay.classList.remove("show"));
@@ -2539,6 +2542,13 @@
   applyMainPos();
   refreshOwnerUI();
   tryLoadShared();
+
+  window.addEventListener("storage", (e) => {
+    if(e.key !== "l2Lang") return;
+    applyLibraryCollapsed();
+    renderLibrary();
+    renderMacros();
+  });
 })();
 </script>
 </body>
