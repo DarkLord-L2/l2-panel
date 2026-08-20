@@ -137,45 +137,45 @@
 
 <div class="admin-wrap" id="adminWrap" style="display:none;">
   <div class="admin-head">
-    <h1>Админ-панель</h1>
+    <h1 data-i18n="admin.title">Админ-панель</h1>
   </div>
 
   <div class="admin-shell">
     <nav class="admin-nav" id="adminNav">
-      <button type="button" class="admin-nav-item" data-tab="users">Пользователи</button>
-      <button type="button" class="admin-nav-item" data-tab="sections">Разделы и права</button>
-      <button type="button" class="admin-nav-item" data-tab="rules">Правила клана</button>
-      <button type="button" class="admin-nav-item" data-tab="branding">Оформление</button>
-      <button type="button" class="admin-nav-item" data-tab="shares">Ссылки</button>
+      <button type="button" class="admin-nav-item" data-tab="users" data-i18n="admin.tabUsers">Пользователи</button>
+      <button type="button" class="admin-nav-item" data-tab="sections" data-i18n="admin.tabSections">Разделы и права</button>
+      <button type="button" class="admin-nav-item" data-tab="rules" data-i18n="admin.tabRules">Правила клана</button>
+      <button type="button" class="admin-nav-item" data-tab="branding" data-i18n="admin.tabBranding">Оформление</button>
+      <button type="button" class="admin-nav-item" data-tab="shares" data-i18n="admin.tabShares">Ссылки</button>
     </nav>
 
     <div class="admin-content">
     <div class="admin-tab-panel" data-panel="users">
   <section class="card">
-    <h2>Новый пользователь</h2>
+    <h2 data-i18n="admin.newUserTitle">Новый пользователь</h2>
     <form id="createUserForm">
       <div class="form-row">
         <div class="field">
-          <label for="newUsername">Логин</label>
-          <input type="text" id="newUsername" required pattern="[a-zA-Z0-9_\-]{3,32}" title="3–32 символа: латиница, цифры, - и _" />
+          <label for="newUsername" data-i18n="admin.loginLabel">Логин</label>
+          <input type="text" id="newUsername" required pattern="[a-zA-Z0-9_\-]{3,32}" data-i18n-attr="title:admin.loginTitle" title="3–32 символа: латиница, цифры, - и _" />
         </div>
         <div class="field">
-          <label for="newPassword">Пароль</label>
+          <label for="newPassword" data-i18n="admin.passwordLabel">Пароль</label>
           <input type="text" id="newPassword" required minlength="6" />
         </div>
         <div class="field">
-          <label for="newNickname">Ник в игре (необязательно)</label>
-          <input type="text" id="newNickname" placeholder="Любой, хоть кириллицей" />
+          <label for="newNickname" data-i18n="admin.nicknameOptionalLabel">Ник в игре (необязательно)</label>
+          <input type="text" id="newNickname" data-i18n-attr="placeholder:admin.nicknameAnyPlaceholder" placeholder="Любой, хоть кириллицей" />
         </div>
         <div class="field">
-          <label for="newRole">Роль</label>
+          <label for="newRole" data-i18n="admin.roleLabel">Роль</label>
           <select id="newRole"></select>
         </div>
         <div class="field">
-          <label for="newParty">Пати (необязательно)</label>
+          <label for="newParty" data-i18n="admin.partyOptionalLabel">Пати (необязательно)</label>
           <select id="newParty"><option value="">—</option></select>
         </div>
-        <button type="submit" class="btn btn-primary" id="createUserBtn">Создать</button>
+        <button type="submit" class="btn btn-primary" id="createUserBtn" data-i18n="admin.createBtn">Создать</button>
       </div>
       <p class="error-msg" id="createUserError"></p>
       <p class="ok-msg" id="createUserOk"></p>
@@ -183,17 +183,17 @@
   </section>
 
   <section class="card">
-    <h2>Пользователи</h2>
+    <h2 data-i18n="admin.usersTitle">Пользователи</h2>
     <div class="users-group-toolbar">
-      <span class="users-group-label">Группировать по:</span>
+      <span class="users-group-label" data-i18n="admin.groupByLabel">Группировать по:</span>
       <div class="users-group-tabs" id="usersGroupTabs">
-        <button type="button" class="users-group-tab" data-group="party">Пати</button>
-        <button type="button" class="users-group-tab" data-group="role">Роль</button>
+        <button type="button" class="users-group-tab" data-group="party" data-i18n="admin.groupByParty">Пати</button>
+        <button type="button" class="users-group-tab" data-group="role" data-i18n="admin.groupByRole">Роль</button>
       </div>
     </div>
     <table class="data-table" id="usersTable">
       <thead>
-        <tr><th>Логин</th><th>Ник в игре</th><th>Роль</th><th>Пати</th><th>Защита</th><th>Создан</th><th></th></tr>
+        <tr><th data-i18n="admin.colLogin">Логин</th><th data-i18n="admin.colNickname">Ник в игре</th><th data-i18n="admin.colRole">Роль</th><th data-i18n="admin.colParty">Пати</th><th data-i18n="admin.colProtection">Защита</th><th data-i18n="admin.colCreated">Создан</th><th></th></tr>
       </thead>
       <tbody id="usersBody"></tbody>
     </table>
@@ -203,39 +203,39 @@
 
     <div class="admin-tab-panel" data-panel="rules">
   <section class="card">
-    <h2>Налог за неделю</h2>
-    <p class="hint">Сумма налога с одного человека за неделю. Используется в окошке «Итого за неделю» на странице «Налоги» — просто множится на число заплативших и складывается с донатами, саму отметку «кто платил» это не меняет.</p>
+    <h2 data-i18n="admin.weeklyTaxTitle">Налог за неделю</h2>
+    <p class="hint" data-i18n="admin.weeklyTaxHint">Сумма налога с одного человека за неделю. Используется в окошке «Итого за неделю» на странице «Налоги» — просто множится на число заплативших и складывается с донатами, саму отметку «кто платил» это не меняет.</p>
     <div class="tax-amount-row">
-      <span class="label">Сумма с человека</span>
+      <span class="label" data-i18n="admin.amountPerPersonLabel">Сумма с человека</span>
       <input type="number" id="weeklyTaxAmountInput" step="1" min="0" />
     </div>
     <p class="error-msg" id="weeklyTaxAmountError"></p>
   </section>
 
   <section class="card">
-    <h2>Раздел дропа</h2>
+    <h2 data-i18n="admin.lootSplitSectionTitle">Раздел дропа</h2>
     <div class="section-toggle-row">
-      <span class="label">Показывать только тех, кто хоть раз ходил за отмеченный период</span>
+      <span class="label" data-i18n="admin.lootHideZeroLabel">Показывать только тех, кто хоть раз ходил за отмеченный период</span>
       <label class="toggle-switch">
         <input type="checkbox" id="lootHideZeroInput" />
         <span class="track"></span>
       </label>
     </div>
-    <p class="hint">Выключено — виден весь состав из последней переписи, даже с 0 начальных баллов. Включено — те, у кого начальных баллов 0, из таблицы пропадают.</p>
+    <p class="hint" data-i18n="admin.lootHideZeroHint">Выключено — виден весь состав из последней переписи, даже с 0 начальных баллов. Включено — те, у кого начальных баллов 0, из таблицы пропадают.</p>
     <p class="error-msg" id="lootHideZeroError"></p>
   </section>
 
   <div class="admin-coef-row">
     <section class="card">
-      <h2>Коэффициент профессии для «ДКП Соло»</h2>
-      <p class="hint">У каждой профессии свой множитель: финальные баллы участника = начальные баллы × % буста × этот коэффициент. Нет строки для класса — считается как 1.</p>
+      <h2 data-i18n="admin.classCoefSoloTitle">Коэффициент профессии для «ДКП Соло»</h2>
+      <p class="hint" data-i18n="admin.classCoefSoloHint">У каждой профессии свой множитель: финальные баллы участника = начальные баллы × % буста × этот коэффициент. Нет строки для класса — считается как 1.</p>
       <div class="loot-coef-list" id="lootCoefList"></div>
       <p class="error-msg" id="lootCoefError"></p>
     </section>
 
     <section class="card">
-      <h2>Коэффициент пати для «ДКП Пати»</h2>
-      <p class="hint">У каждой пати свой множитель: финальные баллы пати = начальные баллы × % буста × этот коэффициент. Нет строки для пати — считается как 1.</p>
+      <h2 data-i18n="admin.classCoefPartyTitle">Коэффициент пати для «ДКП Пати»</h2>
+      <p class="hint" data-i18n="admin.classCoefPartyHint">У каждой пати свой множитель: финальные баллы пати = начальные баллы × % буста × этот коэффициент. Нет строки для пати — считается как 1.</p>
       <div class="loot-coef-list" id="lootPartyCoefList"></div>
       <p class="error-msg" id="lootPartyCoefError"></p>
     </section>
@@ -244,25 +244,25 @@
 
     <div class="admin-tab-panel" data-panel="sections">
   <section class="card">
-    <h2>Какие разделы вообще есть</h2>
-    <p class="hint">Полностью выключает раздел для всего клана — исчезает из меню у абсолютно всех, независимо от роли и от галочек в матрице ниже. «Админ-панель» выключить нельзя — иначе некому будет включить остальное обратно.</p>
+    <h2 data-i18n="admin.sectionsExistTitle">Какие разделы вообще есть</h2>
+    <p class="hint" data-i18n="admin.sectionsExistHint">Полностью выключает раздел для всего клана — исчезает из меню у абсолютно всех, независимо от роли и от галочек в матрице ниже. «Админ-панель» выключить нельзя — иначе некому будет включить остальное обратно.</p>
     <div class="section-toggle-list" id="sectionToggleList"></div>
     <p class="error-msg" id="sectionToggleError"></p>
   </section>
 
   <section class="card">
-    <h2>Порядок разделов в меню</h2>
-    <p class="hint">Стрелками ▲▼ переставьте пункты — в таком порядке они будут идти в левом меню у всех в клане. «Учёт клана» двигается целиком, вместе со своими подпунктами.</p>
+    <h2 data-i18n="admin.sectionOrderTitle">Порядок разделов в меню</h2>
+    <p class="hint" data-i18n="admin.sectionOrderHint">Стрелками ▲▼ переставьте пункты — в таком порядке они будут идти в левом меню у всех в клане. «Учёт клана» двигается целиком, вместе со своими подпунктами.</p>
     <div class="sec-order-list" id="secOrderList"></div>
     <p class="ok-msg" id="secOrderOk" style="display:none;">
-      Порядок сохранён. <a href="#" id="secOrderReload">Обновить меню</a>
+      <span data-i18n="admin.orderSaved">Порядок сохранён.</span> <a href="#" id="secOrderReload" data-i18n="admin.reloadMenu">Обновить меню</a>
     </p>
     <p class="error-msg" id="secOrderError"></p>
   </section>
 
   <section class="card">
-    <h2>Какие разделы видит каждая роль</h2>
-    <p class="hint">Снимите галочку — раздел исчезнет из навигации у всех с этой ролью. Админ-панель всегда видна только главному админу.</p>
+    <h2 data-i18n="admin.roleSectionsTitle">Какие разделы видит каждая роль</h2>
+    <p class="hint" data-i18n="admin.roleSectionsHint">Снимите галочку — раздел исчезнет из навигации у всех с этой ролью. Админ-панель всегда видна только главному админу.</p>
     <div style="overflow-x:auto;">
       <table class="matrix-table" id="permMatrix"></table>
     </div>
@@ -271,61 +271,61 @@
 
     <div class="admin-tab-panel" data-panel="branding">
   <section class="card">
-    <h2>Цветовая схема</h2>
-    <p class="hint">Общий тёмный фон везде одинаковый, меняется только акцентный цвет (заголовки, ссылки, кнопки). Применяется сразу всем в клане.</p>
+    <h2 data-i18n="admin.colorSchemeTitle">Цветовая схема</h2>
+    <p class="hint" data-i18n="admin.colorSchemeHint">Общий тёмный фон везде одинаковый, меняется только акцентный цвет (заголовки, ссылки, кнопки). Применяется сразу всем в клане.</p>
     <div class="preset-grid" id="presetGrid"></div>
   </section>
 
   <section class="card">
-    <h2>Свой акцентный цвет</h2>
-    <p class="hint">Необязательно — точечно подменяет цвет акцента поверх выбранной схемы выше, если хочется свой конкретный оттенок.</p>
+    <h2 data-i18n="admin.customAccentTitle">Свой акцентный цвет</h2>
+    <p class="hint" data-i18n="admin.customAccentHint">Необязательно — точечно подменяет цвет акцента поверх выбранной схемы выше, если хочется свой конкретный оттенок.</p>
     <div class="form-row" style="align-items:center;">
       <div class="field" style="max-width:120px;">
-        <label for="accentColorInput">Цвет</label>
+        <label for="accentColorInput" data-i18n="admin.colorLabel">Цвет</label>
         <input type="color" id="accentColorInput" style="height:38px; padding:2px; cursor:pointer;" />
       </div>
-      <button type="button" class="btn" id="accentClearBtn">Сбросить к схеме</button>
+      <button type="button" class="btn" id="accentClearBtn" data-i18n="admin.resetToSchemeBtn">Сбросить к схеме</button>
     </div>
   </section>
 
   <section class="card">
-    <h2>Название и лого</h2>
-    <p class="hint">Подменяет заголовок «Кабинет клана» в шапке сайта и логине. Оставьте пустым, чтобы использовать значение по умолчанию.</p>
+    <h2 data-i18n="admin.nameAndLogoTitle">Название и лого</h2>
+    <p class="hint" data-i18n="admin.nameAndLogoHint">Подменяет заголовок «Кабинет клана» в шапке сайта и логине. Оставьте пустым, чтобы использовать значение по умолчанию.</p>
     <div class="form-row">
       <div class="field">
-        <label for="brandNameInput">Название кабинета</label>
+        <label for="brandNameInput" data-i18n="admin.cabinetNameLabel">Название кабинета</label>
         <input type="text" id="brandNameInput" placeholder="Кабинет клана" />
       </div>
       <div class="field">
-        <label for="brandLogoInput">Ссылка на лого (URL)</label>
+        <label for="brandLogoInput" data-i18n="admin.logoUrlLabel">Ссылка на лого (URL)</label>
         <input type="text" id="brandLogoInput" placeholder="https://…" />
       </div>
       <div class="field" style="justify-content:flex-end;">
         <label>&nbsp;</label>
         <div style="display:flex; align-items:center; gap:10px;">
           <img id="brandLogoPreview" alt="" style="display:none; height:38px; width:38px; object-fit:cover; border-radius:6px; border:1px solid var(--border);" />
-          <button type="button" class="btn" id="brandLogoUploadBtn">Загрузить фото</button>
-          <button type="button" class="btn btn-danger" id="brandLogoClearBtn">Убрать</button>
+          <button type="button" class="btn" id="brandLogoUploadBtn" data-i18n="admin.uploadPhotoBtn">Загрузить фото</button>
+          <button type="button" class="btn btn-danger" id="brandLogoClearBtn" data-i18n="admin.removeBtn">Убрать</button>
         </div>
       </div>
     </div>
     <input type="file" id="brandLogoPicker" accept="image/*" style="display:none;" />
     <p class="error-msg" id="brandingError"></p>
-    <p class="ok-msg" id="brandingOk" style="display:none;">Сохранено.</p>
+    <p class="ok-msg" id="brandingOk" style="display:none;" data-i18n="admin.saved">Сохранено.</p>
   </section>
     </div>
 
     <div class="admin-tab-panel" data-panel="shares">
   <section class="card">
-    <h2>Активные ссылки «Поделиться»</h2>
-    <p class="hint">Публичные ссылки на снимки отчётов (Посещаемость, Налоги) — живут 5 дней с момента создания, дальше пропадают сами. Здесь можно удалить ссылку раньше срока.</p>
+    <h2 data-i18n="admin.activeSharesTitle">Активные ссылки «Поделиться»</h2>
+    <p class="hint" data-i18n="admin.activeSharesHint">Публичные ссылки на снимки отчётов (Посещаемость, Налоги) — живут 5 дней с момента создания, дальше пропадают сами. Здесь можно удалить ссылку раньше срока.</p>
     <table class="data-table" id="sharesTable">
       <thead>
-        <tr><th>Раздел</th><th>Ссылка</th><th>Создана</th><th>Истекает</th><th></th></tr>
+        <tr><th data-i18n="admin.colSection">Раздел</th><th data-i18n="admin.colLink">Ссылка</th><th data-i18n="admin.colCreatedAt">Создана</th><th data-i18n="admin.colExpires">Истекает</th><th></th></tr>
       </thead>
       <tbody id="sharesBody"></tbody>
     </table>
-    <p class="hint" id="sharesEmpty" style="display:none;">Активных ссылок нет.</p>
+    <p class="hint" id="sharesEmpty" style="display:none;" data-i18n="admin.noActiveShares">Активных ссылок нет.</p>
     <p class="error-msg" id="sharesError"></p>
   </section>
     </div>
@@ -335,13 +335,14 @@
 
 <div class="login-wrap" id="deniedWrap" style="display:none;">
   <div class="card login-card">
-    <h1>⛔ Нет доступа</h1>
-    <p class="hint">Эта страница только для главного админа.</p>
+    <h1 data-i18n="admin.accessDeniedTitle">⛔ Нет доступа</h1>
+    <p class="hint" data-i18n="admin.accessDeniedHint">Эта страница только для главного админа.</p>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=17"></script>
+<script src="js/i18n.js?v=1"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -401,7 +402,7 @@
 
       const label = document.createElement("span");
       label.className = "label";
-      label.textContent = s.label;
+      label.textContent = L2I18n.t("section." + s.key, s.label);
 
       const switchLabel = document.createElement("label");
       switchLabel.className = "toggle-switch";
@@ -421,7 +422,7 @@
           { onConflict: "clan_id,section_key" }
         );
         if(error){
-          errEl.textContent = "Не удалось сохранить: " + error.message;
+          errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
           cb.checked = !cb.checked;
         } else {
           sectionToggles.set(s.key, cb.checked);
@@ -446,13 +447,13 @@
     const errEl = document.getElementById("weeklyTaxAmountError");
     errEl.textContent = "";
     const val = Number(input.value);
-    if(!Number.isFinite(val) || val < 0){ errEl.textContent = "Сумма должна быть числом ≥ 0."; return; }
+    if(!Number.isFinite(val) || val < 0){ errEl.textContent = L2I18n.t("admin.amountMustBeNonNegative", "Сумма должна быть числом ≥ 0."); return; }
     input.disabled = true;
     const { error } = await db.from("tax_settings").upsert(
       { clan_id: profile.clan_id, weekly_tax_amount: val },
       { onConflict: "clan_id" }
     );
-    if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
+    if(error) errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
     input.disabled = false;
   });
 
@@ -473,7 +474,7 @@
       { onConflict: "clan_id" }
     );
     if(error){
-      errEl.textContent = "Не удалось сохранить: " + error.message;
+      errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
       cb.checked = !cb.checked;
     }
     cb.disabled = false;
@@ -509,13 +510,13 @@
         const errEl = document.getElementById("lootCoefError");
         errEl.textContent = "";
         const val = Number(input.value);
-        if(!Number.isFinite(val) || val < 0){ errEl.textContent = "Коэффициент должен быть числом ≥ 0."; return; }
+        if(!Number.isFinite(val) || val < 0){ errEl.textContent = L2I18n.t("admin.coefMustBeNonNegative", "Коэффициент должен быть числом ≥ 0."); return; }
         input.disabled = true;
         const { error } = await db.from("loot_class_coefficients").upsert(
           { clan_id: profile.clan_id, class_name: cls.name, coefficient: val },
           { onConflict: "clan_id,class_name" }
         );
-        if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
+        if(error) errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
         else lootCoefficients.set(cls.name, val);
         input.disabled = false;
       });
@@ -556,13 +557,13 @@
         const errEl = document.getElementById("lootPartyCoefError");
         errEl.textContent = "";
         const val = Number(input.value);
-        if(!Number.isFinite(val) || val < 0){ errEl.textContent = "Коэффициент должен быть числом ≥ 0."; return; }
+        if(!Number.isFinite(val) || val < 0){ errEl.textContent = L2I18n.t("admin.coefMustBeNonNegative", "Коэффициент должен быть числом ≥ 0."); return; }
         input.disabled = true;
         const { error } = await db.from("loot_party_coefficients").upsert(
           { clan_id: profile.clan_id, group_id: party.id, coefficient: val },
           { onConflict: "clan_id,group_id" }
         );
-        if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
+        if(error) errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
         else lootPartyCoefficients.set(party.id, val);
         input.disabled = false;
       });
@@ -576,11 +577,11 @@
   // группировка пунктов повторяет NAV_GROUPS из index.html: в меню «Учёт клана» —
   // один пункт с подпунктами, поэтому и переставлять его надо целиком
   const NAV_GROUPS = [
-    { label: "Учёт клана", keys: ["census", "taxes", "attendance"] },
-    { label: "ДКП", keys: ["loot_split", "loot_split_party", "loot_payout"] },
+    { i18nKey: "navgroup.uchet", fallback: "Учёт клана", keys: ["census", "taxes", "attendance"] },
+    { i18nKey: "navgroup.dkp", fallback: "ДКП", keys: ["loot_split", "loot_split_party", "loot_payout"] },
   ];
 
-  let menuItems = []; // [{ label, keys: [section_key, ...] }] в текущем порядке меню
+  let menuItems = []; // [{ group?, keys: [section_key, ...] }] в текущем порядке меню
 
   async function loadSectionOrder(){
     const { data, error } = await db.from("clan_section_order").select("section_key, sort");
@@ -596,13 +597,13 @@
     ordered.forEach(sec => {
       const group = NAV_GROUPS.find(g => g.keys.includes(sec.key));
       if(!group){
-        menuItems.push({ label: sec.label, keys: [sec.key] });
+        menuItems.push({ keys: [sec.key] });
         return;
       }
-      if(seenGroups.has(group.label)) return;
-      seenGroups.add(group.label);
+      if(seenGroups.has(group.i18nKey)) return;
+      seenGroups.add(group.i18nKey);
       const children = ordered.filter(x => group.keys.includes(x.key));
-      menuItems.push({ label: group.label, keys: children.map(x => x.key), children: children.map(x => x.label) });
+      menuItems.push({ group, keys: children.map(x => x.key) });
     });
   }
 
@@ -619,21 +620,27 @@
 
       const label = document.createElement("span");
       label.className = "label";
-      label.textContent = item.label;
-      if(item.children){
+      if(item.group){
+        label.textContent = L2I18n.t(item.group.i18nKey, item.group.fallback);
         const sub = document.createElement("span");
         sub.className = "sub";
-        sub.textContent = " — " + item.children.join(", ");
+        sub.textContent = " — " + item.keys.map(k => {
+          const sec = sections.find(s => s.key === k);
+          return L2I18n.t("section." + k, sec?.label || k);
+        }).join(", ");
         label.appendChild(sub);
+      } else {
+        const sec = sections.find(s => s.key === item.keys[0]);
+        label.textContent = L2I18n.t("section." + item.keys[0], sec?.label || item.keys[0]);
       }
 
       const moves = document.createElement("div");
       moves.className = "moves";
       const up = document.createElement("button");
-      up.textContent = "▲"; up.title = "Выше"; up.disabled = i === 0;
+      up.textContent = "▲"; up.title = L2I18n.t("admin.moveUp", "Выше"); up.disabled = i === 0;
       up.addEventListener("click", () => moveMenuItem(i, -1));
       const down = document.createElement("button");
-      down.textContent = "▼"; down.title = "Ниже"; down.disabled = i === menuItems.length - 1;
+      down.textContent = "▼"; down.title = L2I18n.t("admin.moveDown", "Ниже"); down.disabled = i === menuItems.length - 1;
       down.addEventListener("click", () => moveMenuItem(i, 1));
       moves.append(up, down);
 
@@ -661,7 +668,7 @@
       rows.push({ clan_id: profile.clan_id, section_key: key, sort: sort++ });
     }));
     const { error } = await db.from("clan_section_order").upsert(rows, { onConflict: "clan_id,section_key" });
-    if(error){ okEl.style.display = "none"; errEl.textContent = "Не удалось сохранить: " + error.message; return; }
+    if(error){ okEl.style.display = "none"; errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message; return; }
     okEl.style.display = "";
   }
 
@@ -697,7 +704,7 @@
         const val = nickInput.value.trim();
         nickInput.disabled = true;
         const { error } = await db.from("profiles").update({ nickname: val || null }).eq("id", u.id);
-        if(error) errEl.textContent = "Не удалось сохранить ник: " + error.message;
+        if(error) errEl.textContent = L2I18n.t("admin.saveNickFailed", "Не удалось сохранить ник: ") + error.message;
         nickInput.disabled = false;
       }
       nickInput.addEventListener("blur", saveNickname);
@@ -706,13 +713,13 @@
 
       const tdRole = document.createElement("td");
       if(isSelf){
-        tdRole.textContent = u.roles?.label || "—";
+        tdRole.textContent = u.roles ? L2I18n.t("role." + u.roles.key, u.roles.label) : "—";
       } else {
         const sel = document.createElement("select");
         roles.forEach(r => {
           const opt = document.createElement("option");
           opt.value = r.id;
-          opt.textContent = r.label;
+          opt.textContent = L2I18n.t("role." + r.key, r.label);
           if(r.id === u.role_id) opt.selected = true;
           sel.appendChild(opt);
         });
@@ -721,7 +728,7 @@
           const errEl = document.getElementById("usersError");
           errEl.textContent = "";
           const { error } = await db.from("profiles").update({ role_id: sel.value }).eq("id", u.id);
-          if(error) errEl.textContent = "Не удалось изменить роль: " + error.message;
+          if(error) errEl.textContent = L2I18n.t("admin.changeRoleFailed", "Не удалось изменить роль: ") + error.message;
           sel.disabled = false;
         });
         tdRole.appendChild(sel);
@@ -746,7 +753,7 @@
           const errEl = document.getElementById("usersError");
           errEl.textContent = "";
           const { error } = await db.from("profiles").update({ party_id: partySel.value || null }).eq("id", u.id);
-          if(error) errEl.textContent = "Не удалось изменить пати: " + error.message;
+          if(error) errEl.textContent = L2I18n.t("admin.changePartyFailed", "Не удалось изменить пати: ") + error.message;
           partySel.disabled = false;
         });
         tdParty.appendChild(partySel);
@@ -755,14 +762,14 @@
       const tdProtect = document.createElement("td");
       if(u.delete_protected){
         const badge = document.createElement("span");
-        badge.textContent = "🔒 Защищён";
+        badge.textContent = L2I18n.t("admin.protectedBadge", "🔒 Защищён");
         badge.style.cssText = "font-size:12px; color: var(--text-dim); margin-right:6px;";
         const unprotectBtn = document.createElement("button");
         unprotectBtn.className = "btn";
-        unprotectBtn.textContent = "Снять защиту";
-        unprotectBtn.title = "Пароль, которым ставили защиту, или мастер-сид-фраза";
+        unprotectBtn.textContent = L2I18n.t("admin.removeProtectionBtn", "Снять защиту");
+        unprotectBtn.title = L2I18n.t("admin.removeProtectionTitle", "Пароль, которым ставили защиту, или мастер-сид-фраза");
         unprotectBtn.addEventListener("click", async () => {
-          const phrase = prompt(`Снять защиту с «${u.username}»? Введите пароль защиты (или сид-фразу):`);
+          const phrase = prompt(L2I18n.t("admin.removeProtectionPrompt", "Снять защиту с «{name}»? Введите пароль защиты (или сид-фразу):").replace("{name}", u.username));
           if(phrase === null) return;
           const errEl = document.getElementById("usersError");
           errEl.textContent = "";
@@ -771,7 +778,7 @@
             await L2Cabinet.adminRemoveDeleteProtection(phrase, u.id);
             await loadUsers();
           }catch(err){
-            errEl.textContent = "Не удалось снять защиту: " + err.message;
+            errEl.textContent = L2I18n.t("admin.removeProtectionFailed", "Не удалось снять защиту: ") + err.message;
             unprotectBtn.disabled = false;
           }
         });
@@ -779,10 +786,10 @@
       } else if(isSelf){
         const protectBtn = document.createElement("button");
         protectBtn.className = "btn";
-        protectBtn.textContent = "🔒 Защитить";
-        protectBtn.title = "Защитить свой аккаунт от удаления другими главными админами";
+        protectBtn.textContent = L2I18n.t("admin.protectBtn", "🔒 Защитить");
+        protectBtn.title = L2I18n.t("admin.protectBtnTitle", "Защитить свой аккаунт от удаления другими главными админами");
         protectBtn.addEventListener("click", async () => {
-          const phrase = prompt("Придумайте пароль для защиты своего аккаунта от удаления (запомните — он понадобится, чтобы снять защиту):");
+          const phrase = prompt(L2I18n.t("admin.setProtectionPrompt", "Придумайте пароль для защиты своего аккаунта от удаления (запомните — он понадобится, чтобы снять защиту):"));
           if(phrase === null) return;
           const errEl = document.getElementById("usersError");
           errEl.textContent = "";
@@ -791,7 +798,7 @@
             await L2Cabinet.adminSetDeleteProtection(phrase);
             await loadUsers();
           }catch(err){
-            errEl.textContent = "Не удалось включить защиту: " + err.message;
+            errEl.textContent = L2I18n.t("admin.setProtectionFailed", "Не удалось включить защиту: ") + err.message;
             protectBtn.disabled = false;
           }
         });
@@ -801,18 +808,18 @@
       }
 
       const tdCreated = document.createElement("td");
-      tdCreated.textContent = new Date(u.created_at).toLocaleDateString("ru-RU");
+      tdCreated.textContent = new Date(u.created_at).toLocaleDateString(L2I18n.locale());
 
       const tdActions = document.createElement("td");
       if(!isSelf){
         const delBtn = document.createElement("button");
         delBtn.className = "btn btn-danger";
-        delBtn.textContent = "Удалить";
+        delBtn.textContent = L2I18n.t("admin.deleteBtn", "Удалить");
         delBtn.addEventListener("click", async () => {
-          if(!confirm(`Удалить пользователя «${u.username}»? Это необратимо.`)) return;
+          if(!confirm(L2I18n.t("admin.confirmDeleteUser", "Удалить пользователя «{name}»? Это необратимо.").replace("{name}", u.username))) return;
           let phrase;
           if(u.delete_protected){
-            phrase = prompt(`«${u.username}» защищён от удаления. Введите пароль защиты (или сид-фразу):`);
+            phrase = prompt(L2I18n.t("admin.deleteProtectedPrompt", "«{name}» защищён от удаления. Введите пароль защиты (или сид-фразу):").replace("{name}", u.username));
             if(phrase === null) return;
           }
           delBtn.disabled = true;
@@ -822,7 +829,7 @@
             await L2Cabinet.adminDeleteUser(u.id, phrase);
             await loadUsers();
           }catch(err){
-            errEl.textContent = "Не удалось удалить: " + err.message;
+            errEl.textContent = L2I18n.t("admin.deleteFailed", "Не удалось удалить: ") + err.message;
             delBtn.disabled = false;
           }
         });
@@ -855,7 +862,7 @@
     });
 
     const knownGroups = usersGroupBy === "role"
-      ? roles.map(r => ({ id: r.id, name: r.label }))       // уже по рангу (см. loadLookups)
+      ? roles.map(r => ({ id: r.id, name: L2I18n.t("role." + r.key, r.label) })) // уже по рангу (см. loadLookups)
       : parties.map(p => ({ id: p.id, name: p.name }));      // уже по алфавиту
 
     const renderedKeys = new Set();
@@ -885,8 +892,8 @@
     byGroup.forEach((members, key) => {
       if(renderedKeys.has(key)) return;
       const fallbackName = key
-        ? (usersGroupBy === "role" ? "Неизвестная роль" : (members[0]?.clan_groups?.name || "Скрытая пати"))
-        : (usersGroupBy === "role" ? "Без роли" : "Без пати");
+        ? (usersGroupBy === "role" ? L2I18n.t("admin.unknownRole", "Неизвестная роль") : (members[0]?.clan_groups?.name || L2I18n.t("admin.hiddenParty", "Скрытая пати")))
+        : (usersGroupBy === "role" ? L2I18n.t("admin.noRole", "Без роли") : L2I18n.t("admin.noParty", "Без пати"));
       renderGroup(key, fallbackName);
     });
   }
@@ -905,7 +912,7 @@
   async function loadUsers(){
     const { data, error } = await db
       .from("profiles")
-      .select("id, username, nickname, role_id, party_id, delete_protected, created_at, roles(label), clan_groups(name)")
+      .select("id, username, nickname, role_id, party_id, delete_protected, created_at, roles(key, label), clan_groups(name)")
       .eq("clan_id", profile.clan_id)
       .order("created_at", { ascending: false });
     if(error){ console.error(error); return; }
@@ -925,9 +932,9 @@
     const map = new Map(data.map(row => [row.role_id + "|" + row.section_key, row]));
 
     const table = document.getElementById("permMatrix");
-    let html = "<tr><th>Роль</th>" + sections.map(s => `<th>${escapeHtml(s.label)}</th>`).join("") + "</tr>";
+    let html = "<tr><th>" + escapeHtml(L2I18n.t("admin.roleColHeader", "Роль")) + "</th>" + sections.map(s => `<th>${escapeHtml(L2I18n.t("section." + s.key, s.label))}</th>`).join("") + "</tr>";
     roles.forEach(role => {
-      html += `<tr><td>${escapeHtml(role.label)}</td>`;
+      html += `<tr><td>${escapeHtml(L2I18n.t("role." + role.key, role.label))}</td>`;
       sections.forEach(sec => {
         const row = map.get(role.id + "|" + sec.key);
         const visible = row ? row.visible : false;
@@ -970,11 +977,11 @@
 
     try{
       await L2Cabinet.adminCreateUser({ username, password, nickname: nickname || null, role_key: role?.key, party_id: partyId || null });
-      okEl.textContent = `Пользователь «${username}» создан.`;
+      okEl.textContent = L2I18n.t("admin.userCreated", "Пользователь «{name}» создан.").replace("{name}", username);
       document.getElementById("createUserForm").reset();
       await loadUsers();
     }catch(err){
-      errEl.textContent = "Не удалось создать: " + err.message;
+      errEl.textContent = L2I18n.t("admin.createUserFailed", "Не удалось создать: ") + err.message;
     }finally{
       btn.disabled = false;
     }
@@ -982,10 +989,10 @@
 
   // ---- Оформление: цветовая схема клана, точечный акцент, название/лого ----
   const PRESETS = [
-    { key: "default", label: "Классика", color: "#e8e8ea" },
-    { key: "amber", label: "Янтарь", color: "#d5a94a" },
-    { key: "azure", label: "Лазурь", color: "#5b9dd9" },
-    { key: "emerald", label: "Изумруд", color: "#4fb37e" },
+    { key: "default", i18nKey: "admin.presetDefault", label: "Классика", color: "#e8e8ea" },
+    { key: "amber", i18nKey: "admin.presetAmber", label: "Янтарь", color: "#d5a94a" },
+    { key: "azure", i18nKey: "admin.presetAzure", label: "Лазурь", color: "#5b9dd9" },
+    { key: "emerald", i18nKey: "admin.presetEmerald", label: "Изумруд", color: "#4fb37e" },
   ];
   let clanBranding = { theme_preset: "default", accent_color: null, display_name: null, logo_url: null };
 
@@ -995,7 +1002,7 @@
     PRESETS.forEach(p => {
       const card = document.createElement("div");
       card.className = "preset-card" + (clanBranding.theme_preset === p.key ? " active" : "");
-      card.innerHTML = `<span class="dot" style="background:${p.color};"></span><span>${escapeHtml(p.label)}</span>`;
+      card.innerHTML = `<span class="dot" style="background:${p.color};"></span><span>${escapeHtml(L2I18n.t(p.i18nKey, p.label))}</span>`;
       card.addEventListener("click", () => selectPreset(p.key));
       grid.appendChild(card);
     });
@@ -1020,7 +1027,7 @@
     renderPresetGrid();
     document.documentElement.dataset.preset = key; // мгновенный превью прямо в админ-панели
     const error = await saveBranding();
-    if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
+    if(error) errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
   }
 
   function updateLogoPreview(){
@@ -1051,7 +1058,7 @@
     document.documentElement.style.setProperty("--focus", color);
     clanBranding.accent_color = color;
     const error = await saveBranding();
-    if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
+    if(error) errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
   });
   document.getElementById("accentClearBtn").addEventListener("click", async () => {
     const errEl = document.getElementById("brandingError");
@@ -1061,7 +1068,7 @@
     document.getElementById("accentColorInput").value = "#e8e8ea";
     clanBranding.accent_color = null;
     const error = await saveBranding();
-    if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
+    if(error) errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
   });
   document.getElementById("brandNameInput").addEventListener("change", async (e) => {
     const errEl = document.getElementById("brandingError");
@@ -1069,7 +1076,7 @@
     errEl.textContent = ""; okEl.style.display = "none";
     clanBranding.display_name = e.target.value.trim() || null;
     const error = await saveBranding();
-    if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
+    if(error){ errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message; return; }
     okEl.style.display = "";
   });
   document.getElementById("brandLogoInput").addEventListener("change", async (e) => {
@@ -1079,7 +1086,7 @@
     errEl.textContent = ""; okEl.style.display = "none";
     clanBranding.logo_url = e.target.value.trim() || null;
     const error = await saveBranding();
-    if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
+    if(error){ errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message; return; }
     okEl.style.display = "";
   });
 
@@ -1120,7 +1127,7 @@
     updateLogoPreview();
     clanBranding.logo_url = dataUrl;
     const error = await saveBranding();
-    if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
+    if(error){ errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message; return; }
     okEl.style.display = "";
   });
   document.getElementById("brandLogoClearBtn").addEventListener("click", async () => {
@@ -1130,13 +1137,13 @@
     updateLogoPreview();
     clanBranding.logo_url = null;
     const error = await saveBranding();
-    if(error) errEl.textContent = "Не удалось сохранить: " + error.message;
+    if(error) errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
   });
 
   // ---- Ссылки: активные снимки-«Поделиться» (Посещаемость/Налоги), можно удалить раньше срока ----
   function fmtDateTime(iso){
     const d = new Date(iso);
-    return d.toLocaleDateString("ru-RU") + " " + d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleDateString(L2I18n.locale()) + " " + d.toLocaleTimeString(L2I18n.locale(), { hour: "2-digit", minute: "2-digit" });
   }
 
   async function loadShares(){
@@ -1175,7 +1182,7 @@
       const tdDel = document.createElement("td");
       const delBtn = document.createElement("button");
       delBtn.className = "btn btn-danger";
-      delBtn.textContent = "Удалить";
+      delBtn.textContent = L2I18n.t("admin.deleteBtn", "Удалить");
       delBtn.addEventListener("click", async () => {
         delBtn.disabled = true;
         const { error: delErr } = await db.from("report_shares").delete().eq("id", s.id);
@@ -1190,7 +1197,7 @@
   }
 
   await loadLookups();
-  fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(r.label), false);
+  fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(L2I18n.t("role." + r.key, r.label)), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
   await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadWeeklyTaxAmount(), loadLootHideZero()]);
   renderSectionOrder();
@@ -1198,6 +1205,17 @@
   renderLootCoefList();
   renderLootPartyCoefList();
   renderPresetGrid();
+
+  window.addEventListener("storage", (e) => {
+    if(e.key !== "l2Lang") return;
+    renderUsersGrouped();
+    renderSectionOrder();
+    renderSectionToggleList();
+    renderLootCoefList();
+    renderLootPartyCoefList();
+    renderPresetGrid();
+    loadMatrix();
+  });
 })();
 </script>
 </body>
