@@ -37,7 +37,7 @@
   table.ls-table tbody tr:hover td{ background: rgba(255,255,255,.03); }
   table.ls-table tbody tr:hover td.ls-col-nick{ background: var(--panel-2); }
 
-  .ls-party{ display:flex; align-items:center; gap:10px; }
+  .ls-party{ display:flex; align-items:center; gap:10px; cursor:pointer; }
   .ls-party .avatar{
     width:32px; height:32px; flex:none;
     border-radius:50%; object-fit:cover;
@@ -46,6 +46,30 @@
   .ls-party .who{ display:flex; flex-direction:column; gap:1px; min-width:0; }
   .ls-party .name{ color: var(--text); font-weight:600; }
   .ls-party .cnt{ font-size:11px; color: var(--text-dim); }
+
+  /* список участников, выезжающий вниз под строкой пати при клике на её название */
+  tr.ls-roster-row td{ padding:0; border-bottom:none; background:none !important; }
+  tr.ls-roster-row:hover td{ background:none !important; }
+  .ls-roster-wrap{
+    max-height:0; opacity:0; overflow:hidden;
+    transition: max-height .28s ease, opacity .2s ease;
+  }
+  .ls-roster-wrap.open{ max-height:900px; opacity:1; }
+  .ls-roster-list{ display:flex; flex-direction:column; gap:6px; padding:4px 10px 14px; max-width:360px; }
+  .ls-roster-item{
+    display:flex; align-items:center; gap:10px;
+    background: var(--panel-2); border:1px solid var(--border); border-radius:7px;
+    padding:6px 10px; cursor:pointer; white-space:normal;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .ls-roster-item:hover{ border-color: var(--border-lit); background: var(--panel); }
+  .ls-roster-item .avatar{
+    width:26px; height:26px; flex:none; border-radius:50%; object-fit:cover;
+    border:1px solid var(--border); background: var(--panel);
+  }
+  .ls-roster-item .who{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+  .ls-roster-item .nm{ color: var(--text); font-weight:600; font-size:13px; }
+  .ls-roster-item .cls{ font-size:11px; color: var(--text-dim); }
 
   .ls-num{ text-align:center; }
   .ls-final{ text-align:center; color: var(--gold); font-weight:700; }
@@ -165,6 +189,38 @@
     (members || []).forEach(r => {
       if(!membersByGroup.has(r.group_id)) membersByGroup.set(r.group_id, []);
       membersByGroup.get(r.group_id).push(r.nickname);
+    });
+  }
+
+  // ---- клик на название пати выкатывает вниз список её участников с профессиями
+  // (клик на ник — переход в его личный кабинет; my-cabinet.html сам проверит права,
+  // тут дублировать проверку лидера/зама не нужно) ----
+  let memberClassByNorm = new Map(); // normalizeNick(nick) -> {class_name, class_name_2, icon}
+  async function loadMemberClasses(){
+    const { data } = await db.from("member_classes").select("nickname, class_name, class_name_2, icon");
+    memberClassByNorm = new Map();
+    (data || []).forEach(r => memberClassByNorm.set(normalizeNick(r.nickname), r));
+  }
+  function classLabelOf(nick){
+    const info = memberClassByNorm.get(normalizeNick(nick));
+    if(!info || !info.class_name) return "Класс не указан";
+    return info.class_name_2 ? `${info.class_name} / ${info.class_name_2}` : info.class_name;
+  }
+  function rosterAvatarOf(nick){
+    const info = memberClassByNorm.get(normalizeNick(nick));
+    return (info && info.icon) || classIcon(info && info.class_name) || BLANK_IMG;
+  }
+  function rosterItemHtml(nick){
+    return `<div class="ls-roster-item" data-nick="${escapeHtml(nick)}">` +
+      `<img class="avatar" src="${rosterAvatarOf(nick)}" alt="" />` +
+      `<span class="who"><span class="nm">${escapeHtml(nick)}</span><span class="cls">${escapeHtml(classLabelOf(nick))}</span></span>` +
+      `</div>`;
+  }
+
+  let expandedPartyId = null; // id пати, чей список участников сейчас раскрыт (одна за раз)
+  function updateRosterOpenState(){
+    document.querySelectorAll(".ls-roster-wrap").forEach(w => {
+      w.classList.toggle("open", w.dataset.partyId === expandedPartyId);
     });
   }
 
@@ -349,11 +405,12 @@
   function renderBody(rows){
     const body = document.getElementById("lsBody");
     body.innerHTML = "";
+    const colspan = 6 + events.length;
     rows.forEach(r => {
       const tr = document.createElement("tr");
       const avatarSrc = classIcon(r.party.class_name) || BLANK_IMG;
       const leaderText = r.party.leader_nickname ? ` · лидер ${escapeHtml(r.party.leader_nickname)}` : "";
-      let html = `<td class="ls-col-nick"><div class="ls-party"><img class="avatar" src="${avatarSrc}" alt="" />` +
+      let html = `<td class="ls-col-nick"><div class="ls-party" data-party-id="${r.party.id}"><img class="avatar" src="${avatarSrc}" alt="" />` +
         `<span class="who"><span class="name">${escapeHtml(r.party.name)}</span>` +
         `<span class="cnt">${r.roster.length} участников${leaderText}</span></span></div></td>`;
       html += `<td class="ls-num">${r.initial}</td>`;
@@ -368,6 +425,17 @@
       });
       tr.innerHTML = html;
       body.appendChild(tr);
+
+      const rosterTr = document.createElement("tr");
+      rosterTr.className = "ls-roster-row";
+      const sortedRoster = r.roster.slice().sort((a, b) => a.localeCompare(b));
+      const itemsHtml = sortedRoster.length
+        ? sortedRoster.map(rosterItemHtml).join("")
+        : '<p class="hint" style="margin:0;">Участников нет.</p>';
+      const openCls = expandedPartyId === r.party.id ? " open" : "";
+      rosterTr.innerHTML = `<td colspan="${colspan}"><div class="ls-roster-wrap${openCls}" data-party-id="${r.party.id}">` +
+        `<div class="ls-roster-list">${itemsHtml}</div></div></td>`;
+      body.appendChild(rosterTr);
     });
   }
 
@@ -410,6 +478,33 @@
     renderTable(lastRows);
     document.getElementById("splitBtn").disabled = false;
   }
+
+  // клик на название пати — раскрыть/свернуть список участников (одна пати за раз);
+  // клик на участника внутри списка — перейти в его личный кабинет
+  document.getElementById("lsBody").addEventListener("click", (e) => {
+    const partyEl = e.target.closest(".ls-party");
+    if(partyEl){
+      const id = partyEl.dataset.partyId;
+      expandedPartyId = (expandedPartyId === id) ? null : id;
+      updateRosterOpenState();
+      return;
+    }
+    const rosterItem = e.target.closest(".ls-roster-item");
+    if(rosterItem){
+      const nick = rosterItem.dataset.nick;
+      // раздел перезагрузится с нуля при возврате — запоминаем выбранный период,
+      // чтобы кнопка «назад» из личного кабинета вернула ту же дату и расчёт
+      saveDkpPartyState();
+      if(window.top && window.top.L2Nav) window.top.L2Nav.openMyCabinet(nick, "loot_split_party");
+    }
+  });
+  // клик где угодно вне раскрытого списка и вне названия пати — свернуть его
+  document.addEventListener("click", (e) => {
+    if(!expandedPartyId) return;
+    if(e.target.closest(".ls-party") || e.target.closest(".ls-roster-wrap")) return;
+    expandedPartyId = null;
+    updateRosterOpenState();
+  });
 
   document.getElementById("splitBtn").addEventListener("click", doSplit);
   // сумму голды можно поменять без повторного пересчёта явки/буста — просто
@@ -459,8 +554,32 @@
     renderHead();
   });
 
-  await Promise.all([loadParties(), loadBoostStructure(), loadBoostValues(), loadPartyCoefficients(), loadLootSplitSettings()]);
+  // ---- сохранение/восстановление выбранного периода ----
+  // Раздел живёт в iframe и при возврате из личного кабинета участника перезагружается
+  // с нуля, поэтому перед переходом складываем даты в sessionStorage — та же схема,
+  // что и в attendance.html (saveReportState/restoreReportState)
+  const DKP_PARTY_STATE_KEY = "l2DkpPartyState";
+  function saveDkpPartyState(){
+    const fromStr = document.getElementById("fromDate").value;
+    const toStr = document.getElementById("toDate").value;
+    if(!fromStr && !toStr) return;
+    sessionStorage.setItem(DKP_PARTY_STATE_KEY, JSON.stringify({ from: fromStr, to: toStr }));
+  }
+  async function restoreDkpPartyState(){
+    const raw = sessionStorage.getItem(DKP_PARTY_STATE_KEY);
+    if(!raw) return;
+    sessionStorage.removeItem(DKP_PARTY_STATE_KEY); // одноразово: обычное открытие раздела не трогаем
+    let st;
+    try{ st = JSON.parse(raw); }catch(e){ return; }
+    if(!st.from && !st.to) return;
+    document.getElementById("fromDate").value = st.from || "";
+    document.getElementById("toDate").value = st.to || "";
+    await doSplit();
+  }
+
+  await Promise.all([loadParties(), loadBoostStructure(), loadBoostValues(), loadPartyCoefficients(), loadLootSplitSettings(), loadMemberClasses()]);
   renderTable([]);
+  await restoreDkpPartyState();
 })();
 </script>
 </body>

@@ -164,7 +164,7 @@
   // без параметра — свой собственный кабинет. ?from=... — куда вести кнопкой «Назад».
   const requestedNick = (new URLSearchParams(location.search).get("nick") || "").trim();
   const viewingOther = !!requestedNick && normalizeNick(requestedNick) !== ownNorm;
-  const FROM_SECTIONS = { groups: "Группы", roster: "Участники клана" };
+  const FROM_SECTIONS = { groups: "Группы", roster: "Участники клана", loot_split_party: "ДКП Пати" };
   const fromKey = (new URLSearchParams(location.search).get("from") || "groups").trim();
 
   if(viewingOther){
