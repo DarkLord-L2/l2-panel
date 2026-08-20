@@ -94,26 +94,26 @@
 
 <div class="ls-wrap" id="wrap" style="display:none;">
   <div class="page-head">
-    <h1>ДКП Пати</h1>
+    <h1 data-i18n="section.loot_split_party">ДКП Пати</h1>
   </div>
 
   <section class="card">
     <div class="ls-filters">
       <div class="field">
-        <label for="fromDate">Начальная дата</label>
+        <label for="fromDate" data-i18n="dkp.fromDateLabel">Начальная дата</label>
         <input type="date" id="fromDate" />
       </div>
       <div class="field">
-        <label for="toDate">Конечная дата</label>
+        <label for="toDate" data-i18n="dkp.toDateLabel">Конечная дата</label>
         <input type="date" id="toDate" />
       </div>
       <div class="field">
-        <label for="goldInput">Голда</label>
+        <label for="goldInput" data-i18n="dkp.goldLabel">Голда</label>
         <input type="number" id="goldInput" min="0" step="1" value="0" />
       </div>
-      <button class="btn btn-primary" id="splitBtn">Разделить дроп</button>
+      <button class="btn btn-primary" id="splitBtn" data-i18n="dkp.splitBtn">Разделить дроп</button>
     </div>
-    <p class="hint" style="margin:0 0 10px;">Тот же расчёт, что в «ДКП Соло», только по пати целиком: начальные баллы — суммарная явка всех участников пати, % буста и коэффициент — их среднее по пати, голда делится между пати пропорционально финальным баллам.</p>
+    <p class="hint" style="margin:0 0 10px;" data-i18n="dkp.partyPageHint">Тот же расчёт, что в «ДКП Соло», только по пати целиком: начальные баллы — суммарная явка всех участников пати, % буста и коэффициент — их среднее по пати, голда делится между пати пропорционально финальным баллам.</p>
     <p class="error-msg" id="lsError"></p>
 
     <div class="ls-table-scroll">
@@ -131,6 +131,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=17"></script>
 <script src="js/classes.js?v=1"></script>
+<script src="js/i18n.js?v=1"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -139,7 +140,8 @@
   const profile = await L2Cabinet.getProfile();
   if(!profile){
     document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
-      '<h1>⚠ Профиль не найден</h1><p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+      '<h1>' + L2I18n.t("shell.profileNotFoundTitle", "⚠ Профиль не найден") + '</h1>' +
+      '<p class="hint">' + L2I18n.t("common.contactLeader", "Обратитесь к клан-лидеру.") + '</p></div></div>';
     return;
   }
 
@@ -161,7 +163,7 @@
       .replace(/[^a-zа-яё0-9]/gi, "");
   }
 
-  const DAY_SHORT = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
+  function dayShort(jsDay){ return L2I18n.t("common.day" + ((jsDay + 6) % 7)); } // jsDay: 0=вс..6=сб
   const BLANK_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'></svg>";
   function classIcon(name){ return name && window.L2_CLASS_ICON ? window.L2_CLASS_ICON(name) : null; }
 
@@ -203,7 +205,7 @@
   }
   function classLabelOf(nick){
     const info = memberClassByNorm.get(normalizeNick(nick));
-    if(!info || !info.class_name) return "Класс не указан";
+    if(!info || !info.class_name) return L2I18n.t("cab.classNotSet", "Класс не указан");
     return info.class_name_2 ? `${info.class_name} / ${info.class_name_2}` : info.class_name;
   }
   function rosterAvatarOf(nick){
@@ -321,7 +323,7 @@
     });
   }
 
-  function fmtInt(n){ return Math.round(n).toLocaleString("ru-RU"); }
+  function fmtInt(n){ return Math.round(n).toLocaleString(L2I18n.locale()); }
 
   // начальные баллы пати — суммарная явка всех её участников (сколько раз кто-то
   // из пати отметился на мероприятии, сложено по всем); % буста — среднее по
@@ -368,15 +370,15 @@
   function renderHead(){
     const head = document.getElementById("lsHead");
     let h = '<tr>' +
-      sortableTh("name", "Пати", "ls-col-nick") +
-      sortableTh("initial", "Начальные баллы") +
-      sortableTh("pct", "% буста") +
-      sortableTh("coef", "Коэффициент") +
-      sortableTh("final", "Финальные баллы") +
-      sortableTh("gold", "Голда");
+      sortableTh("name", L2I18n.t("dkp.colParty", "Пати"), "ls-col-nick") +
+      sortableTh("initial", L2I18n.t("dkp.colInitial", "Начальные баллы")) +
+      sortableTh("pct", L2I18n.t("dkp.colPct", "% буста")) +
+      sortableTh("coef", L2I18n.t("dkp.colCoef", "Коэффициент")) +
+      sortableTh("final", L2I18n.t("dkp.colFinal", "Финальные баллы")) +
+      sortableTh("gold", L2I18n.t("dkp.goldLabel", "Голда"));
     events.forEach(e => {
       const dt = new Date(e.event_date + "T00:00:00");
-      const wd = DAY_SHORT[(dt.getDay() + 6) % 7];
+      const wd = dayShort(dt.getDay());
       const title = escapeHtml((e.event_name || "") + " — " + e.event_date);
       const bg = e.icon ? ` style="background-image:url('${e.icon}')"` : "";
       h += `<th class="ls-col-day" title="${title}"><div class="ls-day-head">` +
@@ -409,10 +411,10 @@
     rows.forEach(r => {
       const tr = document.createElement("tr");
       const avatarSrc = classIcon(r.party.class_name) || BLANK_IMG;
-      const leaderText = r.party.leader_nickname ? ` · лидер ${escapeHtml(r.party.leader_nickname)}` : "";
+      const leaderText = r.party.leader_nickname ? L2I18n.t("dkp.leaderPrefix", " · лидер ") + escapeHtml(r.party.leader_nickname) : "";
       let html = `<td class="ls-col-nick"><div class="ls-party" data-party-id="${r.party.id}"><img class="avatar" src="${avatarSrc}" alt="" />` +
         `<span class="who"><span class="name">${escapeHtml(r.party.name)}</span>` +
-        `<span class="cnt">${r.roster.length} участников${leaderText}</span></span></div></td>`;
+        `<span class="cnt">${r.roster.length}${L2I18n.t("dkp.membersCountSuffix", " участников")}${leaderText}</span></span></div></td>`;
       html += `<td class="ls-num">${r.initial}</td>`;
       html += `<td class="ls-num" style="color:${pctColor(r.pct)}">${r.pct.toFixed(2)}%</td>`;
       html += `<td class="ls-num">${r.coef.toFixed(2)}</td>`;
@@ -431,7 +433,7 @@
       const sortedRoster = r.roster.slice().sort((a, b) => a.localeCompare(b));
       const itemsHtml = sortedRoster.length
         ? sortedRoster.map(rosterItemHtml).join("")
-        : '<p class="hint" style="margin:0;">Участников нет.</p>';
+        : `<p class="hint" style="margin:0;">${L2I18n.t("dkp.noMembersInRoster", "Участников нет.")}</p>`;
       const openCls = expandedPartyId === r.party.id ? " open" : "";
       rosterTr.innerHTML = `<td colspan="${colspan}"><div class="ls-roster-wrap${openCls}" data-party-id="${r.party.id}">` +
         `<div class="ls-roster-list">${itemsHtml}</div></div></td>`;
@@ -446,16 +448,16 @@
     renderBody(sortRows(rows));
     const emptyEl = document.getElementById("lsEmpty");
     if(!parties.length){
-      emptyEl.textContent = "Пати ещё не заведены — сначала создайте их в разделе «Группы».";
+      emptyEl.textContent = L2I18n.t("dkp.emptyNoPartiesYet", "Пати ещё не заведены — сначала создайте их в разделе «Группы».");
       emptyEl.style.display = "";
     } else if(!hasSplit){
-      emptyEl.textContent = "Укажите период и нажмите «Разделить дроп».";
+      emptyEl.textContent = L2I18n.t("dkp.emptySetPeriod", "Укажите период и нажмите «Разделить дроп».");
       emptyEl.style.display = "";
     } else if(!events.length){
-      emptyEl.textContent = "За выбранный период нет мероприятий в «Журнале посещаемости».";
+      emptyEl.textContent = L2I18n.t("dkp.emptyNoEvents", "За выбранный период нет мероприятий в «Журнале посещаемости».");
       emptyEl.style.display = "";
     } else if(!rows.length && hideZeroAttendance){
-      emptyEl.textContent = "Ни в одной пати за этот период не было явки — настройка «Показывать только тех, кто хоть раз ходил» (Админ-панель → «Правила клана») скрыла всех.";
+      emptyEl.textContent = L2I18n.t("dkp.emptyHiddenZeroParty", "Ни в одной пати за этот период не было явки — настройка «Показывать только тех, кто хоть раз ходил» (Админ-панель → «Правила клана») скрыла всех.");
       emptyEl.style.display = "";
     } else {
       emptyEl.style.display = "none";
@@ -467,8 +469,8 @@
     errEl.textContent = "";
     const fromStr = document.getElementById("fromDate").value;
     const toStr = document.getElementById("toDate").value;
-    if(!fromStr || !toStr){ errEl.textContent = "Укажите начальную и конечную дату."; return; }
-    if(fromStr > toStr){ errEl.textContent = "Начальная дата позже конечной."; return; }
+    if(!fromStr || !toStr){ errEl.textContent = L2I18n.t("dkp.validateBothDates", "Укажите начальную и конечную дату."); return; }
+    if(fromStr > toStr){ errEl.textContent = L2I18n.t("dkp.validateDateOrder", "Начальная дата позже конечной."); return; }
 
     document.getElementById("splitBtn").disabled = true;
     await loadEventsAndAttendance(fromStr, toStr);
@@ -548,7 +550,7 @@
     if(!file || !pickerTargetEventId) return;
     const dataUrl = await resizeImageFile(file, 64);
     const { error } = await db.from("attendance_events").update({ icon: dataUrl }).eq("id", pickerTargetEventId);
-    if(error){ document.getElementById("lsError").textContent = "Не удалось сохранить иконку: " + error.message; return; }
+    if(error){ document.getElementById("lsError").textContent = L2I18n.t("dkp.saveIconFailed", "Не удалось сохранить иконку: ") + error.message; return; }
     const ev = events.find(x => x.id === pickerTargetEventId);
     if(ev) ev.icon = dataUrl;
     renderHead();
@@ -580,6 +582,13 @@
   await Promise.all([loadParties(), loadBoostStructure(), loadBoostValues(), loadPartyCoefficients(), loadLootSplitSettings(), loadMemberClasses()]);
   renderTable([]);
   await restoreDkpPartyState();
+
+  // заголовки/список участников/пустые состояния построены через JS (не data-i18n) —
+  // перестраиваем при смене языка; expandedPartyId — обычная переменная замыкания,
+  // renderTable сам восстановит раскрытое состояние по ней
+  window.addEventListener("storage", (e) => {
+    if(e.key === "l2Lang") renderTable(lastRows);
+  });
 })();
 </script>
 </body>

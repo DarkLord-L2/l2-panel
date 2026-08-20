@@ -29,8 +29,8 @@
     <p id="shareMeta"></p>
   </div>
   <div class="field share-search">
-    <label for="searchInput">Поиск по нику</label>
-    <input type="text" id="searchInput" placeholder="Ник" />
+    <label for="searchInput" data-i18n="share.searchLabel">Поиск по нику</label>
+    <input type="text" id="searchInput" data-i18n-attr="placeholder:share.searchPlaceholder" placeholder="Ник" />
   </div>
   <div class="share-table-scroll">
     <table class="share-table">
@@ -38,18 +38,19 @@
       <tbody id="tBody"></tbody>
     </table>
   </div>
-  <p class="empty-hint" id="emptyHint" style="display:none;">Ничего не найдено.</p>
+  <p class="empty-hint" id="emptyHint" style="display:none;" data-i18n="share.emptyHint">Ничего не найдено.</p>
 </div>
 
 <div class="login-wrap" id="errorWrap" style="display:none;">
   <div class="card login-card">
-    <h1>⛔ Ссылка недействительна</h1>
-    <p class="hint">Срок действия ссылки истёк (5 дней) или она указана неверно.</p>
+    <h1 data-i18n="share.invalidTitle">⛔ Ссылка недействительна</h1>
+    <p class="hint" data-i18n="share.invalidHint">Срок действия ссылки истёк (5 дней) или она указана неверно.</p>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=17"></script>
+<script src="js/i18n.js?v=1"></script>
 <script>
 (async function(){
   // публичная страница — никакого requireSession()/getProfile(), читаем анонимно;
@@ -72,7 +73,7 @@
   document.getElementById("shareTitle").textContent = data.title;
   const until = new Date(data.expires_at);
   document.getElementById("shareMeta").textContent =
-    "Ссылка действует до " + until.toLocaleDateString("ru-RU") + " " + until.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+    L2I18n.t("share.validUntil", "Ссылка действует до") + " " + until.toLocaleDateString(L2I18n.locale()) + " " + until.toLocaleTimeString(L2I18n.locale(), { hour: "2-digit", minute: "2-digit" });
 
   const columns = data.columns || [];
   const allRows = data.rows || [];

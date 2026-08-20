@@ -103,19 +103,19 @@
 
 <div class="rw-wrap" id="wrap" style="display:none;">
   <div class="page-head">
-    <h1>Участники клана</h1>
+    <h1 data-i18n="section.roster">Участники клана</h1>
   </div>
 
   <section class="card">
     <div class="rw-toolbar">
       <div class="rw-tabs" id="rwTabs">
-        <button type="button" class="rw-tab active" data-mode="alpha">По алфавиту</button>
-        <button type="button" class="rw-tab" data-mode="party">По пати</button>
-        <button type="button" class="rw-tab" data-mode="class">По профессиям</button>
+        <button type="button" class="rw-tab active" data-mode="alpha" data-i18n="roster.tabAlpha">По алфавиту</button>
+        <button type="button" class="rw-tab" data-mode="party" data-i18n="roster.tabParty">По пати</button>
+        <button type="button" class="rw-tab" data-mode="class" data-i18n="roster.tabClass">По профессиям</button>
         <button type="button" class="rw-tab" id="tagTab" data-mode="tag" style="display:none;"></button>
       </div>
-      <input type="text" class="rw-search" id="rwSearch" placeholder="Поиск по нику..." />
-      <button type="button" class="rw-gear-btn" id="rwSettingsBtn" title="Настройки" style="display:none;">⚙</button>
+      <input type="text" class="rw-search" id="rwSearch" data-i18n-attr="placeholder:census.searchPlaceholder" placeholder="Поиск по нику..." />
+      <button type="button" class="rw-gear-btn" id="rwSettingsBtn" data-i18n-attr="title:roster.settingsTitle" title="Настройки" style="display:none;">⚙</button>
     </div>
 
     <div id="rwBody"></div>
@@ -125,74 +125,74 @@
 
 <div class="modal-overlay" id="memberOverlay">
   <div class="modal gc-member-modal">
-    <button class="modal-close" id="memberClose" title="Закрыть">×</button>
+    <button class="modal-close" id="memberClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
     <h2 id="memberTitle"></h2>
 
     <div class="field">
-      <label>Класс</label>
+      <label data-i18n="roster.classLabel">Класс</label>
       <div class="gc-class-row">
         <div class="gc-class-picker" id="classPicker1">
           <button type="button" class="gc-class-picker-btn" id="classPickerBtn1">
             <img id="classPickerIcon1" class="gc-class-picker-icon" alt="" style="display:none;" />
-            <span id="classPickerLabel1">Не выбран</span>
+            <span id="classPickerLabel1" data-i18n="roster.notChosenM">Не выбран</span>
           </button>
           <div class="gc-class-dropdown" id="classDropdown1" style="display:none;">
-            <input type="text" id="classSearchInput1" placeholder="Поиск класса..." />
+            <input type="text" id="classSearchInput1" data-i18n-attr="placeholder:roster.classSearchPlaceholder" placeholder="Поиск класса..." />
             <div class="gc-class-list" id="classDropdownList1"></div>
           </div>
         </div>
-        <input type="number" class="gc-class-level" id="classLevel1" min="1" max="85" placeholder="ур." title="Уровень, 1–85" />
+        <input type="number" class="gc-class-level" id="classLevel1" min="1" max="85" data-i18n-attr="placeholder:roster.levelPlaceholder;title:roster.levelTitle" placeholder="ур." title="Уровень, 1–85" />
       </div>
     </div>
 
     <div class="field">
-      <label>Вторая профессия (необязательно)</label>
+      <label data-i18n="roster.secondClassLabel">Вторая профессия (необязательно)</label>
       <div class="gc-class-row">
         <div class="gc-class-picker" id="classPicker2">
           <button type="button" class="gc-class-picker-btn" id="classPickerBtn2">
             <img id="classPickerIcon2" class="gc-class-picker-icon" alt="" style="display:none;" />
-            <span id="classPickerLabel2">Не выбрана</span>
+            <span id="classPickerLabel2" data-i18n="roster.notChosenF">Не выбрана</span>
           </button>
           <div class="gc-class-dropdown" id="classDropdown2" style="display:none;">
-            <input type="text" id="classSearchInput2" placeholder="Поиск класса..." />
+            <input type="text" id="classSearchInput2" data-i18n-attr="placeholder:roster.classSearchPlaceholder" placeholder="Поиск класса..." />
             <div class="gc-class-list" id="classDropdownList2"></div>
           </div>
         </div>
-        <input type="number" class="gc-class-level" id="classLevel2" min="1" max="85" placeholder="ур." title="Уровень, 1–85" />
+        <input type="number" class="gc-class-level" id="classLevel2" min="1" max="85" data-i18n-attr="placeholder:roster.levelPlaceholder;title:roster.levelTitle" placeholder="ур." title="Уровень, 1–85" />
       </div>
     </div>
 
     <div class="field">
-      <label>Третья профессия (необязательно)</label>
+      <label data-i18n="roster.thirdClassLabel">Третья профессия (необязательно)</label>
       <div class="gc-class-row">
         <div class="gc-class-picker" id="classPicker3">
           <button type="button" class="gc-class-picker-btn" id="classPickerBtn3">
             <img id="classPickerIcon3" class="gc-class-picker-icon" alt="" style="display:none;" />
-            <span id="classPickerLabel3">Не выбрана</span>
+            <span id="classPickerLabel3" data-i18n="roster.notChosenF">Не выбрана</span>
           </button>
           <div class="gc-class-dropdown" id="classDropdown3" style="display:none;">
-            <input type="text" id="classSearchInput3" placeholder="Поиск класса..." />
+            <input type="text" id="classSearchInput3" data-i18n-attr="placeholder:roster.classSearchPlaceholder" placeholder="Поиск класса..." />
             <div class="gc-class-list" id="classDropdownList3"></div>
           </div>
         </div>
-        <input type="number" class="gc-class-level" id="classLevel3" min="1" max="85" placeholder="ур." title="Уровень, 1–85" />
+        <input type="number" class="gc-class-level" id="classLevel3" min="1" max="85" data-i18n-attr="placeholder:roster.levelPlaceholder;title:roster.levelTitle" placeholder="ур." title="Уровень, 1–85" />
       </div>
     </div>
 
     <div class="field">
-      <label>Четвёртая профессия (необязательно)</label>
+      <label data-i18n="roster.fourthClassLabel">Четвёртая профессия (необязательно)</label>
       <div class="gc-class-row">
         <div class="gc-class-picker" id="classPicker4">
           <button type="button" class="gc-class-picker-btn" id="classPickerBtn4">
             <img id="classPickerIcon4" class="gc-class-picker-icon" alt="" style="display:none;" />
-            <span id="classPickerLabel4">Не выбрана</span>
+            <span id="classPickerLabel4" data-i18n="roster.notChosenF">Не выбрана</span>
           </button>
           <div class="gc-class-dropdown" id="classDropdown4" style="display:none;">
-            <input type="text" id="classSearchInput4" placeholder="Поиск класса..." />
+            <input type="text" id="classSearchInput4" data-i18n-attr="placeholder:roster.classSearchPlaceholder" placeholder="Поиск класса..." />
             <div class="gc-class-list" id="classDropdownList4"></div>
           </div>
         </div>
-        <input type="number" class="gc-class-level" id="classLevel4" min="1" max="85" placeholder="ур." title="Уровень, 1–85" />
+        <input type="number" class="gc-class-level" id="classLevel4" min="1" max="85" data-i18n-attr="placeholder:roster.levelPlaceholder;title:roster.levelTitle" placeholder="ур." title="Уровень, 1–85" />
       </div>
     </div>
 
@@ -201,28 +201,29 @@
     </div>
 
     <p class="error-msg" id="memberError"></p>
-    <button class="btn btn-primary" id="memberSaveBtn">Сохранить</button>
+    <button class="btn btn-primary" id="memberSaveBtn" data-i18n="common.save">Сохранить</button>
   </div>
 </div>
 
 <div class="modal-overlay" id="tagSettingsOverlay">
   <div class="modal">
-    <button class="modal-close" id="tagSettingsClose" title="Закрыть">×</button>
-    <h2>Настройки отдельного списка</h2>
-    <p class="hint">Свой список участников (например «неактивные, но в клане») — отдельная вкладка со своим названием, ставится/снимается прямо в окне класса участника.</p>
-    <div class="checkbox-row"><label><input type="checkbox" id="tagEnabledInput" /> Показывать эту вкладку</label></div>
+    <button class="modal-close" id="tagSettingsClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 data-i18n="roster.tagSettingsTitle">Настройки отдельного списка</h2>
+    <p class="hint" data-i18n="roster.tagSettingsHint">Свой список участников (например «неактивные, но в клане») — отдельная вкладка со своим названием, ставится/снимается прямо в окне класса участника.</p>
+    <div class="checkbox-row"><label><input type="checkbox" id="tagEnabledInput" /> <span data-i18n="roster.showTagTab">Показывать эту вкладку</span></label></div>
     <div class="field">
-      <label for="tagLabelInput">Название вкладки</label>
-      <input type="text" id="tagLabelInput" maxlength="40" placeholder="Например: Неактивные" />
+      <label for="tagLabelInput" data-i18n="roster.tagTabNameLabel">Название вкладки</label>
+      <input type="text" id="tagLabelInput" maxlength="40" data-i18n-attr="placeholder:roster.tagTabNamePlaceholder" placeholder="Например: Неактивные" />
     </div>
     <p class="error-msg" id="tagSettingsError"></p>
-    <button class="btn btn-primary" id="tagSettingsSaveBtn">Сохранить</button>
+    <button class="btn btn-primary" id="tagSettingsSaveBtn" data-i18n="common.save">Сохранить</button>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=17"></script>
 <script src="js/classes.js?v=1"></script>
+<script src="js/i18n.js?v=1"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -231,7 +232,8 @@
   const profile = await L2Cabinet.getProfile();
   if(!profile){
     document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
-      '<h1>⚠ Профиль не найден</h1><p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+      '<h1>' + L2I18n.t("shell.profileNotFoundTitle", "⚠ Профиль не найден") + '</h1>' +
+      '<p class="hint">' + L2I18n.t("common.contactLeader", "Обратитесь к клан-лидеру.") + '</p></div></div>';
     return;
   }
 
@@ -260,7 +262,7 @@
   let memberInfo = new Map();     // nickname -> {class_name..4, class_level..4, icon}
   let groups = [];                // [{id, name, sort_order, leader_nickname, deputy_nickname}]
   let membersByGroup = new Map(); // group_id -> [nickname, ...]
-  let tagSettings = { label: "Отдельный список", enabled: false };
+  let tagSettings = { label: L2I18n.t("roster.defaultTagLabel", "Отдельный список"), enabled: false };
   let taggedSet = new Set();      // nickname (точное написание из переписи)
   let viewMode = "alpha";         // "alpha" | "party" | "class" | "tag"
   let searchQuery = "";
@@ -306,7 +308,7 @@
 
   async function loadTagSettings(){
     const { data } = await db.from("roster_tag_settings").select("label, enabled").maybeSingle();
-    tagSettings = { label: data?.label || "Отдельный список", enabled: !!data?.enabled };
+    tagSettings = { label: data?.label || L2I18n.t("roster.defaultTagLabel", "Отдельный список"), enabled: !!data?.enabled };
   }
   async function loadTagged(){
     const { data } = await db.from("roster_tagged_members").select("nickname");
@@ -318,7 +320,7 @@
     tab.style.display = tagSettings.enabled ? "" : "none";
     tab.textContent = tagSettings.label;
     document.getElementById("memberTagRow").style.display = tagSettings.enabled ? "" : "none";
-    document.getElementById("memberTagLabel").textContent = "В «" + tagSettings.label + "»";
+    document.getElementById("memberTagLabel").textContent = L2I18n.t("roster.inTagList", "В «{label}»").replace("{label}", tagSettings.label);
     if(!tagSettings.enabled && viewMode === "tag") setViewMode("alpha");
   }
 
@@ -377,7 +379,7 @@
       .map(src => `<img class="rw-sub-avatar" src="${src}" alt="" />`)
       .join("");
     const badge = viewMode === "alpha"
-      ? `<span class="rw-party-badge">${escapeHtml(groupOfNick(nick)?.name || "Без пати")}</span>`
+      ? `<span class="rw-party-badge">${escapeHtml(groupOfNick(nick)?.name || L2I18n.t("roster.noParty", "Без пати"))}</span>`
       : "";
     const tagBadge = (tagSettings.enabled && taggedSet.has(nick) && viewMode !== "tag")
       ? `<span class="rw-tag-badge">${escapeHtml(tagSettings.label)}</span>`
@@ -391,7 +393,7 @@
       (subAvatars ? `<span class="rw-sub-avatar-row">${subAvatars}</span>` : "") +
       `</button>` +
       `<div class="rw-who">${nameHtml}` +
-      `<span class="rw-cls${clsText ? "" : " rw-cls-empty"}">${escapeHtml(clsText || "Класс не указан")}</span></div>` +
+      `<span class="rw-cls${clsText ? "" : " rw-cls-empty"}">${escapeHtml(clsText || L2I18n.t("cab.classNotSet", "Класс не указан"))}</span></div>` +
       tagBadge + badge +
       `</div>`;
   }
@@ -401,7 +403,7 @@
     const emptyEl = document.getElementById("rwEmpty");
     if(!nicks.length){
       body.innerHTML = "";
-      emptyEl.textContent = "В последней переписи нет участников — сначала заполните «Перепись клана».";
+      emptyEl.textContent = L2I18n.t("dkp.emptyNoCensusMembers", "В последней переписи нет участников — сначала заполните «Перепись клана».");
       emptyEl.style.display = "";
       return;
     }
@@ -419,7 +421,7 @@
       });
       const solo = sortTaggedLast(filterNicks(soloMembers()));
       if(solo.length){
-        html += `<div class="rw-party-title">Без пати<span class="rw-party-count">${solo.length}</span></div>`;
+        html += `<div class="rw-party-title">${L2I18n.t("roster.noParty", "Без пати")}<span class="rw-party-count">${solo.length}</span></div>`;
         html += solo.map(renderRow).join("");
       }
     } else if(viewMode === "class"){
@@ -439,14 +441,14 @@
       });
       const noClsFiltered = sortTaggedLast(filterNicks(noClass.sort((a,b)=>a.localeCompare(b))));
       if(noClsFiltered.length){
-        html += `<div class="rw-party-title">Без профессии<span class="rw-party-count">${noClsFiltered.length}</span></div>`;
+        html += `<div class="rw-party-title">${L2I18n.t("roster.noClass", "Без профессии")}<span class="rw-party-count">${noClsFiltered.length}</span></div>`;
         html += noClsFiltered.map(renderRow).join("");
       }
     } else if(viewMode === "tag"){
       const list = filterNicks(nicks.filter(n => taggedSet.has(n)));
       html = list.map(renderRow).join("");
       if(!list.length){
-        emptyEl.textContent = `Список «${tagSettings.label}» пуст.`;
+        emptyEl.textContent = L2I18n.t("roster.tagListEmpty", "Список «{label}» пуст.").replace("{label}", tagSettings.label);
         emptyEl.style.display = "";
         body.innerHTML = "";
         return;
@@ -455,7 +457,7 @@
 
     body.innerHTML = html;
     emptyEl.style.display = html ? "none" : "";
-    if(!html) emptyEl.textContent = "Никого не нашлось.";
+    if(!html) emptyEl.textContent = L2I18n.t("roster.nothingFound", "Никого не нашлось.");
   }
 
   function setViewMode(mode){
@@ -489,13 +491,13 @@
     const searchEl = document.getElementById("classSearchInput" + n);
     const listEl = document.getElementById("classDropdownList" + n);
     const levelEl = document.getElementById("classLevel" + n);
-    const emptyLabel = n === 1 ? "Не выбран" : "Не выбрана";
+    function emptyLabel(){ return n === 1 ? L2I18n.t("roster.notChosenM", "Не выбран") : L2I18n.t("roster.notChosenF", "Не выбрана"); }
     let className = "";
 
     function renderButton(){
       const icon = classIcon(className);
       if(icon){ iconEl.src = icon; iconEl.style.display = ""; } else { iconEl.style.display = "none"; }
-      labelEl.textContent = className || emptyLabel;
+      labelEl.textContent = className || emptyLabel();
       levelEl.disabled = !className;
       if(!className) levelEl.value = "";
     }
@@ -505,7 +507,7 @@
       listEl.innerHTML = "";
       const clearOpt = document.createElement("div");
       clearOpt.className = "gc-class-option gc-class-clear";
-      clearOpt.textContent = emptyLabel;
+      clearOpt.textContent = emptyLabel();
       clearOpt.addEventListener("click", () => pick(""));
       listEl.appendChild(clearOpt);
       (window.L2_CLASSES || []).filter(c => !q || c.name.toLowerCase().includes(q)).forEach(c => {
@@ -577,7 +579,7 @@
       const slot = CLASS_SLOTS[i];
       const level = slot.level();
       if(Number.isNaN(level) || (level !== null && (level < 1 || level > 85))){
-        errEl.textContent = `Уровень должен быть числом от 1 до 85 (профессия №${i + 1}).`;
+        errEl.textContent = L2I18n.t("roster.levelRangeError", "Уровень должен быть числом от 1 до 85 (профессия №{n}).").replace("{n}", i + 1);
         return;
       }
       row[classNameCol(i + 1)] = slot.name() || null;
@@ -620,7 +622,7 @@
   document.getElementById("tagSettingsSaveBtn").addEventListener("click", async () => {
     const errEl = document.getElementById("tagSettingsError");
     errEl.textContent = "";
-    const label = document.getElementById("tagLabelInput").value.trim() || "Отдельный список";
+    const label = document.getElementById("tagLabelInput").value.trim() || L2I18n.t("roster.defaultTagLabel", "Отдельный список");
     const enabled = document.getElementById("tagEnabledInput").checked;
     const { error } = await db.from("roster_tag_settings").upsert(
       { clan_id: profile.clan_id, label, enabled }, { onConflict: "clan_id" }
@@ -635,6 +637,14 @@
   await Promise.all([loadCensus(), loadMemberInfo(), loadGroups(), loadTagSettings(), loadTagged()]);
   applyTagTabVisibility();
   renderList();
+
+  // список/бейджи/пустые состояния построены через JS (не data-i18n) — перестраиваем
+  // при смене языка (data-i18n элементы в самой разметке уже обновит сам L2I18n)
+  window.addEventListener("storage", (e) => {
+    if(e.key !== "l2Lang") return;
+    applyTagTabVisibility();
+    renderList();
+  });
 })();
 </script>
 </body>

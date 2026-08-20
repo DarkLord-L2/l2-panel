@@ -17,8 +17,8 @@ function initWeekRoster(config){
     profile,
     isAdmin,
     db,
-    addBtnIdleLabel = "+ Добавить",
-    addBtnOpenLabel = "Скрыть загрузку",
+    addBtnIdleLabel = L2I18n.t("weekRoster.addDefault", "+ Добавить"),
+    addBtnOpenLabel = L2I18n.t("weekRoster.hideUpload", "Скрыть загрузку"),
     // если задан — ник в списке становится кликабельным (крестик удаления не рисуется,
     // удаление остаётся через «Удалить списком»). Используется налогами.
     onNickClick = null,
@@ -134,7 +134,7 @@ function initWeekRoster(config){
       emptyHintEl.textContent = defaultEmptyHintText;
       emptyHintEl.style.display = "";
     } else if(q && !visibleEntries.length){
-      emptyHintEl.textContent = "Ничего не найдено.";
+      emptyHintEl.textContent = L2I18n.t("weekRoster.nothingFound", "Ничего не найдено.");
       emptyHintEl.style.display = "";
     } else {
       emptyHintEl.style.display = "none";
@@ -181,7 +181,8 @@ function initWeekRoster(config){
   }
 
   function updateDeleteSelectedLabel(){
-    document.getElementById("deleteSelectedBtn").textContent = `Удалить выбранных (${selectedIds.size})`;
+    document.getElementById("deleteSelectedBtn").textContent =
+      L2I18n.t("weekRoster.deleteSelectedBtn", "Удалить выбранных ({n})").replace("{n}", selectedIds.size);
   }
 
   async function goToWeek(monday){
@@ -225,7 +226,7 @@ function initWeekRoster(config){
 
   document.getElementById("deleteSelectedBtn").addEventListener("click", async () => {
     if(!selectedIds.size) return;
-    if(!confirm(`Удалить выбранных: ${selectedIds.size}?`)) return;
+    if(!confirm(L2I18n.t("weekRoster.confirmDeleteSelected", "Удалить выбранных: {n}?").replace("{n}", selectedIds.size))) return;
     const { error } = await db.from(tableName).delete().in("id", Array.from(selectedIds));
     if(!error){
       selectMode = false;
@@ -256,11 +257,12 @@ function initWeekRoster(config){
     if(!files.length) return;
     if(files.length > 9){
       files = files.slice(0, 9);
-      statusEl.textContent = "Взяты только первые 9 файлов.";
+      statusEl.textContent = L2I18n.t("weekRoster.onlyFirst9", "Взяты только первые 9 файлов.");
     }
 
     for(let i = 0; i < files.length; i++){
-      statusEl.textContent = `Распознаю скрин ${i + 1} из ${files.length}…`;
+      statusEl.textContent = L2I18n.t("weekRoster.scanning", "Распознаю скрин {n} из {total}…")
+        .replace("{n}", i + 1).replace("{total}", files.length);
       try{
         const dataUrl = await fileToDataUrl(files[i]);
         const nicknames = await L2Cabinet.adminOcrNicknames(dataUrl);
@@ -269,10 +271,11 @@ function initWeekRoster(config){
         });
         renderChips();
       }catch(err){
-        errEl.textContent = `Скрин ${i + 1}: ${err.message}`;
+        errEl.textContent = L2I18n.t("weekRoster.scanError", "Скрин {n}: ").replace("{n}", i + 1) + err.message;
       }
     }
-    statusEl.textContent = `Готово, распознано ${pendingChips.length} ник(ов) — проверьте перед сохранением.`;
+    statusEl.textContent = L2I18n.t("weekRoster.scanDone", "Готово, распознано {n} ник(ов) — проверьте перед сохранением.")
+      .replace("{n}", pendingChips.length);
   });
 
   document.getElementById("manualAddBtn").addEventListener("click", () => {
@@ -309,13 +312,14 @@ function initWeekRoster(config){
       ...extraInsertFields(nickname),
     }));
     const { error } = await db.from(tableName).insert(rows);
-    if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
+    if(error){ errEl.textContent = L2I18n.t("weekRoster.saveFailed", "Не удалось сохранить: ") + error.message; return; }
     resetUploadPreview();
     closeUploadCard();
     await loadWeek();
   });
 
   renderWeekLabel();
+  updateDeleteSelectedLabel(); // чтобы «(0)» сразу было на нужном языке, не только после первого клика
   loadWeek();
 
   return {

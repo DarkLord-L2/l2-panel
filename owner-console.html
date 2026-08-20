@@ -21,64 +21,66 @@
 </head>
 <body>
 
+<div class="lang-switch" id="langSwitch" style="position:fixed; top:16px; right:16px;"></div>
+
 <div class="login-wrap" id="loginView" style="display:none;">
   <form class="card login-card" id="loginForm" autocomplete="on">
-    <h1>Консоль</h1>
+    <h1 data-i18n="oc.title">Консоль</h1>
     <div class="field">
-      <label for="ownerEmail">Email</label>
+      <label for="ownerEmail" data-i18n="oc.emailLabel">Email</label>
       <input type="email" id="ownerEmail" name="email" autocomplete="email" required autofocus />
     </div>
     <div class="field">
-      <label for="password">Пароль</label>
+      <label for="password" data-i18n="oc.passwordLabel">Пароль</label>
       <input type="password" id="password" name="password" autocomplete="current-password" required />
     </div>
     <p class="error-msg" id="loginError"></p>
-    <button type="submit" class="btn btn-primary" id="loginSubmit" style="width:100%;">Войти</button>
+    <button type="submit" class="btn btn-primary" id="loginSubmit" style="width:100%;" data-i18n="oc.submit">Войти</button>
   </form>
 </div>
 
 <div class="login-wrap" id="deniedView" style="display:none;">
   <div class="card login-card">
-    <h1>⛔ Нет доступа</h1>
-    <p class="hint">Эта страница недоступна с этим аккаунтом.</p>
-    <button class="btn" id="deniedBackBtn">Назад ко входу</button>
+    <h1 data-i18n="oc.deniedTitle">⛔ Нет доступа</h1>
+    <p class="hint" data-i18n="oc.deniedHint">Эта страница недоступна с этим аккаунтом.</p>
+    <button class="btn" id="deniedBackBtn" data-i18n="oc.backToLogin">Назад ко входу</button>
   </div>
 </div>
 
 <div class="oc-wrap" id="panelWrap" style="display:none;">
   <div class="admin-head" style="display:flex; align-items:center; justify-content:space-between;">
-    <h1>Консоль</h1>
-    <button class="btn btn-ghost" id="signOutBtn">Выйти</button>
+    <h1 data-i18n="oc.title">Консоль</h1>
+    <button class="btn btn-ghost" id="signOutBtn" data-i18n="oc.signOut">Выйти</button>
   </div>
 
   <section class="card">
-    <h2>Новый клан</h2>
+    <h2 data-i18n="oc.newClan">Новый клан</h2>
     <form id="createClanForm">
       <div class="form-row">
         <div class="field">
-          <label for="clanName">Название клана</label>
+          <label for="clanName" data-i18n="oc.clanNameLabel">Название клана</label>
           <input type="text" id="clanName" required maxlength="80" />
         </div>
         <div class="field">
-          <label for="leaderUsername">Логин клан-лидера</label>
-          <input type="text" id="leaderUsername" required pattern="[a-zA-Z0-9_\-]{3,32}" title="3–32 символа: латиница, цифры, - и _" />
+          <label for="leaderUsername" data-i18n="oc.leaderLoginLabel">Логин клан-лидера</label>
+          <input type="text" id="leaderUsername" required pattern="[a-zA-Z0-9_\-]{3,32}" data-i18n-attr="title:oc.leaderLoginTitle" title="3–32 символа: латиница, цифры, - и _" />
         </div>
-        <button type="submit" class="btn btn-primary" id="createClanBtn">Создать</button>
+        <button type="submit" class="btn btn-primary" id="createClanBtn" data-i18n="oc.create">Создать</button>
       </div>
       <p class="error-msg" id="createClanError"></p>
     </form>
     <div class="oc-temp-pass" id="tempPassBox" style="display:none;">
-      <span>Логин <b id="tempPassUsername"></b>, временный пароль: <code id="tempPassValue"></code></span>
-      <button class="btn" id="tempPassCopyBtn" type="button">Скопировать</button>
+      <span><span data-i18n="oc.tempPassPrefix">Логин </span><b id="tempPassUsername"></b><span data-i18n="oc.tempPassMiddle">, временный пароль: </span><code id="tempPassValue"></code></span>
+      <button class="btn" id="tempPassCopyBtn" type="button" data-i18n="oc.copy">Скопировать</button>
     </div>
-    <p class="hint" id="tempPassHint" style="display:none;">Передайте это клан-лидеру — больше пароль нигде не покажется. При первом входе он сменит его сам.</p>
+    <p class="hint" id="tempPassHint" style="display:none;" data-i18n="oc.tempPassHint">Передайте это клан-лидеру — больше пароль нигде не покажется. При первом входе он сменит его сам.</p>
   </section>
 
   <section class="card">
-    <h2>Кланы</h2>
+    <h2 data-i18n="oc.clansTitle">Кланы</h2>
     <table class="data-table" id="clansTable">
       <thead>
-        <tr><th>Название</th><th>Логин лидера</th><th>Доступ</th><th></th></tr>
+        <tr><th data-i18n="oc.colName">Название</th><th data-i18n="oc.colLeaderLogin">Логин лидера</th><th data-i18n="oc.colAccess">Доступ</th><th></th></tr>
       </thead>
       <tbody id="clansBody"></tbody>
     </table>
@@ -88,6 +90,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=17"></script>
+<script src="js/i18n.js?v=1"></script>
 <script>
 (async function(){
   // тот же публичный URL проекта, что и в js/supabase-client.js — не тянем его оттуда,
@@ -120,14 +123,14 @@
       tdLeader.textContent = c.leader_username || "—";
       const tdAccess = document.createElement("td");
       tdAccess.innerHTML = c.access_enabled
-        ? '<span class="oc-access-on">Да</span>'
-        : '<span class="oc-access-off">Нет</span>';
+        ? `<span class="oc-access-on">${L2I18n.t("oc.yes", "Да")}</span>`
+        : `<span class="oc-access-off">${L2I18n.t("oc.no", "Нет")}</span>`;
       const tdToggle = document.createElement("td");
       tdToggle.style.display = "flex";
       tdToggle.style.gap = "8px";
       const toggleBtn = document.createElement("button");
       toggleBtn.className = c.access_enabled ? "btn btn-danger" : "btn btn-primary";
-      toggleBtn.textContent = c.access_enabled ? "Отключить доступ" : "Включить доступ";
+      toggleBtn.textContent = c.access_enabled ? L2I18n.t("oc.disableAccess", "Отключить доступ") : L2I18n.t("oc.enableAccess", "Включить доступ");
       toggleBtn.addEventListener("click", async () => {
         toggleBtn.disabled = true;
         const { error: updErr } = await client
@@ -139,7 +142,7 @@
       });
       const deleteBtn = document.createElement("button");
       deleteBtn.className = "btn btn-danger";
-      deleteBtn.textContent = "Удалить клан";
+      deleteBtn.textContent = L2I18n.t("oc.deleteClan", "Удалить клан");
       deleteBtn.addEventListener("click", () => deleteClan(c, deleteBtn));
       tdToggle.append(toggleBtn, deleteBtn);
       tr.append(tdName, tdLeader, tdAccess, tdToggle);
@@ -152,13 +155,9 @@
   async function deleteClan(c, btn){
     const errEl = document.getElementById("clansError");
     errEl.textContent = "";
-    const typed = prompt(
-      `Это НЕОБРАТИМО удалит клан «${c.name}» целиком: всех участников и их логины, ` +
-      `всю перепись, группы, буст, налоги, посещаемость. Чтобы подтвердить, ` +
-      `введите точное название клана:`
-    );
+    const typed = prompt(L2I18n.t("oc.deleteConfirmPrompt", "Это НЕОБРАТИМО удалит клан «{name}» целиком: всех участников и их логины, всю перепись, группы, буст, налоги, посещаемость. Чтобы подтвердить, введите точное название клана:").replace("{name}", c.name));
     if(typed === null) return;
-    if(typed !== c.name){ alert("Название не совпало — отменено."); return; }
+    if(typed !== c.name){ alert(L2I18n.t("oc.nameMismatch", "Название не совпало — отменено.")); return; }
 
     btn.disabled = true;
     try{
@@ -175,7 +174,7 @@
       if(!res.ok) throw new Error(body.error || "request_failed");
       await loadClans();
     }catch(err){
-      errEl.textContent = "Не удалось удалить: " + err.message;
+      errEl.textContent = L2I18n.t("oc.deleteFailed", "Не удалось удалить: ") + err.message;
       btn.disabled = false;
     }
   }
@@ -194,6 +193,8 @@
     await loadClans();
   }
 
+  L2I18n.renderSwitcher(document.getElementById("langSwitch"));
+
   document.getElementById("deniedBackBtn").addEventListener("click", () => showView("loginView"));
   document.getElementById("signOutBtn").addEventListener("click", async () => {
     await client.auth.signOut();
@@ -206,7 +207,7 @@
     const submitBtn = document.getElementById("loginSubmit");
     errorEl.textContent = "";
     submitBtn.disabled = true;
-    submitBtn.textContent = "Входим…";
+    submitBtn.textContent = L2I18n.t("oc.submitting", "Входим…");
 
     const email = document.getElementById("ownerEmail").value;
     const password = document.getElementById("password").value;
@@ -218,10 +219,10 @@
       if(error) throw error;
       await checkAndShow();
     }catch(err){
-      errorEl.textContent = "Неверный email или пароль";
+      errorEl.textContent = L2I18n.t("oc.loginError", "Неверный email или пароль");
     }finally{
       submitBtn.disabled = false;
-      submitBtn.textContent = "Войти";
+      submitBtn.textContent = L2I18n.t("oc.submit", "Войти");
     }
   });
 
@@ -257,7 +258,7 @@
       document.getElementById("createClanForm").reset();
       await loadClans();
     }catch(err){
-      errEl.textContent = "Не удалось создать: " + err.message;
+      errEl.textContent = L2I18n.t("oc.createFailed", "Не удалось создать: ") + err.message;
     }finally{
       btn.disabled = false;
     }
@@ -266,6 +267,11 @@
   document.getElementById("tempPassCopyBtn").addEventListener("click", () => {
     const val = document.getElementById("tempPassValue").textContent;
     navigator.clipboard?.writeText(val).catch(() => {});
+  });
+
+  // таблица кланов построена через JS (не data-i18n) — перестраиваем при смене языка
+  window.addEventListener("storage", (e) => {
+    if(e.key === "l2Lang" && document.getElementById("panelWrap").style.display !== "none") loadClans();
   });
 
   const { data: { session } } = await client.auth.getSession();

@@ -57,10 +57,10 @@
 <body>
 
 <div class="cab-wrap" id="wrap" style="display:none;">
-  <div class="page-head"><h1>Мой кабинет</h1></div>
+  <div class="page-head"><h1 data-i18n="cab.title">Мой кабинет</h1></div>
 
   <section class="card" id="noNickCard" style="display:none;">
-    <p class="hint">К вашему аккаунту не привязан игровой ник — обратитесь к клан-лидеру, чтобы он указал его в Админ-панели («Пользователи» → «Ник в игре»).</p>
+    <p class="hint" data-i18n="cab.noNickHint">К вашему аккаунту не привязан игровой ник — обратитесь к клан-лидеру, чтобы он указал его в Админ-панели («Пользователи» → «Ник в игре»).</p>
   </section>
 
   <div id="cabContent" style="display:none;">
@@ -76,36 +76,36 @@
     </section>
 
     <section class="card">
-      <h2>Статистика по мероприятиям</h2>
+      <h2 data-i18n="cab.statsTitle">Статистика по мероприятиям</h2>
       <div class="rep-filters">
         <div class="field">
-          <label for="cabPeriodSelect">Период</label>
+          <label for="cabPeriodSelect" data-i18n="cab.periodLabel">Период</label>
           <select id="cabPeriodSelect"></select>
         </div>
       </div>
 
       <div class="rep-tiles" style="margin-top:14px;">
-        <div class="rep-tile"><div class="val" id="cabKills">0</div><div class="lbl">Килы</div></div>
-        <div class="rep-tile"><div class="val" id="cabDeaths">0</div><div class="lbl">Смерти</div></div>
+        <div class="rep-tile"><div class="val" id="cabKills">0</div><div class="lbl" data-i18n="cab.kills">Килы</div></div>
+        <div class="rep-tile"><div class="val" id="cabDeaths">0</div><div class="lbl" data-i18n="cab.deaths">Смерти</div></div>
         <div class="rep-tile"><div class="val" id="cabKd">0.00</div><div class="lbl">K:D</div></div>
-        <div class="rep-tile"><div class="val" id="cabPvp">0</div><div class="lbl">PvP урон</div></div>
-        <div class="rep-tile"><div class="val" id="cabPve">0</div><div class="lbl">PvE урон</div></div>
+        <div class="rep-tile"><div class="val" id="cabPvp">0</div><div class="lbl" data-i18n="cab.pvpDamage">PvP урон</div></div>
+        <div class="rep-tile"><div class="val" id="cabPve">0</div><div class="lbl" data-i18n="cab.pveDamage">PvE урон</div></div>
       </div>
 
       <div class="cab-history-scroll">
         <table class="cab-history-table">
-          <thead><tr><th>Дата</th><th>Мероприятие</th><th>Килы</th><th>Смерти</th><th>K:D</th><th>PvP</th><th>PvE</th></tr></thead>
+          <thead><tr><th data-i18n="cab.colDate">Дата</th><th data-i18n="cab.colEvent">Мероприятие</th><th data-i18n="cab.kills">Килы</th><th data-i18n="cab.deaths">Смерти</th><th>K:D</th><th>PvP</th><th>PvE</th></tr></thead>
           <tbody id="cabHistoryBody"></tbody>
         </table>
       </div>
-      <p class="hint" id="cabHistoryEmpty" style="display:none;">За выбранный период данных нет.</p>
+      <p class="hint" id="cabHistoryEmpty" style="display:none;" data-i18n="cab.noDataForPeriod">За выбранный период данных нет.</p>
     </section>
 
     <section class="card">
-      <h2>Проверка буста</h2>
-      <p class="cab-boost-percent">Процент буста: <b id="cabBoostPercent">—</b></p>
+      <h2 data-i18n="cab.boostTitle">Проверка буста</h2>
+      <p class="cab-boost-percent"><span data-i18n="cab.boostPercent">Процент буста: </span><b id="cabBoostPercent">—</b></p>
       <div id="cabBoostBody"></div>
-      <p class="hint" id="cabBoostEmpty" style="display:none;">Разделы буста ещё не настроены.</p>
+      <p class="hint" id="cabBoostEmpty" style="display:none;" data-i18n="cab.boostNotConfigured">Разделы буста ещё не настроены.</p>
     </section>
   </div>
 </div>
@@ -113,6 +113,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=17"></script>
 <script src="js/classes.js?v=1"></script>
+<script src="js/i18n.js?v=1"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -121,7 +122,8 @@
   const profile = await L2Cabinet.getProfile();
   if(!profile){
     document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
-      '<h1>⚠ Профиль не найден</h1><p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+      '<h1>' + L2I18n.t("shell.profileNotFoundTitle", "⚠ Профиль не найден") + '</h1>' +
+      '<p class="hint">' + L2I18n.t("common.contactLeader", "Обратитесь к клан-лидеру.") + '</p></div></div>';
     return;
   }
 
@@ -164,7 +166,11 @@
   // без параметра — свой собственный кабинет. ?from=... — куда вести кнопкой «Назад».
   const requestedNick = (new URLSearchParams(location.search).get("nick") || "").trim();
   const viewingOther = !!requestedNick && normalizeNick(requestedNick) !== ownNorm;
-  const FROM_SECTIONS = { groups: "Группы", roster: "Участники клана", loot_split_party: "ДКП Пати" };
+  const FROM_SECTIONS = {
+    groups: L2I18n.t("section.groups", "Группы"),
+    roster: L2I18n.t("section.roster", "Участники клана"),
+    loot_split_party: L2I18n.t("section.loot_split_party", "ДКП Пати"),
+  };
   const fromKey = (new URLSearchParams(location.search).get("from") || "groups").trim();
 
   if(viewingOther){
@@ -181,7 +187,8 @@
     }
     if(!allowed){
       document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
-        '<h1>⛔ Доступ запрещён</h1><p class="hint">У вас нет прав смотреть кабинет этого участника.</p></div></div>';
+        '<h1>' + L2I18n.t("cab.accessDeniedTitle", "⛔ Доступ запрещён") + '</h1>' +
+        '<p class="hint">' + L2I18n.t("cab.accessDeniedHint", "У вас нет прав смотреть кабинет этого участника.") + '</p></div></div>';
       return;
     }
   }
@@ -196,10 +203,11 @@
   if(viewingOther){
     const h1 = document.querySelector("#wrap .page-head h1");
     if(h1){
-      h1.textContent = "Личный кабинет: " + myNick;
+      h1.removeAttribute("data-i18n"); // дальше это конкретный ник, не заголовок из словаря
+      h1.textContent = L2I18n.t("cab.otherCabinetPrefix", "Личный кабинет: ") + myNick;
       const backBtn = document.createElement("button");
       backBtn.className = "btn btn-ghost";
-      backBtn.textContent = "← " + (FROM_SECTIONS[fromKey] || "Назад");
+      backBtn.textContent = "← " + (FROM_SECTIONS[fromKey] || L2I18n.t("cab.backDefault", "Назад"));
       backBtn.addEventListener("click", () => {
         if(window.top && window.top.L2Nav) window.top.L2Nav.openSection(fromKey);
       });
@@ -222,7 +230,7 @@
 
   function renderHead(info){
     document.getElementById("cabNickname").textContent = myNick;
-    const clsLabel = info.class_name_2 ? `${info.class_name || ""} / ${info.class_name_2}` : (info.class_name || "Класс не указан");
+    const clsLabel = info.class_name_2 ? `${info.class_name || ""} / ${info.class_name_2}` : (info.class_name || L2I18n.t("cab.classNotSet", "Класс не указан"));
     document.getElementById("cabClass").textContent = clsLabel;
     document.getElementById("cabAvatar").src = info.icon || classIcon(info.class_name) || BLANK_IMG;
     const subSrc = classIcon(info.class_name_2);
@@ -263,13 +271,13 @@
     const sel = document.getElementById("cabPeriodSelect");
     sel.innerHTML = "";
     const allOpt = document.createElement("option");
-    allOpt.value = ""; allOpt.textContent = "Всё время";
+    allOpt.value = ""; allOpt.textContent = L2I18n.t("cab.allTime", "Всё время");
     sel.appendChild(allOpt);
 
     const weeks = [...new Set(allRawStats.map(r => r.week_start))].sort((a, b) => b.localeCompare(a));
     if(weeks.length){
       const weekGroup = document.createElement("optgroup");
-      weekGroup.label = "Недели";
+      weekGroup.label = L2I18n.t("cab.weeksGroup", "Недели");
       weeks.forEach(w => {
         const opt = document.createElement("option");
         opt.value = "week:" + w; opt.textContent = weekRangeLabel(w);
@@ -281,7 +289,7 @@
     const sortedEvents = allRawStats.slice().sort((a, b) => (b.event_date || "").localeCompare(a.event_date || ""));
     if(sortedEvents.length){
       const eventGroup = document.createElement("optgroup");
-      eventGroup.label = "Мероприятия";
+      eventGroup.label = L2I18n.t("cab.eventsGroup", "Мероприятия");
       sortedEvents.forEach(e => {
         const opt = document.createElement("option");
         opt.value = "event:" + e.event_id;
@@ -310,11 +318,11 @@
     }, { kills: 0, deaths: 0, pvp: 0, pve: 0 });
     const kd = totals.deaths > 0 ? totals.kills / totals.deaths : totals.kills;
 
-    document.getElementById("cabKills").textContent = totals.kills.toLocaleString("ru-RU");
-    document.getElementById("cabDeaths").textContent = totals.deaths.toLocaleString("ru-RU");
+    document.getElementById("cabKills").textContent = totals.kills.toLocaleString(L2I18n.locale());
+    document.getElementById("cabDeaths").textContent = totals.deaths.toLocaleString(L2I18n.locale());
     document.getElementById("cabKd").textContent = kd.toFixed(2);
-    document.getElementById("cabPvp").textContent = totals.pvp.toLocaleString("ru-RU");
-    document.getElementById("cabPve").textContent = totals.pve.toLocaleString("ru-RU");
+    document.getElementById("cabPvp").textContent = totals.pvp.toLocaleString(L2I18n.locale());
+    document.getElementById("cabPve").textContent = totals.pve.toLocaleString(L2I18n.locale());
 
     const sorted = rows.slice().sort((a, b) => (b.event_date || "").localeCompare(a.event_date || ""));
     const body = document.getElementById("cabHistoryBody");
@@ -327,11 +335,11 @@
       tr.innerHTML =
         `<td>${d ? pad2(d.getDate()) + "." + pad2(d.getMonth() + 1) : "—"}</td>` +
         `<td>${escapeHtml(r.event_name || "")}</td>` +
-        `<td>${r.kills.toLocaleString("ru-RU")}</td>` +
-        `<td>${r.deaths.toLocaleString("ru-RU")}</td>` +
+        `<td>${r.kills.toLocaleString(L2I18n.locale())}</td>` +
+        `<td>${r.deaths.toLocaleString(L2I18n.locale())}</td>` +
         `<td>${rowKd.toFixed(2)}</td>` +
-        `<td>${r.pvp.toLocaleString("ru-RU")}</td>` +
-        `<td>${r.pve.toLocaleString("ru-RU")}</td>`;
+        `<td>${r.pvp.toLocaleString(L2I18n.locale())}</td>` +
+        `<td>${r.pve.toLocaleString(L2I18n.locale())}</td>`;
       body.appendChild(tr);
     });
   }
@@ -397,6 +405,18 @@
 
   const boostData = await loadBoost();
   renderBoost(boostData);
+
+  // период/класс-заглушка/числа (toLocaleString) построены через JS, не data-i18n —
+  // при смене языка (storage-событие из шапки) перестраиваем их, сохраняя выбранный период
+  window.addEventListener("storage", (e) => {
+    if(e.key !== "l2Lang") return;
+    renderHead(memberInfo);
+    const sel = document.getElementById("cabPeriodSelect");
+    const current = sel.value;
+    renderPeriodOptions();
+    sel.value = current;
+    renderStats();
+  });
 })();
 </script>
 </body>

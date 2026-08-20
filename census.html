@@ -10,79 +10,79 @@
 
 <div class="roster-wrap" id="wrap" style="display:none;">
   <div class="page-head">
-    <h1>Перепись клана</h1>
+    <h1 data-i18n="census.title">Перепись клана</h1>
   </div>
 
   <section class="card week-nav">
     <button class="btn" id="prevWeekBtn">◀</button>
     <div class="week-label" id="weekLabel"></div>
     <button class="btn" id="nextWeekBtn">▶</button>
-    <button class="btn" id="todayBtn">Сегодня</button>
+    <button class="btn" id="todayBtn" data-i18n="census.today">Сегодня</button>
   </section>
 
   <section class="card">
     <div class="table-head-row">
-      <h2>Ники недели (<span id="weekCount">0</span>)</h2>
+      <h2><span data-i18n="census.weekNicksPrefix">Ники недели (</span><span id="weekCount">0</span><span data-i18n="census.weekNicksSuffix">)</span></h2>
       <div class="tools">
-        <button class="btn btn-primary" id="addEntryBtn" style="display:none;">+ Добавить перепись</button>
-        <button class="btn" id="trashModeBtn" title="Режим удаления списком" style="display:none;">Удалить</button>
+        <button class="btn btn-primary" id="addEntryBtn" style="display:none;" data-i18n="census.addEntry">+ Добавить перепись</button>
+        <button class="btn" id="trashModeBtn" data-i18n="census.deleteMode" data-i18n-attr="title:census.deleteModeTitle" title="Режим удаления списком" style="display:none;">Удалить</button>
       </div>
     </div>
 
     <div style="margin-top:10px;">
-      <input type="text" id="weekSearch" placeholder="Поиск по нику..." style="max-width:260px; width:100%;" />
+      <input type="text" id="weekSearch" data-i18n-attr="placeholder:census.searchPlaceholder" placeholder="Поиск по нику..." style="max-width:260px; width:100%;" />
     </div>
 
     <div class="table-head-row" id="bulkTools" style="display:none; margin-top:8px;">
       <div class="tools">
-        <button class="btn" id="selectAllBtn">Выбрать всех</button>
+        <button class="btn" id="selectAllBtn" data-i18n="common.selectAll">Выбрать всех</button>
         <button class="btn btn-danger" id="deleteSelectedBtn">Удалить выбранных (0)</button>
       </div>
     </div>
 
     <div class="chip-row roster-row" id="weekBody"></div>
-    <p class="empty-hint" id="emptyHint" style="display:none;">На этой неделе ещё никто не загружен.</p>
+    <p class="empty-hint" id="emptyHint" style="display:none;" data-i18n="census.emptyWeek">На этой неделе ещё никто не загружен.</p>
   </section>
 
   <section class="card upload-card" id="uploadCard" style="display:none;">
-    <h2>Загрузить скрины переписи</h2>
-    <p class="hint">До 9 скриншотов со списком ников. Каждый распознаётся отдельно — если один собьётся, остальные не пострадают.</p>
+    <h2 data-i18n="census.uploadTitle">Загрузить скрины переписи</h2>
+    <p class="hint" data-i18n="census.uploadHint">До 9 скриншотов со списком ников. Каждый распознаётся отдельно — если один собьётся, остальные не пострадают.</p>
     <input type="file" id="fileInput" accept="image/*" multiple style="display:none;" />
-    <button class="btn" id="filePickBtn" style="margin:10px 0;">Выбрать файлы…</button>
+    <button class="btn" id="filePickBtn" style="margin:10px 0;" data-i18n="census.pickFiles">Выбрать файлы…</button>
     <p class="upload-status" id="uploadStatus"></p>
 
     <div class="chip-row" id="chipRow"></div>
 
     <div class="manual-add">
-      <input type="text" id="manualNick" placeholder="Добавить ник вручную" />
-      <button class="btn" id="manualAddBtn">Добавить</button>
+      <input type="text" id="manualNick" data-i18n-attr="placeholder:census.manualPlaceholder" placeholder="Добавить ник вручную" />
+      <button class="btn" id="manualAddBtn" data-i18n="common.add">Добавить</button>
     </div>
 
     <p class="error-msg" id="uploadError"></p>
     <div class="form-row" style="display:flex; gap:10px;">
-      <button class="btn btn-primary" id="saveWeekBtn">Сохранить перепись</button>
-      <button class="btn btn-ghost" id="cancelUploadBtn">Отмена</button>
+      <button class="btn btn-primary" id="saveWeekBtn" data-i18n="census.saveWeek">Сохранить перепись</button>
+      <button class="btn btn-ghost" id="cancelUploadBtn" data-i18n="common.cancel">Отмена</button>
     </div>
   </section>
 </div>
 
-<button class="help-btn" id="helpBtn" title="Как пользоваться">?</button>
+<button class="help-btn" id="helpBtn" data-i18n-attr="title:common.howToUse" title="Как пользоваться">?</button>
 <div class="modal-overlay" id="helpOverlay">
   <div class="modal">
-    <button class="modal-close" id="helpClose" title="Закрыть">×</button>
-    <h2>Как пользоваться переписью</h2>
+    <button class="modal-close" id="helpClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 data-i18n="census.helpTitle">Как пользоваться переписью</h2>
 
     <details class="help-section">
-      <summary>Недели</summary>
+      <summary data-i18n="census.helpWeeksSummary">Недели</summary>
       <div class="help-body">
-        <p>Каждая календарная неделя (понедельник–воскресенье) — свой отдельный список участников клана. Переключайтесь между неделями стрелками ◀/▶ или кнопкой «Сегодня».</p>
+        <p data-i18n="census.helpWeeksBody">Каждая календарная неделя (понедельник–воскресенье) — свой отдельный список участников клана. Переключайтесь между неделями стрелками ◀/▶ или кнопкой «Сегодня».</p>
       </div>
     </details>
 
     <details class="help-section">
-      <summary>Правки</summary>
+      <summary data-i18n="census.helpEditsSummary">Правки</summary>
       <div class="help-body">
-        <p>Кнопка «Удалить» включает выбор ников для удаления — отметьте нужных (или «Выбрать всех») и подтвердите.</p>
+        <p data-i18n="census.helpEditsBody">Кнопка «Удалить» включает выбор ников для удаления — отметьте нужных (или «Выбрать всех») и подтвердите.</p>
       </div>
     </details>
   </div>
@@ -90,7 +90,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=17"></script>
-<script src="js/week-roster.js?v=4"></script>
+<script src="js/i18n.js?v=1"></script>
+<script src="js/week-roster.js?v=5"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -99,7 +100,8 @@
   const profile = await L2Cabinet.getProfile();
   if(!profile){
     document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
-      '<h1>⚠ Профиль не найден</h1><p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+      '<h1>' + L2I18n.t("shell.profileNotFoundTitle", "⚠ Профиль не найден") + '</h1>' +
+      '<p class="hint">' + L2I18n.t("common.contactLeader", "Обратитесь к клан-лидеру.") + '</p></div></div>';
     return;
   }
 
@@ -111,8 +113,8 @@
   initWeekRoster({
     tableName: "census_entries",
     profile, isAdmin, db,
-    addBtnIdleLabel: "+ Добавить перепись",
-    addBtnOpenLabel: "Скрыть загрузку",
+    addBtnIdleLabel: L2I18n.t("census.addEntry", "+ Добавить перепись"),
+    addBtnOpenLabel: L2I18n.t("weekRoster.hideUpload", "Скрыть загрузку"),
   });
 
   document.getElementById("helpBtn").addEventListener("click", () => {
