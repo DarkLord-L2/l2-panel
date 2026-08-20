@@ -322,6 +322,14 @@ function initWeekRoster(config){
   updateDeleteSelectedLabel(); // чтобы «(0)» сразу было на нужном языке, не только после первого клика
   loadWeek();
 
+  // «(0)»/пустой хинт построены через L2I18n.t(), но не data-i18n — перерисовываем
+  // при смене языка (общий модуль census.html и taxes.html, поэтому чинится тут разом)
+  window.addEventListener("storage", (e) => {
+    if(e.key !== "l2Lang") return;
+    updateDeleteSelectedLabel();
+    renderList();
+  });
+
   return {
     getCurrentWeek: () => currentWeek,
     reloadWeek: loadWeek,

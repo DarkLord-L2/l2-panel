@@ -180,16 +180,16 @@
 
 <div class="roster-wrap" id="wrap" style="display:none;">
   <div class="page-head">
-    <h1>Налоги</h1>
+    <h1 data-i18n="taxes.title">Налоги</h1>
   </div>
 
   <section class="card week-nav">
     <button class="btn" id="prevWeekBtn">◀</button>
     <div class="week-label" id="weekLabel"></div>
     <button class="btn" id="nextWeekBtn">▶</button>
-    <button class="btn" id="todayBtn">Сегодня</button>
-    <button class="btn btn-primary" id="openReportBtn">Отчёт по налогам</button>
-    <button class="btn" id="openDonationsBtn">Донаты</button>
+    <button class="btn" id="todayBtn" data-i18n="census.today">Сегодня</button>
+    <button class="btn btn-primary" id="openReportBtn" data-i18n="taxes.reportBtn">Отчёт по налогам</button>
+    <button class="btn" id="openDonationsBtn" data-i18n="taxes.donationsBtn">Донаты</button>
   </section>
 
   <section class="card">
@@ -197,24 +197,24 @@
       <div class="tax-week-main">
         <div class="table-head-row">
           <div class="table-head-title">
-            <h2>Заплатили на этой неделе (<span id="weekCount">0</span>)</h2>
-            <button type="button" class="copy-btn" id="copyPayersBtn" title="Скопировать список ников">📋</button>
+            <h2><span data-i18n="taxes.weekPaidPrefix">Заплатили на этой неделе (</span><span id="weekCount">0</span><span data-i18n="taxes.weekPaidSuffix">)</span></h2>
+            <button type="button" class="copy-btn" id="copyPayersBtn" data-i18n-attr="title:common.copyListTitle" title="Скопировать список ников">📋</button>
           </div>
           <div class="tools">
-            <button class="btn btn-primary" id="addEntryBtn" style="display:none;">+ Добавить оплаты</button>
-            <button class="btn" id="trashModeBtn" title="Режим удаления списком" style="display:none;">Удалить списком</button>
+            <button class="btn btn-primary" id="addEntryBtn" style="display:none;" data-i18n="taxes.addPayments">+ Добавить оплаты</button>
+            <button class="btn" id="trashModeBtn" data-i18n="taxes.deleteListMode" data-i18n-attr="title:census.deleteModeTitle" title="Режим удаления списком" style="display:none;">Удалить списком</button>
           </div>
         </div>
 
         <div class="table-head-row" id="bulkTools" style="display:none; margin-top:8px;">
           <div class="tools">
-            <button class="btn" id="selectAllBtn">Выбрать всех</button>
+            <button class="btn" id="selectAllBtn" data-i18n="common.selectAll">Выбрать всех</button>
             <button class="btn btn-danger" id="deleteSelectedBtn">Удалить выбранных (0)</button>
           </div>
         </div>
 
         <div class="chip-row roster-row" id="weekBody"></div>
-        <p class="empty-hint" id="emptyHint" style="display:none;">На этой неделе ещё никто не платил.</p>
+        <p class="empty-hint" id="emptyHint" style="display:none;" data-i18n="taxes.emptyWeekPaid">На этой неделе ещё никто не платил.</p>
       </div>
 
       <aside class="tax-week-side">
@@ -222,16 +222,16 @@
           <div class="tax-side-box-hresize left" data-hfor="totalsBoxCard"></div>
           <div class="tax-side-box-hresize right" data-hfor="totalsBoxCard"></div>
           <div class="tax-side-box-head">
-            <span class="tax-side-drag-handle" title="Перетащить">⠿</span>
-            <h3>Итого за неделю</h3>
+            <span class="tax-side-drag-handle" data-i18n-attr="title:common.dragTitle" title="Перетащить">⠿</span>
+            <h3 data-i18n="taxes.totalsTitle">Итого за неделю</h3>
           </div>
-          <p class="tax-totals-line" id="totalsTaxLine">Налог: —</p>
-          <p class="tax-totals-line" id="totalsDonateLine">Донат: —</p>
+          <p class="tax-totals-line" id="totalsTaxLine" data-i18n="taxes.taxLineDefault">Налог: —</p>
+          <p class="tax-totals-line" id="totalsDonateLine" data-i18n="taxes.donateLineDefault">Донат: —</p>
           <div class="tax-totals-sum">
-            <span>Всего</span>
+            <span data-i18n="taxes.totalLabel">Всего</span>
             <span id="totalsSumValue">0</span>
           </div>
-          <p class="hint" id="totalsTaxHint" style="display:none;">Сумма налога не настроена — задайте её в Админ-панели → «Правила клана».</p>
+          <p class="hint" id="totalsTaxHint" style="display:none;" data-i18n="taxes.taxNotConfigured">Сумма налога не настроена — задайте её в Админ-панели → «Правила клана».</p>
           <div class="tax-side-box-vresize" data-vfor="totalsBoxCard"></div>
         </div>
 
@@ -239,17 +239,17 @@
           <div class="tax-side-box-hresize left" data-hfor="donationsBoxCard"></div>
           <div class="tax-side-box-hresize right" data-hfor="donationsBoxCard"></div>
           <div class="tax-side-box-head">
-            <span class="tax-side-drag-handle" title="Перетащить">⠿</span>
+            <span class="tax-side-drag-handle" data-i18n-attr="title:common.dragTitle" title="Перетащить">⠿</span>
             <div class="table-head-title">
-              <h3>Донаты</h3>
-              <button type="button" class="copy-btn" id="copyDonorsBtn" title="Скопировать список ников">📋</button>
+              <h3 data-i18n="taxes.donationsBtn">Донаты</h3>
+              <button type="button" class="copy-btn" id="copyDonorsBtn" data-i18n-attr="title:common.copyListTitle" title="Скопировать список ников">📋</button>
             </div>
             <span class="tax-side-box-sum" id="donationsBoxSum"></span>
           </div>
           <p class="hint" id="donationsBoxLabel"></p>
           <div class="tax-side-box-list" id="donationsBoxList"></div>
-          <p class="hint tax-side-box-empty" id="donationsBoxEmpty" style="display:none;">На этой неделе пока никто не донатил.</p>
-          <button type="button" class="btn tax-side-box-more" id="donationsBoxMoreBtn">Все донаты →</button>
+          <p class="hint tax-side-box-empty" id="donationsBoxEmpty" style="display:none;" data-i18n="taxes.noDonationsThisWeek">На этой неделе пока никто не донатил.</p>
+          <button type="button" class="btn tax-side-box-more" id="donationsBoxMoreBtn" data-i18n="taxes.allDonationsBtn">Все донаты →</button>
           <div class="tax-side-box-vresize" data-vfor="donationsBoxCard"></div>
         </div>
 
@@ -257,23 +257,23 @@
           <div class="tax-side-box-hresize left" data-hfor="aheadDebtBoxCard"></div>
           <div class="tax-side-box-hresize right" data-hfor="aheadDebtBoxCard"></div>
           <div class="tax-side-box-head">
-            <span class="tax-side-drag-handle" title="Перетащить">⠿</span>
-            <h3>Наперёд / Долг</h3>
+            <span class="tax-side-drag-handle" data-i18n-attr="title:common.dragTitle" title="Перетащить">⠿</span>
+            <h3 data-i18n="taxes.aheadDebtTitle">Наперёд / Долг</h3>
           </div>
 
           <div class="tax-side-sub">
             <div class="tax-side-sub-label tax-chip-ahead">
-              <span class="dot"></span>Заплатили наперёд (<span id="aheadCount">0</span>)
-              <button type="button" class="copy-btn" id="copyAheadBtn" title="Скопировать список ников">📋</button>
+              <span class="dot"></span><span data-i18n="taxes.paidAheadPrefix">Заплатили наперёд (</span><span id="aheadCount">0</span><span data-i18n="taxes.countSuffix">)</span>
+              <button type="button" class="copy-btn" id="copyAheadBtn" data-i18n-attr="title:common.copyListTitle" title="Скопировать список ников">📋</button>
             </div>
             <div class="tax-side-box-list" id="aheadList"></div>
-            <p class="hint tax-side-box-empty" id="aheadEmpty" style="display:none;">Пока никого.</p>
+            <p class="hint tax-side-box-empty" id="aheadEmpty" style="display:none;" data-i18n="common.nobodyYet">Пока никого.</p>
           </div>
 
           <div class="tax-side-sub">
-            <div class="tax-side-sub-label tax-chip-debt"><span class="dot"></span>Погасили долг (<span id="debtCount">0</span>)</div>
+            <div class="tax-side-sub-label tax-chip-debt"><span class="dot"></span><span data-i18n="taxes.paidOffDebtPrefix">Погасили долг (</span><span id="debtCount">0</span><span data-i18n="taxes.countSuffix">)</span></div>
             <div class="tax-side-box-list" id="debtList"></div>
-            <p class="hint tax-side-box-empty" id="debtEmpty" style="display:none;">Пока никого.</p>
+            <p class="hint tax-side-box-empty" id="debtEmpty" style="display:none;" data-i18n="common.nobodyYet">Пока никого.</p>
           </div>
           <div class="tax-side-box-vresize" data-vfor="aheadDebtBoxCard"></div>
         </div>
@@ -282,23 +282,23 @@
   </section>
 
   <section class="card upload-card" id="uploadCard" style="display:none;">
-    <h2>Загрузить скрины оплат</h2>
-    <p class="hint">До 9 скриншотов со списком заплативших. Каждый распознаётся отдельно — если один собьётся, остальные не пострадают.</p>
+    <h2 data-i18n="taxes.uploadTitle">Загрузить скрины оплат</h2>
+    <p class="hint" data-i18n="taxes.uploadHint">До 9 скриншотов со списком заплативших. Каждый распознаётся отдельно — если один собьётся, остальные не пострадают.</p>
     <input type="file" id="fileInput" accept="image/*" multiple style="display:none;" />
-    <button class="btn" id="filePickBtn" style="margin:10px 0;">Выбрать файлы…</button>
+    <button class="btn" id="filePickBtn" style="margin:10px 0;" data-i18n="census.pickFiles">Выбрать файлы…</button>
     <p class="upload-status" id="uploadStatus"></p>
 
     <div class="chip-row" id="chipRow"></div>
 
     <div class="manual-add">
-      <input type="text" id="manualNick" placeholder="Добавить ник вручную" />
-      <button class="btn" id="manualAddBtn">Добавить</button>
+      <input type="text" id="manualNick" data-i18n-attr="placeholder:census.manualPlaceholder" placeholder="Добавить ник вручную" />
+      <button class="btn" id="manualAddBtn" data-i18n="common.add">Добавить</button>
     </div>
 
     <p class="error-msg" id="uploadError"></p>
     <div class="form-row" style="display:flex; gap:10px;">
-      <button class="btn btn-primary" id="saveWeekBtn">Сохранить оплаты</button>
-      <button class="btn btn-ghost" id="cancelUploadBtn">Отмена</button>
+      <button class="btn btn-primary" id="saveWeekBtn" data-i18n="taxes.saveBtn">Сохранить оплаты</button>
+      <button class="btn btn-ghost" id="cancelUploadBtn" data-i18n="common.cancel">Отмена</button>
     </div>
   </section>
 </div>
@@ -306,55 +306,55 @@
 <!-- Клик по нику в списке недели: отметить оплату вперёд или погашение долга -->
 <div class="modal-overlay" id="nickOverlay">
   <div class="modal" style="max-width:360px;">
-    <button class="modal-close" id="nickClose" title="Закрыть">×</button>
+    <button class="modal-close" id="nickClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
     <h2 id="nickTitle"></h2>
 
     <div class="field">
-      <label>Что отметить</label>
-      <label class="checkbox-row"><input type="radio" name="taxAction" value="ahead" checked /> Заплатил наперёд</label>
-      <label class="checkbox-row"><input type="radio" name="taxAction" value="debt" /> Погасил долг</label>
-      <label class="checkbox-row"><input type="radio" name="taxAction" value="donate" /> Задонатил</label>
+      <label data-i18n="taxes.whatToMark">Что отметить</label>
+      <label class="checkbox-row"><input type="radio" name="taxAction" value="ahead" checked /> <span data-i18n="taxes.paidAheadOption">Заплатил наперёд</span></label>
+      <label class="checkbox-row"><input type="radio" name="taxAction" value="debt" /> <span data-i18n="taxes.paidOffDebtOption">Погасил долг</span></label>
+      <label class="checkbox-row"><input type="radio" name="taxAction" value="donate" /> <span data-i18n="taxes.donatedOption">Задонатил</span></label>
     </div>
 
     <div class="field" id="nickWeeksField">
-      <label for="nickWeeks">На сколько недель</label>
+      <label for="nickWeeks" data-i18n="taxes.howManyWeeks">На сколько недель</label>
       <input type="number" id="nickWeeks" min="1" max="52" value="1" />
     </div>
 
     <div class="field" id="nickDonateField" style="display:none;">
-      <label for="nickDonateAmount">Сколько задонатил</label>
-      <input type="number" id="nickDonateAmount" min="0" step="0.01" placeholder="Сумма" />
+      <label for="nickDonateAmount" data-i18n="taxes.howMuchDonated">Сколько задонатил</label>
+      <input type="number" id="nickDonateAmount" min="0" step="0.01" data-i18n-attr="placeholder:taxes.sumPlaceholder" placeholder="Сумма" />
     </div>
 
     <p class="hint" id="nickHint"></p>
     <p class="error-msg" id="nickError"></p>
     <p class="ok-msg" id="nickOk"></p>
-    <button class="btn btn-primary" id="nickApplyBtn">ОК</button>
+    <button class="btn btn-primary" id="nickApplyBtn" data-i18n="common.ok">ОК</button>
   </div>
 </div>
 
 <!-- Отчёт по налогам: три под-экрана в одной модалке -->
 <div class="modal-overlay" id="reportOverlay">
   <div class="modal report-modal">
-    <button class="modal-close" id="reportClose" title="Закрыть">×</button>
+    <button class="modal-close" id="reportClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
 
     <div id="reportPickView">
-      <h2>Выберите недели для отчёта</h2>
-      <p class="hint">Можно отметить любое количество недель, не обязательно подряд идущих.</p>
+      <h2 data-i18n="taxes.pickWeeksTitle">Выберите недели для отчёта</h2>
+      <p class="hint" data-i18n="taxes.pickWeeksHint">Можно отметить любое количество недель, не обязательно подряд идущих.</p>
       <div class="weeks-list" id="pickWeeksList"></div>
       <p class="error-msg" id="pickError"></p>
       <div class="report-actions">
-        <button class="btn btn-primary" id="showReportBtn">Показать отчёт</button>
-        <button class="btn" id="archiveManagerBtn" style="display:none;">Архивировать недели...</button>
+        <button class="btn btn-primary" id="showReportBtn" data-i18n="taxes.showReportBtn">Показать отчёт</button>
+        <button class="btn" id="archiveManagerBtn" style="display:none;" data-i18n="taxes.archiveWeeksBtn">Архивировать недели...</button>
       </div>
     </div>
 
     <div id="reportArchiveView" style="display:none;">
-      <h2>Архивация недель</h2>
-      <p class="hint">Заархивированные недели прячутся из списка выбора выше — данные никуда не пропадают.</p>
+      <h2 data-i18n="taxes.archiveTitle">Архивация недель</h2>
+      <p class="hint" data-i18n="taxes.archiveHint">Заархивированные недели прячутся из списка выбора выше — данные никуда не пропадают.</p>
       <div class="weeks-list" id="archiveWeeksList"></div>
       <div class="report-actions">
-        <button class="btn" id="archiveBackBtn">← Назад к выбору недель</button>
+        <button class="btn" id="archiveBackBtn" data-i18n="taxes.backToWeeksBtn">← Назад к выбору недель</button>
       </div>
     </div>
 
@@ -364,13 +364,13 @@
 <!-- Ссылка «Поделиться» на снимок текущего отчёта — публичная, без логина, 5 дней -->
 <div class="modal-overlay" id="shareOverlay">
   <div class="modal" style="max-width:480px;">
-    <button class="modal-close" id="shareClose" title="Закрыть">×</button>
-    <h2>Ссылка на отчёт</h2>
-    <p class="hint">Доступна 5 дней, без пароля — увидит любой, у кого есть ссылка.</p>
+    <button class="modal-close" id="shareClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 data-i18n="taxes.shareLinkTitle">Ссылка на отчёт</h2>
+    <p class="hint" data-i18n="taxes.shareLinkHint">Доступна 5 дней, без пароля — увидит любой, у кого есть ссылка.</p>
     <div class="field">
       <input type="text" id="shareLinkInput" readonly onclick="this.select()" />
     </div>
-    <button class="btn btn-primary" id="shareCopyBtn">Скопировать</button>
+    <button class="btn btn-primary" id="shareCopyBtn" data-i18n="oc.copy">Скопировать</button>
     <p class="error-msg" id="shareError"></p>
   </div>
 </div>
@@ -388,29 +388,29 @@
             <tbody id="taxReportBody"></tbody>
           </table>
         </div>
-        <p class="empty-hint" id="taxReportEmpty" style="display:none;">Нет данных за выбранные недели.</p>
+        <p class="empty-hint" id="taxReportEmpty" style="display:none;" data-i18n="taxes.noDataForWeeks">Нет данных за выбранные недели.</p>
         <div class="legend" id="taxReportLegend"></div>
       </div>
 
       <aside class="tax-report-side">
-        <button class="btn" id="taxReportBackBtn">← Назад к выбору недель</button>
-        <button class="btn" id="taxReportShareBtn">Поделиться</button>
-        <button class="btn" id="taxReportCopyBtn" title="Скопировать список ников (в текущем порядке/фильтре)">📋 Скопировать ники</button>
+        <button class="btn" id="taxReportBackBtn" data-i18n="taxes.backToWeeksBtn">← Назад к выбору недель</button>
+        <button class="btn" id="taxReportShareBtn" data-i18n="taxes.shareBtn">Поделиться</button>
+        <button class="btn" id="taxReportCopyBtn" data-i18n="taxes.copyNicksOrderBtn" data-i18n-attr="title:taxes.copyNicksOrderTitle" title="Скопировать список ников (в текущем порядке/фильтре)">📋 Скопировать ники</button>
         <div class="field">
-          <label for="taxReportNickSearch">Поиск по нику</label>
-          <input type="text" id="taxReportNickSearch" placeholder="Ник" />
+          <label for="taxReportNickSearch" data-i18n="taxes.searchNickLabel">Поиск по нику</label>
+          <input type="text" id="taxReportNickSearch" data-i18n-attr="placeholder:share.searchPlaceholder" placeholder="Ник" />
         </div>
         <div class="field">
-          <label for="taxReportGroupFilter">Пати</label>
-          <select id="taxReportGroupFilter"><option value="">Все</option></select>
+          <label for="taxReportGroupFilter" data-i18n="taxes.partyLabel">Пати</label>
+          <select id="taxReportGroupFilter"><option value="" data-i18n="common.all">Все</option></select>
         </div>
         <div class="field">
-          <label for="taxReportSort">Сортировка</label>
+          <label for="taxReportSort" data-i18n="taxes.sortLabel">Сортировка</label>
           <select id="taxReportSort">
-            <option value="paid_desc">Оплата: сначала оплатившие</option>
-            <option value="paid_asc">Оплата: сначала должники</option>
-            <option value="name_asc">Имя: А → Я</option>
-            <option value="name_desc">Имя: Я → А</option>
+            <option value="paid_desc" data-i18n="taxes.sortPaidDesc">Оплата: сначала оплатившие</option>
+            <option value="paid_asc" data-i18n="taxes.sortPaidAsc">Оплата: сначала должники</option>
+            <option value="name_asc" data-i18n="taxes.sortNameAsc">Имя: А → Я</option>
+            <option value="name_desc" data-i18n="taxes.sortNameDesc">Имя: Я → А</option>
           </select>
         </div>
       </aside>
@@ -421,43 +421,43 @@
 <!-- Список всех донатов -->
 <div class="modal-overlay" id="donationsOverlay">
   <div class="modal report-modal">
-    <button class="modal-close" id="donationsClose" title="Закрыть">×</button>
-    <h2>Донаты</h2>
+    <button class="modal-close" id="donationsClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 data-i18n="taxes.donationsBtn">Донаты</h2>
     <div style="display:flex; gap:8px; margin:2px 0 8px;">
-      <button type="button" class="btn btn-primary" id="donationsWeekBtn">За неделю</button>
-      <button type="button" class="btn" id="donationsAllBtn">За всё время</button>
-      <button type="button" class="btn" id="donationsModalCopyBtn" title="Скопировать список ников">📋 Ники</button>
+      <button type="button" class="btn btn-primary" id="donationsWeekBtn" data-i18n="taxes.weekBtn">За неделю</button>
+      <button type="button" class="btn" id="donationsAllBtn" data-i18n="taxes.allTimeBtn">За всё время</button>
+      <button type="button" class="btn" id="donationsModalCopyBtn" data-i18n="taxes.copyNicksBtn" data-i18n-attr="title:common.copyListTitle" title="Скопировать список ников">📋 Ники</button>
     </div>
     <p class="hint" id="donationsWeekLabel"></p>
     <div style="overflow-x:auto;">
       <table class="report-table">
         <thead>
-          <tr><th>Никнейм</th><th>Сумма</th><th>Дата</th><th></th></tr>
+          <tr><th data-i18n="taxes.colNickname">Никнейм</th><th data-i18n="taxes.colAmount">Сумма</th><th data-i18n="cab.colDate">Дата</th><th></th></tr>
         </thead>
         <tbody id="donationsBody"></tbody>
       </table>
     </div>
-    <p class="hint" id="donationsEmpty" style="display:none;">Донатов ещё не было.</p>
+    <p class="hint" id="donationsEmpty" style="display:none;" data-i18n="taxes.noDonationsYet">Донатов ещё не было.</p>
     <p class="error-msg" id="donationsError"></p>
   </div>
 </div>
 
-<button class="help-btn" id="helpBtn" title="Как пользоваться">?</button>
+<button class="help-btn" id="helpBtn" data-i18n-attr="title:common.howToUse" title="Как пользоваться">?</button>
 <div class="modal-overlay" id="helpOverlay">
   <div class="modal">
-    <button class="modal-close" id="helpClose" title="Закрыть">×</button>
-    <h2>Как пользоваться налогами</h2>
+    <button class="modal-close" id="helpClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 data-i18n="taxes.helpTitle">Как пользоваться налогами</h2>
 
     <details class="help-section">
-      <summary>Недели</summary>
+      <summary data-i18n="census.helpWeeksSummary">Недели</summary>
       <div class="help-body">
-        <p>Каждая календарная неделя — свой отдельный список заплативших. Переключайтесь между неделями стрелками ◀/▶ или кнопкой «Сегодня», загружайте скрины так же, как в «Переписи клана».</p>
+        <p data-i18n="taxes.helpWeeksBody">Каждая календарная неделя — свой отдельный список заплативших. Переключайтесь между неделями стрелками ◀/▶ или кнопкой «Сегодня», загружайте скрины так же, как в «Переписи клана».</p>
       </div>
     </details>
 
     <details class="help-section">
-      <summary>Клик по нику</summary>
-      <div class="help-body">
+      <summary data-i18n="taxes.helpNickClickSummary">Клик по нику</summary>
+      <div class="help-body" data-i18n-html="taxes.helpNickClickBody">
         <p>Открывает окно, где можно отметить <b>«Заплатил наперёд»</b> или <b>«Погасил долг»</b> и указать, на сколько недель. Ник добавится в списки следующих недель (наперёд) или предыдущих (долг) — под окном сразу видно, какие именно недели затронет. В списке недели такие ники подсвечиваются: наперёд — зелёным, долг — оранжевым.</p>
         <p><b>«Задонатил»</b> — отдельно от недель: впишите сумму, запись попадёт в общий список донатов (кнопка «Донаты»).</p>
         <p>Удалить ник из недели можно кнопкой «Удалить списком».</p>
@@ -466,8 +466,8 @@
     </details>
 
     <details class="help-section">
-      <summary>Отчёт по налогам</summary>
-      <div class="help-body">
+      <summary data-i18n="taxes.helpReportSummary">Отчёт по налогам</summary>
+      <div class="help-body" data-i18n-html="taxes.helpReportBody">
         <p>Кнопка «Отчёт по налогам» — выберите любые недели галочками и нажмите «Показать отчёт». Откроется таблица-матрица (как в отчёте «Посещаемость») на весь экран: по колонке на каждую выбранную неделю, ✓ если оплачена, плюс поиск по нику и фильтр «Пати». Таблицу можно растянуть за правый край — ширина запомнится до следующего захода. Для каждого ника посчитается, сколько раз из выбранных недель он платил, и статус:</p>
         <ul>
           <li><b>Новый</b> — этот ник впервые встретился в самой свежей «Переписи клана» (или его там ещё вообще нет).</li>
@@ -477,16 +477,16 @@
     </details>
 
     <details class="help-section">
-      <summary>Донаты</summary>
+      <summary data-i18n="taxes.helpDonationsSummary">Донаты</summary>
       <div class="help-body">
-        <p>Кнопка «Донаты» открывает список всех записанных донатов (ник, сумма, дата). Добавляются они через клик по нику → «Задонатил» → сумма. Окошко «Донаты» справа от списка недели показывает донаты текущей недели редактора без открытия окна — «Все донаты →» открывает полный список.</p>
+        <p data-i18n="taxes.helpDonationsBody">Кнопка «Донаты» открывает список всех записанных донатов (ник, сумма, дата). Добавляются они через клик по нику → «Задонатил» → сумма. Окошко «Донаты» справа от списка недели показывает донаты текущей недели редактора без открытия окна — «Все донаты →» открывает полный список.</p>
       </div>
     </details>
 
     <details class="help-section">
-      <summary>Архив недель</summary>
+      <summary data-i18n="taxes.helpArchiveSummary">Архив недель</summary>
       <div class="help-body">
-        <p>«Архивировать недели...» прячет старые недели из списка выбора, чтобы он не разрастался — данные при этом никуда не удаляются.</p>
+        <p data-i18n="taxes.helpArchiveBody">«Архивировать недели...» прячет старые недели из списка выбора, чтобы он не разрастался — данные при этом никуда не удаляются.</p>
       </div>
     </details>
   </div>
@@ -495,7 +495,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=17"></script>
 <script src="js/i18n.js?v=1"></script>
-<script src="js/week-roster.js?v=5"></script>
+<script src="js/week-roster.js?v=6"></script>
 <script src="js/share-report.js?v=2"></script>
 <script>
 (async function(){
@@ -505,7 +505,8 @@
   const profile = await L2Cabinet.getProfile();
   if(!profile){
     document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
-      '<h1>⚠ Профиль не найден</h1><p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+      '<h1>' + L2I18n.t("shell.profileNotFoundTitle", "⚠ Профиль не найден") + '</h1>' +
+      '<p class="hint">' + L2I18n.t("common.contactLeader", "Обратитесь к клан-лидеру.") + '</p></div></div>';
     return;
   }
 
@@ -683,8 +684,8 @@
   const roster = initWeekRoster({
     tableName: "tax_payments",
     profile, isAdmin, db,
-    addBtnIdleLabel: "+ Добавить оплаты",
-    addBtnOpenLabel: "Скрыть загрузку",
+    addBtnIdleLabel: L2I18n.t("taxes.addPayments", "+ Добавить оплаты"),
+    addBtnOpenLabel: L2I18n.t("weekRoster.hideUpload", "Скрыть загрузку"),
     onNickClick: openNickModal,
     extraSelect: ", kind",
     // наперёд — зелёный, долг — оранжевый; обычная оплата за саму неделю — как раньше
@@ -731,7 +732,7 @@
     const count = Math.max(1, Number(document.getElementById("nickWeeks").value) || 1);
     const weeks = targetWeeks(action, count);
     document.getElementById("nickHint").textContent =
-      "Недели: " + weeks.map(w => weekRangeLabel(w)).join(", ");
+      L2I18n.t("taxes.weeksPrefix", "Недели: ") + weeks.map(w => weekRangeLabel(w)).join(", ");
   }
 
   // таймер автозакрытия (см. closeNickModalAfterOk) — отслеживаем сам id, чтобы
@@ -791,15 +792,15 @@
 
     if(action === "donate"){
       const amount = Number(document.getElementById("nickDonateAmount").value);
-      if(!isFinite(amount) || amount <= 0){ errEl.textContent = "Впишите сумму доната."; return; }
+      if(!isFinite(amount) || amount <= 0){ errEl.textContent = L2I18n.t("taxes.donateSumPrompt", "Впишите сумму доната."); return; }
       const { error } = await db.from("tax_donations").insert({
         clan_id: profile.clan_id,
         nickname: nickModalNick,
         amount,
         created_by: profile.id,
       });
-      if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
-      okEl.textContent = "✓ Ок — донат записан.";
+      if(error){ errEl.textContent = L2I18n.t("taxes.saveFailed", "Не удалось сохранить: ") + error.message; return; }
+      okEl.textContent = L2I18n.t("taxes.donationSaved", "✓ Ок — донат записан.");
       document.getElementById("nickDonateAmount").value = "";
       await loadDonationsBox();
       await loadTotalsBox();
@@ -833,11 +834,11 @@
       origin_week: originWeek,
     }));
 
-    if(!rows.length){ okEl.textContent = "Уже отмечено на все эти недели."; return; }
+    if(!rows.length){ okEl.textContent = L2I18n.t("taxes.alreadyMarkedAll", "Уже отмечено на все эти недели."); return; }
 
     const { error } = await db.from("tax_payments").insert(rows);
-    if(error){ errEl.textContent = "Не удалось сохранить: " + error.message; return; }
-    okEl.textContent = `✓ Ок — отмечено недель: ${rows.length}.`;
+    if(error){ errEl.textContent = L2I18n.t("taxes.saveFailed", "Не удалось сохранить: ") + error.message; return; }
+    okEl.textContent = L2I18n.t("taxes.markedWeeksCount", "✓ Ок — отмечено недель: {n}.").replace("{n}", rows.length);
     await roster.reloadWeek();
     await loadAheadDebtBox();
     closeNickModalAfterOk();
@@ -889,7 +890,7 @@
     const list = document.getElementById("pickWeeksList");
     list.innerHTML = "";
     if(!visible.length){
-      list.innerHTML = '<p class="hint">Ещё нет ни одной недели с оплатами.</p>';
+      list.innerHTML = `<p class="hint">${L2I18n.t("taxes.noWeeksYet", "Ещё нет ни одной недели с оплатами.")}</p>`;
     }
     visible.forEach(w => {
       const label = document.createElement("label");
@@ -950,11 +951,11 @@
 
     let query = db.from("tax_donations").select("id, nickname, amount, created_at").order("amount", { ascending: false });
     if(donationsShowAll){
-      document.getElementById("donationsWeekLabel").textContent = "За всё время";
+      document.getElementById("donationsWeekLabel").textContent = L2I18n.t("taxes.allTimeBtn", "За всё время");
     } else {
       const weekStart = roster.getCurrentWeek();
       const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 7);
-      document.getElementById("donationsWeekLabel").textContent = "За неделю: " + weekRangeLabel(isoOf(weekStart));
+      document.getElementById("donationsWeekLabel").textContent = L2I18n.t("taxes.weekBtn", "За неделю") + ": " + weekRangeLabel(isoOf(weekStart));
       query = query.gte("created_at", weekStart.toISOString()).lt("created_at", weekEnd.toISOString());
     }
     const { data, error } = await query;
@@ -967,15 +968,15 @@
       const tr = document.createElement("tr");
       const tdNick = document.createElement("td"); tdNick.textContent = r.nickname;
       const tdAmount = document.createElement("td"); tdAmount.textContent = r.amount;
-      const tdDate = document.createElement("td"); tdDate.textContent = new Date(r.created_at).toLocaleDateString("ru-RU");
+      const tdDate = document.createElement("td"); tdDate.textContent = new Date(r.created_at).toLocaleDateString(L2I18n.locale());
       const tdActions = document.createElement("td");
       if(isAdmin){
         const del = document.createElement("button");
         del.className = "btn btn-danger";
         del.textContent = "×";
-        del.title = "Удалить";
+        del.title = L2I18n.t("taxes.deleteDonationTitle", "Удалить");
         del.addEventListener("click", async () => {
-          if(!confirm(`Удалить донат «${r.nickname}» на ${r.amount}?`)) return;
+          if(!confirm(L2I18n.t("taxes.confirmDeleteDonation", "Удалить донат «{nick}» на {amount}?").replace("{nick}", r.nickname).replace("{amount}", r.amount))) return;
           await db.from("tax_donations").delete().eq("id", r.id);
           await loadDonations();
         });
@@ -1014,7 +1015,7 @@
   async function loadDonationsBox(){
     const weekStart = roster.getCurrentWeek();
     const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 7);
-    document.getElementById("donationsBoxLabel").textContent = "За неделю: " + weekRangeLabel(isoOf(weekStart));
+    document.getElementById("donationsBoxLabel").textContent = L2I18n.t("taxes.weekBtn", "За неделю") + ": " + weekRangeLabel(isoOf(weekStart));
 
     const { data, error } = await db.from("tax_donations")
       .select("nickname, amount")
@@ -1028,7 +1029,7 @@
     listEl.innerHTML = "";
     document.getElementById("donationsBoxEmpty").style.display = rows.length ? "none" : "";
     const total = rows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
-    document.getElementById("donationsBoxSum").textContent = total ? "+" + total.toLocaleString("ru-RU") : "";
+    document.getElementById("donationsBoxSum").textContent = total ? "+" + total.toLocaleString(L2I18n.locale()) : "";
     rows.forEach(r => {
       listEl.appendChild(sideBoxRow(r.nickname, String(r.amount), () => openNickModal(r.nickname)));
     });
@@ -1094,7 +1095,7 @@
     weeklyTaxAmount = Number(data?.weekly_tax_amount) || 0;
   }
 
-  function fmtGold(n){ return n.toLocaleString("ru-RU"); }
+  function fmtGold(n){ return n.toLocaleString(L2I18n.locale()); }
 
   async function loadTotalsBox(){
     const weekStart = roster.getCurrentWeek();
@@ -1115,8 +1116,8 @@
     const taxTotal = paidCount * weeklyTaxAmount;
     const donateTotal = (donRows || []).reduce((sum, r) => sum + Number(r.amount || 0), 0);
 
-    document.getElementById("totalsTaxLine").textContent = `Налог: ${paidCount} × ${fmtGold(weeklyTaxAmount)} = ${fmtGold(taxTotal)}`;
-    document.getElementById("totalsDonateLine").textContent = `Донат: ${fmtGold(donateTotal)}`;
+    document.getElementById("totalsTaxLine").textContent = `${L2I18n.t("taxes.taxPrefix", "Налог: ")}${paidCount} × ${fmtGold(weeklyTaxAmount)} = ${fmtGold(taxTotal)}`;
+    document.getElementById("totalsDonateLine").textContent = `${L2I18n.t("taxes.donatePrefix", "Донат: ")}${fmtGold(donateTotal)}`;
     document.getElementById("totalsSumValue").textContent = fmtGold(taxTotal + donateTotal);
     document.getElementById("totalsTaxHint").style.display = (isAdmin && weeklyTaxAmount === 0) ? "" : "none";
   }
@@ -1162,12 +1163,13 @@
   const DARK_TEXT = "#2c2314";
 
   function statusAndColor(paid, total, isOld){
+    const NEW = L2I18n.t("taxes.statusNew", "Новый"), OLD = L2I18n.t("taxes.statusOld", "Старый");
     if(!isOld){
-      return { status: "Новый", color: paid === 0 ? COLORS.newZero : COLORS.newSome };
+      return { status: NEW, color: paid === 0 ? COLORS.newZero : COLORS.newSome };
     }
-    if(paid === 0) return { status: "Старый", color: COLORS.oldZero };
-    if(paid === total) return { status: "Старый", color: COLORS.oldFull };
-    return { status: "Старый", color: COLORS.oldSome };
+    if(paid === 0) return { status: OLD, color: COLORS.oldZero };
+    if(paid === total) return { status: OLD, color: COLORS.oldFull };
+    return { status: OLD, color: COLORS.oldSome };
   }
 
   let taxReportRows = [];
@@ -1246,9 +1248,12 @@
       const paid = paidCount.get(nickname) || 0;
       const fs = firstSeen.get(nickname);
       const isOld = fs !== undefined && fs !== latestCensusWeek;
-      const { status, color } = statusAndColor(paid, total, isOld);
+      // статус — не текст, а сырые данные; переводим при каждой отрисовке
+      // (см. renderTaxReportMatrix), а не один раз тут, чтобы смена языка не
+      // требовала пересчёта отчёта заново
+      const { color } = statusAndColor(paid, total, isOld);
       const percent = total ? Math.round((paid / total) * 100) : 0;
-      return { nickname, paid, total, percent, status, color };
+      return { nickname, paid, total, percent, isOld, color };
     });
 
     return { rows, nickWeeks };
@@ -1294,7 +1299,7 @@
     if(isPartyRestricted){
       const myGroup = taxGroupsList.find(g => g.id === profile.party_id);
       const opt = document.createElement("option");
-      opt.value = profile.party_id; opt.textContent = myGroup?.name || "Моя пати";
+      opt.value = profile.party_id; opt.textContent = myGroup?.name || L2I18n.t("taxes.myPartyFallback", "Моя пати");
       sel.appendChild(opt);
       sel.value = profile.party_id;
       sel.disabled = true;
@@ -1302,7 +1307,7 @@
       return;
     }
     const allOpt = document.createElement("option");
-    allOpt.value = ""; allOpt.textContent = "Все";
+    allOpt.value = ""; allOpt.textContent = L2I18n.t("common.all", "Все");
     sel.appendChild(allOpt);
     taxGroupsList.forEach(g => {
       const opt = document.createElement("option");
@@ -1341,7 +1346,7 @@
 
     const head = document.getElementById("taxReportHead");
     const weekCells = taxReportWeeksSorted.map(w => `<th title="${weekRangeLabel(w)}">${weekShortLabel(w)}</th>`).join("");
-    head.innerHTML = `<tr><th class="tax-num">#</th><th class="tax-nick">Никнейм</th>${weekCells}<th>Итого</th><th>%</th><th>Статус</th></tr>`;
+    head.innerHTML = `<tr><th class="tax-num">#</th><th class="tax-nick">${L2I18n.t("taxes.colNickname", "Никнейм")}</th>${weekCells}<th>${L2I18n.t("taxes.colTotal", "Итого")}</th><th>%</th><th>${L2I18n.t("taxes.colStatus", "Статус")}</th></tr>`;
     applyTaxStickyHead();
 
     const body = document.getElementById("taxReportBody");
@@ -1364,7 +1369,7 @@
 
       const tdPaid = document.createElement("td"); tdPaid.textContent = `${r.paid}/${r.total}`;
       const tdPct = document.createElement("td"); tdPct.textContent = `${r.percent}%`;
-      const tdStatus = document.createElement("td"); tdStatus.textContent = r.status;
+      const tdStatus = document.createElement("td"); tdStatus.textContent = r.isOld ? L2I18n.t("taxes.statusOld", "Старый") : L2I18n.t("taxes.statusNew", "Новый");
       tr.append(tdPaid, tdPct, tdStatus);
       body.appendChild(tr);
     });
@@ -1372,11 +1377,11 @@
 
   function renderLegend(){
     const items = [
-      [COLORS.newZero, "Новый, 0 оплат"],
-      [COLORS.newSome, "Новый, есть оплаты"],
-      [COLORS.oldZero, "Старый, 0 оплат"],
-      [COLORS.oldSome, "Старый, частично"],
-      [COLORS.oldFull, "Старый, оплатил всё"],
+      [COLORS.newZero, L2I18n.t("taxes.legendNewZero", "Новый, 0 оплат")],
+      [COLORS.newSome, L2I18n.t("taxes.legendNewSome", "Новый, есть оплаты")],
+      [COLORS.oldZero, L2I18n.t("taxes.legendOldZero", "Старый, 0 оплат")],
+      [COLORS.oldSome, L2I18n.t("taxes.legendOldSome", "Старый, частично")],
+      [COLORS.oldFull, L2I18n.t("taxes.legendOldFull", "Старый, оплатил всё")],
     ];
     const el = document.getElementById("taxReportLegend");
     el.innerHTML = items.map(([color, label]) =>
@@ -1441,13 +1446,13 @@
     try{
       const table = document.querySelector("#taxReportTableWrap table");
       const url = await L2Share.createShareLink(db, {
-        table, title: "Налоги", clanId: profile.clan_id, createdBy: profile.id,
+        table, title: L2I18n.t("taxes.reportShareTitle", "Налоги"), clanId: profile.clan_id, createdBy: profile.id,
         nickSelector: ".tax-nick",
       });
       document.getElementById("shareLinkInput").value = url;
       document.getElementById("shareOverlay").classList.add("show");
     }catch(e){
-      alert("Не удалось создать ссылку: " + e.message);
+      alert(L2I18n.t("taxes.createLinkFailed", "Не удалось создать ссылку: ") + e.message);
     }finally{
       btn.disabled = false;
     }
@@ -1480,7 +1485,7 @@
 
   const taxResizeHandle = document.createElement("div");
   taxResizeHandle.className = "table-resize-handle";
-  taxResizeHandle.title = "Потяните, чтобы изменить ширину таблицы";
+  taxResizeHandle.title = L2I18n.t("taxes.resizeHandleTitle", "Потяните, чтобы изменить ширину таблицы");
   taxTableWrapEl.appendChild(taxResizeHandle);
 
   function applySavedTaxWidth(){
@@ -1518,7 +1523,7 @@
   document.getElementById("showReportBtn").addEventListener("click", async () => {
     const checked = Array.from(document.querySelectorAll("#pickWeeksList input:checked")).map(cb => cb.value);
     if(!checked.length){
-      document.getElementById("pickError").textContent = "Выберите хотя бы одну неделю.";
+      document.getElementById("pickError").textContent = L2I18n.t("taxes.selectAtLeastOneWeek", "Выберите хотя бы одну неделю.");
       return;
     }
     document.getElementById("pickError").textContent = "";
@@ -1543,6 +1548,20 @@
     }
     applySavedTaxWidth();
     renderTaxReportMatrix();
+  });
+
+  // окошки справа/легенда/фильтр «Пати» построены через JS (не data-i18n) —
+  // перестраиваем при смене языка; матрицу отчёта — только если она сейчас видна
+  window.addEventListener("storage", (e) => {
+    if(e.key !== "l2Lang") return;
+    loadTotalsBox();
+    loadDonationsBox();
+    loadAheadDebtBox();
+    renderLegend();
+    if(document.getElementById("taxReportView").style.display !== "none"){
+      renderTaxGroupFilterOptions();
+      renderTaxReportMatrix();
+    }
   });
 })();
 </script>
