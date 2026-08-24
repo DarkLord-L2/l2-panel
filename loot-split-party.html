@@ -113,7 +113,8 @@
       </div>
       <button class="btn btn-primary" id="splitBtn" data-i18n="dkp.splitBtn">Разделить дроп</button>
     </div>
-    <p class="hint" style="margin:0 0 10px;" data-i18n="dkp.partyPageHint">Тот же расчёт, что в «ДКП Соло», только по пати целиком: начальные баллы — суммарная явка всех участников пати, % буста и коэффициент — их среднее по пати, голда делится между пати пропорционально финальным баллам.</p>
+    <p class="hint" style="margin:0 0 4px;" data-i18n="dkp.partyPageHint">Тот же расчёт, что в «ДКП Соло», только по пати целиком: начальные баллы — суммарная явка всех участников пати, % буста и коэффициент — их среднее по пати, голда делится между пати пропорционально финальным баллам.</p>
+    <p class="hint" style="margin:0 0 10px;" data-i18n="dkp.goldAutoHint">Сумма подставляется автоматически как доли (финальные баллы) × цена доли (Админ-панель → «Правила клана»); можно изменить вручную.</p>
     <p class="error-msg" id="lsError"></p>
 
     <div class="ls-table-scroll">
@@ -292,9 +293,13 @@
   // «показывать только тех, кто хоть раз ходил» — общая с «ДКП Соло» настройка из
   // Админ-панели → «Правила клана»; здесь означает «пати, где вообще была явка»
   let hideZeroAttendance = false;
+  // «Цена доли» — тоже общая с «ДКП Соло» настройка: сколько голды стоит одна
+  // доля (финальный балл); используется для авто-подстановки суммы в #goldInput
+  let sharePrice = 0;
   async function loadLootSplitSettings(){
-    const { data } = await db.from("loot_split_settings").select("hide_zero_attendance").eq("clan_id", profile.clan_id).maybeSingle();
+    const { data } = await db.from("loot_split_settings").select("hide_zero_attendance, loot_share_price").eq("clan_id", profile.clan_id).maybeSingle();
     hideZeroAttendance = !!data?.hide_zero_attendance;
+    sharePrice = Number(data?.loot_share_price) || 0;
   }
 
   async function loadEventsAndAttendance(fromStr, toStr){
@@ -338,7 +343,8 @@
       }, 0);
       const pct = roster.length ? roster.reduce((s, nick) => s + percentOf(nick), 0) / roster.length : 0;
       const coef = coefficientOf(party.id);
-      const final = initial * (pct / 100) * coef;
+      // доли округляются до четверти — та же логика, что и в «ДКП Соло»
+      const final = Math.round(initial * (pct / 100) * coef * 4) / 4;
       return { party, roster, initial, pct, coef, final };
     });
   }
@@ -476,6 +482,10 @@
     await loadEventsAndAttendance(fromStr, toStr);
     hasSplit = true;
     const rows = computeRows().filter(r => !hideZeroAttendance || r.initial > 0);
+    // сумма голды по умолчанию — доли × цена доли из Админ-панели; поле остаётся
+    // обычным ручным вводом, так что при желании его можно тут же поправить
+    const sumFinal = rows.reduce((s, r) => s + r.final, 0);
+    document.getElementById("goldInput").value = Math.round(sumFinal * sharePrice);
     lastRows = applyGold(rows);
     renderTable(lastRows);
     document.getElementById("splitBtn").disabled = false;

@@ -169,8 +169,9 @@
       "No dates set — showing all-time statistics.",
     ],
     "payout.colNick": ["Ник", "Нік", "Nickname"],
-    "payout.colTogether": ["Раз вместе", "Разів разом", "Times together"],
+    "payout.colTogether": ["Доли", "Частки", "Shares"],
     "payout.colShare": ["Доля от раздач", "Частка від роздач", "Share of payouts"],
+    "payout.colGold": ["Голда", "Голда", "Gold"],
     "payout.copyBtn": ["📋 Скопировать ники", "📋 Скопіювати ніки", "📋 Copy nicknames"],
     "payout.copyBtnTitle": [
       "Скопировать список ников (в порядке таблицы)",
@@ -276,6 +277,11 @@
     "dkp.fromDateLabel": ["Начальная дата", "Початкова дата", "Start date"],
     "dkp.toDateLabel": ["Конечная дата", "Кінцева дата", "End date"],
     "dkp.goldLabel": ["Голда", "Голда", "Gold"],
+    "dkp.goldAutoHint": [
+      "Сумма подставляется автоматически как доли (финальные баллы) × цена доли (Админ-панель → «Правила клана»); можно изменить вручную.",
+      "Сума підставляється автоматично як частки (фінальні бали) × ціна частки (Адмін-панель → «Правила клану»); можна змінити вручну.",
+      "The amount is filled in automatically as shares (final points) × the share price (Admin Panel → “Clan Rules”); you can change it manually.",
+    ],
     "dkp.splitBtn": ["Разделить дроп", "Розділити дроп", "Split loot"],
     "dkp.colNick": ["Участники", "Учасники", "Members"],
     "dkp.colParty": ["Пати", "Паті", "Party"],
@@ -664,6 +670,14 @@
       "У кожної паті свій множник: фінальні бали паті = початкові бали × % бусту × цей коефіцієнт. Немає рядка для паті — вважається як 1.",
       "Each party has its own multiplier: a party's final points = starting points × boost % × this coefficient. No row for a party — treated as 1.",
     ],
+
+    "admin.sharePriceTitle": ["Цена доли", "Ціна частки", "Share price"],
+    "admin.sharePriceHint": [
+      "Сколько голды стоит одна доля в «ДКП Соло»/«ДКП Пати» и в «Раздаче». Долей считаются финальные баллы (округлённые до четверти) — голда автоматически подставляется как доли × эта цена.",
+      "Скільки голди коштує одна частка в «ДКП Соло»/«ДКП Паті» і в «Роздачі». Частками вважаються фінальні бали (округлені до чверті) — голда автоматично підставляється як частки × ця ціна.",
+      "How much gold one share is worth in “DKP Solo”/“DKP Party” and in “Payout”. Shares are the final points (rounded to a quarter) — gold is filled in automatically as shares × this price.",
+    ],
+    "admin.sharePriceLabel": ["Цена одной доли", "Ціна однієї частки", "Price per share"],
 
     "admin.sectionsExistTitle": ["Какие разделы вообще есть", "Які розділи взагалі є", "Which sections exist at all"],
     "admin.sectionsExistHint": [

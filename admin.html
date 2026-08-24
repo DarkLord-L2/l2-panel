@@ -225,6 +225,16 @@
     <p class="error-msg" id="lootHideZeroError"></p>
   </section>
 
+  <section class="card">
+    <h2 data-i18n="admin.sharePriceTitle">Цена доли</h2>
+    <p class="hint" data-i18n="admin.sharePriceHint">Сколько голды стоит одна доля в «ДКП Соло»/«ДКП Пати» и в «Раздаче». Долей считаются финальные баллы (округлённые до четверти) — голда автоматически подставляется как доли × эта цена.</p>
+    <div class="tax-amount-row">
+      <span class="label" data-i18n="admin.sharePriceLabel">Цена одной доли</span>
+      <input type="number" id="lootSharePriceInput" step="1" min="0" />
+    </div>
+    <p class="error-msg" id="lootSharePriceError"></p>
+  </section>
+
   <div class="admin-coef-row">
     <section class="card">
       <h2 data-i18n="admin.classCoefSoloTitle">Коэффициент профессии для «ДКП Соло»</h2>
@@ -478,6 +488,29 @@
       cb.checked = !cb.checked;
     }
     cb.disabled = false;
+  });
+
+  // ---------- «Цена доли»: сколько голды стоит одна доля (финальный балл) в
+  // «ДКП Соло»/«ДКП Пати»/«Раздаче» ----------
+  async function loadLootSharePrice(){
+    const { data, error } = await db.from("loot_split_settings").select("loot_share_price").eq("clan_id", profile.clan_id).maybeSingle();
+    if(error){ console.error(error); return; }
+    document.getElementById("lootSharePriceInput").value = Number(data?.loot_share_price) || 0;
+  }
+
+  document.getElementById("lootSharePriceInput").addEventListener("change", async () => {
+    const input = document.getElementById("lootSharePriceInput");
+    const errEl = document.getElementById("lootSharePriceError");
+    errEl.textContent = "";
+    const val = Number(input.value);
+    if(!Number.isFinite(val) || val < 0){ errEl.textContent = L2I18n.t("admin.amountMustBeNonNegative", "Сумма должна быть числом ≥ 0."); return; }
+    input.disabled = true;
+    const { error } = await db.from("loot_split_settings").upsert(
+      { clan_id: profile.clan_id, loot_share_price: val },
+      { onConflict: "clan_id" }
+    );
+    if(error) errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
+    input.disabled = false;
   });
 
   // ---------- коэффициенты профессий («Раздел дропа») ----------
@@ -1199,7 +1232,7 @@
   await loadLookups();
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(L2I18n.t("role." + r.key, r.label)), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
-  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadWeeklyTaxAmount(), loadLootHideZero()]);
+  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadWeeklyTaxAmount(), loadLootHideZero(), loadLootSharePrice()]);
   renderSectionOrder();
   renderSectionToggleList();
   renderLootCoefList();

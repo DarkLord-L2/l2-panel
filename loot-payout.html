@@ -25,7 +25,7 @@
   table.lp-table th.lp-num, table.lp-table td.lp-num{ text-align:right; white-space:nowrap; }
   table.lp-table tbody tr:hover td{ background: rgba(255,255,255,.03); }
   .lp-cnt{ color: var(--gold); font-weight:700; }
-  .lp-pct{ color: var(--text-dim); }
+  .lp-gold{ color: var(--text-dim); }
 
   .lp-copy-row{ margin:12px 0 0; }
 </style>
@@ -64,7 +64,7 @@
       <div class="lp-summary" id="lpSummary"></div>
       <table class="lp-table">
         <thead>
-          <tr><th data-i18n="payout.colNick">Ник</th><th class="lp-num" data-i18n="payout.colTogether">Раз вместе</th><th class="lp-num" data-i18n="payout.colShare">Доля от раздач</th></tr>
+          <tr><th data-i18n="payout.colNick">Ник</th><th class="lp-num" data-i18n="payout.colTogether">Доли</th><th class="lp-num" data-i18n="payout.colGold">Голда</th></tr>
         </thead>
         <tbody id="lpBody"></tbody>
       </table>
@@ -121,6 +121,15 @@
   let leaderStats = new Map(); // leaderNick -> { partyCount, members: Map(memberNick -> count) }
   let leaderOrder = [];        // ники лидеров, отсортированные по убыванию partyCount
   let currentRows = [];        // [{nickname, count}], в текущем отображаемом порядке (для копирования)
+
+  // «Цена доли» — общая с «ДКП Соло»/«ДКП Пати» настройка из Админ-панели →
+  // «Правила клана»: тут «раз вместе» с лидером и есть число долей участника,
+  // голда = доли × цена доли
+  let sharePrice = 0;
+  async function loadSharePrice(){
+    const { data } = await db.from("loot_split_settings").select("loot_share_price").eq("clan_id", profile.clan_id).maybeSingle();
+    sharePrice = Number(data?.loot_share_price) || 0;
+  }
 
   // лидер на скрине не распознаётся отдельным ОСР-полем — event-roster.js просто
   // помечает is_party_leader=true у первого валидного ника скрина (лидер пати в игре
@@ -207,10 +216,10 @@
 
     const body = document.getElementById("lpBody");
     body.innerHTML = currentRows.map(r => {
-      const pct = entry.partyCount ? (r.count / entry.partyCount * 100) : 0;
+      const gold = r.count * sharePrice;
       return `<tr><td>${escapeHtml(r.nickname)}</td>` +
         `<td class="lp-num lp-cnt">${r.count}</td>` +
-        `<td class="lp-num lp-pct">${pct.toFixed(0)}%</td></tr>`;
+        `<td class="lp-num lp-gold">${Math.round(gold).toLocaleString(L2I18n.locale())}</td></tr>`;
     }).join("");
   }
 
@@ -244,6 +253,7 @@
     renderForLeader(sel.value || null);
   });
 
+  await loadSharePrice();
   await reload();
 })();
 </script>

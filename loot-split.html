@@ -95,6 +95,7 @@
       </div>
       <button class="btn btn-primary" id="splitBtn" data-i18n="dkp.splitBtn">Разделить дроп</button>
     </div>
+    <p class="hint" style="margin:-4px 0 10px;" data-i18n="dkp.goldAutoHint">Сумма подставляется автоматически как доли (финальные баллы) × цена доли (Админ-панель → «Правила клана»); можно изменить вручную.</p>
     <p class="error-msg" id="lsError"></p>
 
     <div class="ls-table-scroll">
@@ -273,9 +274,14 @@
   // «показывать только тех, кто хоть раз ходил» — настройка из Админ-панели →
   // «Правила клана» (по умолчанию выключена, показывает всех, как раньше)
   let hideZeroAttendance = false;
+  // «Цена доли» — тоже из Админ-панели → «Правила клана»: сколько голды стоит
+  // одна доля (финальный балл); используется, чтобы автоматически подставлять
+  // сумму в #goldInput при каждом «Разделить дроп»
+  let sharePrice = 0;
   async function loadLootSplitSettings(){
-    const { data } = await db.from("loot_split_settings").select("hide_zero_attendance").eq("clan_id", profile.clan_id).maybeSingle();
+    const { data } = await db.from("loot_split_settings").select("hide_zero_attendance, loot_share_price").eq("clan_id", profile.clan_id).maybeSingle();
     hideZeroAttendance = !!data?.hide_zero_attendance;
+    sharePrice = Number(data?.loot_share_price) || 0;
   }
 
   async function loadEventsAndAttendance(fromStr, toStr){
@@ -313,7 +319,9 @@
       const pct = percentOf(nick);
       const cls = classOf(nick);
       const coef = coefficientOf(nick);
-      const final = initial * (pct / 100) * coef;
+      // доли округляются до четверти (0 / 0.25 / 0.5 / 0.75 / 1 / …) — голда потом
+      // считается как доли × цена доли, дробные доли меньше четверти не нужны
+      const final = Math.round(initial * (pct / 100) * coef * 4) / 4;
       return { nick, norm, cls, initial, pct, coef, final };
     });
   }
@@ -436,6 +444,10 @@
     await loadEventsAndAttendance(fromStr, toStr);
     hasSplit = true;
     const rows = computeRows().filter(r => !hideZeroAttendance || r.initial > 0);
+    // сумма голды по умолчанию — доли × цена доли из Админ-панели; поле остаётся
+    // обычным ручным вводом, так что при желании его можно тут же поправить
+    const sumFinal = rows.reduce((s, r) => s + r.final, 0);
+    document.getElementById("goldInput").value = Math.round(sumFinal * sharePrice);
     lastRows = applyGold(rows);
     renderTable(lastRows);
     document.getElementById("splitBtn").disabled = false;
