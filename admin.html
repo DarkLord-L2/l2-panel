@@ -65,7 +65,8 @@
     background: var(--panel-2); border:1px solid var(--border); border-radius:7px;
     padding:8px 12px;
   }
-  .loot-coef-row .label{ font-size:13px; color: var(--text); }
+  .loot-coef-row .label{ font-size:13px; color: var(--text); display:flex; align-items:center; gap:8px; }
+  .loot-coef-row .label .icon{ width:22px; height:22px; flex:none; border-radius:5px; object-fit:cover; border:1px solid var(--border); background: var(--panel); }
   .loot-coef-row input{ width:80px; text-align:right; }
 
   /* сумма недельного налога с человека («Налоги») — то же поле-число, что и у коэффициентов */
@@ -145,6 +146,7 @@
       <button type="button" class="admin-nav-item" data-tab="users" data-i18n="admin.tabUsers">Пользователи</button>
       <button type="button" class="admin-nav-item" data-tab="sections" data-i18n="admin.tabSections">Разделы и права</button>
       <button type="button" class="admin-nav-item" data-tab="rules" data-i18n="admin.tabRules">Правила клана</button>
+      <button type="button" class="admin-nav-item" data-tab="dkp" data-i18n="admin.tabDkp">ДКП</button>
       <button type="button" class="admin-nav-item" data-tab="branding" data-i18n="admin.tabBranding">Оформление</button>
       <button type="button" class="admin-nav-item" data-tab="shares" data-i18n="admin.tabShares">Ссылки</button>
     </nav>
@@ -211,7 +213,9 @@
     </div>
     <p class="error-msg" id="weeklyTaxAmountError"></p>
   </section>
+    </div>
 
+    <div class="admin-tab-panel" data-panel="dkp">
   <section class="card">
     <h2 data-i18n="admin.lootSplitSectionTitle">Раздел дропа</h2>
     <div class="section-toggle-row">
@@ -226,13 +230,13 @@
   </section>
 
   <section class="card">
-    <h2 data-i18n="admin.sharePriceTitle">Цена доли</h2>
-    <p class="hint" data-i18n="admin.sharePriceHint">Сколько голды стоит одна доля в «ДКП Соло»/«ДКП Пати» и в «Раздаче». Долей считаются финальные баллы (округлённые до четверти) — голда автоматически подставляется как доли × эта цена.</p>
+    <h2 data-i18n="admin.leaderCoefTitle">Коэффициент пати-лидерам</h2>
+    <p class="hint" data-i18n="admin.leaderCoefHint">Отдельный множитель, который в «ДКП Пати» применяется только к личным финальным баллам того, кто назначен лидером пати (Группы → лидер) — поверх его обычного коэффициента профессии. На саму пати и на «ДКП Соло» не влияет. 1 — без надбавки.</p>
     <div class="tax-amount-row">
-      <span class="label" data-i18n="admin.sharePriceLabel">Цена одной доли</span>
-      <input type="number" id="lootSharePriceInput" step="1" min="0" />
+      <span class="label" data-i18n="admin.leaderCoefLabel">Коэффициент</span>
+      <input type="number" id="lootLeaderCoefInput" step="0.01" min="0" />
     </div>
-    <p class="error-msg" id="lootSharePriceError"></p>
+    <p class="error-msg" id="lootLeaderCoefError"></p>
   </section>
 
   <div class="admin-coef-row">
@@ -490,23 +494,23 @@
     cb.disabled = false;
   });
 
-  // ---------- «Цена доли»: сколько голды стоит одна доля (финальный балл) в
-  // «ДКП Соло»/«ДКП Пати»/«Раздаче» ----------
-  async function loadLootSharePrice(){
-    const { data, error } = await db.from("loot_split_settings").select("loot_share_price").eq("clan_id", profile.clan_id).maybeSingle();
+  // ---------- «Коэффициент пати-лидерам»: доп. множитель личных финальных
+  // баллов того, кто назначен лидером пати — только в «ДКП Пати» ----------
+  async function loadLootLeaderCoef(){
+    const { data, error } = await db.from("loot_split_settings").select("loot_leader_coefficient").eq("clan_id", profile.clan_id).maybeSingle();
     if(error){ console.error(error); return; }
-    document.getElementById("lootSharePriceInput").value = Number(data?.loot_share_price) || 0;
+    document.getElementById("lootLeaderCoefInput").value = data?.loot_leader_coefficient ?? 1;
   }
 
-  document.getElementById("lootSharePriceInput").addEventListener("change", async () => {
-    const input = document.getElementById("lootSharePriceInput");
-    const errEl = document.getElementById("lootSharePriceError");
+  document.getElementById("lootLeaderCoefInput").addEventListener("change", async () => {
+    const input = document.getElementById("lootLeaderCoefInput");
+    const errEl = document.getElementById("lootLeaderCoefError");
     errEl.textContent = "";
     const val = Number(input.value);
     if(!Number.isFinite(val) || val < 0){ errEl.textContent = L2I18n.t("admin.amountMustBeNonNegative", "Сумма должна быть числом ≥ 0."); return; }
     input.disabled = true;
     const { error } = await db.from("loot_split_settings").upsert(
-      { clan_id: profile.clan_id, loot_share_price: val },
+      { clan_id: profile.clan_id, loot_leader_coefficient: val },
       { onConflict: "clan_id" }
     );
     if(error) errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
@@ -531,7 +535,15 @@
 
       const label = document.createElement("span");
       label.className = "label";
-      label.textContent = cls.name;
+      const iconSrc = window.L2_CLASS_ICON ? window.L2_CLASS_ICON(cls.name) : null;
+      if(iconSrc){
+        const icon = document.createElement("img");
+        icon.className = "icon";
+        icon.src = iconSrc;
+        icon.alt = "";
+        label.appendChild(icon);
+      }
+      label.appendChild(document.createTextNode(cls.name));
 
       const input = document.createElement("input");
       input.type = "number";
@@ -1232,7 +1244,7 @@
   await loadLookups();
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(L2I18n.t("role." + r.key, r.label)), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
-  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadWeeklyTaxAmount(), loadLootHideZero(), loadLootSharePrice()]);
+  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadWeeklyTaxAmount(), loadLootHideZero(), loadLootLeaderCoef()]);
   renderSectionOrder();
   renderSectionToggleList();
   renderLootCoefList();
