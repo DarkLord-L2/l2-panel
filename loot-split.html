@@ -25,11 +25,11 @@
      скруглённые левый/правый край первой/последней ячейки делает каждую строку
      отдельным закруглённым блоком — без единого цвета по значению, разница
      между колонками только в насыщенности/жирности шрифта */
-  table.ls-table{ border-collapse:separate; border-spacing:0 6px; width:auto; font-size:13px; }
+  table.ls-table{ border-collapse:separate; border-spacing:0 8px; width:auto; font-size:13px; }
   table.ls-table th{
-    padding:0 12px 10px;
+    padding:0 14px 10px;
     position:sticky; top:0; z-index:2;
-    background: var(--bg);
+    background: var(--panel);
     color: var(--text-dim); font-size:11px; font-weight:600; letter-spacing:.03em; text-transform:uppercase;
     vertical-align:bottom; text-align:center;
   }
@@ -37,19 +37,18 @@
   table.ls-table th.ls-sortable{ cursor:pointer; user-select:none; }
   table.ls-table th.ls-sortable:hover{ color: var(--text); }
   table.ls-table tbody td{
-    padding:13px 14px;
+    padding:14px;
     background: var(--panel-2);
-    border-top:1px solid var(--border);
-    border-bottom:1px solid var(--border);
+    border-top:1px solid var(--border-lit);
+    border-bottom:1px solid var(--border-lit);
     white-space:nowrap;
   }
-  table.ls-table tbody tr td:first-child{ border-left:1px solid var(--border); border-top-left-radius:9px; border-bottom-left-radius:9px; }
-  table.ls-table tbody tr td:last-child{ border-right:1px solid var(--border); border-top-right-radius:9px; border-bottom-right-radius:9px; }
+  table.ls-table tbody tr td:first-child{ border-left:1px solid var(--border-lit); border-top-left-radius:10px; border-bottom-left-radius:10px; }
+  table.ls-table tbody tr td:last-child{ border-right:1px solid var(--border-lit); border-top-right-radius:10px; border-bottom-right-radius:10px; }
   table.ls-table .ls-col-nick{
     position:sticky; left:0; z-index:1;
-    box-shadow: 2px 0 6px rgba(0,0,0,.35);
   }
-  table.ls-table tbody tr:hover td{ background: var(--panel); }
+  table.ls-table tbody tr:hover td{ background: var(--panel); border-color: var(--gold-dim); }
 
   .ls-nick{ display:flex; align-items:center; gap:10px; }
   .ls-nick .avatar{
