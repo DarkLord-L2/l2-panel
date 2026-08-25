@@ -47,7 +47,10 @@
   .ls-party .name{ color: var(--text); font-weight:600; }
   .ls-party .cnt{ font-size:11px; color: var(--text-dim); }
 
-  /* список участников, выезжающий вниз под строкой пати при клике на её название */
+  /* список участников, выезжающий вниз под строкой пати при клике на её название —
+     мини-таблица с теми же колонками, что и у пати целиком, но цифры уже личные:
+     свои баллы явки, свой % буста, свой коэффициент (по классу, как в «ДКП Соло»),
+     свои финальные баллы и своя доля голды пати */
   tr.ls-roster-row td{ padding:0; border-bottom:none; background:none !important; }
   tr.ls-roster-row:hover td{ background:none !important; }
   .ls-roster-wrap{
@@ -55,21 +58,21 @@
     transition: max-height .28s ease, opacity .2s ease;
   }
   .ls-roster-wrap.open{ max-height:900px; opacity:1; }
-  .ls-roster-list{ display:flex; flex-direction:column; gap:6px; padding:4px 10px 14px; max-width:360px; }
-  .ls-roster-item{
-    display:flex; align-items:center; gap:10px;
-    background: var(--panel-2); border:1px solid var(--border); border-radius:7px;
-    padding:6px 10px; cursor:pointer; white-space:normal;
-    transition: border-color .15s ease, background .15s ease;
-  }
-  .ls-roster-item:hover{ border-color: var(--border-lit); background: var(--panel); }
+  .ls-roster-scroll{ padding:4px 10px 14px; overflow-x:auto; }
+  table.ls-roster-table{ border-collapse:separate; border-spacing:0; width:auto; font-size:12px; }
+  table.ls-roster-table th, table.ls-roster-table td{ padding:5px 9px; border-bottom:1px solid var(--border); white-space:nowrap; text-align:center; }
+  table.ls-roster-table thead th{ color: var(--text-dim); font-weight:500; }
+  table.ls-roster-table th.ls-col-nick, table.ls-roster-table td.ls-col-nick{ text-align:left; }
+  table.ls-roster-table th.ls-col-day, table.ls-roster-table td.ls-col-day{ width:32px; min-width:32px; max-width:32px; }
+  .ls-roster-item{ display:flex; align-items:center; gap:8px; cursor:pointer; }
+  .ls-roster-item:hover .nm{ color: var(--gold); }
   .ls-roster-item .avatar{
-    width:26px; height:26px; flex:none; border-radius:50%; object-fit:cover;
-    border:1px solid var(--border); background: var(--panel);
+    width:24px; height:24px; flex:none; border-radius:50%; object-fit:cover;
+    border:1px solid var(--border); background: var(--panel-2);
   }
   .ls-roster-item .who{ display:flex; flex-direction:column; gap:1px; min-width:0; }
-  .ls-roster-item .nm{ color: var(--text); font-weight:600; font-size:13px; }
-  .ls-roster-item .cls{ font-size:11px; color: var(--text-dim); }
+  .ls-roster-item .nm{ color: var(--text); font-weight:600; font-size:12.5px; }
+  .ls-roster-item .cls{ font-size:10.5px; color: var(--text-dim); }
 
   .ls-num{ text-align:center; }
   .ls-final{ text-align:center; color: var(--gold); font-weight:700; }
@@ -213,11 +216,45 @@
     const info = memberClassByNorm.get(normalizeNick(nick));
     return (info && info.icon) || classIcon(info && info.class_name) || BLANK_IMG;
   }
-  function rosterItemHtml(nick){
-    return `<div class="ls-roster-item" data-nick="${escapeHtml(nick)}">` +
-      `<img class="avatar" src="${rosterAvatarOf(nick)}" alt="" />` +
-      `<span class="who"><span class="nm">${escapeHtml(nick)}</span><span class="cls">${escapeHtml(classLabelOf(nick))}</span></span>` +
-      `</div>`;
+  // мини-таблица личной статистики участника внутри раскрытой пати — те же колонки,
+  // что и у пати целиком (m.initial/pct/coef/final/gold считаются в computeRows ниже)
+  function memberRowHtml(m){
+    let html = `<tr>` +
+      `<td class="ls-col-nick"><div class="ls-roster-item" data-nick="${escapeHtml(m.nick)}">` +
+      `<img class="avatar" src="${rosterAvatarOf(m.nick)}" alt="" />` +
+      `<span class="who"><span class="nm">${escapeHtml(m.nick)}</span><span class="cls">${escapeHtml(classLabelOf(m.nick))}</span></span>` +
+      `</div></td>` +
+      `<td class="ls-num">${m.initial}</td>` +
+      `<td class="ls-num" style="color:${pctColor(m.pct)}">${m.pct.toFixed(2)}%</td>` +
+      `<td class="ls-num">${m.coef}</td>` +
+      `<td class="ls-final">${m.final.toFixed(2)}</td>` +
+      `<td class="ls-gold">${fmtInt(m.gold)}</td>`;
+    events.forEach(e => {
+      const was = (attendedByEvent.get(e.id) || new Set()).has(m.norm);
+      html += `<td class="ls-col-day ${was ? "ls-mark-yes" : "ls-mark-no"}">${was ? 1 : 0}</td>`;
+    });
+    html += `</tr>`;
+    return html;
+  }
+
+  function rosterTableHtml(memberRows){
+    if(!memberRows.length){
+      return `<p class="hint" style="margin:0;">${L2I18n.t("dkp.noMembersInRoster", "Участников нет.")}</p>`;
+    }
+    const sorted = memberRows.slice().sort((a, b) => a.nick.localeCompare(b.nick));
+    let h = `<table class="ls-roster-table"><thead><tr>` +
+      `<th class="ls-col-nick">${L2I18n.t("dkp.colNick", "Участники")}</th>` +
+      `<th>${L2I18n.t("dkp.colInitial", "Начальные баллы")}</th>` +
+      `<th>${L2I18n.t("dkp.colPct", "% буста")}</th>` +
+      `<th>${L2I18n.t("dkp.colCoef", "Коэффициент")}</th>` +
+      `<th>${L2I18n.t("dkp.colFinal", "Финальные баллы")}</th>` +
+      `<th>${L2I18n.t("dkp.goldLabel", "Голда")}</th>`;
+    events.forEach(e => {
+      const dt = new Date(e.event_date + "T00:00:00");
+      h += `<th class="ls-col-day">${dayShort(dt.getDay())}</th>`;
+    });
+    h += `</tr></thead><tbody>${sorted.map(memberRowHtml).join("")}</tbody></table>`;
+    return h;
   }
 
   let expandedPartyId = null; // id пати, чей список участников сейчас раскрыт (одна за раз)
@@ -290,6 +327,22 @@
     return c === undefined ? 1 : c;
   }
 
+  // коэффициент КОНКРЕТНОГО участника (по его классу) — та же настройка «Раздел
+  // дропа» в Админ-панели, что и в «ДКП Соло»; нужен только для личной статистики
+  // внутри раскрытой пати, саму пати эти коэффициенты не затрагивают
+  let classCoefficients = new Map(); // class_name -> coefficient
+  async function loadClassCoefficients(){
+    const { data } = await db.from("loot_class_coefficients").select("class_name, coefficient");
+    classCoefficients = new Map((data || []).map(r => [r.class_name, Number(r.coefficient)]));
+  }
+  function memberCoefficientOf(nick){
+    const info = memberClassByNorm.get(normalizeNick(nick));
+    const cls = info && info.class_name;
+    if(!cls) return 1;
+    const c = classCoefficients.get(cls);
+    return c === undefined ? 1 : c;
+  }
+
   // «показывать только тех, кто хоть раз ходил» — общая с «ДКП Соло» настройка из
   // Админ-панели → «Правила клана»; здесь означает «пати, где вообще была явка»
   let hideZeroAttendance = false;
@@ -333,19 +386,26 @@
   // начальные баллы пати — суммарная явка всех её участников (сколько раз кто-то
   // из пати отметился на мероприятии, сложено по всем); % буста — среднее по
   // участникам пати; коэффициент — не среднее, а прямая настройка на саму пати
-  // (Админ-панель → «Правила клана»)
+  // (Админ-панель → «Правила клана»). Личная статистика каждого участника (memberRows)
+  // считается отдельно, теми же формулами, что и в «ДКП Соло» — она нужна только
+  // для раскрывающегося списка участников, на саму пати не влияет.
   function computeRows(){
     return parties.map(party => {
       const roster = membersByGroup.get(party.id) || [];
-      const initial = roster.reduce((sum, nick) => {
+      const memberRows = roster.map(nick => {
         const norm = normalizeNick(nick);
-        return sum + events.reduce((s, e) => s + ((attendedByEvent.get(e.id) || new Set()).has(norm) ? 1 : 0), 0);
-      }, 0);
+        const mInitial = events.reduce((s, e) => s + ((attendedByEvent.get(e.id) || new Set()).has(norm) ? 1 : 0), 0);
+        const mPct = percentOf(nick);
+        const mCoef = memberCoefficientOf(nick);
+        const mFinal = Math.round(mInitial * (mPct / 100) * mCoef * 4) / 4;
+        return { nick, norm, initial: mInitial, pct: mPct, coef: mCoef, final: mFinal };
+      });
+      const initial = memberRows.reduce((s, m) => s + m.initial, 0);
       const pct = roster.length ? roster.reduce((s, nick) => s + percentOf(nick), 0) / roster.length : 0;
       const coef = coefficientOf(party.id);
       // доли округляются до четверти — та же логика, что и в «ДКП Соло»
       const final = Math.round(initial * (pct / 100) * coef * 4) / 4;
-      return { party, roster, initial, pct, coef, final };
+      return { party, roster, memberRows, initial, pct, coef, final };
     });
   }
 
@@ -353,6 +413,16 @@
     const gold = Number(document.getElementById("goldInput").value) || 0;
     const sumFinal = rows.reduce((s,r)=> s + r.final, 0);
     rows.forEach(r => { r.gold = sumFinal ? (r.final / sumFinal) * gold : 0; });
+    return rows;
+  }
+
+  // голда пати делится между её участниками пропорционально их личным финальным
+  // баллам — второй уровень того же принципа, что «сумма → пати» выше
+  function applyMemberGold(rows){
+    rows.forEach(r => {
+      const sumMemberFinal = r.memberRows.reduce((s, m) => s + m.final, 0);
+      r.memberRows.forEach(m => { m.gold = sumMemberFinal ? (m.final / sumMemberFinal) * r.gold : 0; });
+    });
     return rows;
   }
 
@@ -436,13 +506,10 @@
 
       const rosterTr = document.createElement("tr");
       rosterTr.className = "ls-roster-row";
-      const sortedRoster = r.roster.slice().sort((a, b) => a.localeCompare(b));
-      const itemsHtml = sortedRoster.length
-        ? sortedRoster.map(rosterItemHtml).join("")
-        : `<p class="hint" style="margin:0;">${L2I18n.t("dkp.noMembersInRoster", "Участников нет.")}</p>`;
+      const itemsHtml = rosterTableHtml(r.memberRows);
       const openCls = expandedPartyId === r.party.id ? " open" : "";
       rosterTr.innerHTML = `<td colspan="${colspan}"><div class="ls-roster-wrap${openCls}" data-party-id="${r.party.id}">` +
-        `<div class="ls-roster-list">${itemsHtml}</div></div></td>`;
+        `<div class="ls-roster-scroll">${itemsHtml}</div></div></td>`;
       body.appendChild(rosterTr);
     });
   }
@@ -486,7 +553,7 @@
     // обычным ручным вводом, так что при желании его можно тут же поправить
     const sumFinal = rows.reduce((s, r) => s + r.final, 0);
     document.getElementById("goldInput").value = Math.round(sumFinal * sharePrice);
-    lastRows = applyGold(rows);
+    lastRows = applyMemberGold(applyGold(rows));
     renderTable(lastRows);
     document.getElementById("splitBtn").disabled = false;
   }
@@ -523,7 +590,7 @@
   // перераспределяем уже посчитанные финальные баллы по новой сумме
   document.getElementById("goldInput").addEventListener("input", () => {
     if(!lastRows.length) return;
-    applyGold(lastRows);
+    applyMemberGold(applyGold(lastRows));
     renderBody(sortRows(lastRows));
   });
 
@@ -589,7 +656,7 @@
     await doSplit();
   }
 
-  await Promise.all([loadParties(), loadBoostStructure(), loadBoostValues(), loadPartyCoefficients(), loadLootSplitSettings(), loadMemberClasses()]);
+  await Promise.all([loadParties(), loadBoostStructure(), loadBoostValues(), loadPartyCoefficients(), loadClassCoefficients(), loadLootSplitSettings(), loadMemberClasses()]);
   renderTable([]);
   await restoreDkpPartyState();
 
