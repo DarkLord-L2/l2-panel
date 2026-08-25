@@ -17,44 +17,50 @@
   /* тот же приём, что в «ДКП Соло»/matrix-scroll: без своего overflow — таблица
      продолжается вниз и вбок вместе со всей страницей, не в отдельном "окошке" */
   .ls-table-scroll{ display:inline-block; vertical-align:top; overflow:visible; }
-  table.ls-table{ border-collapse:separate; border-spacing:0; width:auto; font-size:13px; }
-  table.ls-table th, table.ls-table td{ padding:9px 12px; border-bottom:1px solid var(--border); white-space:nowrap; }
-  table.ls-table thead th{
+  /* строки-«карточки»: border-spacing по вертикали разводит соседние строки, а
+     скруглённые левый/правый край первой/последней ячейки делает каждую строку
+     отдельным закруглённым блоком — без цвета по значению, разница между
+     колонками только в насыщенности/жирности шрифта */
+  table.ls-table{ border-collapse:separate; border-spacing:0 6px; width:auto; font-size:13px; }
+  table.ls-table th{
+    padding:0 12px 10px;
     position:sticky; top:0; z-index:2;
-    background: var(--panel);
-    color: var(--text-dim); font-size:11.5px; font-weight:600; letter-spacing:.03em; text-transform:uppercase;
+    background: var(--bg);
+    color: var(--text-dim); font-size:11px; font-weight:600; letter-spacing:.03em; text-transform:uppercase;
     vertical-align:bottom; text-align:center;
-    border-bottom:2px solid var(--gold-dim);
   }
-  table.ls-table thead th.ls-col-nick{ text-align:left; }
-  table.ls-table thead th.ls-sortable{ cursor:pointer; user-select:none; }
-  table.ls-table thead th.ls-sortable:hover{ color: var(--text); }
+  table.ls-table th.ls-col-nick{ text-align:left; }
+  table.ls-table th.ls-sortable{ cursor:pointer; user-select:none; }
+  table.ls-table th.ls-sortable:hover{ color: var(--text); }
+  table.ls-table tbody td{
+    padding:13px 14px;
+    background: var(--panel-2);
+    border-top:1px solid var(--border);
+    border-bottom:1px solid var(--border);
+    white-space:nowrap;
+  }
+  table.ls-table tbody tr:not(.ls-roster-row) td:first-child{ border-left:1px solid var(--border); border-top-left-radius:9px; border-bottom-left-radius:9px; }
+  table.ls-table tbody tr:not(.ls-roster-row) td:last-child{ border-right:1px solid var(--border); border-top-right-radius:9px; border-bottom-right-radius:9px; }
   table.ls-table .ls-col-nick{
     position:sticky; left:0; z-index:1;
-    background: var(--panel-2);
     box-shadow: 2px 0 6px rgba(0,0,0,.35);
   }
-  table.ls-table thead th.ls-col-nick{ z-index:3; background: var(--panel); box-shadow:none; }
-  /* лёгкая зебра — почти незаметная на тёмном фоне, но помогает не терять строку
-     глазами, когда колонок с датами много и таблица растягивается вбок */
-  table.ls-table tbody tr:nth-child(4n+1) td:not(.ls-col-nick){ background: rgba(255,255,255,.014); }
-  table.ls-table tbody tr:hover td{ background: rgba(255,255,255,.045) !important; }
-  table.ls-table tbody tr:hover td.ls-col-nick{ background: var(--panel-2); }
+  table.ls-table tbody tr:not(.ls-roster-row):hover td{ background: var(--panel); }
 
   .ls-party{ display:flex; align-items:center; gap:10px; cursor:pointer; }
   .ls-party .avatar{
     width:32px; height:32px; flex:none;
     border-radius:50%; object-fit:cover;
-    border:1px solid var(--border); background: var(--panel-2);
+    border:1px solid var(--border); background: var(--panel);
     transition: border-color .15s ease;
   }
-  .ls-party:hover .avatar{ border-color: var(--gold-dim); }
+  .ls-party:hover .avatar{ border-color: var(--border-lit); }
   .ls-party .who{ display:flex; flex-direction:column; gap:1px; min-width:0; }
   .ls-party .name{ color: var(--text); font-weight:600; display:flex; align-items:center; gap:6px; }
   /* стрелка-шеврон разворота — крутится через class="open" на .chevron, который
      ставит/снимает updateRosterOpenState() вместе с раскрытием самого списка */
   .ls-party .chevron{ display:inline-block; font-size:10px; color: var(--text-dim); transition: transform .18s ease; }
-  .ls-party .chevron.open{ transform: rotate(90deg); color: var(--gold-dim); }
+  .ls-party .chevron.open{ transform: rotate(90deg); }
   .ls-party .cnt{ font-size:11px; color: var(--text-dim); }
 
   /* список участников, выезжающий вниз под строкой пати при клике на её название —
@@ -63,28 +69,27 @@
      свои финальные баллы и своя доля голды пати. Своя рамка с акцентной левой
      полосой — чтобы визуально читалось как «выехавшая деталь» строки пати, а не
      ещё один самостоятельный кусок таблицы */
-  tr.ls-roster-row td{ padding:0; border-bottom:none; background:none !important; }
-  tr.ls-roster-row:hover td{ background:none !important; }
+  tr.ls-roster-row td{ padding:0; border:none !important; background:none !important; border-radius:0 !important; }
   .ls-roster-wrap{
     max-height:0; opacity:0; overflow:hidden;
     transition: max-height .28s ease, opacity .2s ease;
   }
   .ls-roster-wrap.open{ max-height:900px; opacity:1; }
   .ls-roster-scroll{
-    margin:6px 10px 14px 42px;
+    margin:0 10px 10px 42px;
     padding:6px;
     background: var(--panel);
     border:1px solid var(--border);
-    border-left:2px solid var(--gold-dim);
+    border-left:2px solid var(--border-lit);
     border-radius:8px;
     overflow-x:auto;
   }
   table.ls-roster-table{ border-collapse:separate; border-spacing:0; width:auto; font-size:12px; }
-  table.ls-roster-table th, table.ls-roster-table td{ padding:6px 10px; border-bottom:1px solid var(--border); white-space:nowrap; text-align:center; }
+  table.ls-roster-table th, table.ls-roster-table td{ padding:6px 10px; border-bottom:1px solid var(--border); white-space:nowrap; text-align:center; background:none; border-radius:0; }
   table.ls-roster-table thead th{ color: var(--text-dim); font-weight:600; font-size:10.5px; letter-spacing:.02em; text-transform:uppercase; }
   table.ls-roster-table th.ls-col-nick, table.ls-roster-table td.ls-col-nick{ text-align:left; }
   table.ls-roster-table th.ls-col-day, table.ls-roster-table td.ls-col-day{ width:32px; min-width:32px; max-width:32px; }
-  table.ls-roster-table tbody tr:hover td{ background: rgba(255,255,255,.035); }
+  table.ls-roster-table tbody tr:hover td{ background: var(--panel-2); }
   table.ls-roster-table tbody tr:last-child td{ border-bottom:none; }
   .ls-roster-item{ display:flex; align-items:center; gap:8px; cursor:pointer; }
   .ls-roster-item:hover .nm{ color: var(--gold); }
@@ -96,30 +101,24 @@
   .ls-roster-item .nm{ color: var(--text); font-weight:600; font-size:12.5px; }
   .ls-roster-item .cls{ font-size:10.5px; color: var(--text-dim); }
 
-  .ls-num{ text-align:center; font-variant-numeric: tabular-nums; }
-  .ls-final{ text-align:center; color: var(--gold); font-weight:700; font-size:14px; font-variant-numeric: tabular-nums; }
-  .ls-gold{ text-align:center; font-weight:700; font-variant-numeric: tabular-nums; }
-  /* голда — «итог» строки, поэтому цветная таблетка отдельно от нейтрального
-     акцента --gold (у клана он может быть перекрашен пресетом «Оформление») —
-     зелёный читается как «деньги» независимо от выбранной темы */
-  .ls-gold .pill{
-    display:inline-block; padding:3px 10px; border-radius:999px;
-    background: rgba(76,154,99,.16); color:#7fce97;
-  }
+  .ls-num{ text-align:center; color: var(--text); font-variant-numeric: tabular-nums; }
+  .ls-final{ text-align:center; color: var(--text); font-weight:700; font-size:14px; font-variant-numeric: tabular-nums; }
+  .ls-gold{ text-align:center; color: var(--text); font-weight:700; font-size:14px; font-variant-numeric: tabular-nums; }
 
-  table.ls-table th.ls-col-day, table.ls-table td.ls-col-day{ width:56px; min-width:56px; max-width:56px; text-align:center; }
+  table.ls-table th.ls-col-day, table.ls-table td.ls-col-day{ width:52px; min-width:52px; max-width:52px; text-align:center; }
   .ls-day-head{ display:flex; flex-direction:column; align-items:center; gap:4px; }
   .ls-day-icon-btn{
-    width:26px; height:26px; padding:0; border-radius:6px;
+    width:28px; height:28px; padding:0; border-radius:8px;
     border:1px solid var(--border); background: var(--panel-2);
     color: var(--text-dim); font-size:13px; line-height:1; cursor:pointer;
     background-size:cover; background-position:center;
   }
   .ls-day-icon-btn:hover{ border-color: var(--border-lit); }
   .ls-day-icon-btn:disabled{ cursor:default; }
-  .ls-day-wd{ font-size:10.5px; color: var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:.02em; }
-  .ls-mark-yes{ color: var(--ok); font-weight:700; }
-  .ls-mark-no{ color: var(--text-dim); opacity:.4; }
+  .ls-day-wd{ font-size:10.5px; color: var(--text-dim); font-weight:600; }
+  /* явка/неявка — тоже без цвета, только насыщенность: у нуля цифра тусклее и тоньше */
+  .ls-mark{ color: var(--text); font-weight:600; }
+  .ls-mark.zero{ color: var(--text-dim); opacity:.5; font-weight:400; }
 </style>
 </head>
 <body>
@@ -196,7 +195,6 @@
       .replace(/[^a-zа-яё0-9]/gi, "");
   }
 
-  function dayShort(jsDay){ return L2I18n.t("common.day" + ((jsDay + 6) % 7)); } // jsDay: 0=вс..6=сб
   const BLANK_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'></svg>";
   function classIcon(name){ return name && window.L2_CLASS_ICON ? window.L2_CLASS_ICON(name) : null; }
 
@@ -254,13 +252,13 @@
       `<span class="who"><span class="nm">${escapeHtml(m.nick)}</span><span class="cls">${escapeHtml(classLabelOf(m.nick))}</span></span>` +
       `</div></td>` +
       `<td class="ls-num">${m.initial}</td>` +
-      `<td class="ls-num" style="color:${pctColor(m.pct)}">${m.pct.toFixed(2)}%</td>` +
+      `<td class="ls-num">${m.pct.toFixed(2)}%</td>` +
       `<td class="ls-num">${m.coef}</td>` +
       `<td class="ls-final">${m.final.toFixed(2)}</td>` +
-      `<td class="ls-gold"><span class="pill">${fmtInt(m.gold)}</span></td>`;
+      `<td class="ls-gold">${fmtInt(m.gold)}</td>`;
     events.forEach(e => {
       const was = (attendedByEvent.get(e.id) || new Set()).has(m.norm);
-      html += `<td class="ls-col-day ${was ? "ls-mark-yes" : "ls-mark-no"}">${was ? 1 : 0}</td>`;
+      html += `<td class="ls-col-day"><span class="ls-mark${was ? "" : " zero"}">${was ? 1 : 0}</span></td>`;
     });
     html += `</tr>`;
     return html;
@@ -280,7 +278,8 @@
       `<th>${L2I18n.t("dkp.goldLabel", "Голда")}</th>`;
     events.forEach(e => {
       const dt = new Date(e.event_date + "T00:00:00");
-      h += `<th class="ls-col-day">${dayShort(dt.getDay())}</th>`;
+      const dateLabel = String(dt.getDate()).padStart(2, "0") + "." + String(dt.getMonth() + 1).padStart(2, "0");
+      h += `<th class="ls-col-day">${dateLabel}</th>`;
     });
     h += `</tr></thead><tbody>${sorted.map(memberRowHtml).join("")}</tbody></table>`;
     return h;
@@ -342,12 +341,6 @@
     const mx = maxBoostScore();
     return mx ? (boostScoreOf(nick) / mx) * 100 : 0;
   }
-  function pctColor(p){
-    if(p >= 90) return "var(--ok)";
-    if(p >= 60) return "var(--gold)";
-    return "var(--danger-lit)";
-  }
-
   // коэффициент задаётся прямо на пати (Админ-панель → «Правила клана», список
   // рядом с коэффициентами профессий) — не считается средним по участникам
   async function loadPartyCoefficients(){
@@ -486,12 +479,12 @@
       sortableTh("gold", L2I18n.t("dkp.goldLabel", "Голда"));
     events.forEach(e => {
       const dt = new Date(e.event_date + "T00:00:00");
-      const wd = dayShort(dt.getDay());
+      const dateLabel = String(dt.getDate()).padStart(2, "0") + "." + String(dt.getMonth() + 1).padStart(2, "0");
       const title = escapeHtml((e.event_name || "") + " — " + e.event_date);
       const bg = e.icon ? ` style="background-image:url('${e.icon}')"` : "";
       h += `<th class="ls-col-day" title="${title}"><div class="ls-day-head">` +
         `<button type="button" class="ls-day-icon-btn" data-event="${e.id}"${bg} ${isAdmin ? "" : "disabled"}>${e.icon ? "" : "+"}</button>` +
-        `<span class="ls-day-wd">${wd}</span></div></th>`;
+        `<span class="ls-day-wd">${dateLabel}</span></div></th>`;
     });
     h += "</tr>";
     head.innerHTML = h;
@@ -525,14 +518,14 @@
         `<span class="who"><span class="name"><span class="chevron${chevronOpen}">▸</span>${escapeHtml(r.party.name)}</span>` +
         `<span class="cnt">${r.roster.length}${L2I18n.t("dkp.membersCountSuffix", " участников")}${leaderText}</span></span></div></td>`;
       html += `<td class="ls-num">${r.initial}</td>`;
-      html += `<td class="ls-num" style="color:${pctColor(r.pct)}">${r.pct.toFixed(2)}%</td>`;
+      html += `<td class="ls-num">${r.pct.toFixed(2)}%</td>`;
       html += `<td class="ls-num">${r.coef.toFixed(2)}</td>`;
       html += `<td class="ls-final">${r.final.toFixed(2)}</td>`;
-      html += `<td class="ls-gold"><span class="pill">${fmtInt(r.gold)}</span></td>`;
+      html += `<td class="ls-gold">${fmtInt(r.gold)}</td>`;
       events.forEach(e => {
         const set = attendedByEvent.get(e.id) || new Set();
         const count = r.roster.filter(nick => set.has(normalizeNick(nick))).length;
-        html += `<td class="ls-col-day ${count > 0 ? "ls-mark-yes" : "ls-mark-no"}">${count}</td>`;
+        html += `<td class="ls-col-day"><span class="ls-mark${count > 0 ? "" : " zero"}">${count}</span></td>`;
       });
       tr.innerHTML = html;
       body.appendChild(tr);

@@ -19,23 +19,22 @@
   .lp-summary .stat{ font-size:12.5px; color: var(--text-dim); }
   .lp-summary .stat b{ color: var(--text); font-weight:600; }
 
-  table.lp-table{ border-collapse:separate; border-spacing:0; width:100%; max-width:520px; font-size:13.5px; }
-  table.lp-table th, table.lp-table td{ padding:9px 12px; border-bottom:1px solid var(--border); }
-  table.lp-table thead th{
-    text-align:left; color: var(--text-dim); font-size:11.5px; font-weight:600;
-    letter-spacing:.03em; text-transform:uppercase; border-bottom:2px solid var(--gold-dim);
+  /* строки-«карточки» — тот же приём, что в «ДКП Соло»/«ДКП Пати»: border-spacing
+     по вертикали разводит строки, скруглённые крайние ячейки делают их отдельными
+     блоками; никакого цвета по значению, только жирность/размер для акцента */
+  table.lp-table{ border-collapse:separate; border-spacing:0 6px; width:100%; max-width:520px; font-size:13.5px; }
+  table.lp-table th{
+    padding:0 12px 8px;
+    text-align:left; color: var(--text-dim); font-size:11px; font-weight:600;
+    letter-spacing:.03em; text-transform:uppercase;
   }
+  table.lp-table tbody td{ padding:11px 12px; background: var(--panel-2); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+  table.lp-table tbody tr td:first-child{ border-left:1px solid var(--border); border-top-left-radius:9px; border-bottom-left-radius:9px; }
+  table.lp-table tbody tr td:last-child{ border-right:1px solid var(--border); border-top-right-radius:9px; border-bottom-right-radius:9px; }
   table.lp-table th.lp-num, table.lp-table td.lp-num{ text-align:right; white-space:nowrap; font-variant-numeric: tabular-nums; }
-  table.lp-table tbody tr:nth-child(even) td{ background: rgba(255,255,255,.014); }
-  table.lp-table tbody tr:hover td{ background: rgba(255,255,255,.045); }
-  .lp-cnt{ color: var(--gold); font-weight:700; font-size:14px; }
-  /* голда — «итог» строки, та же таблетка, что в «ДКП Соло»/«ДКП Пати» — зелёный
-     читается как «деньги» независимо от акцентного цвета клана */
-  .lp-gold{ font-weight:700; }
-  .lp-gold .pill{
-    display:inline-block; padding:3px 10px; border-radius:999px;
-    background: rgba(76,154,99,.16); color:#7fce97;
-  }
+  table.lp-table tbody tr:hover td{ background: var(--panel); }
+  .lp-cnt{ color: var(--text); font-weight:700; font-size:14px; }
+  .lp-gold{ color: var(--text); font-weight:700; font-size:14px; }
 
   .lp-copy-row{ margin:12px 0 0; }
 </style>
@@ -229,7 +228,7 @@
       const gold = r.count * sharePrice;
       return `<tr><td>${escapeHtml(r.nickname)}</td>` +
         `<td class="lp-num lp-cnt">${r.count}</td>` +
-        `<td class="lp-num lp-gold"><span class="pill">${Math.round(gold).toLocaleString(L2I18n.locale())}</span></td></tr>`;
+        `<td class="lp-num lp-gold">${Math.round(gold).toLocaleString(L2I18n.locale())}</td></tr>`;
     }).join("");
   }
 
