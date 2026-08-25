@@ -59,7 +59,8 @@
     <p class="hint" style="margin:0 0 12px;" data-i18n="payout.hint">
       На каждом скрине «Журнала посещаемости» первым в списке участников всегда стоит лидер пати —
       отсюда и берётся привязка «кто с каким лидером сколько раз был в одной группе».
-      Помогает лидеру решить, кому и сколько передать при личной раздаче денег/дропа.
+      Голда на каждого — из последнего расчёта «ДКП Соло»/«ДКП Пати» (нужно зайти сюда сразу после
+      кнопки «→ В раздачу» там); без этого список «кто кого водил» всё равно виден, просто без сумм.
     </p>
     <div class="lp-filters">
       <div class="field">
@@ -70,12 +71,14 @@
         <label for="toDate" data-i18n="payout.toLabel">По</label>
         <input type="date" id="toDate" />
       </div>
+      <button class="btn" id="lpApplyBtn" data-i18n="payout.applyBtn">Показать</button>
       <div class="field lp-field-leader">
         <label for="leaderSelect" data-i18n="payout.leaderLabel">Пати-лидер</label>
         <select id="leaderSelect"></select>
       </div>
     </div>
     <p class="hint" style="margin:-4px 0 12px;" data-i18n="payout.noDateHint">Даты не заданы — показывается статистика за всё время.</p>
+    <p class="hint" id="lpNoGoldHint" style="margin:-4px 0 12px; display:none;"></p>
     <p class="error-msg" id="lpError"></p>
 
     <div id="lpContent">
@@ -182,15 +185,27 @@
   let leaderOrder = [];        // ники лидеров, отсортированные по убыванию partyCount
   let currentRows = [];        // [{nickname, count}], в текущем отображаемом порядке (для копирования)
 
-  // «Цена доли» — общая с «ДКП Соло»/«ДКП Пати» настройка из Админ-панели →
-  // «Правила клана»: тут «раз вместе» с лидером и есть число долей участника,
-  // голда = доли × цена доли
-  let sharePrice = 0;
-  async function loadSharePrice(){
-    const { data } = await db.from("loot_split_settings").select("loot_share_price").eq("clan_id", profile.clan_id).maybeSingle();
-    sharePrice = Number(data?.loot_share_price) || 0;
+  // голда больше не считается на этой странице — её присылает «ДКП Соло»/«ДКП Пати»
+  // через sessionStorage при нажатии там «→ В раздачу» (кнопка активна только после
+  // «Разделить дроп»), одноразово. Список «кто с каким лидером сколько раз был» —
+  // отдельная, независимая от ДКП штука (строится из event_stats/is_party_leader
+  // по своему фильтру дат) и работает всегда, даже без свежих данных из ДКП —
+  // тогда просто колонка «Голда» остаётся пустой, а не вся страница пропадает
+  const PAYOUT_DATA_KEY = "l2PayoutDkpData";
+  let dkpPayload = null; // { from, to, goldByNick: {nickname: gold}, source: "solo"|"party" }
+  // одноразовое чтение — сразу стираем из sessionStorage, чтобы обычный заход
+  // в «Раздачу» (через меню, обновление страницы и т.п.), а не прямо сейчас
+  // нажатой кнопкой «→ В раздачу» из ДКП, не показывал старые запомненные суммы
+  function loadDkpPayload(){
+    try{
+      const raw = sessionStorage.getItem(PAYOUT_DATA_KEY);
+      sessionStorage.removeItem(PAYOUT_DATA_KEY);
+      if(!raw) return null;
+      const parsed = JSON.parse(raw);
+      if(!parsed || typeof parsed !== "object" || !parsed.goldByNick) return null;
+      return parsed;
+    }catch(e){ return null; }
   }
-
   // лидер на скрине не распознаётся отдельным ОСР-полем — event-roster.js просто
   // помечает is_party_leader=true у первого валидного ника скрина (лидер пати в игре
   // всегда идёт первой строкой), группируем эти отметки по batch_id
@@ -250,6 +265,16 @@
       .join("");
   }
 
+  // голда конкретного ника — только если пришли свежие данные из ДКП, иначе
+  // null (не 0 — 0 читалось бы как «посчитано и вышло 0», а тут просто нечем
+  // считать); рендерящий код сам решает, показать число или прочерк
+  function goldOf(nick){
+    return dkpPayload ? (dkpPayload.goldByNick[nick] || 0) : null;
+  }
+  function fmtGold(gold){
+    return gold === null ? "—" : Math.round(gold).toLocaleString(L2I18n.locale());
+  }
+
   function renderForLeader(leader){
     const contentEl = document.getElementById("lpContent");
     const emptyEl = document.getElementById("lpEmpty");
@@ -266,9 +291,13 @@
     emptyEl.style.display = "none";
 
     const entry = leaderStats.get(leader);
+    // сам лидер не входит в entry.members (там только те, кому он раздаёт) —
+    // его собственную голду показываем отдельной строкой, только если она есть
+    const leaderGold = goldOf(leader);
     document.getElementById("lpSummary").innerHTML =
       `<span class="stat">${L2I18n.t("payout.ledCount", "Раздач под руководством: ")}<b>${entry.partyCount}</b></span>` +
-      `<span class="stat">${L2I18n.t("payout.uniqueMembers", "Разных участников: ")}<b>${entry.members.size}</b></span>`;
+      `<span class="stat">${L2I18n.t("payout.uniqueMembers", "Разных участников: ")}<b>${entry.members.size}</b></span>` +
+      (leaderGold !== null ? `<span class="stat">${L2I18n.t("payout.leaderGold", "Себе (лидер): ")}<b>${fmtGold(leaderGold)}</b></span>` : "");
 
     currentRows = Array.from(entry.members.entries())
       .map(([nickname, count]) => ({ nickname, count }))
@@ -276,13 +305,12 @@
 
     const body = document.getElementById("lpBody");
     body.innerHTML = currentRows.map(r => {
-      const gold = r.count * sharePrice;
       const cross = isLeftClan(r.nickname) ? ` <span class="lp-left-cross" title="${escapeHtml(L2I18n.t("dkp.leftClanTitle", "Уже не в клане"))}">✗</span>` : "";
       const tag = tagBadgeOf(r.nickname);
       const badge = tag ? ` <span class="lp-tag-badge">${escapeHtml(tag)}</span>` : "";
       return `<tr><td>${escapeHtml(r.nickname)}${cross}${badge}</td>` +
         `<td class="lp-num lp-cnt">${r.count}</td>` +
-        `<td class="lp-num lp-gold">${Math.round(gold).toLocaleString(L2I18n.locale())}</td></tr>`;
+        `<td class="lp-num lp-gold">${fmtGold(goldOf(r.nickname))}</td></tr>`;
     }).join("");
   }
 
@@ -303,6 +331,10 @@
   }
   document.getElementById("fromDate").addEventListener("change", reload);
   document.getElementById("toDate").addEventListener("change", reload);
+  // подстраховка на случай, если в браузере не сработал change у type="date"
+  // (например, при ручном вводе цифр без потери фокуса поля) — явная кнопка
+  // всегда перечитывает то, что реально стоит в полях, и пересчитывает заново
+  document.getElementById("lpApplyBtn").addEventListener("click", reload);
 
   // список лидеров и сводка строятся из данных через innerHTML (не data-i18n) —
   // при смене языка в шапке (storage-событие) перерисовываем их заново, иначе
@@ -316,7 +348,15 @@
     renderForLeader(sel.value || null);
   });
 
-  await Promise.all([loadSharePrice(), loadCensus(), loadRosterTag()]);
+  dkpPayload = loadDkpPayload();
+  if(!dkpPayload){
+    const hintEl = document.getElementById("lpNoGoldHint");
+    hintEl.textContent = L2I18n.t("payout.noGoldHint",
+      "Голда не показана — зайдите сюда через кнопку «→ В раздачу» в «ДКП Соло»/«ДКП Пати» сразу после «Разделить дроп».");
+    hintEl.style.display = "";
+  }
+
+  await Promise.all([loadCensus(), loadRosterTag()]);
   await reload();
 })();
 </script>

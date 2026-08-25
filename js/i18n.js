@@ -156,17 +156,23 @@
 
     "payout.title": ["Раздача", "Роздача", "Payout"],
     "payout.hint": [
-      "На каждом скрине «Журнала посещаемости» первым в списке участников всегда стоит лидер пати — отсюда и берётся привязка «кто с каким лидером сколько раз был в одной группе». Помогает лидеру решить, кому и сколько передать при личной раздаче денег/дропа.",
-      "На кожному скрині «Журналу відвідуваності» першим у списку учасників завжди стоїть лідер паті — звідси і береться прив'язка «хто з яким лідером скільки разів був в одній групі». Допомагає лідеру вирішити, кому і скільки передати при особистій роздачі грошей/дропу.",
-      "On every “Attendance Log” screenshot the party leader is always the first entry — that's how “who was in whose party how many times” is tracked. Helps a leader decide who to pay out and how much when splitting money/loot in person.",
+      "На каждом скрине «Журнала посещаемости» первым в списке участников всегда стоит лидер пати — отсюда и берётся привязка «кто с каким лидером сколько раз был в одной группе». Голда на каждого — из последнего расчёта «ДКП Соло»/«ДКП Пати» (нужно зайти сюда сразу после кнопки «→ В раздачу» там); без этого список «кто кого водил» всё равно виден, просто без сумм.",
+      "На кожному скрині «Журналу відвідуваності» першим у списку учасників завжди стоїть лідер паті — звідси і береться прив'язка «хто з яким лідером скільки разів був в одній групі». Голда на кожного — з останнього розрахунку «ДКП Соло»/«ДКП Паті» (потрібно зайти сюди одразу після кнопки «→ У роздачу» там); без цього список «хто кого водив» все одно видно, просто без сум.",
+      "On every “Attendance Log” screenshot the party leader is always the first entry — that's how “who was in whose party how many times” is tracked. Each person's gold comes from the latest “DKP Solo”/“DKP Party” split (open this page right after clicking “→ To payout” there); without that, the “who led whom” list is still visible, just without the amounts.",
     ],
     "payout.fromLabel": ["С", "Від", "From"],
     "payout.toLabel": ["По", "До", "To"],
+    "payout.applyBtn": ["Показать", "Показати", "Show"],
     "payout.leaderLabel": ["Пати-лидер", "Паті-лідер", "Party leader"],
     "payout.noDateHint": [
       "Даты не заданы — показывается статистика за всё время.",
       "Дати не задані — показується статистика за весь час.",
       "No dates set — showing all-time statistics.",
+    ],
+    "payout.noGoldHint": [
+      "Голда не показана — зайдите сюда через кнопку «→ В раздачу» в «ДКП Соло»/«ДКП Пати» сразу после «Разделить дроп».",
+      "Голда не показана — зайдіть сюди через кнопку «→ У роздачу» в «ДКП Соло»/«ДКП Паті» одразу після «Розділити дроп».",
+      "Gold isn't shown — open this page via the “→ To payout” button in “DKP Solo”/“DKP Party”, right after “Split loot”.",
     ],
     "payout.colNick": ["Ник", "Нік", "Nickname"],
     "payout.colTogether": ["Доли", "Частки", "Shares"],
@@ -183,6 +189,7 @@
     "payout.payoutsCountSuffix": [" раздач", " роздач", " payouts"],
     "payout.ledCount": ["Раздач под руководством: ", "Роздач під керівництвом: ", "Payouts led: "],
     "payout.uniqueMembers": ["Разных участников: ", "Різних учасників: ", "Unique members: "],
+    "payout.leaderGold": ["Себе (лидер): ", "Собі (лідер): ", "For yourself (leader): "],
     "payout.emptyForPeriod": [
       "За выбранный период нет скринов с отмеченным пати-лидером.",
       "За обраний період немає скринів з відміченим паті-лідером.",
@@ -277,12 +284,8 @@
     "dkp.fromDateLabel": ["Начальная дата", "Початкова дата", "Start date"],
     "dkp.toDateLabel": ["Конечная дата", "Кінцева дата", "End date"],
     "dkp.goldLabel": ["Голда", "Голда", "Gold"],
-    "dkp.goldAutoHint": [
-      "Сумма подставляется автоматически как доли (финальные баллы) × цена доли (Админ-панель → «Правила клана»); можно изменить вручную.",
-      "Сума підставляється автоматично як частки (фінальні бали) × ціна частки (Адмін-панель → «Правила клану»); можна змінити вручну.",
-      "The amount is filled in automatically as shares (final points) × the share price (Admin Panel → “Clan Rules”); you can change it manually.",
-    ],
     "dkp.splitBtn": ["Разделить дроп", "Розділити дроп", "Split loot"],
+    "dkp.toPayoutBtn": ["→ В раздачу", "→ У роздачу", "→ To payout"],
     "dkp.colNick": ["Участники", "Учасники", "Members"],
     "dkp.colParty": ["Пати", "Паті", "Party"],
     "dkp.colInitial": ["Начальные баллы", "Початкові бали", "Initial points"],
@@ -318,11 +321,6 @@
     "dkp.validateBothDates": ["Укажите начальную и конечную дату.", "Вкажіть початкову і кінцеву дату.", "Set both a start and end date."],
     "dkp.validateDateOrder": ["Начальная дата позже конечной.", "Початкова дата пізніше кінцевої.", "Start date is after the end date."],
     "dkp.saveIconFailed": ["Не удалось сохранить иконку: ", "Не вдалося зберегти іконку: ", "Failed to save the icon: "],
-    "dkp.partyPageHint": [
-      "Тот же расчёт, что в «ДКП Соло», только по пати целиком: начальные баллы — суммарная явка всех участников пати, % буста и коэффициент — их среднее по пати, голда делится между пати пропорционально финальным баллам.",
-      "Той самий розрахунок, що в «ДКП Соло», тільки по паті цілком: початкові бали — сумарна явка всіх учасників паті, % бусту і коефіцієнт — їх середнє по паті, голда ділиться між паті пропорційно фінальним балам.",
-      "Same calculation as “DKP Solo”, but for the whole party: initial points are the party's total attendance, boost % and coefficient are the party's average, gold is split between parties proportionally to final points.",
-    ],
     "dkp.leftMembersTitle": ["Вышли из клана за последнюю неделю", "Вийшли з клану за останній тиждень", "Left the clan in the last week"],
     "dkp.leftClanTitle": ["Уже не в клане", "Вже не в клані", "No longer in the clan"],
     "dkp.membersCountSuffix": [" участников", " учасників", " members"],
@@ -623,6 +621,7 @@
     "admin.tabUsers": ["Пользователи", "Користувачі", "Users"],
     "admin.tabSections": ["Разделы и права", "Розділи та права", "Sections and permissions"],
     "admin.tabRules": ["Правила клана", "Правила клану", "Clan rules"],
+    "admin.tabDkp": ["ДКП", "ДКП", "DKP"],
     "admin.tabBranding": ["Оформление", "Оформлення", "Branding"],
     "admin.tabShares": ["Ссылки", "Посилання", "Links"],
 
@@ -660,6 +659,13 @@
       "Вимкнено — видно весь склад з останнього перепису, навіть з 0 початкових балів. Увімкнено — ті, у кого початкових балів 0, зникають з таблиці.",
       "Off — the full roster from the latest census is shown, even with 0 starting points. On — those with 0 starting points disappear from the table.",
     ],
+    "admin.leaderCoefTitle": ["Коэффициент пати-лидерам", "Коефіцієнт паті-лідерам", "Party leader coefficient"],
+    "admin.leaderCoefHint": [
+      "В «ДКП Пати» применяется к личным финальным баллам того, кто назначен лидером пати (Группы → лидер) — коэффициенты не складываются: у лидера этот множитель ЗАМЕНЯЕТ собой коэффициент профессии, а не добавляется поверх него. На саму пати (её общий коэффициент) и на «ДКП Соло» не влияет. 1 — как обычный коэффициент профессии 1.",
+      "У «ДКП Паті» застосовується до особистих фінальних балів того, кого призначено лідером паті (Групи → лідер) — коефіцієнти не складаються: у лідера цей множник ЗАМІНЮЄ собою коефіцієнт професії, а не додається поверх нього. На саму паті (її загальний коефіцієнт) і на «ДКП Соло» не впливає. 1 — як звичайний коефіцієнт професії 1.",
+      "Applied in “DKP Party” to the final points of whoever is set as the party's leader (Groups → leader) — coefficients don't stack: for the leader this multiplier REPLACES their class coefficient instead of adding on top of it. Does not affect the party's own coefficient or “DKP Solo”. 1 = same as an ordinary class coefficient of 1.",
+    ],
+    "admin.leaderCoefLabel": ["Коэффициент", "Коефіцієнт", "Coefficient"],
     "admin.classCoefSoloTitle": ["Коэффициент профессии для «ДКП Соло»", "Коефіцієнт професії для «ДКП Соло»", "Class coefficient for “DKP Solo”"],
     "admin.classCoefSoloHint": [
       "У каждой профессии свой множитель: финальные баллы участника = начальные баллы × % буста × этот коэффициент. Нет строки для класса — считается как 1.",
@@ -672,14 +678,6 @@
       "У кожної паті свій множник: фінальні бали паті = початкові бали × % бусту × цей коефіцієнт. Немає рядка для паті — вважається як 1.",
       "Each party has its own multiplier: a party's final points = starting points × boost % × this coefficient. No row for a party — treated as 1.",
     ],
-
-    "admin.sharePriceTitle": ["Цена доли", "Ціна частки", "Share price"],
-    "admin.sharePriceHint": [
-      "Сколько голды стоит одна доля в «ДКП Соло»/«ДКП Пати» и в «Раздаче». Долей считаются финальные баллы (округлённые до четверти) — голда автоматически подставляется как доли × эта цена.",
-      "Скільки голди коштує одна частка в «ДКП Соло»/«ДКП Паті» і в «Роздачі». Частками вважаються фінальні бали (округлені до чверті) — голда автоматично підставляється як частки × ця ціна.",
-      "How much gold one share is worth in “DKP Solo”/“DKP Party” and in “Payout”. Shares are the final points (rounded to a quarter) — gold is filled in automatically as shares × this price.",
-    ],
-    "admin.sharePriceLabel": ["Цена одной доли", "Ціна однієї частки", "Price per share"],
 
     "admin.sectionsExistTitle": ["Какие разделы вообще есть", "Які розділи взагалі є", "Which sections exist at all"],
     "admin.sectionsExistHint": [

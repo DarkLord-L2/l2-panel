@@ -149,9 +149,8 @@
         <input type="number" id="goldInput" min="0" step="1" value="0" />
       </div>
       <button class="btn btn-primary" id="splitBtn" data-i18n="dkp.splitBtn">Разделить дроп</button>
+      <button class="btn" id="toPayoutBtn" data-i18n="dkp.toPayoutBtn" disabled>→ В раздачу</button>
     </div>
-    <p class="hint" style="margin:0 0 4px;" data-i18n="dkp.partyPageHint">Тот же расчёт, что в «ДКП Соло», только по пати целиком: начальные баллы — суммарная явка всех участников пати, % буста и коэффициент — их среднее по пати, голда делится между пати пропорционально финальным баллам.</p>
-    <p class="hint" style="margin:0 0 10px;" data-i18n="dkp.goldAutoHint">Сумма подставляется автоматически как доли (финальные баллы) × цена доли (Админ-панель → «Правила клана»); можно изменить вручную.</p>
     <p class="error-msg" id="lsError"></p>
 
     <div class="ls-table-scroll">
@@ -389,15 +388,16 @@
   }
 
   // «показывать только тех, кто хоть раз ходил» — общая с «ДКП Соло» настройка из
-  // Админ-панели → «Правила клана»; здесь означает «пати, где вообще была явка»
+  // Админ-панели → «ДКП»; здесь означает «пати, где вообще была явка»
   let hideZeroAttendance = false;
-  // «Цена доли» — тоже общая с «ДКП Соло» настройка: сколько голды стоит одна
-  // доля (финальный балл); используется для авто-подстановки суммы в #goldInput
-  let sharePrice = 0;
+  // «Коэффициент пати-лидерам» — доп. множитель ТОЛЬКО для личных финальных
+  // баллов того, кто назначен лидером пати (party.leader_nickname), поверх его
+  // обычного коэффициента профессии; на саму пати не влияет
+  let leaderCoefficient = 1;
   async function loadLootSplitSettings(){
-    const { data } = await db.from("loot_split_settings").select("hide_zero_attendance, loot_share_price").eq("clan_id", profile.clan_id).maybeSingle();
+    const { data } = await db.from("loot_split_settings").select("hide_zero_attendance, loot_leader_coefficient").eq("clan_id", profile.clan_id).maybeSingle();
     hideZeroAttendance = !!data?.hide_zero_attendance;
-    sharePrice = Number(data?.loot_share_price) || 0;
+    leaderCoefficient = Number(data?.loot_leader_coefficient) || 1;
   }
 
   async function loadEventsAndAttendance(fromStr, toStr){
@@ -437,11 +437,15 @@
   function computeRows(){
     return parties.map(party => {
       const roster = membersByGroup.get(party.id) || [];
+      const isLeader = (nick) => party.leader_nickname && normalizeNick(nick) === normalizeNick(party.leader_nickname);
       const memberRows = roster.map(nick => {
         const norm = normalizeNick(nick);
         const mInitial = events.reduce((s, e) => s + ((attendedByEvent.get(e.id) || new Set()).has(norm) ? 1 : 0), 0);
         const mPct = percentOf(nick);
-        const mCoef = memberCoefficientOf(nick);
+        // коэффициенты не стакаются: лидер пати получает ТОЛЬКО коэффициент
+        // лидера (полностью вместо коэффициента профессии, а не поверх него);
+        // остальные участники — как раньше, только свой коэффициент профессии
+        const mCoef = isLeader(nick) ? leaderCoefficient : memberCoefficientOf(nick);
         const mFinal = Math.round(mInitial * (mPct / 100) * mCoef * 4) / 4;
         return { nick, norm, initial: mInitial, pct: mPct, coef: mCoef, final: mFinal };
       });
@@ -457,7 +461,8 @@
   function applyGold(rows){
     const gold = Number(document.getElementById("goldInput").value) || 0;
     const sumFinal = rows.reduce((s,r)=> s + r.final, 0);
-    rows.forEach(r => { r.gold = sumFinal ? (r.final / sumFinal) * gold : 0; });
+    const rate = sumFinal ? gold / sumFinal : 0;
+    rows.forEach(r => { r.gold = r.final * rate; });
     return rows;
   }
 
@@ -595,14 +600,29 @@
     await loadEventsAndAttendance(fromStr, toStr);
     hasSplit = true;
     const rows = computeRows().filter(r => !hideZeroAttendance || r.initial > 0);
-    // сумма голды по умолчанию — доли × цена доли из Админ-панели; поле остаётся
-    // обычным ручным вводом, так что при желании его можно тут же поправить
-    const sumFinal = rows.reduce((s, r) => s + r.final, 0);
-    document.getElementById("goldInput").value = Math.round(sumFinal * sharePrice);
     lastRows = applyMemberGold(applyGold(rows));
     renderTable(lastRows);
     document.getElementById("splitBtn").disabled = false;
+    document.getElementById("toPayoutBtn").disabled = !lastRows.length;
   }
+
+  // «→ В раздачу» передаёт уже посчитанную личную голду каждого участника пати
+  // (не саму пати целиком) и период в «Раздачу» через sessionStorage — та же
+  // схема, что restoreDkpPartyState ниже. «Раздача» больше не считает голду сама
+  // (лидер×кол-во раз × фикс. цена), а показывает именно эти суммы
+  const PAYOUT_DATA_KEY = "l2PayoutDkpData";
+  document.getElementById("toPayoutBtn").addEventListener("click", () => {
+    if(!lastRows.length) return;
+    const goldByNick = {};
+    lastRows.forEach(r => { r.memberRows.forEach(m => { goldByNick[m.nick] = m.gold; }); });
+    sessionStorage.setItem(PAYOUT_DATA_KEY, JSON.stringify({
+      from: document.getElementById("fromDate").value,
+      to: document.getElementById("toDate").value,
+      goldByNick,
+      source: "party",
+    }));
+    if(window.top && window.top.L2Nav) window.top.L2Nav.openSection("loot_payout");
+  });
 
   // клик на название пати — раскрыть/свернуть список участников (одна пати за раз);
   // клик на участника внутри списка — перейти в его личный кабинет
