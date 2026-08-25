@@ -53,6 +53,7 @@ function json(body: unknown, status = 200) {
 
 const STATS_PROMPT = [
   "This is a screenshot from a game client showing a party member stats table.",
+  "Above or near the table there is often a separate header line labeled \"Лидер\" (or \"Leader\"), followed by a colon and a nickname — that nickname is the party leader. This header line is NOT a row of the table and the leader is NOT necessarily the first row visually — the table rows are often sorted by damage or kills, so the leader can appear anywhere among them, or the header line may be absent entirely.",
   "Columns typically include, in some order: a small class icon, member/nickname, kills, deaths, K/D ratio, PvP damage, PvE damage.",
   "For every row, extract: the nickname, the kills count, the deaths count, the PvP damage number, and the PvE damage number. Ignore the class icon column entirely — do not try to identify or describe it.",
   "The nickname must be copied EXACTLY as written, character-for-character — preserve original case, and keep every digit, hyphen, underscore or other symbol that is part of the nickname text itself.",
@@ -61,8 +62,9 @@ const STATS_PROMPT = [
   "Ignore any K/D or ratio column entirely — do not return it, it will be computed separately.",
   "Damage numbers may contain thousands separators (commas or spaces) — return them as plain integers without separators.",
   "If a numeric cell is empty or unreadable, use 0.",
-  "Respond with ONLY a JSON array of objects — no markdown, no code fences, no explanation.",
-  'Example response: [{"nickname":"3-NickOne","kills":21,"deaths":18,"pvp_damage":814,"pve_damage":253}]',
+  "Respond with ONLY a JSON object — no markdown, no code fences, no explanation — with this exact shape:",
+  '{"leader": "<nickname copied exactly from the \'Лидер\'/\'Leader\' header line, or null if there is no such header line on this screenshot>", "members": [{"nickname":"...","kills":0,"deaths":0,"pvp_damage":0,"pve_damage":0}, ...]}',
+  'Example response: {"leader":"Луник","members":[{"nickname":"3-NickOne","kills":21,"deaths":18,"pvp_damage":814,"pve_damage":253}]}',
 ].join(" ");
 
 function parseDataUrl(dataUrl: string){
@@ -83,6 +85,7 @@ function toInt(v: unknown): number {
 type StatRow = {
   nickname: string; kills: number; deaths: number; pvp_damage: number; pve_damage: number;
 };
+type OcrResult = { leader: string | null; stats: StatRow[] };
 
 function stripFence(text: string): string {
   let t = text.trim();
@@ -90,22 +93,37 @@ function stripFence(text: string): string {
   return fence ? fence[1] : t;
 }
 
-function extractStats(text: string): StatRow[] {
+function toStatRows(list: unknown[]): StatRow[] {
+  return list
+    .filter((x): x is Record<string, unknown> => !!x && typeof x === "object" && typeof (x as any).nickname === "string" && (x as any).nickname.trim())
+    .map(x => ({
+      nickname: (x.nickname as string).trim(),
+      kills: toInt(x.kills),
+      deaths: toInt(x.deaths),
+      pvp_damage: toInt(x.pvp_damage),
+      pve_damage: toInt(x.pve_damage),
+    }));
+}
+
+// ожидаем {leader, members} — leader читается из подписи «Лидер: …» над таблицей,
+// а не берётся первой строкой (сортировка таблицы по урону/килам её со временем
+// сломала — см. commit history). На случай, если модель всё же ответит голым
+// массивом (старый формат промпта/случайный сбой) — молча принимаем его тоже,
+// просто без лидера; фронт в этом случае откатится на «первая строка скрина».
+function extractResult(text: string): OcrResult {
   try{
     const parsed = JSON.parse(stripFence(text));
-    if(!Array.isArray(parsed)) return [];
-    return parsed
-      .filter(x => x && typeof x === "object" && typeof x.nickname === "string" && x.nickname.trim())
-      .map(x => ({
-        nickname: x.nickname.trim(),
-        kills: toInt(x.kills),
-        deaths: toInt(x.deaths),
-        pvp_damage: toInt(x.pvp_damage),
-        pve_damage: toInt(x.pve_damage),
-      }));
+    if(parsed && typeof parsed === "object" && !Array.isArray(parsed)){
+      const members = Array.isArray((parsed as any).members) ? (parsed as any).members : [];
+      const leaderRaw = (parsed as any).leader;
+      const leader = typeof leaderRaw === "string" && leaderRaw.trim() ? leaderRaw.trim() : null;
+      return { leader, stats: toStatRows(members) };
+    }
+    if(Array.isArray(parsed)) return { leader: null, stats: toStatRows(parsed) };
+    return { leader: null, stats: [] };
   }catch{
     // не JSON — оставляем пустой список, фронт покажет "не распознано"
-    return [];
+    return { leader: null, stats: [] };
   }
 }
 
@@ -215,9 +233,9 @@ Deno.serve(async (req) => {
     ];
     const text = await callGemini(parts);
     console.log("stats raw:", text);
-    const stats = extractStats(text);
-    console.log("stats parsed:", JSON.stringify(stats));
-    return json({ stats });
+    const { leader, stats } = extractResult(text);
+    console.log("stats parsed:", JSON.stringify(stats), "leader:", leader);
+    return json({ stats, leader });
   } catch (err) {
     return json({ error: "gemini_request_failed", detail: err instanceof Error ? err.message : String(err) }, 502);
   }

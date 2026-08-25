@@ -71,9 +71,12 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
   let pendingStats = new Map(); // nickname -> {kills, deaths, pvp_damage, pve_damage}, из тех же скринов
   let pendingBatchOf = new Map(); // nickname -> индекс скрина (в этой сессии загрузки), с которого он распознан
   let batchCount = 0; // сколько скринов в этой сессии дали хотя бы одного распознанного ника
-  // индекс скрина -> ник его пати-лидера (для «Раздачи»): в игре лидер пати всегда
-  // идёт первой строкой в таблице участников, поэтому берём первый валидный ник
-  // скрина, а не отдельное распознавание — тот же приём, что и с индексами скринов выше
+  // индекс скрина -> ник его пати-лидера (для «Раздачи») — распознаётся OCR из
+  // подписи «Лидер: …» над таблицей (ocr-event-stats возвращает её отдельно от
+  // строк). На скринах статы отсортированы по урону/килам, поэтому лидер НЕ всегда
+  // первая строка — раньше так считали и получали не того лидера. Если подписи на
+  // скрине не было (старый тип скрина без неё) или OCR её не распознал —
+  // откатываемся на прежнее допущение «первая строка».
   let batchLeaderOf = new Map();
 
   async function load(){
@@ -200,24 +203,28 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
         try{
           const rawDataUrl = await fileToDataUrl(files[i]);
           const dataUrl = await upscaleForOcr(rawDataUrl);
-          const rows = await L2Cabinet.adminOcrEventStats(dataUrl);
+          const { stats: ocrRows, leader: ocrLeader } = await L2Cabinet.adminOcrEventStats(dataUrl);
+          const rows = ocrRows.filter(r => r.nickname);
 
           // индекс скрина заводим лениво, только если он реально дал хоть одного ника —
           // «Отчёт по мероприятиям» использует эти индексы, чтобы группировать строки
           // по скрину (пати) и подписывать блок именем группы клана или «Соло»
-          const hasAny = rows.some(r => r.nickname);
-          const bIdx = hasAny ? batchCount++ : null;
+          const bIdx = rows.length ? batchCount++ : null;
 
           rows.forEach(r => {
-            if(!r.nickname) return;
             if(!pending.includes(r.nickname)) pending.push(r.nickname);
             pendingStats.set(r.nickname, {
               kills: r.kills, deaths: r.deaths,
               pvp_damage: r.pvp_damage, pve_damage: r.pve_damage,
             });
             pendingBatchOf.set(r.nickname, bIdx);
-            if(bIdx != null && !batchLeaderOf.has(bIdx)) batchLeaderOf.set(bIdx, r.nickname);
           });
+          if(bIdx != null && !batchLeaderOf.has(bIdx)){
+            const leaderMatch = ocrLeader && rows.find(r =>
+              r.nickname === ocrLeader || r.nickname.trim().toLowerCase() === ocrLeader.trim().toLowerCase()
+            );
+            batchLeaderOf.set(bIdx, (leaderMatch || rows[0]).nickname);
+          }
           renderChips();
         }catch(err){
           errEl.textContent = L2I18n.t("eventRoster.screenError", "Скрин {i}: {msg}").replace("{i}", i + 1).replace("{msg}", err.message);

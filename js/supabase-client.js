@@ -237,7 +237,9 @@ async function adminOcrEventStats(imageDataUrl){
   });
   const body = await res.json().catch(() => ({}));
   if(!res.ok) throw new Error((body.error || `request_failed (HTTP ${res.status})`) + (body.detail ? ": " + body.detail : ""));
-  return body.stats || [];
+  // leader — ник из подписи «Лидер: …» над таблицей на скрине (может быть null,
+  // если такой подписи не было или модель её не распознала)
+  return { stats: body.stats || [], leader: body.leader || null };
 }
 
 // Снимает флаг «нужно сменить пароль» у своей же строки после успешной смены
