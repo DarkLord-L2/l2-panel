@@ -18,12 +18,13 @@
      продолжается вниз и вбок вместе со всей страницей, не в отдельном "окошке" */
   .ls-table-scroll{ display:inline-block; vertical-align:top; overflow:visible; }
   table.ls-table{ border-collapse:separate; border-spacing:0; width:auto; font-size:13px; }
-  table.ls-table th, table.ls-table td{ padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  table.ls-table th, table.ls-table td{ padding:9px 12px; border-bottom:1px solid var(--border); white-space:nowrap; }
   table.ls-table thead th{
     position:sticky; top:0; z-index:2;
     background: var(--panel);
-    color: var(--text-dim); font-size:12px; font-weight:500; letter-spacing:0;
+    color: var(--text-dim); font-size:11.5px; font-weight:600; letter-spacing:.03em; text-transform:uppercase;
     vertical-align:bottom; text-align:center;
+    border-bottom:2px solid var(--gold-dim);
   }
   table.ls-table thead th.ls-col-nick{ text-align:left; }
   table.ls-table thead th.ls-sortable{ cursor:pointer; user-select:none; }
@@ -34,7 +35,10 @@
     box-shadow: 2px 0 6px rgba(0,0,0,.35);
   }
   table.ls-table thead th.ls-col-nick{ z-index:3; background: var(--panel); box-shadow:none; }
-  table.ls-table tbody tr:hover td{ background: rgba(255,255,255,.03); }
+  /* лёгкая зебра — почти незаметная на тёмном фоне, но помогает не терять строку
+     глазами, когда колонок с датами много и таблица растягивается вбок */
+  table.ls-table tbody tr:nth-child(4n+1) td:not(.ls-col-nick){ background: rgba(255,255,255,.014); }
+  table.ls-table tbody tr:hover td{ background: rgba(255,255,255,.045) !important; }
   table.ls-table tbody tr:hover td.ls-col-nick{ background: var(--panel-2); }
 
   .ls-party{ display:flex; align-items:center; gap:10px; cursor:pointer; }
@@ -42,15 +46,23 @@
     width:32px; height:32px; flex:none;
     border-radius:50%; object-fit:cover;
     border:1px solid var(--border); background: var(--panel-2);
+    transition: border-color .15s ease;
   }
+  .ls-party:hover .avatar{ border-color: var(--gold-dim); }
   .ls-party .who{ display:flex; flex-direction:column; gap:1px; min-width:0; }
-  .ls-party .name{ color: var(--text); font-weight:600; }
+  .ls-party .name{ color: var(--text); font-weight:600; display:flex; align-items:center; gap:6px; }
+  /* стрелка-шеврон разворота — крутится через class="open" на .chevron, который
+     ставит/снимает updateRosterOpenState() вместе с раскрытием самого списка */
+  .ls-party .chevron{ display:inline-block; font-size:10px; color: var(--text-dim); transition: transform .18s ease; }
+  .ls-party .chevron.open{ transform: rotate(90deg); color: var(--gold-dim); }
   .ls-party .cnt{ font-size:11px; color: var(--text-dim); }
 
   /* список участников, выезжающий вниз под строкой пати при клике на её название —
      мини-таблица с теми же колонками, что и у пати целиком, но цифры уже личные:
      свои баллы явки, свой % буста, свой коэффициент (по классу, как в «ДКП Соло»),
-     свои финальные баллы и своя доля голды пати */
+     свои финальные баллы и своя доля голды пати. Своя рамка с акцентной левой
+     полосой — чтобы визуально читалось как «выехавшая деталь» строки пати, а не
+     ещё один самостоятельный кусок таблицы */
   tr.ls-roster-row td{ padding:0; border-bottom:none; background:none !important; }
   tr.ls-roster-row:hover td{ background:none !important; }
   .ls-roster-wrap{
@@ -58,12 +70,22 @@
     transition: max-height .28s ease, opacity .2s ease;
   }
   .ls-roster-wrap.open{ max-height:900px; opacity:1; }
-  .ls-roster-scroll{ padding:4px 10px 14px; overflow-x:auto; }
+  .ls-roster-scroll{
+    margin:6px 10px 14px 42px;
+    padding:6px;
+    background: var(--panel);
+    border:1px solid var(--border);
+    border-left:2px solid var(--gold-dim);
+    border-radius:8px;
+    overflow-x:auto;
+  }
   table.ls-roster-table{ border-collapse:separate; border-spacing:0; width:auto; font-size:12px; }
-  table.ls-roster-table th, table.ls-roster-table td{ padding:5px 9px; border-bottom:1px solid var(--border); white-space:nowrap; text-align:center; }
-  table.ls-roster-table thead th{ color: var(--text-dim); font-weight:500; }
+  table.ls-roster-table th, table.ls-roster-table td{ padding:6px 10px; border-bottom:1px solid var(--border); white-space:nowrap; text-align:center; }
+  table.ls-roster-table thead th{ color: var(--text-dim); font-weight:600; font-size:10.5px; letter-spacing:.02em; text-transform:uppercase; }
   table.ls-roster-table th.ls-col-nick, table.ls-roster-table td.ls-col-nick{ text-align:left; }
   table.ls-roster-table th.ls-col-day, table.ls-roster-table td.ls-col-day{ width:32px; min-width:32px; max-width:32px; }
+  table.ls-roster-table tbody tr:hover td{ background: rgba(255,255,255,.035); }
+  table.ls-roster-table tbody tr:last-child td{ border-bottom:none; }
   .ls-roster-item{ display:flex; align-items:center; gap:8px; cursor:pointer; }
   .ls-roster-item:hover .nm{ color: var(--gold); }
   .ls-roster-item .avatar{
@@ -74,9 +96,16 @@
   .ls-roster-item .nm{ color: var(--text); font-weight:600; font-size:12.5px; }
   .ls-roster-item .cls{ font-size:10.5px; color: var(--text-dim); }
 
-  .ls-num{ text-align:center; }
-  .ls-final{ text-align:center; color: var(--gold); font-weight:700; }
-  .ls-gold{ text-align:center; font-weight:700; }
+  .ls-num{ text-align:center; font-variant-numeric: tabular-nums; }
+  .ls-final{ text-align:center; color: var(--gold); font-weight:700; font-size:14px; font-variant-numeric: tabular-nums; }
+  .ls-gold{ text-align:center; font-weight:700; font-variant-numeric: tabular-nums; }
+  /* голда — «итог» строки, поэтому цветная таблетка отдельно от нейтрального
+     акцента --gold (у клана он может быть перекрашен пресетом «Оформление») —
+     зелёный читается как «деньги» независимо от выбранной темы */
+  .ls-gold .pill{
+    display:inline-block; padding:3px 10px; border-radius:999px;
+    background: rgba(76,154,99,.16); color:#7fce97;
+  }
 
   table.ls-table th.ls-col-day, table.ls-table td.ls-col-day{ width:56px; min-width:56px; max-width:56px; text-align:center; }
   .ls-day-head{ display:flex; flex-direction:column; align-items:center; gap:4px; }
@@ -88,7 +117,7 @@
   }
   .ls-day-icon-btn:hover{ border-color: var(--border-lit); }
   .ls-day-icon-btn:disabled{ cursor:default; }
-  .ls-day-wd{ font-size:11px; color: var(--text-dim); }
+  .ls-day-wd{ font-size:10.5px; color: var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:.02em; }
   .ls-mark-yes{ color: var(--ok); font-weight:700; }
   .ls-mark-no{ color: var(--text-dim); opacity:.4; }
 </style>
@@ -228,7 +257,7 @@
       `<td class="ls-num" style="color:${pctColor(m.pct)}">${m.pct.toFixed(2)}%</td>` +
       `<td class="ls-num">${m.coef}</td>` +
       `<td class="ls-final">${m.final.toFixed(2)}</td>` +
-      `<td class="ls-gold">${fmtInt(m.gold)}</td>`;
+      `<td class="ls-gold"><span class="pill">${fmtInt(m.gold)}</span></td>`;
     events.forEach(e => {
       const was = (attendedByEvent.get(e.id) || new Set()).has(m.norm);
       html += `<td class="ls-col-day ${was ? "ls-mark-yes" : "ls-mark-no"}">${was ? 1 : 0}</td>`;
@@ -261,6 +290,9 @@
   function updateRosterOpenState(){
     document.querySelectorAll(".ls-roster-wrap").forEach(w => {
       w.classList.toggle("open", w.dataset.partyId === expandedPartyId);
+    });
+    document.querySelectorAll(".ls-party").forEach(p => {
+      p.querySelector(".chevron")?.classList.toggle("open", p.dataset.partyId === expandedPartyId);
     });
   }
 
@@ -488,14 +520,15 @@
       const tr = document.createElement("tr");
       const avatarSrc = classIcon(r.party.class_name) || BLANK_IMG;
       const leaderText = r.party.leader_nickname ? L2I18n.t("dkp.leaderPrefix", " · лидер ") + escapeHtml(r.party.leader_nickname) : "";
+      const chevronOpen = expandedPartyId === r.party.id ? " open" : "";
       let html = `<td class="ls-col-nick"><div class="ls-party" data-party-id="${r.party.id}"><img class="avatar" src="${avatarSrc}" alt="" />` +
-        `<span class="who"><span class="name">${escapeHtml(r.party.name)}</span>` +
+        `<span class="who"><span class="name"><span class="chevron${chevronOpen}">▸</span>${escapeHtml(r.party.name)}</span>` +
         `<span class="cnt">${r.roster.length}${L2I18n.t("dkp.membersCountSuffix", " участников")}${leaderText}</span></span></div></td>`;
       html += `<td class="ls-num">${r.initial}</td>`;
       html += `<td class="ls-num" style="color:${pctColor(r.pct)}">${r.pct.toFixed(2)}%</td>`;
       html += `<td class="ls-num">${r.coef.toFixed(2)}</td>`;
       html += `<td class="ls-final">${r.final.toFixed(2)}</td>`;
-      html += `<td class="ls-gold">${fmtInt(r.gold)}</td>`;
+      html += `<td class="ls-gold"><span class="pill">${fmtInt(r.gold)}</span></td>`;
       events.forEach(e => {
         const set = attendedByEvent.get(e.id) || new Set();
         const count = r.roster.filter(nick => set.has(normalizeNick(nick))).length;
