@@ -661,11 +661,15 @@
     ],
     "admin.leaderCoefTitle": ["Коэффициент пати-лидерам", "Коефіцієнт паті-лідерам", "Party leader coefficient"],
     "admin.leaderCoefHint": [
-      "В «ДКП Пати» применяется к личным финальным баллам того, кто назначен лидером пати (Группы → лидер) — коэффициенты не складываются: у лидера этот множитель ЗАМЕНЯЕТ собой коэффициент профессии, а не добавляется поверх него. На саму пати (её общий коэффициент) и на «ДКП Соло» не влияет. 1 — как обычный коэффициент профессии 1.",
-      "У «ДКП Паті» застосовується до особистих фінальних балів того, кого призначено лідером паті (Групи → лідер) — коефіцієнти не складаються: у лідера цей множник ЗАМІНЮЄ собою коефіцієнт професії, а не додається поверх нього. На саму паті (її загальний коефіцієнт) і на «ДКП Соло» не впливає. 1 — як звичайний коефіцієнт професії 1.",
-      "Applied in “DKP Party” to the final points of whoever is set as the party's leader (Groups → leader) — coefficients don't stack: for the leader this multiplier REPLACES their class coefficient instead of adding on top of it. Does not affect the party's own coefficient or “DKP Solo”. 1 = same as an ordinary class coefficient of 1.",
+      "Свой множитель для каждого текущего пати-лидера (Группы → лидер) — коэффициенты не складываются: у лидера этот множитель ЗАМЕНЯЕТ собой коэффициент профессии, а не добавляется поверх него. На саму пати и на «ДКП Соло» не влияет. Список — по тем, кто прямо сейчас отмечен лидером хоть одной пати; нет строки — считается как 1.",
+      "Свій множник для кожного поточного паті-лідера (Групи → лідер) — коефіцієнти не складаються: у лідера цей множник ЗАМІНЮЄ собою коефіцієнт професії, а не додається поверх нього. На саму паті і на «ДКП Соло» не впливає. Список — за тими, хто прямо зараз відмічений лідером хоч однієї паті; немає рядка — вважається як 1.",
+      "A separate multiplier for each current party leader (Groups → leader) — coefficients don't stack: for the leader this multiplier REPLACES their class coefficient instead of adding on top of it. Does not affect the party itself or “DKP Solo”. The list is built from whoever is currently set as a party's leader; no row — treated as 1.",
     ],
-    "admin.leaderCoefLabel": ["Коэффициент", "Коефіцієнт", "Coefficient"],
+    "admin.leaderCoefEmpty": [
+      "Ни в одной пати пока не назначен лидер (Группы → лидер).",
+      "Жодній паті поки що не призначено лідера (Групи → лідер).",
+      "No party has a leader assigned yet (Groups → leader).",
+    ],
     "admin.classCoefSoloTitle": ["Коэффициент профессии для «ДКП Соло»", "Коефіцієнт професії для «ДКП Соло»", "Class coefficient for “DKP Solo”"],
     "admin.classCoefSoloHint": [
       "У каждой профессии свой множитель: финальные баллы участника = начальные баллы × % буста × этот коэффициент. Нет строки для класса — считается как 1.",

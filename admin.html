@@ -229,17 +229,15 @@
     <p class="error-msg" id="lootHideZeroError"></p>
   </section>
 
-  <section class="card">
-    <h2 data-i18n="admin.leaderCoefTitle">Коэффициент пати-лидерам</h2>
-    <p class="hint" data-i18n="admin.leaderCoefHint">Отдельный множитель, который в «ДКП Пати» применяется только к личным финальным баллам того, кто назначен лидером пати (Группы → лидер) — поверх его обычного коэффициента профессии. На саму пати и на «ДКП Соло» не влияет. 1 — без надбавки.</p>
-    <div class="tax-amount-row">
-      <span class="label" data-i18n="admin.leaderCoefLabel">Коэффициент</span>
-      <input type="number" id="lootLeaderCoefInput" step="0.01" min="0" />
-    </div>
-    <p class="error-msg" id="lootLeaderCoefError"></p>
-  </section>
-
   <div class="admin-coef-row">
+    <section class="card">
+      <h2 data-i18n="admin.leaderCoefTitle">Коэффициент пати-лидерам</h2>
+      <p class="hint" data-i18n="admin.leaderCoefHint">Свой множитель для каждого текущего пати-лидера (Группы → лидер) — коэффициенты не складываются: у лидера этот множитель ЗАМЕНЯЕТ собой коэффициент профессии, а не добавляется поверх него. На саму пати и на «ДКП Соло» не влияет. Список — по тем, кто прямо сейчас отмечен лидером хоть одной пати; нет строки — считается как 1.</p>
+      <div class="loot-coef-list" id="lootLeaderCoefList"></div>
+      <p class="hint" id="lootLeaderCoefEmpty" style="display:none;" data-i18n="admin.leaderCoefEmpty">Ни в одной пати пока не назначен лидер (Группы → лидер).</p>
+      <p class="error-msg" id="lootLeaderCoefError"></p>
+    </section>
+
     <section class="card">
       <h2 data-i18n="admin.classCoefSoloTitle">Коэффициент профессии для «ДКП Соло»</h2>
       <p class="hint" data-i18n="admin.classCoefSoloHint">У каждой профессии свой множитель: финальные баллы участника = начальные баллы × % буста × этот коэффициент. Нет строки для класса — считается как 1.</p>
@@ -356,7 +354,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=18"></script>
-<script src="js/i18n.js?v=2"></script>
+<script src="js/i18n.js?v=3"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -388,7 +386,7 @@
   async function loadLookups(){
     const [{ data: r }, { data: p }, { data: s }] = await Promise.all([
       db.from("roles").select("id, key, label, rank").order("rank", { ascending: false }),
-      db.from("clan_groups").select("id, name").eq("hidden", false).order("name"),
+      db.from("clan_groups").select("id, name, leader_nickname").eq("hidden", false).order("name"),
       db.from("sections").select("key, label, sort").order("sort"),
     ]);
     roles = r || []; parties = p || []; sections = s || [];
@@ -494,28 +492,60 @@
     cb.disabled = false;
   });
 
-  // ---------- «Коэффициент пати-лидерам»: доп. множитель личных финальных
-  // баллов того, кто назначен лидером пати — только в «ДКП Пати» ----------
-  async function loadLootLeaderCoef(){
-    const { data, error } = await db.from("loot_split_settings").select("loot_leader_coefficient").eq("clan_id", profile.clan_id).maybeSingle();
-    if(error){ console.error(error); return; }
-    document.getElementById("lootLeaderCoefInput").value = data?.loot_leader_coefficient ?? 1;
+  // ---------- «Коэффициент пати-лидерам»: свой множитель для каждого текущего
+  // пати-лидера (Группы → лидер) — список берём из уже загруженного parties (там
+  // leader_nickname), не храним отдельно; тот же принцип, что у коэффициентов
+  // профессий/пати ниже, только ключ — nickname лидера, а не class_name/group_id ----------
+  let lootLeaderCoefficients = new Map(); // nickname -> coefficient
+
+  async function loadLootLeaderCoefficients(){
+    const { data, error } = await db.from("loot_leader_coefficients").select("nickname, coefficient");
+    if(error) console.error(error);
+    lootLeaderCoefficients = new Map((data || []).map(r => [r.nickname, Number(r.coefficient)]));
   }
 
-  document.getElementById("lootLeaderCoefInput").addEventListener("change", async () => {
-    const input = document.getElementById("lootLeaderCoefInput");
-    const errEl = document.getElementById("lootLeaderCoefError");
-    errEl.textContent = "";
-    const val = Number(input.value);
-    if(!Number.isFinite(val) || val < 0){ errEl.textContent = L2I18n.t("admin.amountMustBeNonNegative", "Сумма должна быть числом ≥ 0."); return; }
-    input.disabled = true;
-    const { error } = await db.from("loot_split_settings").upsert(
-      { clan_id: profile.clan_id, loot_leader_coefficient: val },
-      { onConflict: "clan_id" }
-    );
-    if(error) errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
-    input.disabled = false;
-  });
+  function renderLootLeaderCoefList(){
+    const wrap = document.getElementById("lootLeaderCoefList");
+    const emptyEl = document.getElementById("lootLeaderCoefEmpty");
+    wrap.innerHTML = "";
+    // текущие лидеры — уникальные ники из leader_nickname всех видимых пати;
+    // если лидера сняли, его строка коэффициента остаётся в базе, просто больше
+    // не показывается тут (назначат обратно — коэффициент сразу вернётся)
+    const leaders = [...new Set(parties.map(p => p.leader_nickname).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    emptyEl.style.display = leaders.length ? "none" : "";
+    leaders.forEach(nick => {
+      const row = document.createElement("div");
+      row.className = "loot-coef-row";
+
+      const label = document.createElement("span");
+      label.className = "label";
+      label.textContent = nick;
+
+      const input = document.createElement("input");
+      input.type = "number";
+      input.step = "0.01";
+      input.min = "0";
+      input.value = lootLeaderCoefficients.get(nick) ?? 1;
+
+      input.addEventListener("change", async () => {
+        const errEl = document.getElementById("lootLeaderCoefError");
+        errEl.textContent = "";
+        const val = Number(input.value);
+        if(!Number.isFinite(val) || val < 0){ errEl.textContent = L2I18n.t("admin.coefMustBeNonNegative", "Коэффициент должен быть числом ≥ 0."); return; }
+        input.disabled = true;
+        const { error } = await db.from("loot_leader_coefficients").upsert(
+          { clan_id: profile.clan_id, nickname: nick, coefficient: val },
+          { onConflict: "clan_id,nickname" }
+        );
+        if(error) errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
+        else lootLeaderCoefficients.set(nick, val);
+        input.disabled = false;
+      });
+
+      row.append(label, input);
+      wrap.appendChild(row);
+    });
+  }
 
   // ---------- коэффициенты профессий («Раздел дропа») ----------
   let lootCoefficients = new Map(); // class_name -> coefficient
@@ -1244,11 +1274,12 @@
   await loadLookups();
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(L2I18n.t("role." + r.key, r.label)), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
-  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadWeeklyTaxAmount(), loadLootHideZero(), loadLootLeaderCoef()]);
+  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadLootLeaderCoefficients(), loadWeeklyTaxAmount(), loadLootHideZero()]);
   renderSectionOrder();
   renderSectionToggleList();
   renderLootCoefList();
   renderLootPartyCoefList();
+  renderLootLeaderCoefList();
   renderPresetGrid();
 
   window.addEventListener("storage", (e) => {
@@ -1258,6 +1289,7 @@
     renderSectionToggleList();
     renderLootCoefList();
     renderLootPartyCoefList();
+    renderLootLeaderCoefList();
     renderPresetGrid();
     loadMatrix();
   });

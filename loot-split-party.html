@@ -168,7 +168,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=18"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=2"></script>
+<script src="js/i18n.js?v=3"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -390,14 +390,22 @@
   // «показывать только тех, кто хоть раз ходил» — общая с «ДКП Соло» настройка из
   // Админ-панели → «ДКП»; здесь означает «пати, где вообще была явка»
   let hideZeroAttendance = false;
-  // «Коэффициент пати-лидерам» — доп. множитель ТОЛЬКО для личных финальных
-  // баллов того, кто назначен лидером пати (party.leader_nickname), поверх его
-  // обычного коэффициента профессии; на саму пати не влияет
-  let leaderCoefficient = 1;
   async function loadLootSplitSettings(){
-    const { data } = await db.from("loot_split_settings").select("hide_zero_attendance, loot_leader_coefficient").eq("clan_id", profile.clan_id).maybeSingle();
+    const { data } = await db.from("loot_split_settings").select("hide_zero_attendance").eq("clan_id", profile.clan_id).maybeSingle();
     hideZeroAttendance = !!data?.hide_zero_attendance;
-    leaderCoefficient = Number(data?.loot_leader_coefficient) || 1;
+  }
+
+  // «Коэффициент пати-лидерам» — свой множитель для каждого текущего пати-лидера
+  // (Админ-панель → «ДКП»); коэффициенты не складываются — у лидера этот множитель
+  // ЗАМЕНЯЕТ коэффициент профессии целиком, не умножается на него
+  let leaderCoefByNorm = new Map(); // normalizeNick(nickname) -> coefficient
+  async function loadLootLeaderCoefficients(){
+    const { data } = await db.from("loot_leader_coefficients").select("nickname, coefficient");
+    leaderCoefByNorm = new Map((data || []).map(r => [normalizeNick(r.nickname), Number(r.coefficient)]));
+  }
+  function leaderCoefficientOf(nick){
+    const c = leaderCoefByNorm.get(normalizeNick(nick));
+    return c === undefined ? 1 : c;
   }
 
   async function loadEventsAndAttendance(fromStr, toStr){
@@ -442,10 +450,10 @@
         const norm = normalizeNick(nick);
         const mInitial = events.reduce((s, e) => s + ((attendedByEvent.get(e.id) || new Set()).has(norm) ? 1 : 0), 0);
         const mPct = percentOf(nick);
-        // коэффициенты не стакаются: лидер пати получает ТОЛЬКО коэффициент
-        // лидера (полностью вместо коэффициента профессии, а не поверх него);
-        // остальные участники — как раньше, только свой коэффициент профессии
-        const mCoef = isLeader(nick) ? leaderCoefficient : memberCoefficientOf(nick);
+        // коэффициенты не стакаются: лидер пати получает ТОЛЬКО свой личный
+        // коэффициент лидера (полностью вместо коэффициента профессии, а не
+        // поверх него); остальные участники — как раньше, коэффициент профессии
+        const mCoef = isLeader(nick) ? leaderCoefficientOf(nick) : memberCoefficientOf(nick);
         const mFinal = Math.round(mInitial * (mPct / 100) * mCoef * 4) / 4;
         return { nick, norm, initial: mInitial, pct: mPct, coef: mCoef, final: mFinal };
       });
@@ -722,7 +730,7 @@
     await doSplit();
   }
 
-  await Promise.all([loadParties(), loadBoostStructure(), loadBoostValues(), loadPartyCoefficients(), loadClassCoefficients(), loadLootSplitSettings(), loadMemberClasses(), loadCensus()]);
+  await Promise.all([loadParties(), loadBoostStructure(), loadBoostValues(), loadPartyCoefficients(), loadClassCoefficients(), loadLootSplitSettings(), loadLootLeaderCoefficients(), loadMemberClasses(), loadCensus()]);
   renderTable([]);
   await restoreDkpPartyState();
 
