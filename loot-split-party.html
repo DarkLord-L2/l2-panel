@@ -121,6 +121,10 @@
   /* явка/неявка — тоже без цвета, только насыщенность: у нуля цифра тусклее и тоньше */
   .ls-mark{ color: var(--text); font-weight:600; }
   .ls-mark.zero{ color: var(--text-dim); opacity:.5; font-weight:400; }
+
+  /* участник, которого нет в последней переписи — уже не в клане, но ещё числится
+     в пати; красный крестик рядом с ником, никаких других изменений в расчётах */
+  .ls-left-cross{ color: var(--danger-lit); font-weight:700; margin-left:4px; }
 </style>
 </head>
 <body>
@@ -212,6 +216,20 @@
   let parties = [];                // [{id, name, class_name, leader_nickname}] — видимые (не скрытые) пати
   let membersByGroup = new Map();  // group_id -> [nickname, ...]
 
+  // последняя перепись — чтобы пометить красным крестиком тех, кто ещё числится
+  // в пати (в «Группах»), но уже пропал из клана; пусто, если переписи вообще нет —
+  // тогда никого не помечаем (нечего сравнивать)
+  let censusNormSet = new Set();
+  async function loadCensus(){
+    const { data } = await db.from("census_entries").select("nickname, week_start");
+    const weeks = [...new Set((data || []).map(r => r.week_start))].sort();
+    const latest = weeks.length ? weeks[weeks.length - 1] : null;
+    censusNormSet = latest
+      ? new Set((data || []).filter(r => r.week_start === latest).map(r => normalizeNick(r.nickname)))
+      : new Set();
+  }
+  function isLeftClan(nick){ return censusNormSet.size > 0 && !censusNormSet.has(normalizeNick(nick)); }
+
   let lastRows = [];               // последний посчитанный «Разделить дроп»
 
   async function loadParties(){
@@ -251,7 +269,7 @@
     let html = `<tr>` +
       `<td class="ls-col-nick"><div class="ls-roster-item" data-nick="${escapeHtml(m.nick)}">` +
       `<img class="avatar" src="${rosterAvatarOf(m.nick)}" alt="" />` +
-      `<span class="who"><span class="nm">${escapeHtml(m.nick)}</span><span class="cls">${escapeHtml(classLabelOf(m.nick))}</span></span>` +
+      `<span class="who"><span class="nm">${escapeHtml(m.nick)}${isLeftClan(m.nick) ? ` <span class="ls-left-cross" title="${escapeHtml(L2I18n.t("dkp.leftClanTitle", "Уже не в клане"))}">✗</span>` : ""}</span><span class="cls">${escapeHtml(classLabelOf(m.nick))}</span></span>` +
       `</div></td>` +
       `<td class="ls-num">${m.initial}</td>` +
       `<td class="ls-num">${m.pct.toFixed(2)}%</td>` +
@@ -684,7 +702,7 @@
     await doSplit();
   }
 
-  await Promise.all([loadParties(), loadBoostStructure(), loadBoostValues(), loadPartyCoefficients(), loadClassCoefficients(), loadLootSplitSettings(), loadMemberClasses()]);
+  await Promise.all([loadParties(), loadBoostStructure(), loadBoostValues(), loadPartyCoefficients(), loadClassCoefficients(), loadLootSplitSettings(), loadMemberClasses(), loadCensus()]);
   renderTable([]);
   await restoreDkpPartyState();
 

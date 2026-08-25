@@ -323,6 +323,8 @@
       "Той самий розрахунок, що в «ДКП Соло», тільки по паті цілком: початкові бали — сумарна явка всіх учасників паті, % бусту і коефіцієнт — їх середнє по паті, голда ділиться між паті пропорційно фінальним балам.",
       "Same calculation as “DKP Solo”, but for the whole party: initial points are the party's total attendance, boost % and coefficient are the party's average, gold is split between parties proportionally to final points.",
     ],
+    "dkp.leftMembersTitle": ["Вышли из клана за последнюю неделю", "Вийшли з клану за останній тиждень", "Left the clan in the last week"],
+    "dkp.leftClanTitle": ["Уже не в клане", "Вже не в клані", "No longer in the clan"],
     "dkp.membersCountSuffix": [" участников", " учасників", " members"],
     "dkp.leaderPrefix": [" · лидер ", " · лідер ", " · leader "],
     "dkp.noMembersInRoster": ["Участников нет.", "Учасників немає.", "No members."],

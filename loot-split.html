@@ -81,6 +81,16 @@
   /* явка/неявка — тоже без цвета, только насыщенность: у нуля цифра тусклее и тоньше */
   .ls-mark{ color: var(--text); font-weight:600; }
   .ls-mark.zero{ color: var(--text-dim); opacity:.5; font-weight:400; }
+
+  /* те, кто был в предыдущей переписи, но пропал из последней — досчитываются той
+     же формулой (явка/буст/финал), что и активные, и подставляются доп. строками
+     в самый низ той же таблицы (после отсортированных активных, вне сортировки —
+     чтобы всегда оставались внизу); лёгкая тусклость строки + крестик у ника вместо
+     отдельного блока, раз колонки те же самые */
+  tr.ls-left-divider-row td{ padding:6px 14px 2px; background:none !important; border:none !important; }
+  .ls-left-divider{ font-size:11px; color: var(--text-dim); font-weight:600; letter-spacing:.03em; text-transform:uppercase; text-align:left; }
+  tr.ls-row-left td{ opacity:.72; }
+  .ls-left-cross{ color: var(--danger-lit); font-weight:700; margin-left:6px; }
 </style>
 </head>
 <body>
@@ -178,6 +188,7 @@
   function classIcon(name){ return name && window.L2_CLASS_ICON ? window.L2_CLASS_ICON(name) : null; }
 
   let nicks = [];                  // ники последней переписи, по алфавиту
+  let leftMembers = [];            // были в предыдущей переписи, но пропали из последней
   let memberClasses = new Map();   // nickname -> class_name
   let memberClassesNorm = new Map();
   let memberIcons = new Map();     // nickname -> data-URL своей аватарки
@@ -195,10 +206,18 @@
 
   async function loadCensus(){
     const { data } = await db.from("census_entries").select("nickname, week_start");
-    let latest = null;
-    (data || []).forEach(r => { if(!latest || r.week_start > latest) latest = r.week_start; });
+    const weeks = [...new Set((data || []).map(r => r.week_start))].sort();
+    const latest = weeks.length ? weeks[weeks.length - 1] : null;
+    const prev = weeks.length > 1 ? weeks[weeks.length - 2] : null;
     nicks = [...new Set((data || []).filter(r => r.week_start === latest).map(r => r.nickname))]
       .sort((a,b)=>a.localeCompare(b));
+    // «вышел за последнюю неделю» — был в предпоследней переписи, но пропал из последней
+    if(prev){
+      const latestNorm = new Set(nicks.map(normalizeNick));
+      leftMembers = [...new Set((data || []).filter(r => r.week_start === prev).map(r => r.nickname))]
+        .filter(n => !latestNorm.has(normalizeNick(n)))
+        .sort((a,b)=>a.localeCompare(b));
+    } else leftMembers = [];
   }
 
   async function loadMemberClasses(){
@@ -316,8 +335,8 @@
 
   function fmtInt(n){ return Math.round(n).toLocaleString(L2I18n.locale()); }
 
-  function computeRows(){
-    return nicks.map(nick => {
+  function computeRowsFor(nickList){
+    return nickList.map(nick => {
       const norm = normalizeNick(nick);
       const initial = events.reduce((s, e) => s + ((attendedByEvent.get(e.id) || new Set()).has(norm) ? 1 : 0), 0);
       const pct = percentOf(nick);
@@ -330,10 +349,16 @@
     });
   }
 
-  function applyGold(rows){
+  // голда делится только между активными (rows) — сумма их финальных баллов
+  // определяет ставку голды за балл; у ушедших (leftRows) та же ставка применяется
+  // к их баллам просто для справки, в сумму активных их финал не входит и долю
+  // остальных не уменьшает
+  function applyGold(rows, leftRows){
     const gold = Number(document.getElementById("goldInput").value) || 0;
     const sumFinal = rows.reduce((s,r)=> s + r.final, 0);
-    rows.forEach(r => { r.gold = sumFinal ? (r.final / sumFinal) * gold : 0; });
+    const rate = sumFinal ? gold / sumFinal : 0;
+    rows.forEach(r => { r.gold = r.final * rate; });
+    (leftRows || []).forEach(r => { r.gold = r.final * rate; });
     return rows;
   }
 
@@ -391,33 +416,55 @@
     }
   }
 
-  function renderBody(rows){
+  // общий рендер строки — используется и для активных, и (isLeft=true) для тех,
+  // кто вышел из клана; колонки те же самые, разница только в крестике у ника
+  // и лёгкой тусклости строки (см. .ls-row-left)
+  function rowHtml(r, isLeft){
+    const avatarSrc = memberIcons.get(r.nick) || classIcon(r.cls) || BLANK_IMG;
+    const cross = isLeft ? `<span class="ls-left-cross" title="${escapeHtml(L2I18n.t("dkp.leftClanTitle", "Уже не в клане"))}">✗</span>` : "";
+    let html = `<td class="ls-col-nick"><div class="ls-nick"><img class="avatar" src="${avatarSrc}" alt="" />` +
+      `<span class="who"><span class="name">${escapeHtml(r.nick)}${cross}</span><span class="cls">${escapeHtml(r.cls || "")}</span></span></div></td>`;
+    html += `<td class="ls-num">${r.initial}</td>`;
+    html += `<td class="ls-num">${r.pct.toFixed(2)}%</td>`;
+    html += `<td class="ls-num">${r.coef}</td>`;
+    html += `<td class="ls-final">${r.final.toFixed(2)}</td>`;
+    html += `<td class="ls-gold">${fmtInt(r.gold)}</td>`;
+    events.forEach(e => {
+      const was = (attendedByEvent.get(e.id) || new Set()).has(r.norm);
+      html += `<td class="ls-col-day"><span class="ls-mark${was ? "" : " zero"}">${was ? 1 : 0}</span></td>`;
+    });
+    return html;
+  }
+
+  function renderBody(rows, leftRows){
     const body = document.getElementById("lsBody");
     body.innerHTML = "";
     rows.forEach(r => {
       const tr = document.createElement("tr");
-      const avatarSrc = memberIcons.get(r.nick) || classIcon(r.cls) || BLANK_IMG;
-      let html = `<td class="ls-col-nick"><div class="ls-nick"><img class="avatar" src="${avatarSrc}" alt="" />` +
-        `<span class="who"><span class="name">${escapeHtml(r.nick)}</span><span class="cls">${escapeHtml(r.cls || "")}</span></span></div></td>`;
-      html += `<td class="ls-num">${r.initial}</td>`;
-      html += `<td class="ls-num">${r.pct.toFixed(2)}%</td>`;
-      html += `<td class="ls-num">${r.coef}</td>`;
-      html += `<td class="ls-final">${r.final.toFixed(2)}</td>`;
-      html += `<td class="ls-gold">${fmtInt(r.gold)}</td>`;
-      events.forEach(e => {
-        const was = (attendedByEvent.get(e.id) || new Set()).has(r.norm);
-        html += `<td class="ls-col-day"><span class="ls-mark${was ? "" : " zero"}">${was ? 1 : 0}</span></td>`;
-      });
-      tr.innerHTML = html;
+      tr.innerHTML = rowHtml(r, false);
       body.appendChild(tr);
     });
+    if(leftRows && leftRows.length){
+      const colspan = 6 + events.length;
+      const divTr = document.createElement("tr");
+      divTr.className = "ls-left-divider-row";
+      divTr.innerHTML = `<td colspan="${colspan}" class="ls-left-divider">${escapeHtml(L2I18n.t("dkp.leftMembersTitle", "Вышли из клана за последнюю неделю"))}</td>`;
+      body.appendChild(divTr);
+      leftRows.forEach(r => {
+        const tr = document.createElement("tr");
+        tr.className = "ls-row-left";
+        tr.innerHTML = rowHtml(r, true);
+        body.appendChild(tr);
+      });
+    }
   }
 
   let hasSplit = false; // «Разделить дроп» ещё не нажимали — пока рано говорить, что мероприятий нет
+  let lastLeftRows = []; // строки вышедших из клана — появляются только после «Разделить дроп»
 
   function renderTable(rows){
     renderHead();
-    renderBody(sortRows(rows));
+    renderBody(sortRows(rows), lastLeftRows);
     const emptyEl = document.getElementById("lsEmpty");
     if(!nicks.length){
       emptyEl.textContent = L2I18n.t("dkp.emptyNoCensusMembers", "В последней переписи нет участников — сначала заполните «Перепись клана».");
@@ -447,12 +494,17 @@
     document.getElementById("splitBtn").disabled = true;
     await loadEventsAndAttendance(fromStr, toStr);
     hasSplit = true;
-    const rows = computeRows().filter(r => !hideZeroAttendance || r.initial > 0);
+    const rows = computeRowsFor(nicks).filter(r => !hideZeroAttendance || r.initial > 0);
+    // вышедшие из клана считаются той же формулой и показываются всегда (даже с
+    // нулевой явкой) — это информационный список «кто уже не в клане», а не часть
+    // обычной фильтрации «показывать только тех, кто ходил»
+    const leftRows = computeRowsFor(leftMembers);
     // сумма голды по умолчанию — доли × цена доли из Админ-панели; поле остаётся
     // обычным ручным вводом, так что при желании его можно тут же поправить
     const sumFinal = rows.reduce((s, r) => s + r.final, 0);
     document.getElementById("goldInput").value = Math.round(sumFinal * sharePrice);
-    lastRows = applyGold(rows);
+    lastRows = applyGold(rows, leftRows);
+    lastLeftRows = leftRows;
     renderTable(lastRows);
     document.getElementById("splitBtn").disabled = false;
   }
@@ -461,9 +513,9 @@
   // сумму голды можно поменять без повторного пересчёта явки/буста — просто
   // перераспределяем уже посчитанные финальные баллы по новой сумме
   document.getElementById("goldInput").addEventListener("input", () => {
-    if(!lastRows.length) return;
-    applyGold(lastRows);
-    renderBody(sortRows(lastRows));
+    if(!lastRows.length && !lastLeftRows.length) return;
+    applyGold(lastRows, lastLeftRows);
+    renderBody(sortRows(lastRows), lastLeftRows);
   });
 
   // ---- иконка над столбцом мероприятия (только админ) ----

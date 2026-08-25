@@ -37,6 +37,15 @@
   .lp-gold{ color: var(--text); font-weight:700; font-size:14px; }
 
   .lp-copy-row{ margin:12px 0 0; }
+
+  /* участник, которого нет в последней переписи — уже не в клане; красный крестик
+     рядом с ником, никаких других изменений в таблице */
+  .lp-left-cross{ color: var(--danger-lit); font-weight:700; margin-left:4px; }
+
+  /* тот же «отдельный список» («Окна» и т.п.), что и в «Участники клана» — свой
+     заголовок, ставится/снимается там же; тут просто бейдж рядом с ником для тех,
+     кого туда реально добавили (тот же стиль пилюли, что .rw-tag-badge в roster.html) */
+  .lp-tag-badge{ display:inline-block; font-size:10.5px; padding:2px 8px; border-radius:999px; border:1px dashed var(--border-lit); color: var(--text-dim); margin-left:6px; }
 </style>
 </head>
 <body>
@@ -106,6 +115,48 @@
 
   function escapeHtml(s){
     return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  }
+
+  // перепись иногда пишет ник чуть иначе (кириллица/латиница похожих букв, регистр) —
+  // та же схема нормализации, что в «ДКП Соло»/«ДКП Пати»
+  const CYR_LOOKALIKES = { "а":"a","в":"b","е":"e","к":"k","м":"m","н":"h","о":"o","р":"p","с":"c","т":"t","у":"y","х":"x","ё":"e","0":"o" };
+  function normalizeNick(s){
+    return String(s || "")
+      .toLowerCase()
+      .split("").map(ch => CYR_LOOKALIKES[ch] || ch).join("")
+      .replace(/[^a-zа-яё0-9]/gi, "");
+  }
+
+  // последняя перепись — чтобы пометить красным крестиком тех, кто уже пропал
+  // из клана; пусто, если переписи вообще нет — тогда никого не помечаем
+  let censusNormSet = new Set();
+  async function loadCensus(){
+    const { data } = await db.from("census_entries").select("nickname, week_start");
+    const weeks = [...new Set((data || []).map(r => r.week_start))].sort();
+    const latest = weeks.length ? weeks[weeks.length - 1] : null;
+    censusNormSet = latest
+      ? new Set((data || []).filter(r => r.week_start === latest).map(r => normalizeNick(r.nickname)))
+      : new Set();
+  }
+  function isLeftClan(nick){ return censusNormSet.size > 0 && !censusNormSet.has(normalizeNick(nick)); }
+
+  // «отдельный список» из «Участники клана» (например «Окна» — альт-персонажи) —
+  // один список на клан, свой заголовок; тут просто показываем этот заголовок
+  // рядом с ником, но только тем, кого туда реально добавили
+  let tagLabel = "";
+  let tagEnabled = false;
+  let taggedNormSet = new Set();
+  async function loadRosterTag(){
+    const [{ data: settings }, { data: tagged }] = await Promise.all([
+      db.from("roster_tag_settings").select("label, enabled").maybeSingle(),
+      db.from("roster_tagged_members").select("nickname"),
+    ]);
+    tagLabel = settings?.label || "";
+    tagEnabled = !!settings?.enabled;
+    taggedNormSet = new Set((tagged || []).map(r => normalizeNick(r.nickname)));
+  }
+  function tagBadgeOf(nick){
+    return (tagEnabled && taggedNormSet.has(normalizeNick(nick))) ? tagLabel : null;
   }
 
   // ---- копирование списка ников (та же схема, что в «Налогах»/«Посещаемости») ----
@@ -226,7 +277,10 @@
     const body = document.getElementById("lpBody");
     body.innerHTML = currentRows.map(r => {
       const gold = r.count * sharePrice;
-      return `<tr><td>${escapeHtml(r.nickname)}</td>` +
+      const cross = isLeftClan(r.nickname) ? ` <span class="lp-left-cross" title="${escapeHtml(L2I18n.t("dkp.leftClanTitle", "Уже не в клане"))}">✗</span>` : "";
+      const tag = tagBadgeOf(r.nickname);
+      const badge = tag ? ` <span class="lp-tag-badge">${escapeHtml(tag)}</span>` : "";
+      return `<tr><td>${escapeHtml(r.nickname)}${cross}${badge}</td>` +
         `<td class="lp-num lp-cnt">${r.count}</td>` +
         `<td class="lp-num lp-gold">${Math.round(gold).toLocaleString(L2I18n.locale())}</td></tr>`;
     }).join("");
@@ -262,7 +316,7 @@
     renderForLeader(sel.value || null);
   });
 
-  await loadSharePrice();
+  await Promise.all([loadSharePrice(), loadCensus(), loadRosterTag()]);
   await reload();
 })();
 </script>
