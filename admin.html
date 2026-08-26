@@ -283,6 +283,15 @@
       <p class="error-msg" id="lootPartyCoefError"></p>
     </section>
   </div>
+
+  <section class="card">
+    <h2 data-i18n="admin.closePayoutTitle">Раздача</h2>
+    <p class="hint" data-i18n="admin.closePayoutHint">Голда, которую пати-лидеры видят в «Раздаче», держится 24 часа с момента «Раздать» в «ДКП Соло»/«ДКП Пати». Кнопка ниже закрывает её раньше срока — у всех пати-лидеров голда в «Раздаче» пропадёт сразу же (список «кто с каким лидером ходил» останется как есть).</p>
+    <button type="button" class="btn btn-danger" id="closePayoutBtn" data-i18n="admin.closePayoutBtn">Закрыть раздачу</button>
+    <p class="ok-msg" id="closePayoutOk" style="display:none;" data-i18n="admin.closePayoutClosed">Раздача закрыта.</p>
+    <p class="hint" id="closePayoutNone" style="display:none; margin-top:8px;" data-i18n="admin.closePayoutNoneActive">Сейчас нет активной раздачи.</p>
+    <p class="error-msg" id="closePayoutError"></p>
+  </section>
     </div>
 
     <div class="admin-tab-panel" data-panel="sections">
@@ -394,7 +403,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=19"></script>
-<script src="js/i18n.js?v=15"></script>
+<script src="js/i18n.js?v=16"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -667,6 +676,35 @@
       cb.checked = !cb.checked;
     }
     cb.disabled = false;
+  });
+
+  // ---------- «Раздача»: закрыть активную раздачу раньше срока (та же кнопка,
+  // что «Удалить раздачу» на самой странице «Раздача» — тут просто под рукой в
+  // настройках, чтобы не идти в конкретный раздел ради неё). Раздача сама
+  // «протухает» через 24 часа — тут только показываем, есть ли ещё живая ----------
+  const PAYOUT_BATCH_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+  async function loadClosePayoutState(){
+    const { data, error } = await db.from("payout_batches").select("created_at").eq("clan_id", profile.clan_id).maybeSingle();
+    if(error){ console.error(error); return; }
+    const active = !!data && (Date.now() - new Date(data.created_at).getTime()) <= PAYOUT_BATCH_MAX_AGE_MS;
+    document.getElementById("closePayoutBtn").disabled = !active;
+    document.getElementById("closePayoutNone").style.display = active ? "none" : "";
+    document.getElementById("closePayoutOk").style.display = "none";
+  }
+
+  document.getElementById("closePayoutBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("closePayoutBtn");
+    const errEl = document.getElementById("closePayoutError");
+    errEl.textContent = "";
+    btn.disabled = true;
+    const { error } = await db.from("payout_batches").delete().eq("clan_id", profile.clan_id);
+    if(error){
+      errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
+      btn.disabled = false;
+      return;
+    }
+    document.getElementById("closePayoutOk").style.display = "";
+    document.getElementById("closePayoutNone").style.display = "";
   });
 
   // ---------- «Коэффициент пати-лидерам»: свой множитель для каждого текущего
@@ -1452,7 +1490,7 @@
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(roleDisplayLabel(r)), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
   renderRoleLabelsList();
-  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadLootLeaderCoefficients(), loadWeeklyTaxAmount(), loadLootHideZero(), loadMinBoostPercent(), loadPayoutShowLeft()]);
+  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadLootLeaderCoefficients(), loadWeeklyTaxAmount(), loadLootHideZero(), loadMinBoostPercent(), loadPayoutShowLeft(), loadClosePayoutState()]);
   renderSectionOrder();
   renderSectionToggleList();
   renderDkpSectionToggleList();

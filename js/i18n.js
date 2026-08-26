@@ -748,6 +748,16 @@
       "Each party has its own multiplier: a party's final points = starting points × boost % × this coefficient. No row for a party — treated as 1.",
     ],
 
+    "admin.closePayoutTitle": ["Раздача", "Роздача", "Payout"],
+    "admin.closePayoutHint": [
+      "Голда, которую пати-лидеры видят в «Раздаче», держится 24 часа с момента «Раздать» в «ДКП Соло»/«ДКП Пати». Кнопка ниже закрывает её раньше срока — у всех пати-лидеров голда в «Раздаче» пропадёт сразу же (список «кто с каким лидером ходил» останется как есть).",
+      "Голда, яку паті-лідери бачать у «Роздачі», тримається 24 години з моменту «Роздати» в «ДКП Соло»/«ДКП Паті». Кнопка нижче закриває її раніше строку — у всіх паті-лідерів голда в «Роздачі» зникне одразу ж (список «хто з яким лідером ходив» лишиться як є).",
+      "The gold party leaders see in “Payout” lasts 24 hours from clicking “Distribute” in “DKP Solo”/“DKP Party”. The button below closes it early — every party leader's gold in “Payout” disappears immediately (the “who went with which leader” list stays as is).",
+    ],
+    "admin.closePayoutBtn": ["Закрыть раздачу", "Закрити роздачу", "Close distribution"],
+    "admin.closePayoutClosed": ["Раздача закрыта.", "Роздачу закрито.", "Distribution closed."],
+    "admin.closePayoutNoneActive": ["Сейчас нет активной раздачи.", "Зараз немає активної роздачі.", "There's no active distribution right now."],
+
     "admin.sectionsExistTitle": ["Какие разделы вообще есть", "Які розділи взагалі є", "Which sections exist at all"],
     "admin.sectionsExistHint": [
       "Полностью выключает раздел для всего клана — исчезает из меню у абсолютно всех, независимо от роли и от галочек в матрице ниже. «Админ-панель» выключить нельзя — иначе некому будет включить остальное обратно.",
