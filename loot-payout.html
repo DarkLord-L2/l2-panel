@@ -223,13 +223,19 @@
   // event_stats/is_party_leader по своему фильтру дат) и работает всегда, даже
   // без активной раздачи — тогда просто колонка «Голда» остаётся пустой
   const PAYOUT_BATCH_MAX_AGE_MS = 24 * 60 * 60 * 1000; // «висит» 24 часа
-  let dkpPayload = null; // { from, to, goldByNick: {nickname: gold}, source: "solo"|"party" }
+  let dkpPayload = null; // { from, to, goldByNick: {nickname: gold}, goldByNorm: Map(norm -> gold), source: "solo"|"party" }
   async function loadDkpPayload(){
     const { data } = await db.from("payout_batches").select("from_date, to_date, gold_by_nick, source, created_at").eq("clan_id", profile.clan_id).maybeSingle();
     if(!data || !data.gold_by_nick) return null;
     const ageMs = Date.now() - new Date(data.created_at).getTime();
     if(ageMs > PAYOUT_BATCH_MAX_AGE_MS) return null; // протухла — как будто её и нет
-    return { from: data.from_date, to: data.to_date, goldByNick: data.gold_by_nick, source: data.source };
+    // ключи gold_by_nick — ники из переписи («ДКП Соло»/«ДКП Пати» считают по ним),
+    // а тут ники берутся из сырого распознавания скрина (event_stats) — написание
+    // может чуть отличаться (0/O, регистр и т.п.), поэтому сопоставляем по
+    // normalizeNick, а не точным совпадением строки
+    const goldByNorm = new Map();
+    Object.entries(data.gold_by_nick).forEach(([nick, gold]) => goldByNorm.set(normalizeNick(nick), gold));
+    return { from: data.from_date, to: data.to_date, goldByNick: data.gold_by_nick, goldByNorm, source: data.source };
   }
   async function deleteDkpPayload(){
     await db.from("payout_batches").delete().eq("clan_id", profile.clan_id);
@@ -312,7 +318,9 @@
   // null (не 0 — 0 читалось бы как «посчитано и вышло 0», а тут просто нечем
   // считать); рендерящий код сам решает, показать число или прочерк
   function goldOf(nick){
-    return dkpPayload ? (dkpPayload.goldByNick[nick] || 0) : null;
+    if(!dkpPayload) return null;
+    const gold = dkpPayload.goldByNorm.get(normalizeNick(nick));
+    return gold || 0;
   }
   function fmtGold(gold){
     return gold === null ? "—" : Math.round(gold).toLocaleString(L2I18n.locale());
