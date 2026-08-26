@@ -60,8 +60,12 @@
   .rw-party-badge{ flex:none; font-size:11px; padding:3px 9px; border-radius:999px; border:1px solid var(--border); color: var(--text-dim); }
   .rw-tag-badge{ flex:none; font-size:11px; padding:3px 9px; border-radius:999px; border:1px dashed var(--border-lit); color: var(--text-dim); }
 
-  /* приписка тем, кто ни разу не отмечен ни в одном attendance_entries за всё время */
-  .rw-no-attendance{ font-size:11px; color: var(--danger-lit); }
+  /* приписка тем, кто ни разу не отмечен ни в одном attendance_entries за всё время —
+     бейдж справа, в одном ряду с «Без пати»/меткой отдельного списка */
+  .rw-no-attendance{
+    flex:none; font-size:11px; padding:3px 9px; border-radius:999px;
+    border:1px solid var(--danger-lit); color: var(--danger-lit);
+  }
 
   /* пикер класса — тот же, что в «Группах»: кнопка с иконкой + поиск, до 4 профессий,
      у каждой свой уровень; открытый список разворачивается на всё окно */
@@ -115,6 +119,7 @@
         <button type="button" class="rw-tab active" data-mode="alpha" data-i18n="roster.tabAlpha">По алфавиту</button>
         <button type="button" class="rw-tab" data-mode="party" data-i18n="roster.tabParty">По пати</button>
         <button type="button" class="rw-tab" data-mode="class" data-i18n="roster.tabClass">По профессиям</button>
+        <button type="button" class="rw-tab" data-mode="noattend" data-i18n="roster.tabNeverAttended">Не посещали</button>
         <button type="button" class="rw-tab" id="tagTab" data-mode="tag" style="display:none;"></button>
       </div>
       <input type="text" class="rw-search" id="rwSearch" data-i18n-attr="placeholder:census.searchPlaceholder" placeholder="Поиск по нику..." />
@@ -226,7 +231,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=19"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=23"></script>
+<script src="js/i18n.js?v=24"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -400,8 +405,9 @@
     const nameHtml = canOpenCabinetFor(nick)
       ? `<span class="rw-name rw-name-link" data-nick="${escapeHtml(nick)}">${escapeHtml(nick)}</span>`
       : `<span class="rw-name">${escapeHtml(nick)}</span>`;
-    const noAttendanceNote = neverAttended(nick)
-      ? `<span class="rw-no-attendance">${escapeHtml(L2I18n.t("roster.neverAttended", "(Не посетил ни одного мероприятия)"))}</span>`
+    // на вкладке «Не посещали» бейдж был бы у всех подряд — там и так понятно
+    const noAttendanceBadge = (neverAttended(nick) && viewMode !== "noattend")
+      ? `<span class="rw-no-attendance">${escapeHtml(L2I18n.t("roster.neverAttended", "Не посетил ни одного мероприятия"))}</span>`
       : "";
     return `<div class="rw-row">` +
       `<button type="button" class="rw-avatar-btn" data-nick="${escapeHtml(nick)}" ${isAdmin ? "" : "disabled"}>` +
@@ -409,9 +415,8 @@
       (subAvatars ? `<span class="rw-sub-avatar-row">${subAvatars}</span>` : "") +
       `</button>` +
       `<div class="rw-who">${nameHtml}` +
-      `<span class="rw-cls${clsText ? "" : " rw-cls-empty"}">${escapeHtml(clsText || L2I18n.t("cab.classNotSet", "Класс не указан"))}</span>` +
-      noAttendanceNote + `</div>` +
-      tagBadge + badge +
+      `<span class="rw-cls${clsText ? "" : " rw-cls-empty"}">${escapeHtml(clsText || L2I18n.t("cab.classNotSet", "Класс не указан"))}</span></div>` +
+      tagBadge + noAttendanceBadge + badge +
       `</div>`;
   }
 
@@ -460,6 +465,15 @@
       if(noClsFiltered.length){
         html += `<div class="rw-party-title">${L2I18n.t("roster.noClass", "Без профессии")}<span class="rw-party-count">${noClsFiltered.length}</span></div>`;
         html += noClsFiltered.map(renderRow).join("");
+      }
+    } else if(viewMode === "noattend"){
+      const list = sortTaggedLast(filterNicks(nicks.filter(n => neverAttended(n))));
+      html = list.map(renderRow).join("");
+      if(!list.length){
+        emptyEl.textContent = L2I18n.t("roster.noAttendanceListEmpty", "Такие не нашлись — все хоть раз да были на мероприятии.");
+        emptyEl.style.display = "";
+        body.innerHTML = "";
+        return;
       }
     } else if(viewMode === "tag"){
       const list = filterNicks(nicks.filter(n => taggedSet.has(n)));
