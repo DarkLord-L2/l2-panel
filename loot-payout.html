@@ -51,6 +51,33 @@
      приём подсветки, что и hover — рамка акцентным цветом, свой цвет бейджа */
   .lp-leader-row td{ border-color: var(--gold-dim); }
   .lp-leader-badge{ border-style:solid; border-color: var(--gold-dim); color: var(--gold); }
+
+  /* «Раздача» / «Архив» — та же схема переключателя, что filter-tab в «Налогах»/«Посещаемости» */
+  .lp-tabs{ display:flex; gap:6px; margin:2px 0 14px; }
+  .lp-tab{
+    font-family:inherit; font-size:12.5px; padding:7px 14px; border-radius:6px;
+    border:1px solid var(--border); background: var(--panel-2); color: var(--text-dim); cursor:pointer;
+  }
+  .lp-tab:hover{ border-color: var(--border-lit); color: var(--text); }
+  .lp-tab.active{ border-color: var(--border-lit); background: var(--panel); color: var(--gold); }
+
+  /* архив — карточка на каждую раздачу, свёрнута по умолчанию (только шапка) */
+  .lp-archive-entry{
+    background: var(--panel-2); border:1px solid var(--border-lit); border-radius:10px;
+    margin:0 0 10px; overflow:hidden;
+  }
+  .lp-archive-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; flex-wrap:wrap; }
+  .lp-archive-head-info{ display:flex; flex-direction:column; gap:2px; }
+  .lp-archive-head-info b{ font-size:13.5px; color: var(--text); }
+  .lp-archive-period{ font-size:11.5px; color: var(--text-dim); }
+  .lp-archive-source{ font-size:10.5px; color: var(--text-dim); }
+  .lp-archive-head-actions{ display:flex; gap:8px; flex:none; }
+  .lp-archive-body{ padding:0 14px 14px; display:flex; flex-direction:column; gap:14px; }
+  .lp-archive-leader h3{ margin:0 0 6px; font-size:13px; color: var(--gold); }
+  table.lp-archive-table{ border-collapse:collapse; width:100%; max-width:420px; font-size:12.5px; }
+  table.lp-archive-table td{ padding:5px 10px; border-bottom:1px solid var(--border); }
+  table.lp-archive-table td.lp-num{ text-align:right; white-space:nowrap; font-variant-numeric: tabular-nums; }
+  tr.lp-archive-leader-row td{ font-weight:600; }
 </style>
 </head>
 <body>
@@ -60,10 +87,20 @@
     <h1 data-i18n="payout.title">Раздача</h1>
   </div>
 
-  <section class="card">
+  <div class="lp-tabs" id="lpTabs" style="display:none;">
+    <button type="button" class="lp-tab active" id="lpTabCurrent" data-i18n="payout.tabCurrent">Раздача</button>
+    <button type="button" class="lp-tab" id="lpTabArchive" data-i18n="payout.tabArchive">Архив</button>
+  </div>
+
+  <section class="card" id="lpCurrentView">
     <p class="hint" id="lpMyLeaderInfo" style="margin:0 0 12px; display:none;"></p>
     <p class="hint" id="lpPeriodInfo" style="margin:0 0 12px; display:none;"></p>
-    <button class="btn btn-danger" id="lpDeleteBatchBtn" style="display:none; margin:0 0 12px;" data-i18n="payout.deleteBatchBtn">Удалить раздачу</button>
+    <div class="lp-copy-row" id="lpBatchActions" style="display:none; margin:0 0 12px;">
+      <button class="btn" id="lpArchiveBtn" data-i18n="payout.archiveBtn">Занести в архив</button>
+      <button class="btn btn-danger" id="lpDeleteBatchBtn" data-i18n="payout.deleteBatchBtn">Удалить раздачу</button>
+    </div>
+    <p class="ok-msg" id="lpArchiveOk" style="display:none;" data-i18n="payout.archivedOk">Занесено в архив.</p>
+    <p class="error-msg" id="lpArchiveError"></p>
 
     <div class="lp-filters" id="lpAdminFilters">
       <div class="field">
@@ -98,11 +135,16 @@
     </div>
     <p class="empty-hint" id="lpEmpty" style="display:none;"></p>
   </section>
+
+  <section class="card" id="lpArchiveView" style="display:none;">
+    <div id="lpArchiveList"></div>
+    <p class="empty-hint" id="lpArchiveEmpty" style="display:none;" data-i18n="payout.archiveEmpty">Архив пуст — раздачи туда попадают только по кнопке «Занести в архив».</p>
+  </section>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=19"></script>
-<script src="js/i18n.js?v=20"></script>
+<script src="js/i18n.js?v=21"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -241,7 +283,7 @@
     // normalizeNick, а не точным совпадением строки
     const goldByNorm = new Map();
     Object.entries(data.gold_by_nick).forEach(([nick, gold]) => goldByNorm.set(normalizeNick(nick), gold));
-    return { from: data.from_date, to: data.to_date, goldByNick: data.gold_by_nick, goldByNorm, source: data.source };
+    return { from: data.from_date, to: data.to_date, goldByNick: data.gold_by_nick, goldByNorm, source: data.source, createdAt: data.created_at };
   }
   async function deleteDkpPayload(){
     await db.from("payout_batches").delete().eq("clan_id", profile.clan_id);
@@ -346,6 +388,42 @@
     return gold === null ? "—" : Math.round(gold).toLocaleString(L2I18n.locale());
   }
 
+  // общая для показа и для архивации математика: доли, голда, поровну поделённая
+  // голда ушедших из клана, сортировка. Возвращает leaderRow отдельно (он не
+  // участвует в сортировке участников, всегда идёт первой строкой) и ВСЕХ
+  // участников отсортированными (включая ушедших — фильтр показа/скрытия
+  // ушедших применяется только при показе, архив хранит всё как есть)
+  function computeLeaderRows(leader){
+    const entry = leaderStats.get(leader);
+    const leaderGold = goldOf(leader);
+    const memberRows = Array.from(entry.members.entries())
+      .map(([nickname, count]) => ({ nickname, count, left: isLeftClan(nickname) }));
+
+    // ушедшие из клана не забирают голду сами — их сумма делится поровну между
+    // оставшимися в клане в этом же списке; строка ушедшего (если её вообще
+    // показываем) при этом отображает его исходную, ещё не поделённую сумму —
+    // просто для справки, сколько ему причиталось бы
+    const stayRows = memberRows.filter(r => !r.left);
+    const redistributePool = memberRows.filter(r => r.left).reduce((s, r) => s + (goldOf(r.nickname) || 0), 0);
+    const perStayBonus = stayRows.length ? redistributePool / stayRows.length : 0;
+    memberRows.forEach(r => {
+      const base = goldOf(r.nickname);
+      r.gold = r.left || base === null ? base : base + perStayBonus;
+    });
+
+    const sortByGold = (a, b) => {
+      if(a.gold === null || b.gold === null) return (a.gold === null) - (b.gold === null) || a.nickname.localeCompare(b.nickname);
+      return b.gold - a.gold || a.nickname.localeCompare(b.nickname);
+    };
+    memberRows.sort(sortByGold);
+
+    // «Доли» у лидера — не то же самое, что у участников (там это число раздач
+    // именно под ЭТИМ лидером), но параллельный смысл есть: сколько раз он сам
+    // водил раздачу за период — тот же entry.partyCount
+    const leaderRow = { nickname: leader, count: entry.partyCount, left: isLeftClan(leader), gold: leaderGold, isLeader: true };
+    return { leaderRow, memberRows, stayRows: stayRows.slice().sort(sortByGold) };
+  }
+
   function renderForLeader(leader){
     const contentEl = document.getElementById("lpContent");
     const emptyEl = document.getElementById("lpEmpty");
@@ -362,41 +440,12 @@
     emptyEl.style.display = "none";
 
     const entry = leaderStats.get(leader);
-    // сама голда лидера теперь показывается его строкой в таблице (первой) —
-    // тут отдельно дублировать её незачем
-    const leaderGold = goldOf(leader);
     document.getElementById("lpSummary").innerHTML =
       `<span class="stat">${L2I18n.t("payout.ledCount", "Раздач под руководством: ")}<b>${entry.partyCount}</b></span>` +
       `<span class="stat">${L2I18n.t("payout.uniqueMembers", "Разных участников: ")}<b>${entry.members.size}</b></span>`;
 
-    const memberRows = Array.from(entry.members.entries())
-      .map(([nickname, count]) => ({ nickname, count, left: isLeftClan(nickname) }));
-
-    // ушедшие из клана не забирают голду сами — их сумма делится поровну между
-    // оставшимися в клане в этом же списке; строка ушедшего (если её вообще
-    // показываем) при этом отображает его исходную, ещё не поделённую сумму —
-    // просто для справки, сколько ему причиталось бы
-    const stayRows = memberRows.filter(r => !r.left);
-    const redistributePool = memberRows.filter(r => r.left).reduce((s, r) => s + (goldOf(r.nickname) || 0), 0);
-    const perStayBonus = stayRows.length ? redistributePool / stayRows.length : 0;
-    memberRows.forEach(r => {
-      const base = goldOf(r.nickname);
-      r.gold = r.left || base === null ? base : base + perStayBonus;
-    });
-
-    // сортировка — по голде по убыванию (null — «нечем считать» — в самый низ);
-    // сам пати-лидер в эту сортировку не попадает, он всегда первой строкой
-    const sortByGold = (a, b) => {
-      if(a.gold === null || b.gold === null) return (a.gold === null) - (b.gold === null) || a.nickname.localeCompare(b.nickname);
-      return b.gold - a.gold || a.nickname.localeCompare(b.nickname);
-    };
-    memberRows.sort(sortByGold);
-
-    const visibleMemberRows = showLeftInPayout ? memberRows : stayRows.slice().sort(sortByGold);
-    // «Доли» у лидера — не то же самое, что у участников (там это число раздач
-    // именно под ЭТИМ лидером), но параллельный смысл есть: сколько раз он сам
-    // водил раздачу за период — тот же entry.partyCount, что в сводке выше
-    const leaderRow = { nickname: leader, count: entry.partyCount, left: isLeftClan(leader), gold: leaderGold, isLeader: true };
+    const { leaderRow, memberRows, stayRows } = computeLeaderRows(leader);
+    const visibleMemberRows = showLeftInPayout ? memberRows : stayRows;
     currentRows = [leaderRow, ...visibleMemberRows];
 
     const body = document.getElementById("lpBody");
@@ -464,29 +513,158 @@
   // удалить активную раздачу раньше срока (24ч) — сразу у всех в клане пропадёт
   // голда в этом разделе, список «кто кого водил» останется как есть
   document.getElementById("lpDeleteBatchBtn").addEventListener("click", async () => {
-    const btn = document.getElementById("lpDeleteBatchBtn");
-    btn.disabled = true;
+    const actionsEl = document.getElementById("lpBatchActions");
+    actionsEl.querySelectorAll("button").forEach(b => b.disabled = true);
     await deleteDkpPayload();
     dkpPayload = null;
-    btn.style.display = "none";
+    actionsEl.style.display = "none";
     const hintEl = document.getElementById("lpNoGoldHint");
     hintEl.textContent = L2I18n.t("payout.noGoldHint",
       "Голда не показана — нажмите «Раздать» в «ДКП Соло»/«ДКП Пати» сразу после «Разделить дроп».");
     hintEl.style.display = "";
     renderForLeader(document.getElementById("leaderSelect").value || null);
+    actionsEl.querySelectorAll("button").forEach(b => b.disabled = false);
+  });
+
+  // «Занести в архив» — снимок ТЕКУЩЕЙ активной раздачи (payload) целиком, для
+  // всех пати-лидеров сразу, кнопкой, вручную — ничего не пишется в архив само
+  // по себе при каждом «Раздать», чтобы тестовые/случайные разделения дропа
+  // туда не попадали. leaderStats/leaderOrder могли уехать на другой период,
+  // если админ до этого просто листал фильтр дат тут же на странице — пересчитываем
+  // заново строго под период самой раздачи, чтобы в архив не утекли чужие данные
+  document.getElementById("lpArchiveBtn").addEventListener("click", async () => {
+    if(!dkpPayload) return;
+    const btn = document.getElementById("lpArchiveBtn");
+    const errEl = document.getElementById("lpArchiveError");
+    const okEl = document.getElementById("lpArchiveOk");
+    errEl.textContent = "";
+    okEl.style.display = "none";
+    btn.disabled = true;
+
+    await loadPayoutStats(dkpPayload.from, dkpPayload.to);
+    const leaders = leaderOrder.map(leader => {
+      const { leaderRow, memberRows } = computeLeaderRows(leader);
+      return {
+        leader,
+        leaderGold: leaderRow.gold,
+        partyCount: leaderRow.count,
+        members: memberRows.map(r => ({ nickname: r.nickname, count: r.count, gold: r.gold, left: r.left })),
+      };
+    });
+
+    const { error } = await db.from("payout_archive").insert({
+      clan_id: profile.clan_id,
+      from_date: dkpPayload.from || null,
+      to_date: dkpPayload.to || null,
+      split_date: dkpPayload.createdAt,
+      source: dkpPayload.source,
+      archived_by: profile.id,
+      data: { leaders },
+    });
+
+    if(error){
+      errEl.textContent = L2I18n.t("payout.archiveFailed", "Не удалось занести в архив: ") + error.message;
+    } else {
+      okEl.style.display = "";
+      setTimeout(() => { okEl.style.display = "none"; }, 3000);
+      archiveListStale = true;
+    }
+
+    // возвращаем на экране то, что админ смотрел до нажатия кнопки (поля
+    // дат на странице не трогали — reload() сам пересчитает под них)
+    await reload();
     btn.disabled = false;
   });
+
+  // ---------- архив: список прошлых раздач, свёрнутые карточки, удаление ----------
+  let archiveEntries = [];
+  let archiveListStale = true; // перезагрузить при следующем открытии вкладки «Архив»
+  async function loadArchiveList(){
+    const { data, error } = await db
+      .from("payout_archive")
+      .select("id, from_date, to_date, split_date, source, data")
+      .order("split_date", { ascending: false });
+    archiveEntries = error ? [] : (data || []);
+    archiveListStale = false;
+  }
+  function fmtDateTime(iso){
+    const d = new Date(iso);
+    const pad2 = n => String(n).padStart(2, "0");
+    return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  }
+  function periodLabelOf(entry){
+    if(!entry.from_date && !entry.to_date) return L2I18n.t("payout.periodAllTimeShort", "за всё время");
+    return `${entry.from_date ? fmtDate(entry.from_date) : "…"} – ${entry.to_date ? fmtDate(entry.to_date) : "…"}`;
+  }
+  function renderArchiveList(){
+    const wrap = document.getElementById("lpArchiveList");
+    document.getElementById("lpArchiveEmpty").style.display = archiveEntries.length ? "none" : "";
+    wrap.innerHTML = archiveEntries.map(entry => {
+      const leaders = (entry.data?.leaders || []).map(l => {
+        const rows = [{ nickname: l.leader, gold: l.leaderGold, isLeader: true, left: false }, ...l.members];
+        const rowsHtml = rows.map(r => {
+          const leaderBadge = r.isLeader ? ` <span class="lp-tag-badge lp-leader-badge">${escapeHtml(L2I18n.t("payout.leaderBadge", "пати-лидер"))}</span>` : "";
+          const cross = r.left ? ` <span class="lp-left-cross">✗</span>` : "";
+          return `<tr${r.isLeader ? ' class="lp-archive-leader-row"' : ""}><td>${escapeHtml(r.nickname)}${leaderBadge}${cross}</td><td class="lp-num">${fmtGold(r.gold)}</td></tr>`;
+        }).join("");
+        return `<div class="lp-archive-leader"><h3>${escapeHtml(l.leader)}</h3><table class="lp-archive-table"><tbody>${rowsHtml}</tbody></table></div>`;
+      }).join("");
+      const sourceLabel = entry.source === "party" ? L2I18n.t("section.loot_split_party", "ДКП Пати") : entry.source === "solo" ? L2I18n.t("section.loot_split", "ДКП Соло") : "";
+      return `<div class="lp-archive-entry" data-id="${entry.id}">` +
+        `<div class="lp-archive-head">` +
+        `<div class="lp-archive-head-info"><b>${fmtDateTime(entry.split_date)}</b><span class="lp-archive-period">${escapeHtml(periodLabelOf(entry))}</span>` +
+        (sourceLabel ? `<span class="lp-archive-source">${escapeHtml(sourceLabel)}</span>` : "") + `</div>` +
+        `<div class="lp-archive-head-actions">` +
+        `<button type="button" class="btn btn-ghost lp-archive-toggle" data-i18n="payout.archiveExpandBtn">Показать</button>` +
+        `<button type="button" class="btn btn-danger lp-archive-delete" data-i18n="payout.archiveDeleteBtn">Удалить</button>` +
+        `</div></div>` +
+        `<div class="lp-archive-body" style="display:none;">${leaders || ""}</div>` +
+        `</div>`;
+    }).join("");
+
+    wrap.querySelectorAll(".lp-archive-entry").forEach(card => {
+      const body = card.querySelector(".lp-archive-body");
+      const toggleBtn = card.querySelector(".lp-archive-toggle");
+      toggleBtn.addEventListener("click", () => {
+        const open = body.style.display === "none";
+        body.style.display = open ? "" : "none";
+        toggleBtn.textContent = open ? L2I18n.t("payout.archiveCollapseBtn", "Скрыть") : L2I18n.t("payout.archiveExpandBtn", "Показать");
+      });
+      card.querySelector(".lp-archive-delete").addEventListener("click", async () => {
+        const id = card.dataset.id;
+        if(!confirm(L2I18n.t("payout.confirmDeleteArchiveEntry", "Удалить эту раздачу из архива? Это необратимо."))) return;
+        await db.from("payout_archive").delete().eq("id", id);
+        archiveEntries = archiveEntries.filter(e => e.id !== id);
+        renderArchiveList();
+      });
+    });
+  }
+
+  // ---------- вкладки «Раздача»/«Архив» — только у админа ----------
+  document.getElementById("lpTabCurrent").addEventListener("click", () => switchTab("current"));
+  document.getElementById("lpTabArchive").addEventListener("click", async () => {
+    if(archiveListStale) await loadArchiveList();
+    renderArchiveList();
+    switchTab("archive");
+  });
+  function switchTab(tab){
+    document.getElementById("lpTabCurrent").classList.toggle("active", tab === "current");
+    document.getElementById("lpTabArchive").classList.toggle("active", tab === "archive");
+    document.getElementById("lpCurrentView").style.display = tab === "current" ? "" : "none";
+    document.getElementById("lpArchiveView").style.display = tab === "archive" ? "" : "none";
+  }
 
   dkpPayload = await loadDkpPayload();
 
   if(isAdmin){
+    document.getElementById("lpTabs").style.display = "";
     if(!dkpPayload){
       const hintEl = document.getElementById("lpNoGoldHint");
       hintEl.textContent = L2I18n.t("payout.noGoldHint",
         "Голда не показана — нажмите «Раздать» в «ДКП Соло»/«ДКП Пати» сразу после «Разделить дроп».");
       hintEl.style.display = "";
     } else {
-      document.getElementById("lpDeleteBatchBtn").style.display = "";
+      document.getElementById("lpBatchActions").style.display = "";
       // подставляем период активной раздачи, чтобы «кто кого водил» сразу
       // считалось за те же даты, а не за всё время; менять дальше можно как обычно
       document.getElementById("fromDate").value = dkpPayload.from || "";
