@@ -1188,6 +1188,16 @@
     document.getElementById("footTools").classList.toggle("open");
     document.getElementById("footToggleBtn").classList.toggle("open");
   });
+  // закрыть по клику куда угодно ещё — раньше закрывалось только повторным
+  // нажатием на саму стрелку
+  document.addEventListener("click", (e) => {
+    const footTools = document.getElementById("footTools");
+    const footToggleBtn = document.getElementById("footToggleBtn");
+    if(!footTools.classList.contains("open")) return;
+    if(footTools.contains(e.target) || footToggleBtn.contains(e.target)) return;
+    footTools.classList.remove("open");
+    footToggleBtn.classList.remove("open");
+  });
   document.getElementById("editModeBtn").addEventListener("click", () => {
     editMode = !editMode;
     document.getElementById("editModeBtn").textContent = editMode ? L2I18n.t("gearCheck.editModeDoneBtn", "✓ Готово") : L2I18n.t("gearCheck.editModeBtn", "✎ Редактировать");

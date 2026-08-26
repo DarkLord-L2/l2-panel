@@ -812,6 +812,15 @@
     }
   }
 
+  // «+ Добавить мероприятие» на карточке дня закрывается кликом куда угодно ещё —
+  // сама кнопка и форма внутри останавливают всплытие (см. addRow/toggle выше),
+  // так что сюда долетают только клики точно снаружи; один слушатель на всех
+  // дней сразу, а не по одному на карточку (карточки дня пересоздаются при
+  // каждой перерисовке недели)
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".day-add-row.open").forEach(row => row.classList.remove("open"));
+  });
+
   function renderEventBlock(container, ev){
     const evBlock = document.createElement("div");
     evBlock.className = "event-block";
