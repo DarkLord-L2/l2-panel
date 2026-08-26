@@ -38,6 +38,7 @@
     "navgroup.uchet": ["Учёт клана", "Облік клану", "Clan Records"],
     "navgroup.dkp": ["ДКП", "ДКП", "DKP"],
     "shell.signOut": ["Выйти", "Вийти", "Sign out"],
+    "shell.pinWidget": ["Закреплено", "Закріплено", "Pinned"],
     "shell.profileNotFoundTitle": ["⚠ Профиль не найден", "⚠ Профіль не знайдено", "⚠ Profile not found"],
     "shell.profileNotFoundHint": [
       "Ваш логин существует, но для него не создана запись профиля. Обратитесь к клан-лидеру.",

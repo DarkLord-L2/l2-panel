@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=15" />
+<link rel="stylesheet" href="js/theme.css?v=16" />
 </head>
 <body>
 
@@ -18,6 +18,13 @@
     <span class="who-chevron">▾</span>
     <div class="who-menu" id="whoMenu">
       <div class="lang-switch" id="langSwitch"></div>
+      <div class="pin-toggle-row" id="pinToggleRow">
+        <span data-i18n="shell.pinWidget">Закреплено</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="pinWidgetToggle" />
+          <span class="track"></span>
+        </label>
+      </div>
       <div class="who-menu-sep"></div>
       <button type="button" class="who-menu-item" id="whoMenuCabinet" data-i18n="section.my_cabinet">Мой кабинет</button>
       <button type="button" class="who-menu-item who-menu-danger" id="signOutBtn" data-i18n="shell.signOut">Выйти</button>
@@ -37,7 +44,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=19"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=17"></script>
+<script src="js/i18n.js?v=18"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -291,6 +298,30 @@
   });
   document.addEventListener("click", (e) => {
     if(!whoWidget.contains(e.target)) whoWidget.classList.remove("open");
+  });
+
+  // «Закрепить в сайдбаре» — виджет профиля переезжает из floating-оверлея в
+  // обычный элемент сайдбара, под брендом. Личная настройка интерфейса
+  // (как язык, ширина таблиц) — localStorage на аккаунт, не в БД клана.
+  document.getElementById("pinToggleRow").addEventListener("click", (e) => e.stopPropagation());
+  const PIN_WIDGET_KEY = "l2WhoWidgetPinned:" + profile.id;
+  const pinWidgetToggle = document.getElementById("pinWidgetToggle");
+  const sidebarBrand = document.getElementById("brand");
+
+  function applyWidgetPin(pinned){
+    whoWidget.classList.toggle("pinned", pinned);
+    if(pinned){
+      sidebarBrand.insertAdjacentElement("afterend", whoWidget);
+    } else {
+      document.getElementById("appShell").insertBefore(whoWidget, document.getElementById("appShell").firstChild);
+    }
+  }
+  const widgetPinned = localStorage.getItem(PIN_WIDGET_KEY) === "1";
+  pinWidgetToggle.checked = widgetPinned;
+  applyWidgetPin(widgetPinned);
+  pinWidgetToggle.addEventListener("change", (e) => {
+    localStorage.setItem(PIN_WIDGET_KEY, e.target.checked ? "1" : "0");
+    applyWidgetPin(e.target.checked);
   });
 
   // статус — не через data-i18n (значение либо перевод, либо кастомное название
