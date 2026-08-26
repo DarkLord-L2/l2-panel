@@ -221,11 +221,13 @@ input[type="date"]{ color-scheme: dark; }
 .toggle-switch input:checked + .track{ background: rgba(76,154,99,.35); }
 .toggle-switch input:checked + .track::before{ transform: translateX(14px); background: var(--ok); }
 
-/* «закреплённый» режим — виджет профиля переезжает в сайдбар и ведёт себя как
-   обычный элемент разметки (не floating-оверлей поверх контента); position:relative
-   (не static) — иначе .who-menu (position:absolute) потеряет точку отсчёта и
-   уедет позиционироваться от всей страницы вместо самого виджета */
-.who-widget.pinned{ position:relative; top:auto; right:auto; box-shadow:none; margin:0 8px 12px; }
+/* «закреплённый» режим — виджет остаётся в том же углу (справа сверху), просто
+   перестаёт «плавать» поверх контента: сам контент получает запас сверху
+   (.app-shell.who-pinned .content), чтобы заголовок/кнопки раздела никогда не
+   оказывались под виджетом. Без тени — чтобы выглядело как часть разметки,
+   а не как приподнятая над контентом карточка */
+.who-widget.pinned{ box-shadow:none; }
+.app-shell.who-pinned .content{ padding-top:78px; }
 
 /* переключатель языка (UA/RU/EU) — используется в шапке index.html и на login.html,
    рендерится через L2I18n.renderSwitcher() из js/i18n.js */

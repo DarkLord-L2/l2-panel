@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=16" />
+<link rel="stylesheet" href="js/theme.css?v=17" />
 </head>
 <body>
 
@@ -300,21 +300,18 @@
     if(!whoWidget.contains(e.target)) whoWidget.classList.remove("open");
   });
 
-  // «Закрепить в сайдбаре» — виджет профиля переезжает из floating-оверлея в
-  // обычный элемент сайдбара, под брендом. Личная настройка интерфейса
-  // (как язык, ширина таблиц) — localStorage на аккаунт, не в БД клана.
+  // «Закреплено» — виджет остаётся в том же углу (справа сверху), просто контент
+  // получает запас сверху, чтобы виджет по нему не «плавал» и не мог ничего
+  // перекрыть. Личная настройка интерфейса (как язык) — localStorage на аккаунт,
+  // не в БД клана.
   document.getElementById("pinToggleRow").addEventListener("click", (e) => e.stopPropagation());
   const PIN_WIDGET_KEY = "l2WhoWidgetPinned:" + profile.id;
   const pinWidgetToggle = document.getElementById("pinWidgetToggle");
-  const sidebarBrand = document.getElementById("brand");
+  const appShell = document.getElementById("appShell");
 
   function applyWidgetPin(pinned){
     whoWidget.classList.toggle("pinned", pinned);
-    if(pinned){
-      sidebarBrand.insertAdjacentElement("afterend", whoWidget);
-    } else {
-      document.getElementById("appShell").insertBefore(whoWidget, document.getElementById("appShell").firstChild);
-    }
+    appShell.classList.toggle("who-pinned", pinned);
   }
   const widgetPinned = localStorage.getItem(PIN_WIDGET_KEY) === "1";
   pinWidgetToggle.checked = widgetPinned;
