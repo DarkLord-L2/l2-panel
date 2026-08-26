@@ -449,6 +449,10 @@
       hintEl.style.display = "";
     } else {
       document.getElementById("lpDeleteBatchBtn").style.display = "";
+      // подставляем период активной раздачи, чтобы «кто кого водил» сразу
+      // считалось за те же даты, а не за всё время; менять дальше можно как обычно
+      document.getElementById("fromDate").value = dkpPayload.from || "";
+      document.getElementById("toDate").value = dkpPayload.to || "";
     }
     await Promise.all([loadCensus(), loadRosterTag(), loadPayoutShowLeft()]);
     await reload();
