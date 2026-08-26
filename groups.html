@@ -41,7 +41,10 @@
     border:1px solid var(--border); border-radius:5px; background: var(--panel-2);
   }
 
-  .group-detail-head{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:space-between; }
+  /* padding-right — эта строка на той же высоте, что плавающий виджет профиля
+     справа сверху (position:fixed в index.html); без запаса «Переименовать»/
+     «Скрыть группу» уезжают ему под низ и становятся некликабельными */
+  .group-detail-head{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:space-between; padding-right:260px; }
   .group-name-row{ display:flex; align-items:center; gap:10px; flex:1; min-width:200px; }
   .group-name-row input{ font-size:18px; padding:8px 12px; flex:1; max-width:360px; }
   .group-detail-tools{ display:flex; gap:8px; }
