@@ -239,6 +239,19 @@
     <p class="error-msg" id="minBoostError"></p>
   </section>
 
+  <section class="card">
+    <h2 data-i18n="admin.payoutShowLeftTitle">Ушедшие из клана в «Раздаче»</h2>
+    <div class="section-toggle-row">
+      <span class="label" data-i18n="admin.payoutShowLeftLabel">Показывать в списке тех, кто уже вышел из клана</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="payoutShowLeftInput" />
+        <span class="track"></span>
+      </label>
+    </div>
+    <p class="hint" data-i18n="admin.payoutShowLeftHint">Их голда всегда делится поровну между оставшимися в клане в том же списке лидера — этот переключатель влияет только на то, видна ли сама строка ушедшего (с его исходной, ещё не поделённой суммой, для справки). Выключено — строка просто скрыта, деление остаётся тем же.</p>
+    <p class="error-msg" id="payoutShowLeftError"></p>
+  </section>
+
   <div class="admin-coef-row">
     <section class="card">
       <h2 data-i18n="admin.leaderCoefTitle">Коэффициент пати-лидерам</h2>
@@ -364,7 +377,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=18"></script>
-<script src="js/i18n.js?v=5"></script>
+<script src="js/i18n.js?v=6"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -525,6 +538,30 @@
     );
     if(error) errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
     input.disabled = false;
+  });
+
+  // ---------- «Раздача»: показывать ли в списке тех, кто уже вышел из клана
+  // (их голда всё равно всегда делится между оставшимися — это только видимость строки) ----------
+  async function loadPayoutShowLeft(){
+    const { data, error } = await db.from("loot_split_settings").select("show_left_in_payout").eq("clan_id", profile.clan_id).maybeSingle();
+    if(error){ console.error(error); return; }
+    document.getElementById("payoutShowLeftInput").checked = data?.show_left_in_payout ?? true;
+  }
+
+  document.getElementById("payoutShowLeftInput").addEventListener("change", async () => {
+    const cb = document.getElementById("payoutShowLeftInput");
+    const errEl = document.getElementById("payoutShowLeftError");
+    errEl.textContent = "";
+    cb.disabled = true;
+    const { error } = await db.from("loot_split_settings").upsert(
+      { clan_id: profile.clan_id, show_left_in_payout: cb.checked },
+      { onConflict: "clan_id" }
+    );
+    if(error){
+      errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
+      cb.checked = !cb.checked;
+    }
+    cb.disabled = false;
   });
 
   // ---------- «Коэффициент пати-лидерам»: свой множитель для каждого текущего
@@ -1309,7 +1346,7 @@
   await loadLookups();
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(L2I18n.t("role." + r.key, r.label)), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
-  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadLootLeaderCoefficients(), loadWeeklyTaxAmount(), loadLootHideZero(), loadMinBoostPercent()]);
+  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadLootLeaderCoefficients(), loadWeeklyTaxAmount(), loadLootHideZero(), loadMinBoostPercent(), loadPayoutShowLeft()]);
   renderSectionOrder();
   renderSectionToggleList();
   renderLootCoefList();

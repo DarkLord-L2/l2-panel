@@ -672,6 +672,13 @@
     ],
     "admin.minBoostLabel": ["Минимальный %", "Мінімальний %", "Minimum %"],
     "admin.minBoostRange": ["Число от 0 до 100.", "Число від 0 до 100.", "A number from 0 to 100."],
+    "admin.payoutShowLeftTitle": ["Ушедшие из клана в «Раздаче»", "Ті, хто вийшов з клану, у «Роздачі»", "Members who left the clan, in “Payout”"],
+    "admin.payoutShowLeftLabel": ["Показывать в списке тех, кто уже вышел из клана", "Показувати у списку тих, хто вже вийшов з клану", "Show those who already left the clan in the list"],
+    "admin.payoutShowLeftHint": [
+      "Их голда всегда делится поровну между оставшимися в клане в том же списке лидера — этот переключатель влияет только на то, видна ли сама строка ушедшего (с его исходной, ещё не поделённой суммой, для справки). Выключено — строка просто скрыта, деление остаётся тем же.",
+      "Їхня голда завжди ділиться порівну між тими, хто лишився в клані, у тому самому списку лідера — цей перемикач впливає тільки на те, чи видно саму строку того, хто вийшов (з його вихідною, ще не поділеною сумою, для довідки). Вимкнено — рядок просто прихований, поділ лишається тим самим.",
+      "Their gold is always split evenly among those still in the clan within the same leader's list — this toggle only controls whether the departed member's own row is shown (with their original, not-yet-split amount, for reference). Off — the row is simply hidden, the split stays the same.",
+    ],
     "admin.leaderCoefTitle": ["Коэффициент пати-лидерам", "Коефіцієнт паті-лідерам", "Party leader coefficient"],
     "admin.leaderCoefHint": [
       "Свой множитель для каждого текущего пати-лидера (Группы → лидер) — коэффициенты не складываются: у лидера этот множитель ЗАМЕНЯЕТ собой коэффициент профессии, а не добавляется поверх него. На саму пати и на «ДКП Соло» не влияет. Список — по тем, кто прямо сейчас отмечен лидером хоть одной пати; нет строки — считается как 1.",
