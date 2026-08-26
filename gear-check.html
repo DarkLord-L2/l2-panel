@@ -73,6 +73,10 @@
   .gc-row-menu:hover{ border-color: var(--border); color: var(--text); }
   .gc-score{ text-align:center; color: var(--gold); font-weight:700; }
   .gc-percent{ text-align:center; font-weight:700; }
+  /* «выдан мин.» — подставленный минимальный % буста (Админ-панель → «ДКП») у
+     тех, кто вообще ничего не отметил; тусклый и не жирный, чтобы не спутать
+     с настоящим измеренным процентом рядом */
+  .gc-min-badge{ display:inline-block; font-size:9.5px; font-weight:400; color: var(--text-dim); vertical-align:middle; margin-left:4px; }
   .gc-cell{ text-align:center; color: var(--text-dim); }
   /* все колонки-пункты одной ширины, чтобы иконки шли ровно, без разных промежутков */
   table.gc-table th.gc-col-item, table.gc-table td.gc-cell{ width:74px; min-width:74px; max-width:74px; }
@@ -485,7 +489,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=18"></script>
-<script src="js/i18n.js?v=3"></script>
+<script src="js/i18n.js?v=4"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -761,6 +765,15 @@
     (data || []).forEach(r => { if(r.enabled) valueSet.add(keyOf(r.nickname, r.item_id)); });
   }
 
+  // «Минимальный % буста» (Админ-панель → «ДКП») — применяется только тем, у кого
+  // реальный балл = 0 (ничего не отмечено); хоть один отмеченный пункт — минимум
+  // отменяется, приоритет у реального процента (см. percentOf ниже)
+  let minBoostPercent = 0;
+  async function loadMinBoostPercent(){
+    const { data } = await db.from("loot_split_settings").select("min_boost_percent").eq("clan_id", profile.clan_id).maybeSingle();
+    minBoostPercent = Number(data?.min_boost_percent) || 0;
+  }
+
   function itemsOfSection(secId){
     return items.filter(i => i.section_id === secId).sort((a,b)=> a.sort_order - b.sort_order || a.name.localeCompare(b.name));
   }
@@ -802,7 +815,12 @@
   function scoreOf(nick){
     return mergeGroups(orderedItems()).reduce((s, g) => s + groupScore(g, nick), 0);
   }
+  // минимум подставляется, только пока у человека реальный балл ровно 0 (ничего
+  // не отмечено) — хоть один отмеченный пункт сразу возвращает приоритет
+  // настоящему проценту, даже если тот ниже минимума
+  function isMinBoostApplied(nick){ return minBoostPercent > 0 && scoreOf(nick) === 0; }
   function percentOf(nick){
+    if(isMinBoostApplied(nick)) return minBoostPercent;
     const mx = maxScore();
     return mx ? (scoreOf(nick) / mx) * 100 : 0;
   }
@@ -872,8 +890,12 @@
       tdNick.appendChild(wrap);
       tr.appendChild(tdNick);
 
+      const minApplied = isMinBoostApplied(nick);
+      const minBadge = minApplied
+        ? ` <span class="gc-min-badge" title="${escapeHtml(L2I18n.t("gearCheck.minBoostAppliedTitle", "Ничего не отмечено — выдан минимальный % (Админ-панель → «ДКП»)"))}">${escapeHtml(L2I18n.t("gearCheck.minBoostAppliedBadge", "выдан мин."))}</span>`
+        : "";
       let rest = `<td class="gc-score">${score.toFixed(2)}</td>`;
-      rest += `<td class="gc-percent" style="color:${pctColor(pct)}">${pct.toFixed(2)}%</td>`;
+      rest += `<td class="gc-percent" style="color:${pctColor(pct)}">${pct.toFixed(2)}%${minBadge}</td>`;
       colGroups.forEach(group => {
         // у склеенных пунктов балл общий; зелёным — только когда включены все,
         // иначе видно, что часть группы у человека не отмечена
@@ -1513,7 +1535,7 @@
   document.getElementById("helpClose").addEventListener("click", () => { document.getElementById("helpOverlay").classList.remove("show"); unlockScroll(); });
   document.getElementById("helpOverlay").addEventListener("click", (e) => { if(e.target.id === "helpOverlay"){ e.currentTarget.classList.remove("show"); unlockScroll(); } });
 
-  await Promise.all([loadNicks(), loadStructure(), loadValues(), loadMemberInfo(), loadClassValues(), loadGroups()]);
+  await Promise.all([loadNicks(), loadStructure(), loadValues(), loadMemberInfo(), loadClassValues(), loadGroups(), loadMinBoostPercent()]);
 
   // сюда попали кликом по «Показать буст» на карточке участника в группе — сразу открыть её таблицу
   const params = new URLSearchParams(location.search);

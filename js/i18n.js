@@ -659,6 +659,14 @@
       "Вимкнено — видно весь склад з останнього перепису, навіть з 0 початкових балів. Увімкнено — ті, у кого початкових балів 0, зникають з таблиці.",
       "Off — the full roster from the latest census is shown, even with 0 starting points. On — those with 0 starting points disappear from the table.",
     ],
+    "admin.minBoostTitle": ["Минимальный % буста", "Мінімальний % бусту", "Minimum boost %"],
+    "admin.minBoostHint": [
+      "Применяется только к тем, у кого в «Проверке буста» не отмечено вообще ничего (реальный % = 0) — вместо 0% используется этот минимум, в том числе в «ДКП Соло»/«ДКП Пати». Как только у человека отмечен хоть один пункт — минимум отменяется, используется его настоящий процент, даже если он ниже минимума. 0 — выключено.",
+      "Застосовується тільки до тих, у кого в «Перевірці бусту» не відмічено взагалі нічого (реальний % = 0) — замість 0% використовується цей мінімум, у тому числі в «ДКП Соло»/«ДКП Паті». Щойно у людини відмічено хоч один пункт — мінімум скасовується, використовується її справжній відсоток, навіть якщо він нижчий за мінімум. 0 — вимкнено.",
+      "Applies only to those with nothing checked at all in “Gear Check” (real % = 0) — instead of 0%, this minimum is used, including in “DKP Solo”/“DKP Party”. As soon as even one item is checked, the minimum is dropped and their real percentage is used, even if it's lower than the minimum. 0 = disabled.",
+    ],
+    "admin.minBoostLabel": ["Минимальный %", "Мінімальний %", "Minimum %"],
+    "admin.minBoostRange": ["Число от 0 до 100.", "Число від 0 до 100.", "A number from 0 to 100."],
     "admin.leaderCoefTitle": ["Коэффициент пати-лидерам", "Коефіцієнт паті-лідерам", "Party leader coefficient"],
     "admin.leaderCoefHint": [
       "Свой множитель для каждого текущего пати-лидера (Группы → лидер) — коэффициенты не складываются: у лидера этот множитель ЗАМЕНЯЕТ собой коэффициент профессии, а не добавляется поверх него. На саму пати и на «ДКП Соло» не влияет. Список — по тем, кто прямо сейчас отмечен лидером хоть одной пати; нет строки — считается как 1.",
@@ -1411,6 +1419,12 @@
     "gearCheck.colMembers": ["Участники", "Учасники", "Members"],
     "gearCheck.colTotalPoints": ["Общие баллы", "Загальні бали", "Total points"],
     "gearCheck.colBoostPercent": ["Процент буста", "Відсоток бусту", "Gear %"],
+    "gearCheck.minBoostAppliedBadge": ["выдан мин.", "видано мін.", "min. applied"],
+    "gearCheck.minBoostAppliedTitle": [
+      "Ничего не отмечено — выдан минимальный % (Админ-панель → «ДКП»)",
+      "Нічого не відмічено — видано мінімальний % (Адмін-панель → «ДКП»)",
+      "Nothing checked — the minimum % was applied (Admin Panel → “DKP”)",
+    ],
     "gearCheck.addColumnTitle": ["Добавить столбец", "Додати стовпець", "Add column"],
     "gearCheck.classMenuTitle": ["Класс", "Клас", "Class"],
     "gearCheck.hasValue": ["есть", "є", "yes"],

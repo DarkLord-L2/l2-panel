@@ -229,6 +229,16 @@
     <p class="error-msg" id="lootHideZeroError"></p>
   </section>
 
+  <section class="card">
+    <h2 data-i18n="admin.minBoostTitle">Минимальный % буста</h2>
+    <p class="hint" data-i18n="admin.minBoostHint">Применяется только к тем, у кого в «Проверке буста» не отмечено вообще ничего (реальный % = 0) — вместо 0% используется этот минимум, в том числе в «ДКП Соло»/«ДКП Пати». Как только у человека отмечен хоть один пункт — минимум отменяется, используется его настоящий процент, даже если он ниже минимума. 0 — выключено.</p>
+    <div class="tax-amount-row">
+      <span class="label" data-i18n="admin.minBoostLabel">Минимальный %</span>
+      <input type="number" id="minBoostInput" step="1" min="0" max="100" />
+    </div>
+    <p class="error-msg" id="minBoostError"></p>
+  </section>
+
   <div class="admin-coef-row">
     <section class="card">
       <h2 data-i18n="admin.leaderCoefTitle">Коэффициент пати-лидерам</h2>
@@ -354,7 +364,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=18"></script>
-<script src="js/i18n.js?v=3"></script>
+<script src="js/i18n.js?v=4"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -490,6 +500,31 @@
       cb.checked = !cb.checked;
     }
     cb.disabled = false;
+  });
+
+  // ---------- «Минимальный % буста»: применяется только тем, у кого реальный
+  // балл в «Проверке буста» = 0 (ничего не отмечено) — вместо 0% используется
+  // этот минимум, в «Проверке буста» и в «ДКП Соло»/«ДКП Пати». Хоть один
+  // отмеченный пункт — минимум отменяется, приоритет у реального процента ----------
+  async function loadMinBoostPercent(){
+    const { data, error } = await db.from("loot_split_settings").select("min_boost_percent").eq("clan_id", profile.clan_id).maybeSingle();
+    if(error){ console.error(error); return; }
+    document.getElementById("minBoostInput").value = Number(data?.min_boost_percent) || 0;
+  }
+
+  document.getElementById("minBoostInput").addEventListener("change", async () => {
+    const input = document.getElementById("minBoostInput");
+    const errEl = document.getElementById("minBoostError");
+    errEl.textContent = "";
+    const val = Number(input.value);
+    if(!Number.isFinite(val) || val < 0 || val > 100){ errEl.textContent = L2I18n.t("admin.minBoostRange", "Число от 0 до 100."); return; }
+    input.disabled = true;
+    const { error } = await db.from("loot_split_settings").upsert(
+      { clan_id: profile.clan_id, min_boost_percent: val },
+      { onConflict: "clan_id" }
+    );
+    if(error) errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
+    input.disabled = false;
   });
 
   // ---------- «Коэффициент пати-лидерам»: свой множитель для каждого текущего
@@ -1274,7 +1309,7 @@
   await loadLookups();
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(L2I18n.t("role." + r.key, r.label)), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
-  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadLootLeaderCoefficients(), loadWeeklyTaxAmount(), loadLootHideZero()]);
+  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadLootLeaderCoefficients(), loadWeeklyTaxAmount(), loadLootHideZero(), loadMinBoostPercent()]);
   renderSectionOrder();
   renderSectionToggleList();
   renderLootCoefList();

@@ -134,7 +134,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=18"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=3"></script>
+<script src="js/i18n.js?v=4"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -279,7 +279,11 @@
   }
   function maxBoostScore(){ return orderedBoostItems().reduce((s,i)=> s + i.weight, 0); }
   function boostScoreOf(nick){ return mergeGroups(orderedBoostItems()).reduce((s,g)=> s + groupScore(g, nick), 0); }
+  // «Минимальный % буста» (Админ-панель → «ДКП») — только пока реальный балл
+  // человека ровно 0 (в «Проверке буста» ничего не отмечено); хоть один
+  // отмеченный пункт сразу возвращает приоритет реальному проценту
   function percentOf(nick){
+    if(minBoostPercent > 0 && boostScoreOf(nick) === 0) return minBoostPercent;
     const mx = maxBoostScore();
     return mx ? (boostScoreOf(nick) / mx) * 100 : 0;
   }
@@ -295,11 +299,14 @@
   }
 
   // «показывать только тех, кто хоть раз ходил» — настройка из Админ-панели →
-  // «Правила клана» (по умолчанию выключена, показывает всех, как раньше)
+  // «ДКП» (по умолчанию выключена, показывает всех, как раньше)
   let hideZeroAttendance = false;
+  // «Минимальный % буста» — тоже из Админ-панели → «ДКП»; см. percentOf() выше
+  let minBoostPercent = 0;
   async function loadLootSplitSettings(){
-    const { data } = await db.from("loot_split_settings").select("hide_zero_attendance").eq("clan_id", profile.clan_id).maybeSingle();
+    const { data } = await db.from("loot_split_settings").select("hide_zero_attendance, min_boost_percent").eq("clan_id", profile.clan_id).maybeSingle();
     hideZeroAttendance = !!data?.hide_zero_attendance;
+    minBoostPercent = Number(data?.min_boost_percent) || 0;
   }
 
   async function loadEventsAndAttendance(fromStr, toStr){
