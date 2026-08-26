@@ -134,7 +134,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=18"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=4"></script>
+<script src="js/i18n.js?v=5"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -203,6 +203,13 @@
   let attendedByEvent = new Map(); // event_id -> Set(normalizeNick)
 
   let lastRows = [];               // последний посчитанный «Разделить дроп»
+  let leftMembersWeek = null;       // неделя переписи, в которой ушедшие встречались последний раз
+
+  function fmtDate(iso){
+    if(!iso) return "";
+    const [y, m, d] = iso.split("-");
+    return `${d}.${m}.${y}`;
+  }
 
   async function loadCensus(){
     const { data } = await db.from("census_entries").select("nickname, week_start");
@@ -211,7 +218,9 @@
     const prev = weeks.length > 1 ? weeks[weeks.length - 2] : null;
     nicks = [...new Set((data || []).filter(r => r.week_start === latest).map(r => r.nickname))]
       .sort((a,b)=>a.localeCompare(b));
-    // «вышел за последнюю неделю» — был в предпоследней переписи, но пропал из последней
+    // «вышел за последнюю неделю» — был в предпоследней переписи, но пропал из последней;
+    // значит их последняя встреченная неделя — именно prev, одна и та же для всех
+    leftMembersWeek = prev;
     if(prev){
       const latestNorm = new Set(nicks.map(normalizeNick));
       leftMembers = [...new Set((data || []).filter(r => r.week_start === prev).map(r => r.nickname))]
@@ -424,7 +433,10 @@
   // и лёгкой тусклости строки (см. .ls-row-left)
   function rowHtml(r, isLeft){
     const avatarSrc = memberIcons.get(r.nick) || classIcon(r.cls) || BLANK_IMG;
-    const cross = isLeft ? `<span class="ls-left-cross" title="${escapeHtml(L2I18n.t("dkp.leftClanTitle", "Уже не в клане"))}">✗</span>` : "";
+    const leftTitle = leftMembersWeek
+      ? L2I18n.t("dkp.leftClanTitleWithDate", "Уже не в клане — был в переписи от {date}").replace("{date}", fmtDate(leftMembersWeek))
+      : L2I18n.t("dkp.leftClanTitle", "Уже не в клане");
+    const cross = isLeft ? `<span class="ls-left-cross" title="${escapeHtml(leftTitle)}">✗</span>` : "";
     let html = `<td class="ls-col-nick"><div class="ls-nick"><img class="avatar" src="${avatarSrc}" alt="" />` +
       `<span class="who"><span class="name">${escapeHtml(r.nick)}${cross}</span><span class="cls">${escapeHtml(r.cls || "")}</span></span></div></td>`;
     html += `<td class="ls-num">${r.initial}</td>`;

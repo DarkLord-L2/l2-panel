@@ -323,6 +323,11 @@
     "dkp.saveIconFailed": ["Не удалось сохранить иконку: ", "Не вдалося зберегти іконку: ", "Failed to save the icon: "],
     "dkp.leftMembersTitle": ["Вышли из клана за последнюю неделю", "Вийшли з клану за останній тиждень", "Left the clan in the last week"],
     "dkp.leftClanTitle": ["Уже не в клане", "Вже не в клані", "No longer in the clan"],
+    "dkp.leftClanTitleWithDate": [
+      "Уже не в клане — был в переписи от {date}",
+      "Вже не в клані — був у переписі від {date}",
+      "No longer in the clan — last seen in the census on {date}",
+    ],
     "dkp.membersCountSuffix": [" участников", " учасників", " members"],
     "dkp.leaderPrefix": [" · лидер ", " · лідер ", " · leader "],
     "dkp.noMembersInRoster": ["Участников нет.", "Учасників немає.", "No members."],

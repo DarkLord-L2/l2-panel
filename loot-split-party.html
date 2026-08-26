@@ -168,7 +168,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=18"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=4"></script>
+<script src="js/i18n.js?v=5"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -219,6 +219,10 @@
   // в пати (в «Группах»), но уже пропал из клана; пусто, если переписи вообще нет —
   // тогда никого не помечаем (нечего сравнивать)
   let censusNormSet = new Set();
+  // normalizeNick(nickname) -> самая свежая неделя переписи, в которой он вообще
+  // встречался (не только последняя/предпоследняя) — для подсказки «был в
+  // переписи от {дата}» у тех, кто пропал из клана давно, а не только на неделе
+  let lastSeenWeekByNorm = new Map();
   async function loadCensus(){
     const { data } = await db.from("census_entries").select("nickname, week_start");
     const weeks = [...new Set((data || []).map(r => r.week_start))].sort();
@@ -226,8 +230,25 @@
     censusNormSet = latest
       ? new Set((data || []).filter(r => r.week_start === latest).map(r => normalizeNick(r.nickname)))
       : new Set();
+    lastSeenWeekByNorm = new Map();
+    (data || []).forEach(r => {
+      const norm = normalizeNick(r.nickname);
+      const prev = lastSeenWeekByNorm.get(norm);
+      if(!prev || r.week_start > prev) lastSeenWeekByNorm.set(norm, r.week_start);
+    });
   }
   function isLeftClan(nick){ return censusNormSet.size > 0 && !censusNormSet.has(normalizeNick(nick)); }
+  function fmtDate(iso){
+    if(!iso) return "";
+    const [y, m, d] = iso.split("-");
+    return `${d}.${m}.${y}`;
+  }
+  function leftClanTitleOf(nick){
+    const lastWeek = lastSeenWeekByNorm.get(normalizeNick(nick));
+    return lastWeek
+      ? L2I18n.t("dkp.leftClanTitleWithDate", "Уже не в клане — был в переписи от {date}").replace("{date}", fmtDate(lastWeek))
+      : L2I18n.t("dkp.leftClanTitle", "Уже не в клане");
+  }
 
   let lastRows = [];               // последний посчитанный «Разделить дроп»
 
@@ -268,7 +289,7 @@
     let html = `<tr>` +
       `<td class="ls-col-nick"><div class="ls-roster-item" data-nick="${escapeHtml(m.nick)}">` +
       `<img class="avatar" src="${rosterAvatarOf(m.nick)}" alt="" />` +
-      `<span class="who"><span class="nm">${escapeHtml(m.nick)}${isLeftClan(m.nick) ? ` <span class="ls-left-cross" title="${escapeHtml(L2I18n.t("dkp.leftClanTitle", "Уже не в клане"))}">✗</span>` : ""}</span><span class="cls">${escapeHtml(classLabelOf(m.nick))}</span></span>` +
+      `<span class="who"><span class="nm">${escapeHtml(m.nick)}${isLeftClan(m.nick) ? ` <span class="ls-left-cross" title="${escapeHtml(leftClanTitleOf(m.nick))}">✗</span>` : ""}</span><span class="cls">${escapeHtml(classLabelOf(m.nick))}</span></span>` +
       `</div></td>` +
       `<td class="ls-num">${m.initial}</td>` +
       `<td class="ls-num">${m.pct.toFixed(2)}%</td>` +
