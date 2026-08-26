@@ -57,6 +57,7 @@
 
   <section class="card">
     <p class="hint" id="lpMyLeaderInfo" style="margin:0 0 12px; display:none;"></p>
+    <p class="hint" id="lpPeriodInfo" style="margin:0 0 12px; display:none;"></p>
     <button class="btn btn-danger" id="lpDeleteBatchBtn" style="display:none; margin:0 0 12px;" data-i18n="payout.deleteBatchBtn">Удалить раздачу</button>
 
     <div class="lp-filters" id="lpAdminFilters">
@@ -96,7 +97,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=19"></script>
-<script src="js/i18n.js?v=12"></script>
+<script src="js/i18n.js?v=13"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -314,6 +315,20 @@
     el.style.display = "";
   }
 
+  // не-админу период раздачи (даты активного payout_batches) показываем только
+  // текстом — он не может его менять, поле «С/По» ему вообще не показывается
+  function renderPeriodInfo(){
+    const el = document.getElementById("lpPeriodInfo");
+    const from = document.getElementById("fromDate").value;
+    const to = document.getElementById("toDate").value;
+    el.textContent = (from || to)
+      ? L2I18n.t("payout.periodRange", "Период: {from} — {to}")
+        .replace("{from}", from ? fmtDate(from) : "…")
+        .replace("{to}", to ? fmtDate(to) : "…")
+      : L2I18n.t("payout.periodAllTime", "Период: за всё время.");
+    el.style.display = "";
+  }
+
   // голда конкретного ника — только если пришли свежие данные из ДКП, иначе
   // null (не 0 — 0 читалось бы как «посчитано и вышло 0», а тут просто нечем
   // считать); рендерящий код сам решает, показать число или прочерк
@@ -396,6 +411,7 @@
     } else {
       const myLeader = findMyLeaderKey();
       renderMyLeaderInfo(myLeader);
+      renderPeriodInfo();
       renderForLeader(myLeader);
     }
   }
@@ -420,6 +436,7 @@
     } else {
       const myLeader = findMyLeaderKey();
       renderMyLeaderInfo(myLeader);
+      renderPeriodInfo();
       renderForLeader(myLeader);
     }
   });

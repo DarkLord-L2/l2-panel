@@ -170,6 +170,16 @@
       "Gold isn't shown — click “Distribute” in “DKP Solo”/“DKP Party”, right after “Split loot”.",
     ],
     "payout.deleteBatchBtn": ["Удалить раздачу", "Видалити роздачу", "Delete distribution"],
+    "payout.periodRange": [
+      "Период: {from} — {to}",
+      "Період: {from} — {to}",
+      "Period: {from} — {to}",
+    ],
+    "payout.periodAllTime": [
+      "Период: за всё время.",
+      "Період: за весь час.",
+      "Period: all time.",
+    ],
     "payout.youAreLeader": [
       "Ты — пати-лидер «{nick}» за этот период.",
       "Ти — паті-лідер «{nick}» за цей період.",
