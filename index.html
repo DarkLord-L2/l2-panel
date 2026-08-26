@@ -4,11 +4,23 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=18" />
+<link rel="stylesheet" href="js/theme.css?v=19" />
 </head>
 <body>
 
 <div class="app-shell" id="appShell" style="display:none;">
+  <div class="topbar" id="classicTopbar" style="display:none;">
+    <div class="brand">
+      <img id="classicBrandLogo" alt="" style="display:none;" />
+      <span id="classicBrandName" data-i18n="shell.defaultBrandName">Кабинет клана</span>
+    </div>
+    <div class="who">
+      <div class="lang-switch" id="classicLangSwitch"></div>
+      <span class="name" id="classicWhoName"></span>
+      <span class="badge" id="classicWhoRole"></span>
+      <button class="btn btn-ghost" id="classicSignOutBtn" data-i18n="shell.signOut">Выйти</button>
+    </div>
+  </div>
   <div class="who-widget" id="whoWidget">
     <img class="who-avatar" id="whoAvatar" alt="" />
     <div class="who-text">
@@ -37,7 +49,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=19"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=19"></script>
+<script src="js/i18n.js?v=20"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -123,16 +135,19 @@
   }
 
   L2I18n.renderSwitcher(document.getElementById("langSwitch"));
+  L2I18n.renderSwitcher(document.getElementById("classicLangSwitch"));
 
   if(profile.clans?.display_name){
-    const brandNameEl = document.getElementById("brandName");
-    brandNameEl.textContent = profile.clans.display_name;
-    brandNameEl.removeAttribute("data-i18n"); // реальное имя клана — не переводим при смене языка
+    [document.getElementById("brandName"), document.getElementById("classicBrandName")].forEach(el => {
+      el.textContent = profile.clans.display_name;
+      el.removeAttribute("data-i18n"); // реальное имя клана — не переводим при смене языка
+    });
   }
   if(profile.clans?.logo_url){
-    const logo = document.getElementById("brandLogo");
-    logo.src = profile.clans.logo_url;
-    logo.style.display = "";
+    [document.getElementById("brandLogo"), document.getElementById("classicBrandLogo")].forEach(logo => {
+      logo.src = profile.clans.logo_url;
+      logo.style.display = "";
+    });
   }
 
   const db = L2Cabinet.client;
@@ -149,7 +164,9 @@
   const BLANK_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'></svg>";
 
   const roleKey = profile.roles?.key || "obychniy";
-  document.getElementById("whoName").textContent = profile.nickname || profile.username;
+  const myName = profile.nickname || profile.username;
+  document.getElementById("whoName").textContent = myName;
+  document.getElementById("classicWhoName").textContent = myName;
 
   // своё название роли для этого клана (Админ-панель → Разное → «Названия ролей»),
   // иначе — обычный перевод роли; та же логика, что roleDisplayLabel в admin.html
@@ -158,7 +175,12 @@
     const { data } = await db.from("clan_role_labels").select("label").eq("clan_id", profile.clan_id).eq("role_id", profile.role_id).maybeSingle();
     return data?.label || L2I18n.t("role." + roleKey, profile.roles?.label || roleKey);
   }
-  document.getElementById("whoRole").textContent = await loadMyRoleLabel();
+  async function renderMyRoleLabel(){
+    const label = await loadMyRoleLabel();
+    document.getElementById("whoRole").textContent = label;
+    document.getElementById("classicWhoRole").textContent = label;
+  }
+  await renderMyRoleLabel();
 
   // аватарка — иконка своего класса (своя загруженная, иначе стандартная по имени класса)
   async function loadMyAvatar(){
@@ -172,6 +194,7 @@
   document.getElementById("whoAvatar").src = (await loadMyAvatar()) || BLANK_AVATAR;
 
   document.getElementById("signOutBtn").addEventListener("click", () => L2Cabinet.signOut());
+  document.getElementById("classicSignOutBtn").addEventListener("click", () => L2Cabinet.signOut());
 
   const sections = await L2Cabinet.getVisibleSections(roleKey);
   const nav = document.getElementById("sidebarNav");
@@ -276,6 +299,8 @@
   if(startKey) renderSection(startKey);
   else content.innerHTML = '<p class="hint">' + L2I18n.t("shell.noSectionsForRole", "Для вашей роли пока не открыто ни одного раздела.") + '</p>';
 
+  const appShell = document.getElementById("appShell");
+
   // виджет «аватарка + имя + статус» справа сверху — клик раскрывает меню
   const whoWidget = document.getElementById("whoWidget");
   const whoMenuCabinet = document.getElementById("whoMenuCabinet");
@@ -293,14 +318,26 @@
     if(!whoWidget.contains(e.target)) whoWidget.classList.remove("open");
   });
 
+  // «Классическая шапка сайта» — тумблер в «Моём кабинете» (личная настройка,
+  // не в БД клана): полоса сверху (#classicTopbar) вместо плавающего виджета +
+  // бренда в сайдбаре. «Мой кабинет» во вложенном iframe меняет тот же localStorage
+  // ключ, storage-событие долетает сюда (тот же приём, что и с языком) без перезагрузки
+  const CLASSIC_TOPBAR_KEY = "l2ClassicTopbar:" + profile.id;
+  const classicTopbarEl = document.getElementById("classicTopbar");
+  function applyClassicTopbar(classic){
+    appShell.classList.toggle("classic-topbar", classic);
+    classicTopbarEl.style.display = classic ? "flex" : "none";
+  }
+  applyClassicTopbar(localStorage.getItem(CLASSIC_TOPBAR_KEY) === "1");
+
   // статус — не через data-i18n (значение либо перевод, либо кастомное название
   // роли из БД), поэтому переводим вручную по смене языка в шапке
   window.addEventListener("storage", async (e) => {
-    if(e.key !== "l2Lang") return;
-    document.getElementById("whoRole").textContent = await loadMyRoleLabel();
+    if(e.key === "l2Lang") await renderMyRoleLabel();
+    else if(e.key === CLASSIC_TOPBAR_KEY) applyClassicTopbar(e.newValue === "1");
   });
 
-  document.getElementById("appShell").style.display = "";
+  appShell.style.display = "";
 })();
 </script>
 </body>

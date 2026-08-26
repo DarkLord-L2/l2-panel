@@ -283,6 +283,13 @@
     "cab.taxPaidDebt": ["Оплачено (долг)", "Оплачено (борг)", "Paid (debt)"],
     "cab.taxPaid": ["Оплачено", "Оплачено", "Paid"],
     "cab.taxNotPaid": ["Не оплачено", "Не оплачено", "Not paid"],
+    "cab.appearanceTitle": ["Внешний вид", "Зовнішній вигляд", "Appearance"],
+    "cab.classicTopbarLabel": ["Классическая шапка сайта (полоса сверху)", "Класична шапка сайту (смуга зверху)", "Classic site header (top strip)"],
+    "cab.classicTopbarHint": [
+      "Выключено — имя и роль в плавающем виджете справа сверху, название клана в меню слева. Включено — классическая полоса сверху, как раньше.",
+      "Вимкнено — ім'я і роль у плаваючому віджеті справа зверху, назва клану в меню зліва. Увімкнено — класична смуга зверху, як раніше.",
+      "Off — name and role in a floating widget top-right, clan name in the left menu. On — classic top strip, like before.",
+    ],
 
     "oc.title": ["Консоль", "Консоль", "Console"],
     "oc.emailLabel": ["Email", "Email", "Email"],
