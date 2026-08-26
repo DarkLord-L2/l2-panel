@@ -615,9 +615,9 @@
   }
 
   // «→ В раздачу» передаёт уже посчитанную личную голду каждого участника пати
-  // (не саму пати целиком) и период в «Раздачу» через sessionStorage — та же
-  // схема, что restoreDkpPartyState ниже. «Раздача» больше не считает голду сама
-  // (лидер×кол-во раз × фикс. цена), а показывает именно эти суммы
+  // (не саму пати целиком) и период в «Раздачу» через sessionStorage (одноразово,
+  // отдельно от постоянной памяти фильтров ниже). «Раздача» больше не считает
+  // голду сама (лидер×кол-во раз × фикс. цена), а показывает именно эти суммы
   const PAYOUT_DATA_KEY = "l2PayoutDkpData";
   document.getElementById("toPayoutBtn").addEventListener("click", () => {
     if(!lastRows.length) return;
@@ -645,9 +645,6 @@
     const rosterItem = e.target.closest(".ls-roster-item");
     if(rosterItem){
       const nick = rosterItem.dataset.nick;
-      // раздел перезагрузится с нуля при возврате — запоминаем выбранный период,
-      // чтобы кнопка «назад» из личного кабинета вернула ту же дату и расчёт
-      saveDkpPartyState();
       if(window.top && window.top.L2Nav) window.top.L2Nav.openMyCabinet(nick, "loot_split_party");
     }
   });
@@ -663,9 +660,20 @@
   // сумму голды можно поменять без повторного пересчёта явки/буста — просто
   // перераспределяем уже посчитанные финальные баллы по новой сумме
   document.getElementById("goldInput").addEventListener("input", () => {
+    saveDkpFilters();
     if(!lastRows.length) return;
     applyMemberGold(applyGold(lastRows));
     renderBody(sortRows(lastRows));
+  });
+  // поле голды обычно стоит на «0» — начать печатать сумму поверх него неудобно
+  // (получится «05» и т.п.), поэтому при заходе в поле нулевое значение само
+  // убирается; уже вписанную ранее (в т.ч. восстановленную) сумму не трогаем
+  document.getElementById("goldInput").addEventListener("focus", (e) => {
+    if(e.target.value === "0") e.target.value = "";
+  });
+  // Enter в поле голды сразу запускает «Разделить дроп» — не обязательно тянуться к кнопке
+  document.getElementById("goldInput").addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){ e.preventDefault(); doSplit(); }
   });
 
   // ---- иконка над столбцом мероприятия (только админ) — та же attendance_events,
@@ -707,32 +715,33 @@
     renderHead();
   });
 
-  // ---- сохранение/восстановление выбранного периода ----
-  // Раздел живёт в iframe и при возврате из личного кабинета участника перезагружается
-  // с нуля, поэтому перед переходом складываем даты в sessionStorage — та же схема,
-  // что и в attendance.html (saveReportState/restoreReportState)
-  const DKP_PARTY_STATE_KEY = "l2DkpPartyState";
-  function saveDkpPartyState(){
-    const fromStr = document.getElementById("fromDate").value;
-    const toStr = document.getElementById("toDate").value;
-    if(!fromStr && !toStr) return;
-    sessionStorage.setItem(DKP_PARTY_STATE_KEY, JSON.stringify({ from: fromStr, to: toStr }));
+  // запоминаем период + сумму голды в localStorage — переживает переход на
+  // другие разделы сайта (раздел живёт в iframe и перезагружается с нуля при
+  // каждом открытии, в т.ч. при возврате из личного кабинета участника) и
+  // закрытие вкладки; у «ДКП Соло»/«ДКП Пати» своя память, суммы у них обычно разные
+  const DKP_FILTERS_KEY = "l2DkpPartyFilters";
+  function saveDkpFilters(){
+    localStorage.setItem(DKP_FILTERS_KEY, JSON.stringify({
+      from: document.getElementById("fromDate").value,
+      to: document.getElementById("toDate").value,
+      gold: document.getElementById("goldInput").value,
+    }));
   }
-  async function restoreDkpPartyState(){
-    const raw = sessionStorage.getItem(DKP_PARTY_STATE_KEY);
-    if(!raw) return;
-    sessionStorage.removeItem(DKP_PARTY_STATE_KEY); // одноразово: обычное открытие раздела не трогаем
+  function restoreDkpFilters(){
     let st;
-    try{ st = JSON.parse(raw); }catch(e){ return; }
-    if(!st.from && !st.to) return;
-    document.getElementById("fromDate").value = st.from || "";
-    document.getElementById("toDate").value = st.to || "";
-    await doSplit();
+    try{ st = JSON.parse(localStorage.getItem(DKP_FILTERS_KEY) || "null"); }catch(e){ st = null; }
+    if(!st) return false;
+    if(st.from) document.getElementById("fromDate").value = st.from;
+    if(st.to) document.getElementById("toDate").value = st.to;
+    if(st.gold != null && st.gold !== "") document.getElementById("goldInput").value = st.gold;
+    return !!(st.from && st.to);
   }
+  document.getElementById("fromDate").addEventListener("change", saveDkpFilters);
+  document.getElementById("toDate").addEventListener("change", saveDkpFilters);
 
   await Promise.all([loadParties(), loadBoostStructure(), loadBoostValues(), loadPartyCoefficients(), loadClassCoefficients(), loadLootSplitSettings(), loadLootLeaderCoefficients(), loadMemberClasses(), loadCensus()]);
   renderTable([]);
-  await restoreDkpPartyState();
+  if(restoreDkpFilters()) await doSplit();
 
   // заголовки/список участников/пустые состояния построены через JS (не data-i18n) —
   // перестраиваем при смене языка; expandedPartyId — обычная переменная замыкания,

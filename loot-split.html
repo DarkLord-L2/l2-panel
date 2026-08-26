@@ -505,10 +505,45 @@
   // сумму голды можно поменять без повторного пересчёта явки/буста — просто
   // перераспределяем уже посчитанные финальные баллы по новой сумме
   document.getElementById("goldInput").addEventListener("input", () => {
+    saveDkpFilters();
     if(!lastRows.length && !lastLeftRows.length) return;
     applyGold(lastRows, lastLeftRows);
     renderBody(sortRows(lastRows), lastLeftRows);
   });
+  // поле голды обычно стоит на «0» — начать печатать сумму поверх него неудобно
+  // (получится «05» и т.п.), поэтому при заходе в поле нулевое значение само
+  // убирается; уже вписанную ранее (в т.ч. восстановленную) сумму не трогаем
+  document.getElementById("goldInput").addEventListener("focus", (e) => {
+    if(e.target.value === "0") e.target.value = "";
+  });
+  // Enter в поле голды сразу запускает «Разделить дроп» — не обязательно тянуться к кнопке
+  document.getElementById("goldInput").addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){ e.preventDefault(); doSplit(); }
+  });
+
+  // запоминаем период + сумму голды в localStorage — переживает переход на
+  // другие разделы сайта (раздел живёт в iframe и перезагружается с нуля при
+  // каждом открытии) и закрытие вкладки; у «ДКП Соло»/«ДКП Пати» своя память,
+  // суммы у них обычно разные
+  const DKP_FILTERS_KEY = "l2DkpSoloFilters";
+  function saveDkpFilters(){
+    localStorage.setItem(DKP_FILTERS_KEY, JSON.stringify({
+      from: document.getElementById("fromDate").value,
+      to: document.getElementById("toDate").value,
+      gold: document.getElementById("goldInput").value,
+    }));
+  }
+  function restoreDkpFilters(){
+    let st;
+    try{ st = JSON.parse(localStorage.getItem(DKP_FILTERS_KEY) || "null"); }catch(e){ st = null; }
+    if(!st) return false;
+    if(st.from) document.getElementById("fromDate").value = st.from;
+    if(st.to) document.getElementById("toDate").value = st.to;
+    if(st.gold != null && st.gold !== "") document.getElementById("goldInput").value = st.gold;
+    return !!(st.from && st.to);
+  }
+  document.getElementById("fromDate").addEventListener("change", saveDkpFilters);
+  document.getElementById("toDate").addEventListener("change", saveDkpFilters);
 
   // «→ В раздачу» передаёт уже посчитанную голду по никам и период в «Раздачу»
   // через sessionStorage (та же схема, что restoreDkpPartyState в ДКП Пати) —
@@ -568,6 +603,7 @@
 
   await Promise.all([loadCensus(), loadMemberClasses(), loadBoostStructure(), loadBoostValues(), loadCoefficients(), loadLootSplitSettings()]);
   renderTable([]);
+  if(restoreDkpFilters()) await doSplit();
 
   // заголовки/пустые состояния построены через JS (не data-i18n) — перестраиваем при смене языка
   window.addEventListener("storage", (e) => {
