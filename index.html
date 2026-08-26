@@ -317,6 +317,15 @@
   document.addEventListener("click", (e) => {
     if(!whoWidget.contains(e.target)) whoWidget.classList.remove("open");
   });
+  // клик внутри вложенного iframe (сам раздел — почти вся страница) не всплывает
+  // в родительский документ, так что document.click выше его не видит; но клик
+  // туда переносит фокус на сам <iframe> — это единственный надёжный способ
+  // поймать такой клик из родителя
+  window.addEventListener("blur", () => {
+    setTimeout(() => {
+      if(document.activeElement?.tagName === "IFRAME") whoWidget.classList.remove("open");
+    }, 0);
+  });
 
   // «Классическая шапка сайта» — тумблер в «Моём кабинете» (личная настройка,
   // не в БД клана): полоса сверху (#classicTopbar) вместо плавающего виджета +
