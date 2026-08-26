@@ -115,8 +115,9 @@
         <input type="number" id="goldInput" min="0" step="1" value="0" />
       </div>
       <button class="btn btn-primary" id="splitBtn" data-i18n="dkp.splitBtn">Разделить дроп</button>
-      <button class="btn" id="toPayoutBtn" data-i18n="dkp.toPayoutBtn" disabled>→ В раздачу</button>
+      <button class="btn btn-danger" id="toPayoutBtn" data-i18n="dkp.toPayoutBtn" disabled style="display:none;">Раздать</button>
     </div>
+    <p class="hint" id="toPayoutHint" style="margin:-4px 0 10px; display:none;"></p>
     <p class="error-msg" id="lsError"></p>
 
     <div class="ls-table-scroll">
@@ -134,7 +135,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=18"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=7"></script>
+<script src="js/i18n.js?v=8"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -151,6 +152,9 @@
   const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
   const db = L2Cabinet.client;
   document.getElementById("wrap").style.display = "";
+  // «Раздать» пишет общую на весь клан таблицу — доступно только админам,
+  // как и остальные пишущие действия в ДКП (иконка мероприятия и т.п.)
+  if(isAdmin) document.getElementById("toPayoutBtn").style.display = "";
 
   function escapeHtml(s){
     return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
@@ -565,22 +569,39 @@
   document.getElementById("fromDate").addEventListener("change", saveDkpFilters);
   document.getElementById("toDate").addEventListener("change", saveDkpFilters);
 
-  // «→ В раздачу» передаёт уже посчитанную голду по никам и период в «Раздачу»
-  // через sessionStorage (та же схема, что restoreDkpPartyState в ДКП Пати) —
+  // «Раздать» пишет посчитанную голду по никам и период в общую на весь клан
+  // таблицу payout_batches (не в sessionStorage — тот виден только в браузере
+  // того, кто нажал, соседний пати-лидер на своём устройстве его не видел).
   // «Раздача» больше не считает голду сама (лидер×кол-во раз × фикс. цена),
-  // а показывает именно эти суммы, сгруппированные по пати-лидеру со скринов
-  const PAYOUT_DATA_KEY = "l2PayoutDkpData";
-  document.getElementById("toPayoutBtn").addEventListener("click", () => {
+  // а показывает именно эти суммы, сгруппированные по пати-лидеру со скринов;
+  // каждый пати-лидер при заходе видит только свою часть — см. loot-payout.html
+  document.getElementById("toPayoutBtn").addEventListener("click", async () => {
     if(!lastRows.length) return;
+    const btn = document.getElementById("toPayoutBtn");
+    const hintEl = document.getElementById("toPayoutHint");
+    btn.disabled = true;
     const goldByNick = {};
     lastRows.forEach(r => { goldByNick[r.nick] = r.gold; });
-    sessionStorage.setItem(PAYOUT_DATA_KEY, JSON.stringify({
-      from: document.getElementById("fromDate").value,
-      to: document.getElementById("toDate").value,
-      goldByNick,
-      source: "solo",
-    }));
-    if(window.top && window.top.L2Nav) window.top.L2Nav.openSection("loot_payout");
+    const { error } = await db.from("payout_batches").upsert(
+      {
+        clan_id: profile.clan_id,
+        from_date: document.getElementById("fromDate").value,
+        to_date: document.getElementById("toDate").value,
+        gold_by_nick: goldByNick,
+        source: "solo",
+        created_by: profile.id,
+        created_at: new Date().toISOString(),
+      },
+      { onConflict: "clan_id" }
+    );
+    if(error){
+      document.getElementById("lsError").textContent = L2I18n.t("dkp.payoutSaveFailed", "Не удалось отправить в раздачу: ") + error.message;
+    } else {
+      hintEl.textContent = L2I18n.t("dkp.payoutSentHint", "Отправлено — у каждого пати-лидера в «Раздаче» появится своя часть (на 24 часа).");
+      hintEl.style.display = "";
+      if(window.top && window.top.L2Nav) window.top.L2Nav.openSection("loot_payout");
+    }
+    btn.disabled = false;
   });
 
   // ---- иконка над столбцом мероприятия (только админ) ----
