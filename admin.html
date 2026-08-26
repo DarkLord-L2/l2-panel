@@ -218,6 +218,13 @@
 
     <div class="admin-tab-panel" data-panel="dkp">
   <section class="card">
+    <h2 data-i18n="admin.dkpSectionsTitle">Включённые разделы ДКП</h2>
+    <p class="hint" data-i18n="admin.dkpSectionsHint">Полностью выключает раздел для всего клана — исчезает из меню у абсолютно всех, независимо от роли (та же настройка, что в «Разделы и права» → «Какие разделы вообще есть», просто отдельно и под рукой здесь).</p>
+    <div class="section-toggle-list" id="dkpSectionToggleList"></div>
+    <p class="error-msg" id="dkpSectionToggleError"></p>
+  </section>
+
+  <section class="card">
     <h2 data-i18n="admin.lootSplitSectionTitle">Раздел дропа</h2>
     <div class="section-toggle-row">
       <span class="label" data-i18n="admin.lootHideZeroLabel">Показывать только тех, кто хоть раз ходил за отмеченный период</span>
@@ -387,7 +394,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=19"></script>
-<script src="js/i18n.js?v=11"></script>
+<script src="js/i18n.js?v=12"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -501,47 +508,70 @@
     sectionToggles = new Map((data || []).map(r => [r.section_key, r.enabled]));
   }
 
+  // общая строка «раздел + вкл/выкл» — используется и полным списком («Разделы
+  // и права»), и коротким списком из трёх пунктов на вкладке «ДКП»; оба читают
+  // и пишут один и тот же clan_section_toggles, поэтому после успешного
+  // переключения перерисовываем обе карточки, если они уже отрисованы на странице
+  function buildSectionToggleRow(s, errElId){
+    const enabled = sectionToggles.get(s.key) ?? true; // нет строки — раздел включён
+
+    const row = document.createElement("div");
+    row.className = "section-toggle-row";
+
+    const label = document.createElement("span");
+    label.className = "label";
+    label.textContent = L2I18n.t("section." + s.key, s.label);
+
+    const switchLabel = document.createElement("label");
+    switchLabel.className = "toggle-switch";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = enabled;
+    const track = document.createElement("span");
+    track.className = "track";
+    switchLabel.append(cb, track);
+
+    cb.addEventListener("change", async () => {
+      const errEl = document.getElementById(errElId);
+      errEl.textContent = "";
+      cb.disabled = true;
+      const { error } = await db.from("clan_section_toggles").upsert(
+        { clan_id: profile.clan_id, section_key: s.key, enabled: cb.checked },
+        { onConflict: "clan_id,section_key" }
+      );
+      if(error){
+        errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
+        cb.checked = !cb.checked;
+      } else {
+        sectionToggles.set(s.key, cb.checked);
+        renderSectionToggleList();
+        renderDkpSectionToggleList();
+      }
+      cb.disabled = false;
+    });
+
+    row.append(label, switchLabel);
+    return row;
+  }
+
   function renderSectionToggleList(){
     const wrap = document.getElementById("sectionToggleList");
     wrap.innerHTML = "";
     sections.filter(s => s.key !== "admin").forEach(s => {
-      const enabled = sectionToggles.get(s.key) ?? true; // нет строки — раздел включён
+      wrap.appendChild(buildSectionToggleRow(s, "sectionToggleError"));
+    });
+  }
 
-      const row = document.createElement("div");
-      row.className = "section-toggle-row";
-
-      const label = document.createElement("span");
-      label.className = "label";
-      label.textContent = L2I18n.t("section." + s.key, s.label);
-
-      const switchLabel = document.createElement("label");
-      switchLabel.className = "toggle-switch";
-      const cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.checked = enabled;
-      const track = document.createElement("span");
-      track.className = "track";
-      switchLabel.append(cb, track);
-
-      cb.addEventListener("change", async () => {
-        const errEl = document.getElementById("sectionToggleError");
-        errEl.textContent = "";
-        cb.disabled = true;
-        const { error } = await db.from("clan_section_toggles").upsert(
-          { clan_id: profile.clan_id, section_key: s.key, enabled: cb.checked },
-          { onConflict: "clan_id,section_key" }
-        );
-        if(error){
-          errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
-          cb.checked = !cb.checked;
-        } else {
-          sectionToggles.set(s.key, cb.checked);
-        }
-        cb.disabled = false;
-      });
-
-      row.append(label, switchLabel);
-      wrap.appendChild(row);
+  // тот же тумблер, только сразу под рукой на вкладке «ДКП» — только для трёх
+  // разделов ДКП, чтобы не листать общий список ради них
+  const DKP_SECTION_KEYS = ["loot_split", "loot_split_party", "loot_payout"];
+  function renderDkpSectionToggleList(){
+    const wrap = document.getElementById("dkpSectionToggleList");
+    if(!wrap) return;
+    wrap.innerHTML = "";
+    DKP_SECTION_KEYS.forEach(key => {
+      const s = sections.find(x => x.key === key);
+      if(s) wrap.appendChild(buildSectionToggleRow(s, "dkpSectionToggleError"));
     });
   }
 
@@ -1425,6 +1455,7 @@
   await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadLootLeaderCoefficients(), loadWeeklyTaxAmount(), loadLootHideZero(), loadMinBoostPercent(), loadPayoutShowLeft()]);
   renderSectionOrder();
   renderSectionToggleList();
+  renderDkpSectionToggleList();
   renderLootCoefList();
   renderLootPartyCoefList();
   renderLootLeaderCoefList();
@@ -1435,6 +1466,7 @@
     renderUsersGrouped();
     renderSectionOrder();
     renderSectionToggleList();
+    renderDkpSectionToggleList();
     renderLootCoefList();
     renderLootPartyCoefList();
     renderLootLeaderCoefList();

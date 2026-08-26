@@ -686,6 +686,12 @@
       "Weekly tax amount per person. Used in the “Total for the week” box on the “Taxes” page — it's simply multiplied by the number of payers and added to donations; it doesn't change the “who paid” marks themselves.",
     ],
     "admin.amountPerPersonLabel": ["Сумма с человека", "Сума з людини", "Amount per person"],
+    "admin.dkpSectionsTitle": ["Включённые разделы ДКП", "Увімкнені розділи ДКП", "Enabled DKP sections"],
+    "admin.dkpSectionsHint": [
+      "Полностью выключает раздел для всего клана — исчезает из меню у абсолютно всех, независимо от роли (та же настройка, что в «Разделы и права» → «Какие разделы вообще есть», просто отдельно и под рукой здесь).",
+      "Повністю вимикає розділ для всього клану — зникає з меню в абсолютно всіх, незалежно від ролі (те саме налаштування, що в «Розділи і права» → «Які розділи взагалі є», просто окремо і під рукою тут).",
+      "Fully disables the section for the whole clan — disappears from everyone's menu, regardless of role (the same setting as “Sections & Permissions” → “Which sections exist at all”, just kept handy here separately).",
+    ],
     "admin.lootSplitSectionTitle": ["Раздел дропа", "Розділ дропу", "Loot split section"],
     "admin.lootHideZeroLabel": ["Показывать только тех, кто хоть раз ходил за отмеченный период", "Показувати тільки тих, хто хоч раз ходив за позначений період", "Only show those who attended at least once in the selected period"],
     "admin.lootHideZeroHint": [
