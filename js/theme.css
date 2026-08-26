@@ -192,6 +192,8 @@ input[type="date"]{ color-scheme: dark; }
 }
 .who-menu-item:hover{ background: var(--panel-2); }
 .who-menu-item.who-menu-danger{ color: var(--danger-lit); }
+.who-menu .lang-switch{ justify-content:center; gap:4px; padding:2px 2px 6px; }
+.who-menu-sep{ height:1px; background: var(--border); margin:2px 4px 4px; }
 
 /* переключатель языка (UA/RU/EU) — используется в шапке index.html и на login.html,
    рендерится через L2I18n.renderSwitcher() из js/i18n.js */
