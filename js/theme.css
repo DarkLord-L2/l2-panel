@@ -168,7 +168,30 @@ input[type="date"]{ color-scheme: dark; }
 }
 .topbar .brand{ font-family:inherit; color: var(--gold); font-size:15px; font-weight:600; letter-spacing:0; }
 .topbar .who{ display:flex; align-items:center; gap:12px; font-size:12.5px; color: var(--text-dim); }
-.topbar .who .name{ color: var(--text); }
+
+/* виджет «аватарка класса + имя + статус» в правом верхнем углу — клик раскрывает
+   меню («Мой кабинет»/«Выйти»), тот же принцип, что переключатель раздела в сайдбаре */
+.who-widget{ position:relative; display:flex; align-items:center; gap:8px; padding:4px 8px 4px 4px; border-radius:20px; cursor:pointer; }
+.who-widget:hover{ background: var(--panel-2); }
+.who-avatar{ width:30px; height:30px; border-radius:50%; object-fit:cover; flex:none; border:1px solid var(--border); background: var(--panel-2); }
+.who-text{ display:flex; flex-direction:column; line-height:1.25; }
+.who-name{ font-size:13px; font-weight:600; color: var(--text); }
+.who-status{ font-size:11px; color: var(--gold); }
+.who-chevron{ font-size:10px; color: var(--text-dim); transition: transform .15s; }
+.who-widget.open .who-chevron{ transform: rotate(180deg); }
+.who-menu{
+  display:none; flex-direction:column; gap:2px;
+  position:absolute; top:100%; right:0; margin-top:8px; min-width:160px; z-index:20;
+  background: var(--panel); border:1px solid var(--border); border-radius:9px; padding:6px;
+  box-shadow: 0 10px 28px rgba(0,0,0,.4);
+}
+.who-widget.open .who-menu{ display:flex; }
+.who-menu-item{
+  all:unset; box-sizing:border-box; width:100%; padding:8px 10px; border-radius:6px;
+  font-size:12.5px; color: var(--text); cursor:pointer;
+}
+.who-menu-item:hover{ background: var(--panel-2); }
+.who-menu-item.who-menu-danger{ color: var(--danger-lit); }
 
 /* переключатель языка (UA/RU/EU) — используется в шапке index.html и на login.html,
    рендерится через L2I18n.renderSwitcher() из js/i18n.js */

@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=12" />
+<link rel="stylesheet" href="js/theme.css?v=13" />
 </head>
 <body>
 
@@ -16,9 +16,18 @@
     </div>
     <div class="who">
       <div class="lang-switch" id="langSwitch"></div>
-      <span class="name" id="whoName"></span>
-      <span class="badge" id="whoRole"></span>
-      <button class="btn btn-ghost" id="signOutBtn" data-i18n="shell.signOut">Выйти</button>
+      <div class="who-widget" id="whoWidget">
+        <img class="who-avatar" id="whoAvatar" alt="" />
+        <div class="who-text">
+          <span class="who-name" id="whoName"></span>
+          <span class="who-status" id="whoRole"></span>
+        </div>
+        <span class="who-chevron">▾</span>
+        <div class="who-menu" id="whoMenu">
+          <button type="button" class="who-menu-item" id="whoMenuCabinet" data-i18n="section.my_cabinet">Мой кабинет</button>
+          <button type="button" class="who-menu-item who-menu-danger" id="signOutBtn" data-i18n="shell.signOut">Выйти</button>
+        </div>
+      </div>
     </div>
   </div>
   <div class="app-body">
@@ -29,6 +38,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=19"></script>
+<script src="js/classes.js?v=1"></script>
 <script src="js/i18n.js?v=17"></script>
 <script>
 (async function(){
@@ -127,10 +137,42 @@
     logo.style.display = "";
   }
 
+  const db = L2Cabinet.client;
+
+  // тот же запасной поиск по нику, что и в «Моём кабинете»/«Отчётах» — ник в
+  // member_classes мог быть внесён чуть иначе (перепись/OCR), чем в профиле
+  const CYR_LOOKALIKES = { "а":"a","в":"b","е":"e","к":"k","м":"m","н":"h","о":"o","р":"p","с":"c","т":"t","у":"y","х":"x","ё":"e","0":"o","l":"i" };
+  function normalizeNick(s){
+    return String(s || "")
+      .toLowerCase()
+      .split("").map(ch => CYR_LOOKALIKES[ch] || ch).join("")
+      .replace(/[^a-zа-яё0-9]/gi, "");
+  }
+  const BLANK_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'></svg>";
+
   const roleKey = profile.roles?.key || "obychniy";
-  const roleLabel = profile.roles?.label || roleKey;
-  document.getElementById("whoName").textContent = profile.username;
-  document.getElementById("whoRole").textContent = roleLabel;
+  document.getElementById("whoName").textContent = profile.nickname || profile.username;
+
+  // своё название роли для этого клана (Админ-панель → Разное → «Названия ролей»),
+  // иначе — обычный перевод роли; та же логика, что roleDisplayLabel в admin.html
+  async function loadMyRoleLabel(){
+    if(!profile.role_id) return L2I18n.t("role." + roleKey, profile.roles?.label || roleKey);
+    const { data } = await db.from("clan_role_labels").select("label").eq("clan_id", profile.clan_id).eq("role_id", profile.role_id).maybeSingle();
+    return data?.label || L2I18n.t("role." + roleKey, profile.roles?.label || roleKey);
+  }
+  document.getElementById("whoRole").textContent = await loadMyRoleLabel();
+
+  // аватарка — иконка своего класса (своя загруженная, иначе стандартная по имени класса)
+  async function loadMyAvatar(){
+    if(!profile.nickname) return null;
+    const { data } = await db.from("member_classes").select("nickname, class_name, icon");
+    const norm = normalizeNick(profile.nickname);
+    const mine = (data || []).find(r => normalizeNick(r.nickname) === norm);
+    if(!mine) return null;
+    return mine.icon || (window.L2_CLASS_ICON && mine.class_name ? window.L2_CLASS_ICON(mine.class_name) : null);
+  }
+  document.getElementById("whoAvatar").src = (await loadMyAvatar()) || BLANK_AVATAR;
+
   document.getElementById("signOutBtn").addEventListener("click", () => L2Cabinet.signOut());
 
   const sections = await L2Cabinet.getVisibleSections(roleKey);
@@ -235,6 +277,30 @@
 
   if(startKey) renderSection(startKey);
   else content.innerHTML = '<p class="hint">' + L2I18n.t("shell.noSectionsForRole", "Для вашей роли пока не открыто ни одного раздела.") + '</p>';
+
+  // виджет «аватарка + имя + статус» справа сверху — клик раскрывает меню
+  const whoWidget = document.getElementById("whoWidget");
+  const whoMenuCabinet = document.getElementById("whoMenuCabinet");
+  if(!sections.some(s => s.key === "my_cabinet")) whoMenuCabinet.style.display = "none";
+  whoMenuCabinet.addEventListener("click", (e) => {
+    e.stopPropagation();
+    whoWidget.classList.remove("open");
+    renderSection("my_cabinet");
+  });
+  whoWidget.addEventListener("click", (e) => {
+    if(e.target.closest(".who-menu-item")) return; // клик по пункту меню закрывает сам пункт
+    whoWidget.classList.toggle("open");
+  });
+  document.addEventListener("click", (e) => {
+    if(!whoWidget.contains(e.target)) whoWidget.classList.remove("open");
+  });
+
+  // статус — не через data-i18n (значение либо перевод, либо кастомное название
+  // роли из БД), поэтому переводим вручную по смене языка в шапке
+  window.addEventListener("storage", async (e) => {
+    if(e.key !== "l2Lang") return;
+    document.getElementById("whoRole").textContent = await loadMyRoleLabel();
+  });
 
   document.getElementById("appShell").style.display = "";
 })();
