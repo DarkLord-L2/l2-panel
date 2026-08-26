@@ -189,7 +189,7 @@ input[type="date"]{ color-scheme: dark; }
    верхнем углу (фиксированная позиция, не часть потока), клик раскрывает
    меню («Мой кабинет»/«Выйти»), тот же принцип, что переключатель в сайдбаре */
 .who-widget{
-  position:fixed; top:14px; right:20px; z-index:15;
+  position:fixed; top:14px; right:28px; z-index:15;
   display:flex; align-items:center; gap:8px; padding:6px 10px 6px 6px; border-radius:20px; cursor:pointer;
   background: var(--panel); border:1px solid var(--border); box-shadow: 0 4px 16px rgba(0,0,0,.35);
 }
