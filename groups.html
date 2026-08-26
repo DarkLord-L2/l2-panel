@@ -171,7 +171,9 @@
 
   /* «Проверка пати» — сводная таблица по участникам ЭТОЙ группы */
   .gm-check-scroll{ overflow-x:auto; margin-top:10px; }
-  table.gm-check-table{ border-collapse:collapse; width:100%; font-size:13px; min-width:480px; }
+  /* не растягиваем на всю ширину карточки — иначе колонки разъезжаются по краям
+     с огромными пустыми промежутками; таблица под свой контент, прижата влево */
+  table.gm-check-table{ border-collapse:collapse; width:auto; font-size:13px; }
   table.gm-check-table th, table.gm-check-table td{ padding:8px 10px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap; }
   table.gm-check-table th{ color: var(--text-dim); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.03em; }
   table.gm-check-table td.gm-check-num, table.gm-check-table th.gm-check-num{ text-align:right; font-variant-numeric: tabular-nums; }
