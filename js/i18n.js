@@ -211,7 +211,6 @@
     "payout.payoutsCountSuffix": [" раздач", " роздач", " payouts"],
     "payout.ledCount": ["Раздач под руководством: ", "Роздач під керівництвом: ", "Payouts led: "],
     "payout.uniqueMembers": ["Разных участников: ", "Різних учасників: ", "Unique members: "],
-    "payout.leaderGold": ["Себе (лидер): ", "Собі (лідер): ", "For yourself (leader): "],
     "payout.emptyForPeriod": [
       "За выбранный период нет скринов с отмеченным пати-лидером.",
       "За обраний період немає скринів з відміченим паті-лідером.",
