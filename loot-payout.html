@@ -46,6 +46,11 @@
      заголовок, ставится/снимается там же; тут просто бейдж рядом с ником для тех,
      кого туда реально добавили (тот же стиль пилюли, что .rw-tag-badge в roster.html) */
   .lp-tag-badge{ display:inline-block; font-size:10.5px; padding:2px 8px; border-radius:999px; border:1px dashed var(--border-lit); color: var(--text-dim); margin-left:6px; }
+
+  /* строка пати-лидера — первая в таблице, среди остальных участников; тот же
+     приём подсветки, что и hover — рамка акцентным цветом, свой цвет бейджа */
+  .lp-leader-row td{ border-color: var(--gold-dim); }
+  .lp-leader-badge{ border-style:solid; border-color: var(--gold-dim); color: var(--gold); }
 </style>
 </head>
 <body>
@@ -97,7 +102,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=19"></script>
-<script src="js/i18n.js?v=13"></script>
+<script src="js/i18n.js?v=14"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -365,30 +370,43 @@
       `<span class="stat">${L2I18n.t("payout.uniqueMembers", "Разных участников: ")}<b>${entry.members.size}</b></span>` +
       (leaderGold !== null ? `<span class="stat">${L2I18n.t("payout.leaderGold", "Себе (лидер): ")}<b>${fmtGold(leaderGold)}</b></span>` : "");
 
-    const allRows = Array.from(entry.members.entries())
-      .map(([nickname, count]) => ({ nickname, count, left: isLeftClan(nickname) }))
-      .sort((a, b) => b.count - a.count || a.nickname.localeCompare(b.nickname));
+    const memberRows = Array.from(entry.members.entries())
+      .map(([nickname, count]) => ({ nickname, count, left: isLeftClan(nickname) }));
 
     // ушедшие из клана не забирают голду сами — их сумма делится поровну между
     // оставшимися в клане в этом же списке; строка ушедшего (если её вообще
     // показываем) при этом отображает его исходную, ещё не поделённую сумму —
     // просто для справки, сколько ему причиталось бы
-    const stayRows = allRows.filter(r => !r.left);
-    const redistributePool = allRows.filter(r => r.left).reduce((s, r) => s + (goldOf(r.nickname) || 0), 0);
+    const stayRows = memberRows.filter(r => !r.left);
+    const redistributePool = memberRows.filter(r => r.left).reduce((s, r) => s + (goldOf(r.nickname) || 0), 0);
     const perStayBonus = stayRows.length ? redistributePool / stayRows.length : 0;
+    memberRows.forEach(r => {
+      const base = goldOf(r.nickname);
+      r.gold = r.left || base === null ? base : base + perStayBonus;
+    });
 
-    currentRows = showLeftInPayout ? allRows : stayRows;
+    // сортировка — по голде по убыванию (null — «нечем считать» — в самый низ);
+    // сам пати-лидер в эту сортировку не попадает, он всегда первой строкой
+    const sortByGold = (a, b) => {
+      if(a.gold === null || b.gold === null) return (a.gold === null) - (b.gold === null) || a.nickname.localeCompare(b.nickname);
+      return b.gold - a.gold || a.nickname.localeCompare(b.nickname);
+    };
+    memberRows.sort(sortByGold);
+
+    const visibleMemberRows = showLeftInPayout ? memberRows : stayRows.slice().sort(sortByGold);
+    const leaderRow = { nickname: leader, count: null, left: isLeftClan(leader), gold: leaderGold, isLeader: true };
+    currentRows = [leaderRow, ...visibleMemberRows];
 
     const body = document.getElementById("lpBody");
     body.innerHTML = currentRows.map(r => {
       const cross = r.left ? ` <span class="lp-left-cross" title="${escapeHtml(leftClanTitleOf(r.nickname))}">✗</span>` : "";
       const tag = tagBadgeOf(r.nickname);
       const badge = tag ? ` <span class="lp-tag-badge">${escapeHtml(tag)}</span>` : "";
-      const base = goldOf(r.nickname);
-      const gold = r.left || base === null ? base : base + perStayBonus;
-      return `<tr><td>${escapeHtml(r.nickname)}${cross}${badge}</td>` +
-        `<td class="lp-num lp-cnt">${r.count}</td>` +
-        `<td class="lp-num lp-gold">${fmtGold(gold)}</td></tr>`;
+      const leaderBadge = r.isLeader ? ` <span class="lp-tag-badge lp-leader-badge">${escapeHtml(L2I18n.t("payout.leaderBadge", "пати-лидер"))}</span>` : "";
+      const countText = r.count === null ? "—" : r.count;
+      return `<tr class="${r.isLeader ? "lp-leader-row" : ""}"><td>${escapeHtml(r.nickname)}${leaderBadge}${cross}${badge}</td>` +
+        `<td class="lp-num lp-cnt">${countText}</td>` +
+        `<td class="lp-num lp-gold">${fmtGold(r.gold)}</td></tr>`;
     }).join("");
   }
 

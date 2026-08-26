@@ -180,6 +180,7 @@
       "Період: за весь час.",
       "Period: all time.",
     ],
+    "payout.leaderBadge": ["пати-лидер", "паті-лідер", "party leader"],
     "payout.youAreLeader": [
       "Ты — пати-лидер «{nick}» за этот период.",
       "Ти — паті-лідер «{nick}» за цей період.",
