@@ -358,9 +358,10 @@
   }
 
   // сортировка по клику на заголовок — та же схема, что в «Отчёте по мероприятиям»
-  // (reports.html): повторный клик по той же колонке переключает направление
-  let sortKey = "nick";
-  let sortDir = "asc";
+  // (reports.html): повторный клик по той же колонке переключает направление.
+  // По умолчанию — голда по убыванию (сначала самые большие суммы)
+  let sortKey = "gold";
+  let sortDir = "desc";
   function sortRows(rows){
     return rows.slice().sort((a, b) => {
       const mul = sortDir === "asc" ? 1 : -1;
