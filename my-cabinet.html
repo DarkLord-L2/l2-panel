@@ -52,6 +52,15 @@
   .cab-boost-item .mark{ flex:none; font-size:13px; }
   .cab-boost-item.on .mark{ color: var(--ok); }
   .cab-boost-item.off .mark{ color: var(--text-dim); }
+
+  .cab-census-status{ font-size:14px; font-weight:600; margin:0 0 4px; }
+  .cab-census-status.ok{ color: var(--ok); }
+  .cab-census-status.warn{ color: var(--danger-lit); }
+
+  /* та же цветовая логика, что «наперёд»/«долг» в «Налогах» (tax-chip-ahead/debt) */
+  .cab-tax-ahead{ color: var(--ok); }
+  .cab-tax-debt{ color:#d98a3d; }
+  .cab-tax-missed{ color: var(--text-dim); }
 </style>
 </head>
 <body>
@@ -107,13 +116,43 @@
       <div id="cabBoostBody"></div>
       <p class="hint" id="cabBoostEmpty" style="display:none;" data-i18n="cab.boostNotConfigured">Разделы буста ещё не настроены.</p>
     </section>
+
+    <section class="card">
+      <h2 data-i18n="cab.censusTitle">Перепись</h2>
+      <p class="cab-census-status" id="cabCensusStatus"></p>
+      <p class="hint" id="cabCensusCount"></p>
+    </section>
+
+    <section class="card">
+      <h2 data-i18n="cab.taxesTitle">Налоги</h2>
+      <div class="rep-tiles">
+        <div class="rep-tile"><div class="val" id="cabTaxWeeksPaid">0 / 0</div><div class="lbl" data-i18n="cab.taxWeeksPaid">Недель оплачено</div></div>
+        <div class="rep-tile"><div class="val" id="cabTaxDonated">0</div><div class="lbl" data-i18n="cab.taxDonated">Задонатил всего</div></div>
+      </div>
+
+      <div class="cab-history-scroll" style="max-height:220px; margin-top:14px;">
+        <table class="cab-history-table">
+          <thead><tr><th data-i18n="cab.colWeek">Неделя</th><th data-i18n="cab.colStatus">Статус</th></tr></thead>
+          <tbody id="cabTaxWeeksBody"></tbody>
+        </table>
+      </div>
+      <p class="hint" id="cabTaxWeeksEmpty" style="display:none;" data-i18n="cab.taxNoWeeksTracked">Ещё нет ни одной недели с оплатами.</p>
+
+      <div class="cab-history-scroll" style="max-height:220px; margin-top:14px;">
+        <table class="cab-history-table">
+          <thead><tr><th data-i18n="cab.colDate">Дата</th><th data-i18n="cab.colAmount">Сумма</th></tr></thead>
+          <tbody id="cabDonationsBody"></tbody>
+        </table>
+      </div>
+      <p class="hint" id="cabDonationsEmpty" style="display:none;" data-i18n="cab.taxNoDonations">Донатов ещё не было.</p>
+    </section>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=19"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=16"></script>
+<script src="js/i18n.js?v=17"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -396,6 +435,99 @@
     });
   }
 
+  function fmtDateOnly(input){
+    const d = new Date(input);
+    return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`;
+  }
+
+  // ---------- перепись: в клане ли сейчас, когда последний раз отмечен ----------
+  async function loadCensusInfo(){
+    const { data } = await db.from("census_entries").select("nickname, week_start");
+    const rows = data || [];
+    const weeks = [...new Set(rows.map(r => r.week_start))].sort();
+    const latestWeek = weeks.length ? weeks[weeks.length - 1] : null;
+    const myWeeks = [...new Set(rows.filter(r => isMe(r.nickname)).map(r => r.week_start))].sort();
+    return {
+      totalWeeks: weeks.length,
+      myWeeksCount: myWeeks.length,
+      inLatest: !!latestWeek && myWeeks.includes(latestWeek),
+      lastSeen: myWeeks.length ? myWeeks[myWeeks.length - 1] : null,
+    };
+  }
+
+  function renderCensus(info){
+    const statusEl = document.getElementById("cabCensusStatus");
+    const countEl = document.getElementById("cabCensusCount");
+    if(!info.totalWeeks){
+      statusEl.textContent = L2I18n.t("cab.censusNoData", "Переписи ещё не было.");
+      statusEl.className = "cab-census-status";
+    } else if(info.inLatest){
+      statusEl.textContent = L2I18n.t("cab.censusInClan", "В клане — отмечен в последней переписи.");
+      statusEl.className = "cab-census-status ok";
+    } else if(info.lastSeen){
+      statusEl.textContent = L2I18n.t("cab.censusLeftWithDate", "Не в клане — последний раз отмечен в переписи от {date}.").replace("{date}", fmtDateOnly(info.lastSeen));
+      statusEl.className = "cab-census-status warn";
+    } else {
+      statusEl.textContent = L2I18n.t("cab.censusNeverSeen", "Не в клане — в переписи вообще не встречался.");
+      statusEl.className = "cab-census-status warn";
+    }
+    countEl.textContent = info.totalWeeks
+      ? L2I18n.t("cab.censusWeeksCount", "Отмечен в {n} из {total} недель переписи.").replace("{n}", info.myWeeksCount).replace("{total}", info.totalWeeks)
+      : "";
+  }
+
+  // ---------- налоги: какие недели оплачены (и как), сколько задонатил ----------
+  async function loadTaxInfo(){
+    const [{ data: payments }, { data: donations }] = await Promise.all([
+      db.from("tax_payments").select("nickname, week_start, kind").order("week_start", { ascending: false }),
+      db.from("tax_donations").select("nickname, amount, created_at").order("created_at", { ascending: false }),
+    ]);
+    const allWeeks = [...new Set((payments || []).map(r => r.week_start))].sort((a, b) => b.localeCompare(a));
+    const myPaidWeeks = new Map((payments || []).filter(r => isMe(r.nickname)).map(r => [r.week_start, r.kind]));
+    const myDonations = (donations || []).filter(r => isMe(r.nickname));
+    return {
+      weeks: allWeeks.map(w => ({ week: w, kind: myPaidWeeks.get(w) || null })),
+      paidCount: myPaidWeeks.size,
+      donations: myDonations,
+      totalDonated: myDonations.reduce((s, r) => s + Number(r.amount), 0),
+    };
+  }
+
+  function taxKindLabel(kind){
+    if(kind === "ahead") return L2I18n.t("cab.taxPaidAhead", "Оплачено (наперёд)");
+    if(kind === "debt") return L2I18n.t("cab.taxPaidDebt", "Оплачено (долг)");
+    if(kind) return L2I18n.t("cab.taxPaid", "Оплачено");
+    return L2I18n.t("cab.taxNotPaid", "Не оплачено");
+  }
+  function taxKindClass(kind){
+    if(kind === "debt") return "cab-tax-debt";
+    if(kind) return "cab-tax-ahead"; // "ahead" и обычная "normal" — тот же зелёный, оба означают «оплачено»
+    return "cab-tax-missed";
+  }
+
+  function renderTaxInfo(info){
+    document.getElementById("cabTaxWeeksPaid").textContent = `${info.paidCount} / ${info.weeks.length}`;
+    document.getElementById("cabTaxDonated").textContent = info.totalDonated.toLocaleString(L2I18n.locale());
+
+    const weeksBody = document.getElementById("cabTaxWeeksBody");
+    weeksBody.innerHTML = "";
+    document.getElementById("cabTaxWeeksEmpty").style.display = info.weeks.length ? "none" : "";
+    info.weeks.forEach(w => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${escapeHtml(weekRangeLabel(w.week))}</td><td class="${taxKindClass(w.kind)}">${escapeHtml(taxKindLabel(w.kind))}</td>`;
+      weeksBody.appendChild(tr);
+    });
+
+    const donBody = document.getElementById("cabDonationsBody");
+    donBody.innerHTML = "";
+    document.getElementById("cabDonationsEmpty").style.display = info.donations.length ? "none" : "";
+    info.donations.forEach(d => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${fmtDateOnly(d.created_at)}</td><td>${Number(d.amount).toLocaleString(L2I18n.locale())}</td>`;
+      donBody.appendChild(tr);
+    });
+  }
+
   const memberInfo = await loadMyMemberInfo();
   renderHead(memberInfo);
 
@@ -405,6 +537,12 @@
 
   const boostData = await loadBoost();
   renderBoost(boostData);
+
+  const censusInfo = await loadCensusInfo();
+  renderCensus(censusInfo);
+
+  const taxInfo = await loadTaxInfo();
+  renderTaxInfo(taxInfo);
 
   // период/класс-заглушка/числа (toLocaleString) построены через JS, не data-i18n —
   // при смене языка (storage-событие из шапки) перестраиваем их, сохраняя выбранный период
@@ -416,6 +554,8 @@
     renderPeriodOptions();
     sel.value = current;
     renderStats();
+    renderCensus(censusInfo);
+    renderTaxInfo(taxInfo);
   });
 })();
 </script>
