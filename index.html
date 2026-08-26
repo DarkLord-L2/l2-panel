@@ -386,7 +386,7 @@
     const others = L2Cabinet.getSavedAccounts().filter(a => a.userId !== profile.id);
     wrap.innerHTML = others.map(a =>
       `<button type="button" class="who-menu-item who-account-item" data-user-id="${escapeHtml(a.userId)}">` +
-      `<span class="who-account-name">${escapeHtml(a.nickname || a.username)}</span>` +
+      `<span class="who-account-name">${escapeHtml(a.username)}</span>` +
       (a.clanName ? `<span class="who-account-clan">${escapeHtml(a.clanName)}</span>` : "") +
       `</button>`
     ).join("");
