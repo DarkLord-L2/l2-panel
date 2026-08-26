@@ -38,6 +38,14 @@
     "navgroup.uchet": ["Учёт клана", "Облік клану", "Clan Records"],
     "navgroup.dkp": ["ДКП", "ДКП", "DKP"],
     "shell.signOut": ["Выйти", "Вийти", "Sign out"],
+    "shell.addAccountBtn": ["+ Добавить аккаунт", "+ Додати акаунт", "+ Add account"],
+    "shell.addAccountTitle": ["Добавить аккаунт", "Додати акаунт", "Add account"],
+    "shell.addAccountHint": [
+      "Логин и пароль другого аккаунта — может быть тем же кланом или совсем другим. Дальше переключаться между ними можно будет прямо из этого меню, без повторного ввода пароля.",
+      "Логін і пароль іншого акаунта — може бути тим самим кланом або зовсім іншим. Далі перемикатися між ними можна буде прямо з цього меню, без повторного введення пароля.",
+      "Another account's login and password — same clan or a completely different one. Afterwards you can switch between them right from this menu, without entering the password again.",
+    ],
+    "shell.addAccountSubmit": ["Добавить и переключиться", "Додати і перемкнутися", "Add and switch"],
     "shell.profileNotFoundTitle": ["⚠ Профиль не найден", "⚠ Профіль не знайдено", "⚠ Profile not found"],
     "shell.profileNotFoundHint": [
       "Ваш логин существует, но для него не создана запись профиля. Обратитесь к клан-лидеру.",

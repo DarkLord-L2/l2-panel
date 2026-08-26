@@ -36,8 +36,74 @@ async function login(username, password, remember){
 }
 
 async function signOut(){
+  const { data: { session } } = await client.auth.getSession();
+  if(session) forgetAccount(session.user.id);
   await client.auth.signOut();
   location.href = "login.html";
+}
+
+// ---------- переключение между несколькими аккаунтами (как в Google «Добавить
+// аккаунт») — храним не пароли, а токены уже состоявшейся сессии (то же самое,
+// что и так лежит в хранилище сессии) под отдельным ключом на каждый аккаунт,
+// чтобы переключаться между несколькими логинами (одного клана или разных
+// клана — не важно) без повторного ввода пароля ----------
+const ACCOUNTS_KEY = "l2SavedAccounts";
+
+function loadSavedAccounts(){
+  try{ return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || "[]"); }catch(e){ return []; }
+}
+function saveSavedAccountsList(list){
+  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(list));
+}
+function forgetAccount(userId){
+  saveSavedAccountsList(loadSavedAccounts().filter(a => a.userId !== userId));
+}
+
+// сохраняет АКТУАЛЬНУЮ активную сессию в список — вызывается перед уходом на
+// другой аккаунт (чтобы не потерять её свежий refresh_token) и сразу после
+// входа/переключения (сохранить то, что реально стало активным)
+async function persistCurrentAccountSession(){
+  const { data: { session } } = await client.auth.getSession();
+  if(!session) return;
+  const profile = await getProfile().catch(() => null);
+  const list = loadSavedAccounts();
+  const entry = {
+    userId: session.user.id,
+    username: profile?.username || session.user.email?.replace(EMAIL_DOMAIN, "") || "",
+    nickname: profile?.nickname || null,
+    clanName: profile?.clans?.display_name || profile?.clans?.name || null,
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+  };
+  const i = list.findIndex(a => a.userId === entry.userId);
+  if(i >= 0) list[i] = entry; else list.push(entry);
+  saveSavedAccountsList(list);
+}
+
+// вход НОВЫМ логином/паролем поверх уже открытой сессии — сохраняет текущий
+// аккаунт (чтобы вернуться к нему потом), входит под новым и тоже его сохраняет.
+// Всегда переводит на «запомнить меня» (localStorage) — иначе переключение между
+// сохранёнными аккаунтами не переживёт закрытие вкладки
+async function addAccount(username, password){
+  await persistCurrentAccountSession();
+  localStorage.setItem(REMEMBER_KEY, "1");
+  const { data, error } = await client.auth.signInWithPassword({ email: usernameToEmail(username), password });
+  if(error) throw error;
+  await persistCurrentAccountSession();
+  return data;
+}
+
+// переключение на уже сохранённый аккаунт по его userId — client.auth.setSession
+// сам обновит токены через refresh_token, если access_token уже протух
+async function switchAccount(userId){
+  const acc = loadSavedAccounts().find(a => a.userId === userId);
+  if(!acc) throw new Error("account_not_found");
+  await persistCurrentAccountSession();
+  localStorage.setItem(REMEMBER_KEY, "1");
+  const { data, error } = await client.auth.setSession({ access_token: acc.access_token, refresh_token: acc.refresh_token });
+  if(error) throw error;
+  await persistCurrentAccountSession();
+  return data;
 }
 
 // Вызывать в начале любой защищённой страницы. Без сессии — редирект на логин.
@@ -277,4 +343,9 @@ window.L2Cabinet = {
   adminOcrEventStats,
   clearMustChangePassword,
   applyClanBranding,
+  getSavedAccounts: loadSavedAccounts,
+  addAccount,
+  switchAccount,
+  forgetAccount,
+  rememberCurrentAccount: persistCurrentAccountSession,
 };

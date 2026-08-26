@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=21" />
+<link rel="stylesheet" href="js/theme.css?v=22" />
 </head>
 <body>
 
@@ -31,6 +31,9 @@
     <div class="who-menu" id="whoMenu">
       <div class="lang-switch" id="langSwitch"></div>
       <div class="who-menu-sep"></div>
+      <div id="whoAccountsList"></div>
+      <button type="button" class="who-menu-item" id="whoAddAccountBtn" data-i18n="shell.addAccountBtn">+ Добавить аккаунт</button>
+      <div class="who-menu-sep"></div>
       <button type="button" class="who-menu-item" id="whoMenuCabinet" data-i18n="section.my_cabinet">Мой кабинет</button>
       <button type="button" class="who-menu-item who-menu-danger" id="signOutBtn" data-i18n="shell.signOut">Выйти</button>
     </div>
@@ -46,10 +49,30 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="addAccountOverlay">
+  <div class="modal">
+    <button class="modal-close" id="addAccountClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 data-i18n="shell.addAccountTitle">Добавить аккаунт</h2>
+    <p class="hint" data-i18n="shell.addAccountHint">Логин и пароль другого аккаунта — может быть тем же кланом или совсем другим. Дальше переключаться между ними можно будет прямо из этого меню, без повторного ввода пароля.</p>
+    <form id="addAccountForm">
+      <div class="field">
+        <label for="addAccountUsername" data-i18n="login.usernameLabel">Логин</label>
+        <input type="text" id="addAccountUsername" autocomplete="username" required autofocus />
+      </div>
+      <div class="field">
+        <label for="addAccountPassword" data-i18n="login.passwordLabel">Пароль</label>
+        <input type="password" id="addAccountPassword" autocomplete="current-password" required />
+      </div>
+      <p class="error-msg" id="addAccountError"></p>
+      <button type="submit" class="btn btn-primary" id="addAccountSubmit" style="width:100%;" data-i18n="shell.addAccountSubmit">Добавить и переключиться</button>
+    </form>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=19"></script>
+<script src="js/supabase-client.js?v=20"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=24"></script>
+<script src="js/i18n.js?v=25"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -106,6 +129,10 @@
       'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[key] || ICONS.default) + "</svg>";
   }
   let navStagger = 0; // счётчик для чуть заметной анимации появления пунктов по очереди
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  }
 
   const profile = await L2Cabinet.getProfile();
   if(!profile){
@@ -344,6 +371,75 @@
   window.addEventListener("storage", async (e) => {
     if(e.key === "l2Lang") await renderMyRoleLabel();
     else if(e.key === CLASSIC_TOPBAR_KEY) applyClassicTopbar(e.newValue === "1");
+  });
+
+  // ---------- переключение между несколькими аккаунтами (как в Google «Добавить
+  // аккаунт») — храним не пароли, а токены уже состоявшейся сессии; работает и
+  // между аккаунтами одного клана, и между разными кланами одинаково ----------
+  // текущую (уже открытую) сессию тоже запоминаем — иначе, если вошли обычным
+  // способом через login.html, а потом добавили ещё один аккаунт, вернуться
+  // назад к первому будет некуда (он никогда не попадал в список)
+  await L2Cabinet.rememberCurrentAccount();
+
+  function renderAccountsList(){
+    const wrap = document.getElementById("whoAccountsList");
+    const others = L2Cabinet.getSavedAccounts().filter(a => a.userId !== profile.id);
+    wrap.innerHTML = others.map(a =>
+      `<button type="button" class="who-menu-item who-account-item" data-user-id="${escapeHtml(a.userId)}">` +
+      `<span class="who-account-name">${escapeHtml(a.nickname || a.username)}</span>` +
+      (a.clanName ? `<span class="who-account-clan">${escapeHtml(a.clanName)}</span>` : "") +
+      `</button>`
+    ).join("");
+    wrap.querySelectorAll(".who-account-item").forEach(btn => {
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        btn.disabled = true;
+        try{
+          await L2Cabinet.switchAccount(btn.dataset.userId);
+          location.reload();
+        }catch(err){
+          // сохранённая сессия протухла (например, пароль сменили) — не висеть
+          // мёртвым грузом в списке, лучше пусть добавят заново через логин/пароль
+          L2Cabinet.forgetAccount(btn.dataset.userId);
+          renderAccountsList();
+        }
+      });
+    });
+  }
+  renderAccountsList();
+
+  const addAccountOverlay = document.getElementById("addAccountOverlay");
+  const addAccountError = document.getElementById("addAccountError");
+  const addAccountSubmit = document.getElementById("addAccountSubmit");
+  document.getElementById("whoAddAccountBtn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    whoWidget.classList.remove("open");
+    addAccountError.textContent = "";
+    document.getElementById("addAccountForm").reset();
+    addAccountOverlay.classList.add("show");
+    setTimeout(() => document.getElementById("addAccountUsername").focus(), 0);
+  });
+  document.getElementById("addAccountClose").addEventListener("click", () => {
+    addAccountOverlay.classList.remove("show");
+  });
+  addAccountOverlay.addEventListener("click", (e) => {
+    if(e.target.id === "addAccountOverlay") e.currentTarget.classList.remove("show");
+  });
+  document.getElementById("addAccountForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    addAccountError.textContent = "";
+    addAccountSubmit.disabled = true;
+    addAccountSubmit.textContent = L2I18n.t("login.submitting", "Входим…");
+    const username = document.getElementById("addAccountUsername").value;
+    const password = document.getElementById("addAccountPassword").value;
+    try{
+      await L2Cabinet.addAccount(username, password);
+      location.reload();
+    }catch(err){
+      addAccountError.textContent = L2I18n.t("login.error", "Неверный логин или пароль");
+      addAccountSubmit.disabled = false;
+      addAccountSubmit.textContent = L2I18n.t("shell.addAccountSubmit", "Добавить и переключиться");
+    }
   });
 
   appShell.style.display = "";
