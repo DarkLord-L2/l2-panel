@@ -178,13 +178,27 @@
       </div>
       <p class="hint" id="cabDonationsEmpty" style="display:none;" data-i18n="cab.taxNoDonations">Донатов ещё не было.</p>
     </section>
+
+    <section class="card">
+      <h2 data-i18n="cab.payoutHistoryTitle">История выплат ДКП</h2>
+      <div class="rep-tiles">
+        <div class="rep-tile"><div class="val" id="cabPayoutTotal">0</div><div class="lbl" data-i18n="cab.payoutTotalReceived">Всего получено</div></div>
+      </div>
+      <div class="cab-history-scroll" style="max-height:260px; margin-top:14px;">
+        <table class="cab-history-table">
+          <thead><tr><th data-i18n="cab.colDate">Дата</th><th data-i18n="cab.colPeriod">Период</th><th data-i18n="cab.colAmount">Сумма</th></tr></thead>
+          <tbody id="cabPayoutBody"></tbody>
+        </table>
+      </div>
+      <p class="hint" id="cabPayoutEmpty" style="display:none;" data-i18n="cab.payoutHistoryEmpty">Пока нет истории выплат — они появляются здесь только после того, как клан-лидер занесёт раздачу в архив.</p>
+    </section>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=19"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=22"></script>
+<script src="js/i18n.js?v=23"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -560,6 +574,52 @@
     });
   }
 
+  function fmtDatePlain(iso){
+    if(!iso) return "";
+    const d = new Date(iso + "T00:00:00");
+    return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`;
+  }
+
+  // ---------- история выплат ДКП — из архива «Раздачи» (payout_archive), не
+  // из живого payout_batches (та висит только 24ч и не история, а активная раздача).
+  // Ничего не появится, пока клан-лидер сам не занесёт раздачу в архив кнопкой
+  // на странице «Раздача» — до этого момента данных тут просто нет ----------
+  async function loadPayoutHistory(){
+    const { data } = await db.from("payout_archive")
+      .select("split_date, from_date, to_date, data")
+      .order("split_date", { ascending: false });
+    const rows = [];
+    (data || []).forEach(entry => {
+      (entry.data?.leaders || []).forEach(l => {
+        // свой ник мог быть и лидером пати в этой раздаче, и просто участником —
+        // в одной записи архива он встречается только в одной из двух ролей
+        if(isMe(l.leader)){
+          rows.push({ split_date: entry.split_date, from_date: entry.from_date, to_date: entry.to_date, gold: l.leaderGold });
+          return;
+        }
+        const mine = (l.members || []).find(m => isMe(m.nickname));
+        if(mine) rows.push({ split_date: entry.split_date, from_date: entry.from_date, to_date: entry.to_date, gold: mine.gold });
+      });
+    });
+    return { rows, total: rows.reduce((s, r) => s + (Number(r.gold) || 0), 0) };
+  }
+
+  function renderPayoutHistory(info){
+    document.getElementById("cabPayoutTotal").textContent = Math.round(info.total).toLocaleString(L2I18n.locale());
+    const body = document.getElementById("cabPayoutBody");
+    body.innerHTML = "";
+    document.getElementById("cabPayoutEmpty").style.display = info.rows.length ? "none" : "";
+    info.rows.forEach(r => {
+      const period = (r.from_date || r.to_date)
+        ? `${r.from_date ? fmtDatePlain(r.from_date) : "…"} – ${r.to_date ? fmtDatePlain(r.to_date) : "…"}`
+        : L2I18n.t("payout.periodAllTimeShort", "за всё время");
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${fmtDateOnly(r.split_date)}</td><td>${escapeHtml(period)}</td>` +
+        `<td>${r.gold == null ? "—" : Math.round(r.gold).toLocaleString(L2I18n.locale())}</td>`;
+      body.appendChild(tr);
+    });
+  }
+
   const memberInfo = await loadMyMemberInfo();
   renderHead(memberInfo);
 
@@ -575,6 +635,9 @@
 
   const taxInfo = await loadTaxInfo();
   renderTaxInfo(taxInfo);
+
+  const payoutHistory = await loadPayoutHistory();
+  renderPayoutHistory(payoutHistory);
 
   // «Классическая шапка сайта» — личная настройка интерфейса (localStorage на
   // аккаунт, не БД клана), доступна только в СВОЁМ кабинете, не в чужом. Ключ
@@ -602,6 +665,7 @@
     renderStats();
     renderCensus(censusInfo);
     renderTaxInfo(taxInfo);
+    renderPayoutHistory(payoutHistory);
   });
 })();
 </script>
