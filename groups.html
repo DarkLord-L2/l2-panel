@@ -165,6 +165,15 @@
   .gc-member-modal .gc-class-picker{ position:static; }
   .gc-member-modal .gc-class-dropdown{ top:68px; left:24px; right:24px; bottom:24px; }
   .gc-member-modal .gc-class-list{ max-height:none; flex:1; }
+
+  /* «Проверка пати» — сводная таблица по участникам ЭТОЙ группы */
+  .gm-check-scroll{ overflow-x:auto; margin-top:10px; }
+  table.gm-check-table{ border-collapse:collapse; width:100%; font-size:13px; min-width:480px; }
+  table.gm-check-table th, table.gm-check-table td{ padding:8px 10px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap; }
+  table.gm-check-table th{ color: var(--text-dim); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.03em; }
+  table.gm-check-table td.gm-check-num, table.gm-check-table th.gm-check-num{ text-align:right; font-variant-numeric: tabular-nums; }
+  .gm-check-ok{ color: var(--ok); }
+  .gm-check-warn{ color: var(--danger-lit); }
 </style>
 </head>
 <body>
@@ -229,6 +238,25 @@
         <button class="btn" id="addMemberBtn" data-i18n="common.add">Добавить</button>
       </div>
       <p class="error-msg" id="groupError"></p>
+    </section>
+
+    <section class="card" id="partyCheckCard" style="margin-top:16px; display:none;">
+      <h2 data-i18n="groups.partyCheckTitle">Проверка пати</h2>
+      <p class="hint" data-i18n="groups.partyCheckHint">Указан ли класс, % буста (та же формула, что в ДКП), сколько мероприятий посетили за всё время и оплачен ли налог за последнюю отслеживаемую неделю.</p>
+      <div class="gm-check-scroll">
+        <table class="gm-check-table">
+          <thead>
+            <tr>
+              <th data-i18n="groups.checkColNick">Ник</th>
+              <th data-i18n="groups.checkColClass">Класс</th>
+              <th class="gm-check-num" data-i18n="groups.checkColBoost">% буста</th>
+              <th class="gm-check-num" data-i18n="groups.checkColAttendance">Мероприятий</th>
+              <th data-i18n="groups.checkColTax">Налог</th>
+            </tr>
+          </thead>
+          <tbody id="partyCheckBody"></tbody>
+        </table>
+      </div>
     </section>
   </div>
 
@@ -384,7 +412,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=20"></script>
-<script src="js/i18n.js?v=25"></script>
+<script src="js/i18n.js?v=26"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -457,6 +485,113 @@
       statsByNick.set(key, cur);
     });
   }
+
+  // ---------- «Проверка пати»: класс/буст/явка/налоги одним взглядом по группе,
+  // для пати-лидера/зама/админа — те же данные, что раскиданы по «Проверке буста»,
+  // «Налогам» и «Журналу посещаемости», просто сведены в одну таблицу под группу ----------
+  let boostSections = [], boostItems = [], boostValueSet = new Set();
+  let minBoostPercent = 0;
+  async function loadBoostStructure(){
+    const [{ data: s }, { data: it }] = await Promise.all([
+      db.from("boost_sections").select("id, sort_order").order("sort_order"),
+      db.from("boost_items")
+        .select("id, section_id, name, weight, sort_order, subgroup, hidden, merged_with_prev, merge_all_required")
+        .order("sort_order"),
+    ]);
+    boostSections = s || [];
+    boostItems = (it || []).map(x => ({ ...x, weight: Number(x.weight) }));
+  }
+  async function loadBoostValues(){
+    const { data } = await db.from("boost_member_values").select("nickname, item_id, enabled");
+    boostValueSet = new Set();
+    (data || []).forEach(r => { if(r.enabled) boostValueSet.add(r.nickname + "|" + r.item_id); });
+  }
+  async function loadMinBoostPercent(){
+    const { data } = await db.from("loot_split_settings").select("min_boost_percent").eq("clan_id", profile.clan_id).maybeSingle();
+    minBoostPercent = Number(data?.min_boost_percent) || 0;
+  }
+  // та же формула (включая «слитые» пункты и минимальный %), что в «ДКП Соло»/«ДКП
+  // Пати» — чтобы процент тут совпадал 1-в-1 с тем, что видно там
+  function boostItemsOfSection(secId){
+    return boostItems.filter(i => i.section_id === secId).sort((a,b)=> a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+  }
+  function orderedBoostItems(){
+    return boostSections.flatMap(s => boostItemsOfSection(s.id)).filter(i => !i.hidden);
+  }
+  function mergeBoostGroups(list){
+    const out = [];
+    list.forEach(item => {
+      const prev = out[out.length - 1];
+      const sameBlock = prev && prev[0].section_id === item.section_id && (prev[0].subgroup || "") === (item.subgroup || "");
+      if(item.merged_with_prev && sameBlock) prev.push(item);
+      else out.push([item]);
+    });
+    return out;
+  }
+  function isAllRequiredBoostGroup(group){ return group.length > 1 && group.some(i => i.merge_all_required); }
+  function boostGroupScore(group, nick){
+    const onItems = group.filter(i => boostValueSet.has(nick + "|" + i.id));
+    if(isAllRequiredBoostGroup(group)) return onItems.length === group.length ? group.reduce((s,i)=>s+i.weight,0) : 0;
+    return onItems.reduce((s,i)=>s+i.weight,0);
+  }
+  function maxBoostScore(){ return orderedBoostItems().reduce((s,i)=> s + i.weight, 0); }
+  function boostScoreOf(nick){ return mergeBoostGroups(orderedBoostItems()).reduce((s,g)=> s + boostGroupScore(g, nick), 0); }
+  function boostPercentOf(nick){
+    if(minBoostPercent > 0 && boostScoreOf(nick) === 0) return minBoostPercent;
+    const mx = maxBoostScore();
+    return mx ? (boostScoreOf(nick) / mx) * 100 : 0;
+  }
+
+  // normalizeNick(nickname) -> сколько раз вообще отмечен в attendance_entries (та же
+  // таблица, что в «Не посещали» в «Участниках клана») — за всё время, не за период
+  let attendanceCountByNorm = new Map();
+  async function loadAttendanceCheck(){
+    const { data } = await db.from("attendance_entries").select("nickname");
+    attendanceCountByNorm = new Map();
+    (data || []).forEach(r => {
+      const key = normalizeNick(r.nickname);
+      attendanceCountByNorm.set(key, (attendanceCountByNorm.get(key) || 0) + 1);
+    });
+  }
+
+  // оплата налога — только за последнюю отслеживаемую неделю (не вся история, как
+  // в «Моём кабинете»): пати-лидеру важно «платит ли СЕЙЧАС», а не архив за год
+  let latestTaxWeek = null;
+  let taxPaidNormSet = new Set();
+  async function loadTaxCheck(){
+    const { data } = await db.from("tax_payments").select("nickname, week_start");
+    const weeks = [...new Set((data || []).map(r => r.week_start))].sort();
+    latestTaxWeek = weeks.length ? weeks[weeks.length - 1] : null;
+    taxPaidNormSet = new Set(
+      (data || []).filter(r => r.week_start === latestTaxWeek).map(r => normalizeNick(r.nickname))
+    );
+  }
+
+  function renderPartyCheck(){
+    const card = document.getElementById("partyCheckCard");
+    if(!canOpenCabinets()){ card.style.display = "none"; return; }
+    card.style.display = "";
+    const nicks = currentOrderedNicks();
+    const body = document.getElementById("partyCheckBody");
+    body.innerHTML = nicks.map(nick => {
+      const info = memberInfo.get(nick) || {};
+      const hasClass = !!info.class_name;
+      const pct = boostPercentOf(nick);
+      const attCount = attendanceCountByNorm.get(normalizeNick(nick)) || 0;
+      const taxOk = latestTaxWeek ? taxPaidNormSet.has(normalizeNick(nick)) : null;
+      const taxCell = taxOk === null
+        ? "—"
+        : taxOk ? L2I18n.t("groups.checkTaxPaid", "оплачен") : L2I18n.t("groups.checkTaxNotPaid", "не оплачен");
+      return `<tr>` +
+        `<td>${escapeHtml(nick)}</td>` +
+        `<td class="${hasClass ? "" : "gm-check-warn"}">${hasClass ? escapeHtml(info.class_name) : L2I18n.t("groups.checkNoClass", "не указан")}</td>` +
+        `<td class="gm-check-num ${pct > 0 ? "" : "gm-check-warn"}">${pct.toFixed(0)}%</td>` +
+        `<td class="gm-check-num ${attCount ? "" : "gm-check-warn"}">${attCount}</td>` +
+        `<td class="${taxOk === null ? "" : taxOk ? "gm-check-ok" : "gm-check-warn"}">${taxCell}</td>` +
+        `</tr>`;
+    }).join("");
+  }
+
   // среднее по всем участникам группы (у кого нет записей в event_stats — считаются нулём,
   // чтобы у пустых/новых групп карточка честно показывала «ещё нет данных», а не пропускала их)
   function groupAverages(groupId){
@@ -1040,6 +1175,7 @@
       wrap.appendChild(card);
     });
     renderGroupLeaderRow();
+    renderPartyCheck();
   }
 
   function openDetail(groupId){
@@ -1284,7 +1420,11 @@
   });
 
   await loadNickOptions();
-  await Promise.all([loadGroups(), loadMemberInfo(), loadMemberStats()]);
+  await Promise.all([
+    loadGroups(), loadMemberInfo(), loadMemberStats(),
+    loadBoostStructure(), loadBoostValues(), loadMinBoostPercent(),
+    loadAttendanceCheck(), loadTaxCheck(),
+  ]);
 
   if(isPartyRestricted){
     // не-админ с назначенной пати не выбирает группу — сразу видит только свою,
