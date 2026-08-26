@@ -145,21 +145,15 @@
     <nav class="admin-nav" id="adminNav">
       <button type="button" class="admin-nav-item" data-tab="users" data-i18n="admin.tabUsers">Пользователи</button>
       <button type="button" class="admin-nav-item" data-tab="sections" data-i18n="admin.tabSections">Разделы и права</button>
-      <button type="button" class="admin-nav-item" data-tab="rules" data-i18n="admin.tabRules">Правила клана</button>
+      <button type="button" class="admin-nav-item" data-tab="rules" data-i18n="admin.tabRules">Налоги</button>
       <button type="button" class="admin-nav-item" data-tab="dkp" data-i18n="admin.tabDkp">ДКП</button>
       <button type="button" class="admin-nav-item" data-tab="branding" data-i18n="admin.tabBranding">Оформление</button>
       <button type="button" class="admin-nav-item" data-tab="shares" data-i18n="admin.tabShares">Ссылки</button>
+      <button type="button" class="admin-nav-item" data-tab="misc" data-i18n="admin.tabMisc">Разное</button>
     </nav>
 
     <div class="admin-content">
     <div class="admin-tab-panel" data-panel="users">
-  <section class="card">
-    <h2 data-i18n="admin.roleNamesTitle">Названия ролей</h2>
-    <p class="hint" data-i18n="admin.roleNamesHint">Своё название роли только для вашего клана — права и ранг не меняются, меняется только то, как роль называется на экране. Пусто — используется название по умолчанию (слева).</p>
-    <div class="loot-coef-list" id="roleLabelsList"></div>
-    <p class="error-msg" id="roleLabelsError"></p>
-  </section>
-
   <section class="card">
     <h2 data-i18n="admin.newUserTitle">Новый пользователь</h2>
     <form id="createUserForm">
@@ -371,6 +365,15 @@
     <p class="error-msg" id="sharesError"></p>
   </section>
     </div>
+
+    <div class="admin-tab-panel" data-panel="misc">
+  <section class="card">
+    <h2 data-i18n="admin.roleNamesTitle">Названия ролей</h2>
+    <p class="hint" data-i18n="admin.roleNamesHint">Своё название роли только для вашего клана — права и ранг не меняются, меняется только то, как роль называется на экране. Пусто — используется название по умолчанию (слева).</p>
+    <div class="loot-coef-list" id="roleLabelsList"></div>
+    <p class="error-msg" id="roleLabelsError"></p>
+  </section>
+    </div>
     </div>
   </div>
 </div>
@@ -384,7 +387,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=19"></script>
-<script src="js/i18n.js?v=9"></script>
+<script src="js/i18n.js?v=10"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
