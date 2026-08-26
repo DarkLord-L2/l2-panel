@@ -99,7 +99,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=18"></script>
-<script src="js/i18n.js?v=6"></script>
+<script src="js/i18n.js?v=7"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -159,9 +159,11 @@
   }
   function leftClanTitleOf(nick){
     const lastWeek = lastSeenWeekByNorm.get(normalizeNick(nick));
-    return lastWeek
-      ? L2I18n.t("dkp.leftClanTitleWithDate", "Уже не в клане — был в переписи от {date}").replace("{date}", fmtDate(lastWeek))
-      : L2I18n.t("dkp.leftClanTitle", "Уже не в клане");
+    if(lastWeek) return L2I18n.t("dkp.leftClanTitleWithDate", "Уже не в клане — был в переписи от {date}").replace("{date}", fmtDate(lastWeek));
+    // не просто «пропал из последней переписи», а вообще ни разу не встречался
+    // ни в одной неделе — отдельный явный текст, чтобы не выглядело как
+    // «подсказка не работает» на фоне остальных строк с датой
+    return L2I18n.t("dkp.leftClanTitleNoHistory", "Уже не в клане — в переписи вообще не встречался");
   }
 
   // «отдельный список» из «Участники клана» (например «Окна» — альт-персонажи) —

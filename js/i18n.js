@@ -328,6 +328,11 @@
       "Вже не в клані — був у переписі від {date}",
       "No longer in the clan — last seen in the census on {date}",
     ],
+    "dkp.leftClanTitleNoHistory": [
+      "Уже не в клане — в переписи вообще не встречался",
+      "Вже не в клані — у переписі взагалі не зустрічався",
+      "No longer in the clan — never appeared in the census at all",
+    ],
     "dkp.membersCountSuffix": [" участников", " учасників", " members"],
     "dkp.leaderPrefix": [" · лидер ", " · лідер ", " · leader "],
     "dkp.noMembersInRoster": ["Участников нет.", "Учасників немає.", "No members."],
