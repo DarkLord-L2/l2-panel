@@ -393,7 +393,10 @@
     memberRows.sort(sortByGold);
 
     const visibleMemberRows = showLeftInPayout ? memberRows : stayRows.slice().sort(sortByGold);
-    const leaderRow = { nickname: leader, count: null, left: isLeftClan(leader), gold: leaderGold, isLeader: true };
+    // «Доли» у лидера — не то же самое, что у участников (там это число раздач
+    // именно под ЭТИМ лидером), но параллельный смысл есть: сколько раз он сам
+    // водил раздачу за период — тот же entry.partyCount, что в сводке выше
+    const leaderRow = { nickname: leader, count: entry.partyCount, left: isLeftClan(leader), gold: leaderGold, isLeader: true };
     currentRows = [leaderRow, ...visibleMemberRows];
 
     const body = document.getElementById("lpBody");
