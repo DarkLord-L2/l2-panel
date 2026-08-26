@@ -60,6 +60,9 @@
   .rw-party-badge{ flex:none; font-size:11px; padding:3px 9px; border-radius:999px; border:1px solid var(--border); color: var(--text-dim); }
   .rw-tag-badge{ flex:none; font-size:11px; padding:3px 9px; border-radius:999px; border:1px dashed var(--border-lit); color: var(--text-dim); }
 
+  /* приписка тем, кто ни разу не отмечен ни в одном attendance_entries за всё время */
+  .rw-no-attendance{ font-size:11px; color: var(--danger-lit); }
+
   /* пикер класса — тот же, что в «Группах»: кнопка с иконкой + поиск, до 4 профессий,
      у каждой свой уровень; открытый список разворачивается на всё окно */
   .gc-class-picker{ position:static; }
@@ -223,7 +226,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=19"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=21"></script>
+<script src="js/i18n.js?v=22"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -306,6 +309,16 @@
     });
   }
 
+  // normalizeNick(nickname) -> хоть раз отмечен в attendance_entries за всё время
+  // (та же таблица, что считает явку в ДКП и «Журнале посещаемости») — кого там
+  // вообще нет ни разу, помечаем прямо в списке участников
+  let attendedNormSet = new Set();
+  async function loadAttendance(){
+    const { data } = await db.from("attendance_entries").select("nickname");
+    attendedNormSet = new Set((data || []).map(r => normalizeNick(r.nickname)));
+  }
+  function neverAttended(nick){ return !attendedNormSet.has(normalizeNick(nick)); }
+
   async function loadTagSettings(){
     const { data } = await db.from("roster_tag_settings").select("label, enabled").maybeSingle();
     tagSettings = { label: data?.label || L2I18n.t("roster.defaultTagLabel", "Отдельный список"), enabled: !!data?.enabled };
@@ -387,13 +400,17 @@
     const nameHtml = canOpenCabinetFor(nick)
       ? `<span class="rw-name rw-name-link" data-nick="${escapeHtml(nick)}">${escapeHtml(nick)}</span>`
       : `<span class="rw-name">${escapeHtml(nick)}</span>`;
+    const noAttendanceNote = neverAttended(nick)
+      ? `<span class="rw-no-attendance">${escapeHtml(L2I18n.t("roster.neverAttended", "(Не посетил ни одного мероприятия)"))}</span>`
+      : "";
     return `<div class="rw-row">` +
       `<button type="button" class="rw-avatar-btn" data-nick="${escapeHtml(nick)}" ${isAdmin ? "" : "disabled"}>` +
       `<img class="rw-avatar-main" src="${avatarSrc}" alt="" />` +
       (subAvatars ? `<span class="rw-sub-avatar-row">${subAvatars}</span>` : "") +
       `</button>` +
       `<div class="rw-who">${nameHtml}` +
-      `<span class="rw-cls${clsText ? "" : " rw-cls-empty"}">${escapeHtml(clsText || L2I18n.t("cab.classNotSet", "Класс не указан"))}</span></div>` +
+      `<span class="rw-cls${clsText ? "" : " rw-cls-empty"}">${escapeHtml(clsText || L2I18n.t("cab.classNotSet", "Класс не указан"))}</span>` +
+      noAttendanceNote + `</div>` +
       tagBadge + badge +
       `</div>`;
   }
@@ -634,7 +651,7 @@
     renderList();
   });
 
-  await Promise.all([loadCensus(), loadMemberInfo(), loadGroups(), loadTagSettings(), loadTagged()]);
+  await Promise.all([loadCensus(), loadMemberInfo(), loadGroups(), loadTagSettings(), loadTagged(), loadAttendance()]);
   applyTagTabVisibility();
   renderList();
 

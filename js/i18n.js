@@ -429,6 +429,11 @@
     "roster.settingsTitle": ["Настройки", "Налаштування", "Settings"],
     "roster.noParty": ["Без пати", "Без паті", "No party"],
     "roster.noClass": ["Без профессии", "Без професії", "No class"],
+    "roster.neverAttended": [
+      "(Не посетил ни одного мероприятия)",
+      "(Не відвідав жодного заходу)",
+      "(Never attended a single event)",
+    ],
     "roster.tagListEmpty": ["Список «{label}» пуст.", "Список «{label}» порожній.", "The “{label}” list is empty."],
     "roster.nothingFound": ["Никого не нашлось.", "Нікого не знайдено.", "No one found."],
     "roster.defaultTagLabel": ["Отдельный список", "Окремий список", "Custom list"],
