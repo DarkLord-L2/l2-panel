@@ -154,6 +154,13 @@
     <div class="admin-content">
     <div class="admin-tab-panel" data-panel="users">
   <section class="card">
+    <h2 data-i18n="admin.roleNamesTitle">Названия ролей</h2>
+    <p class="hint" data-i18n="admin.roleNamesHint">Своё название роли только для вашего клана — права и ранг не меняются, меняется только то, как роль называется на экране. Пусто — используется название по умолчанию (слева).</p>
+    <div class="loot-coef-list" id="roleLabelsList"></div>
+    <p class="error-msg" id="roleLabelsError"></p>
+  </section>
+
+  <section class="card">
     <h2 data-i18n="admin.newUserTitle">Новый пользователь</h2>
     <form id="createUserForm">
       <div class="form-row">
@@ -376,8 +383,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=18"></script>
-<script src="js/i18n.js?v=8"></script>
+<script src="js/supabase-client.js?v=19"></script>
+<script src="js/i18n.js?v=9"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -406,13 +413,78 @@
   const db = L2Cabinet.client;
   let roles = [], parties = [], sections = [];
 
+  // «Названия ролей» — своё название роли для этого клана (public.roles общая
+  // на всю платформу, её label трогать нельзя — задело бы все кланы разом)
+  let roleLabelOverrides = new Map(); // role_id -> label
+
   async function loadLookups(){
-    const [{ data: r }, { data: p }, { data: s }] = await Promise.all([
+    const [{ data: r }, { data: p }, { data: s }, { data: rl }] = await Promise.all([
       db.from("roles").select("id, key, label, rank").order("rank", { ascending: false }),
       db.from("clan_groups").select("id, name, leader_nickname").eq("hidden", false).order("name"),
       db.from("sections").select("key, label, sort").order("sort"),
+      db.from("clan_role_labels").select("role_id, label").eq("clan_id", profile.clan_id),
     ]);
     roles = r || []; parties = p || []; sections = s || [];
+    roleLabelOverrides = new Map((rl || []).map(x => [x.role_id, x.label]));
+  }
+
+  // название роли, которое реально видно в этом клане — своё (если задано в
+  // «Названиях ролей») или обычное дефолтное (перевод/название из public.roles)
+  function roleDisplayLabel(role){
+    if(!role) return "—";
+    return roleLabelOverrides.get(role.id) || L2I18n.t("role." + role.key, role.label);
+  }
+
+  function renderRoleLabelsList(){
+    const wrap = document.getElementById("roleLabelsList");
+    wrap.innerHTML = "";
+    roles.forEach(role => {
+      const row = document.createElement("div");
+      row.className = "loot-coef-row";
+
+      const defaultName = L2I18n.t("role." + role.key, role.label);
+      const label = document.createElement("span");
+      label.className = "label";
+      label.textContent = defaultName;
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.maxLength = 40;
+      input.style.width = "160px";
+      input.placeholder = defaultName;
+      input.value = roleLabelOverrides.get(role.id) || "";
+
+      input.addEventListener("change", async () => {
+        const errEl = document.getElementById("roleLabelsError");
+        errEl.textContent = "";
+        const val = input.value.trim();
+        input.disabled = true;
+        let error;
+        if(val){
+          ({ error } = await db.from("clan_role_labels").upsert(
+            { clan_id: profile.clan_id, role_id: role.id, label: val },
+            { onConflict: "clan_id,role_id" }
+          ));
+          if(!error) roleLabelOverrides.set(role.id, val);
+        } else {
+          ({ error } = await db.from("clan_role_labels").delete().eq("clan_id", profile.clan_id).eq("role_id", role.id));
+          if(!error) roleLabelOverrides.delete(role.id);
+        }
+        if(error){
+          errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
+        } else {
+          // применяем сразу везде, где роли уже отрисованы в этой сессии,
+          // без перезагрузки страницы
+          renderUsersGrouped();
+          loadMatrix();
+          fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(roleDisplayLabel(r)), false);
+        }
+        input.disabled = false;
+      });
+
+      row.append(label, input);
+      wrap.appendChild(row);
+    });
   }
 
   // ---------- полное вкл/выкл раздела на весь клан («Какие разделы вообще есть») ----------
@@ -860,13 +932,13 @@
 
       const tdRole = document.createElement("td");
       if(isSelf){
-        tdRole.textContent = u.roles ? L2I18n.t("role." + u.roles.key, u.roles.label) : "—";
+        tdRole.textContent = u.roles ? roleDisplayLabel({ id: u.role_id, key: u.roles.key, label: u.roles.label }) : "—";
       } else {
         const sel = document.createElement("select");
         roles.forEach(r => {
           const opt = document.createElement("option");
           opt.value = r.id;
-          opt.textContent = L2I18n.t("role." + r.key, r.label);
+          opt.textContent = roleDisplayLabel(r);
           if(r.id === u.role_id) opt.selected = true;
           sel.appendChild(opt);
         });
@@ -1009,7 +1081,7 @@
     });
 
     const knownGroups = usersGroupBy === "role"
-      ? roles.map(r => ({ id: r.id, name: L2I18n.t("role." + r.key, r.label) })) // уже по рангу (см. loadLookups)
+      ? roles.map(r => ({ id: r.id, name: roleDisplayLabel(r) })) // уже по рангу (см. loadLookups)
       : parties.map(p => ({ id: p.id, name: p.name }));      // уже по алфавиту
 
     const renderedKeys = new Set();
@@ -1081,7 +1153,7 @@
     const table = document.getElementById("permMatrix");
     let html = "<tr><th>" + escapeHtml(L2I18n.t("admin.roleColHeader", "Роль")) + "</th>" + sections.map(s => `<th>${escapeHtml(L2I18n.t("section." + s.key, s.label))}</th>`).join("") + "</tr>";
     roles.forEach(role => {
-      html += `<tr><td>${escapeHtml(L2I18n.t("role." + role.key, role.label))}</td>`;
+      html += `<tr><td>${escapeHtml(roleDisplayLabel(role))}</td>`;
       sections.forEach(sec => {
         const row = map.get(role.id + "|" + sec.key);
         const visible = row ? row.visible : false;
@@ -1344,8 +1416,9 @@
   }
 
   await loadLookups();
-  fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(L2I18n.t("role." + r.key, r.label)), false);
+  fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(roleDisplayLabel(r)), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
+  renderRoleLabelsList();
   await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadLootLeaderCoefficients(), loadWeeklyTaxAmount(), loadLootHideZero(), loadMinBoostPercent(), loadPayoutShowLeft()]);
   renderSectionOrder();
   renderSectionToggleList();
@@ -1362,6 +1435,7 @@
     renderLootCoefList();
     renderLootPartyCoefList();
     renderLootLeaderCoefList();
+    renderRoleLabelsList();
     renderPresetGrid();
     loadMatrix();
   });

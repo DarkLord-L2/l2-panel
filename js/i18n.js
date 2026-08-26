@@ -657,6 +657,12 @@
     "admin.tabBranding": ["Оформление", "Оформлення", "Branding"],
     "admin.tabShares": ["Ссылки", "Посилання", "Links"],
 
+    "admin.roleNamesTitle": ["Названия ролей", "Назви ролей", "Role names"],
+    "admin.roleNamesHint": [
+      "Своё название роли только для вашего клана — права и ранг не меняются, меняется только то, как роль называется на экране. Пусто — используется название по умолчанию (слева).",
+      "Своя назва ролі тільки для вашого клану — права і ранг не змінюються, змінюється тільки те, як роль називається на екрані. Порожньо — використовується назва за замовчуванням (зліва).",
+      "A custom role name for your clan only — permissions and rank don't change, only how the role is displayed. Empty — uses the default name (shown on the left).",
+    ],
     "admin.newUserTitle": ["Новый пользователь", "Новий користувач", "New user"],
     "admin.loginLabel": ["Логин", "Логін", "Login"],
     "admin.loginTitle": ["3–32 символа: латиница, цифры, - и _", "3–32 символи: латиниця, цифри, - і _", "3–32 characters: Latin letters, digits, - and _"],

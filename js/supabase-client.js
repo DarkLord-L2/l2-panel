@@ -79,11 +79,23 @@ async function getProfile(){
   if(!user) return null;
   const { data, error } = await client
     .from("profiles")
-    .select("id, username, nickname, clan_id, party_id, must_change_password, roles(key, label, rank), clan_groups(name), clans(access_enabled, name, theme_preset, accent_color, display_name, logo_url)")
+    .select("id, username, nickname, clan_id, party_id, must_change_password, role_id, roles(key, label, rank), clan_groups(name), clans(access_enabled, name, theme_preset, accent_color, display_name, logo_url)")
     .eq("id", user.id)
     .maybeSingle();
   if(error) throw error;
   applyClanBranding(data?.clans);
+  // своё название роли для этого клана (Админ-панель → «Пользователи») — public.roles
+  // общая на всю платформу таблица, поэтому подмена названия делается только тут,
+  // поверх ответа, а не в самой roles.label; нет своей строки — остаётся как было
+  if(data?.roles && data.clan_id && data.role_id){
+    const { data: override } = await client
+      .from("clan_role_labels")
+      .select("label")
+      .eq("clan_id", data.clan_id)
+      .eq("role_id", data.role_id)
+      .maybeSingle();
+    if(override?.label) data.roles.label = override.label;
+  }
   return data;
 }
 
