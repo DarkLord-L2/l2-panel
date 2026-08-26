@@ -156,22 +156,29 @@ input[type="date"]{ color-scheme: dark; }
 
 /* ---- app shell (index.html) ---- */
 /* высота жёстко зафиксирована в 100vh (не min-height) и переполнение спрятано,
-   чтобы скроллился только .content, а шапка с меню оставались на месте */
+   чтобы скроллился только .content, а меню слева оставалось на месте. Отдельной
+   шапки-полосы сверху больше нет — бренд клана переехал в сайдбар (.sidebar-brand),
+   виджет профиля (.who-widget) плавает в правом верхнем углу поверх контента —
+   так заголовок раздела внутри контента оказывается на одной высоте с брендом. */
 .app-shell{ height:100vh; overflow:hidden; display:flex; flex-direction:column; }
-.topbar{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:12px 20px;
-  border-bottom:1px solid var(--border);
-  background: var(--panel);
-}
-.topbar .brand{ font-family:inherit; color: var(--gold); font-size:15px; font-weight:600; letter-spacing:0; }
-.topbar .who{ display:flex; align-items:center; gap:12px; font-size:12.5px; color: var(--text-dim); }
 
-/* виджет «аватарка класса + имя + статус» в правом верхнем углу — клик раскрывает
-   меню («Мой кабинет»/«Выйти»), тот же принцип, что переключатель раздела в сайдбаре */
-.who-widget{ position:relative; display:flex; align-items:center; gap:8px; padding:4px 8px 4px 4px; border-radius:20px; cursor:pointer; }
+/* «Glory To Ukraine»/название клана — теперь заголовок сайдбара, не отдельная полоса */
+.sidebar-brand{
+  display:flex; align-items:center; gap:8px;
+  padding:0 16px 14px; margin-bottom:8px;
+  border-bottom:1px solid var(--border);
+  color: var(--gold); font-size:15px; font-weight:600; letter-spacing:0;
+}
+.sidebar-brand img{ height:22px; border-radius:4px; flex:none; }
+
+/* виджет «аватарка класса + имя + статус» — плавает поверх контента в правом
+   верхнем углу (фиксированная позиция, не часть потока), клик раскрывает
+   меню («Мой кабинет»/«Выйти»), тот же принцип, что переключатель в сайдбаре */
+.who-widget{
+  position:fixed; top:14px; right:20px; z-index:15;
+  display:flex; align-items:center; gap:8px; padding:6px 10px 6px 6px; border-radius:20px; cursor:pointer;
+  background: var(--panel); border:1px solid var(--border); box-shadow: 0 4px 16px rgba(0,0,0,.35);
+}
 .who-widget:hover{ background: var(--panel-2); }
 .who-avatar{ width:30px; height:30px; border-radius:50%; object-fit:cover; flex:none; border:1px solid var(--border); background: var(--panel-2); }
 .who-text{ display:flex; flex-direction:column; line-height:1.25; }
