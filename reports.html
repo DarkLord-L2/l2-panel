@@ -177,11 +177,13 @@
   .rep-batch-rename-input{ font-size:12px; padding:3px 6px; width:180px; }
   .rep-batch-rename-save{ margin-left:6px; padding:2px 10px; font-size:11px; }
 
-  /* повтор .settings-btn из attendance.html — этого класса нет в общем theme.css */
+  /* повтор .settings-btn из attendance.html — этого класса нет в общем theme.css.
+     Обычная кнопка в шапке раздела (.page-head), не фиксированная поверх контента —
+     чтобы не «плавала» вместе с виджетом профиля в углу */
   .settings-btn{
-    position:fixed; top:64px; right:16px; height:32px; padding:0 12px;
+    flex:none; height:32px; padding:0 12px;
     border-radius:6px; border:1px solid var(--border); background: var(--panel);
-    color: var(--text-dim); font-size:13px; font-family:inherit; cursor:pointer; z-index:56;
+    color: var(--text-dim); font-size:13px; font-family:inherit; cursor:pointer;
   }
   .settings-btn:hover{ border-color: var(--border-lit); color: var(--text); }
 
@@ -241,7 +243,10 @@
 <body>
 
 <div class="rep-wrap" id="wrap" style="display:none;">
-  <div class="page-head"><h1 data-i18n="reports.title">Отчёты по мероприятиям</h1></div>
+  <div class="page-head">
+    <h1 data-i18n="reports.title">Отчёты по мероприятиям</h1>
+    <button class="settings-btn" id="groupLabelSettingsBtn" data-i18n-attr="title:reports.groupLabelSettingsBtnTitle" title="Настройки меток пати" style="display:none;" data-i18n="reports.groupLabelSettingsBtn">⚙ Метки пати</button>
+  </div>
 
   <div class="rep-layout">
     <section class="card rep-main">
@@ -342,7 +347,6 @@
   </div>
 </div>
 
-<button class="settings-btn" id="groupLabelSettingsBtn" data-i18n-attr="title:reports.groupLabelSettingsBtnTitle" title="Настройки меток пати" style="display:none;" data-i18n="reports.groupLabelSettingsBtn">⚙ Метки пати</button>
 <div class="modal-overlay" id="groupLabelSettingsOverlay">
   <div class="modal">
     <button class="modal-close" id="groupLabelSettingsClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
