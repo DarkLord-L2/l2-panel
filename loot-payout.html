@@ -56,13 +56,6 @@
   </div>
 
   <section class="card">
-    <p class="hint" style="margin:0 0 12px;" data-i18n="payout.hint">
-      На каждом скрине «Журнала посещаемости» первым в списке участников всегда стоит лидер пати —
-      отсюда и берётся привязка «кто с каким лидером сколько раз был в одной группе».
-      Голда на каждого — из последней раздачи, отправленной кнопкой «Раздать» в «ДКП Соло»/«ДКП Пати»
-      (общая на весь клан, действует 24 часа); без неё список «кто кого водил» всё равно виден, просто без сумм.
-    </p>
-
     <p class="hint" id="lpMyLeaderInfo" style="margin:0 0 12px; display:none;"></p>
     <button class="btn btn-danger" id="lpDeleteBatchBtn" style="display:none; margin:0 0 12px;" data-i18n="payout.deleteBatchBtn">Удалить раздачу</button>
 
@@ -103,7 +96,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=19"></script>
-<script src="js/i18n.js?v=10"></script>
+<script src="js/i18n.js?v=11"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();

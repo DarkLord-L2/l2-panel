@@ -155,11 +155,6 @@
     ],
 
     "payout.title": ["Раздача", "Роздача", "Payout"],
-    "payout.hint": [
-      "На каждом скрине «Журнала посещаемости» первым в списке участников всегда стоит лидер пати — отсюда и берётся привязка «кто с каким лидером сколько раз был в одной группе». Голда на каждого — из последней раздачи, отправленной кнопкой «Раздать» в «ДКП Соло»/«ДКП Пати» (общая на весь клан, действует 24 часа); без неё список «кто кого водил» всё равно виден, просто без сумм.",
-      "На кожному скрині «Журналу відвідуваності» першим у списку учасників завжди стоїть лідер паті — звідси і береться прив'язка «хто з яким лідером скільки разів був в одній групі». Голда на кожного — з останньої роздачі, надісланої кнопкою «Роздати» в «ДКП Соло»/«ДКП Паті» (спільна на весь клан, діє 24 години); без неї список «хто кого водив» все одно видно, просто без сум.",
-      "On every “Attendance Log” screenshot the party leader is always the first entry — that's how “who was in whose party how many times” is tracked. Each person's gold comes from the latest distribution sent via “Distribute” in “DKP Solo”/“DKP Party” (clan-wide, valid for 24 hours); without it, the “who led whom” list is still visible, just without the amounts.",
-    ],
     "payout.fromLabel": ["С", "Від", "From"],
     "payout.toLabel": ["По", "До", "To"],
     "payout.applyBtn": ["Показать", "Показати", "Show"],
