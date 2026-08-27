@@ -93,15 +93,57 @@ async function addAccount(username, password){
   return data;
 }
 
+// «Изменить…» для УЖЕ сохранённого (необязательно активного сейчас) аккаунта —
+// перезаходит тем же логином/новым паролем, чтобы обновить протухший/неверный
+// токен, но НЕ остаётся на нём: сразу возвращается на ту сессию, что была активна
+// до вызова. В отличие от addAccount(), эта функция не должна менять то, чем
+// пользователь занят прямо сейчас — просто чинит запись в списке аккаунтов
+async function reauthAccount(username, password){
+  const { data: { session: prevSession } } = await client.auth.getSession();
+  const prevUserId = prevSession?.user?.id || null;
+
+  await persistCurrentAccountSession();
+  localStorage.setItem(REMEMBER_KEY, "1");
+  const { data, error } = await client.auth.signInWithPassword({ email: usernameToEmail(username), password });
+  if(error) throw error;
+  await persistCurrentAccountSession(); // свежие токены под её userId
+
+  if(prevUserId && prevUserId !== data.session.user.id){
+    const prevAcc = loadSavedAccounts().find(a => a.userId === prevUserId);
+    if(prevAcc) await client.auth.setSession({ access_token: prevAcc.access_token, refresh_token: prevAcc.refresh_token });
+  }
+  return data;
+}
+
 // переключение на уже сохранённый аккаунт по его userId — client.auth.setSession
-// сам обновит токены через refresh_token, если access_token уже протух
+// сам обновит токены через refresh_token, если access_token уже протух.
+// Если у клана целевого аккаунта отключён доступ (owner-console → «access_enabled»),
+// на него НЕ переключаемся — откатываемся обратно на прежнюю сессию и бросаем
+// ошибку с кодом "clan_access_disabled", чтобы вызывающий код (index.html) просто
+// показал сообщение, а не уронил человека на мёртвый экран без пути назад
 async function switchAccount(userId){
   const acc = loadSavedAccounts().find(a => a.userId === userId);
   if(!acc) throw new Error("account_not_found");
+
+  const { data: { session: prevSession } } = await client.auth.getSession();
+  const prevUserId = prevSession?.user?.id || null;
+
   await persistCurrentAccountSession();
   localStorage.setItem(REMEMBER_KEY, "1");
   const { data, error } = await client.auth.setSession({ access_token: acc.access_token, refresh_token: acc.refresh_token });
   if(error) throw error;
+
+  const profile = await getProfile().catch(() => null);
+  if(profile?.clans?.access_enabled === false){
+    if(prevUserId && prevUserId !== userId){
+      const prevAcc = loadSavedAccounts().find(a => a.userId === prevUserId);
+      if(prevAcc) await client.auth.setSession({ access_token: prevAcc.access_token, refresh_token: prevAcc.refresh_token });
+    }
+    const err = new Error("clan_access_disabled");
+    err.code = "clan_access_disabled";
+    throw err;
+  }
+
   await persistCurrentAccountSession();
   return data;
 }
@@ -345,6 +387,7 @@ window.L2Cabinet = {
   applyClanBranding,
   getSavedAccounts: loadSavedAccounts,
   addAccount,
+  reauthAccount,
   switchAccount,
   forgetAccount,
   rememberCurrentAccount: persistCurrentAccountSession,

@@ -46,6 +46,17 @@
       "Another account's login and password — same clan or a completely different one. Afterwards you can switch between them right from this menu, without entering the password again.",
     ],
     "shell.addAccountSubmit": ["Добавить и переключиться", "Додати і перемкнутися", "Add and switch"],
+    "shell.accountCtxEdit": ["Изменить…", "Змінити…", "Edit…"],
+    "shell.accountCtxDelete": ["Удалить", "Видалити", "Delete"],
+    "shell.confirmDeleteAccount": ["Убрать «{username}» из списка аккаунтов?", "Прибрати «{username}» зі списку акаунтів?", "Remove “{username}” from the account list?"],
+    "shell.editAccountTitle": ["Обновить вход", "Оновити вхід", "Update sign-in"],
+    "shell.editAccountSubmit": ["Обновить", "Оновити", "Update"],
+    "shell.editAccountHint": [
+      "Введите пароль ещё раз — например, если он изменился и переключение перестало работать.",
+      "Введіть пароль ще раз — наприклад, якщо він змінився і перемикання перестало працювати.",
+      "Enter the password again — for example, if it changed and switching stopped working.",
+    ],
+    "shell.accessDeniedToast": ["Доступ закрыт", "Доступ закрито", "Access denied"],
     "shell.profileNotFoundTitle": ["⚠ Профиль не найден", "⚠ Профіль не знайдено", "⚠ Profile not found"],
     "shell.profileNotFoundHint": [
       "Ваш логин существует, но для него не создана запись профиля. Обратитесь к клан-лидеру.",

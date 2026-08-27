@@ -222,6 +222,28 @@ input[type="date"]{ color-scheme: dark; }
 .who-account-name{ font-weight:600; }
 .who-account-clan{ font-size:10.5px; color: var(--text-dim); }
 
+/* контекстное меню ПКМ по строке аккаунта — «Изменить…»/«Удалить» */
+.who-account-ctx{
+  position:fixed; z-index:90; min-width:160px;
+  background: var(--panel); border:1px solid var(--border-lit); border-radius:8px;
+  box-shadow: 0 10px 28px rgba(0,0,0,.4); padding:6px;
+  display:flex; flex-direction:column; gap:2px;
+}
+.who-account-ctx button{
+  all:unset; box-sizing:border-box; width:100%; padding:8px 10px; border-radius:6px;
+  font-size:12.5px; color: var(--text); cursor:pointer;
+}
+.who-account-ctx button:hover{ background: var(--panel-2); }
+.who-account-ctx button.danger{ color: var(--danger-lit); }
+
+/* «Доступ закрыт» — короткое сообщение посреди экрана, без ухода со страницы */
+.who-toast{
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:100;
+  background: var(--panel); border:1px solid var(--danger-lit); color: var(--danger-lit);
+  padding:16px 28px; border-radius:10px; font-size:15px; font-weight:600;
+  box-shadow: 0 16px 48px rgba(0,0,0,.5);
+}
+
 /* переключатель языка (UA/RU/EU) — используется в шапке index.html и на login.html,
    рендерится через L2I18n.renderSwitcher() из js/i18n.js */
 .lang-switch{ display:flex; align-items:center; gap:2px; }

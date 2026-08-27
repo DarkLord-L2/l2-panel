@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=22" />
+<link rel="stylesheet" href="js/theme.css?v=23" />
 </head>
 <body>
 
@@ -52,8 +52,8 @@
 <div class="modal-overlay" id="addAccountOverlay">
   <div class="modal">
     <button class="modal-close" id="addAccountClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
-    <h2 data-i18n="shell.addAccountTitle">Добавить аккаунт</h2>
-    <p class="hint" data-i18n="shell.addAccountHint">Логин и пароль другого аккаунта — может быть тем же кланом или совсем другим. Дальше переключаться между ними можно будет прямо из этого меню, без повторного ввода пароля.</p>
+    <h2 id="addAccountTitle" data-i18n="shell.addAccountTitle">Добавить аккаунт</h2>
+    <p class="hint" id="addAccountHint" data-i18n="shell.addAccountHint">Логин и пароль другого аккаунта — может быть тем же кланом или совсем другим. Дальше переключаться между ними можно будет прямо из этого меню, без повторного ввода пароля.</p>
     <form id="addAccountForm">
       <div class="field">
         <label for="addAccountUsername" data-i18n="login.usernameLabel">Логин</label>
@@ -69,10 +69,19 @@
   </div>
 </div>
 
+<!-- ПКМ по сохранённому аккаунту в меню виджета -->
+<div class="who-account-ctx" id="accountCtxMenu" style="display:none;">
+  <button type="button" id="accountCtxEdit" data-i18n="shell.accountCtxEdit">Изменить…</button>
+  <button type="button" class="danger" id="accountCtxDelete" data-i18n="shell.accountCtxDelete">Удалить</button>
+</div>
+
+<!-- сообщение «Доступ закрыт» — коротко посреди экрана, без увода со страницы -->
+<div class="who-toast" id="accessDeniedToast" style="display:none;" data-i18n="shell.accessDeniedToast">Доступ закрыт</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=20"></script>
+<script src="js/supabase-client.js?v=21"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=27"></script>
+<script src="js/i18n.js?v=28"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -350,7 +359,10 @@
   // поймать такой клик из родителя
   window.addEventListener("blur", () => {
     setTimeout(() => {
-      if(document.activeElement?.tagName === "IFRAME") whoWidget.classList.remove("open");
+      if(document.activeElement?.tagName === "IFRAME"){
+        whoWidget.classList.remove("open");
+        closeAccountCtxMenu(); // «Изменить…»/«Удалить» — тот же экран, что и виджет, живёт отдельным элементом
+      }
     }, 0);
   });
 
@@ -381,11 +393,22 @@
   // назад к первому будет некуда (он никогда не попадал в список)
   await L2Cabinet.rememberCurrentAccount();
 
+  // короткое сообщение посреди экрана — например, когда клан целевого аккаунта
+  // отключён (owner-console); текущая сессия при этом остаётся как была,
+  // человека никуда не уводит и из списка аккаунтов не выкидывает
+  function showToast(text){
+    const el = document.getElementById("accessDeniedToast");
+    el.textContent = text;
+    el.style.display = "";
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => { el.style.display = "none"; }, 3000);
+  }
+
   function renderAccountsList(){
     const wrap = document.getElementById("whoAccountsList");
     const others = L2Cabinet.getSavedAccounts().filter(a => a.userId !== profile.id);
     wrap.innerHTML = others.map(a =>
-      `<button type="button" class="who-menu-item who-account-item" data-user-id="${escapeHtml(a.userId)}">` +
+      `<button type="button" class="who-menu-item who-account-item" data-user-id="${escapeHtml(a.userId)}" data-username="${escapeHtml(a.username)}">` +
       `<span class="who-account-name">${escapeHtml(a.username)}</span>` +
       (a.clanName ? `<span class="who-account-clan">${escapeHtml(a.clanName)}</span>` : "") +
       `</button>`
@@ -398,26 +421,97 @@
           await L2Cabinet.switchAccount(btn.dataset.userId);
           location.reload();
         }catch(err){
-          // сохранённая сессия протухла (например, пароль сменили) — не висеть
-          // мёртвым грузом в списке, лучше пусть добавят заново через логин/пароль
-          L2Cabinet.forgetAccount(btn.dataset.userId);
-          renderAccountsList();
+          if(err.code === "clan_access_disabled"){
+            // аккаунт рабочий, просто клану сейчас закрыт доступ — остаёмся,
+            // где были, никуда не переключаемся и из списка не убираем
+            whoWidget.classList.remove("open");
+            showToast(L2I18n.t("shell.accessDeniedToast", "Доступ закрыт"));
+          } else {
+            // сохранённая сессия реально протухла (например, пароль сменили) —
+            // не висеть мёртвым грузом в списке, пусть добавят заново
+            L2Cabinet.forgetAccount(btn.dataset.userId);
+            renderAccountsList();
+          }
         }
+        btn.disabled = false;
+      });
+      btn.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openAccountCtxMenu(e.clientX, e.clientY, btn.dataset.userId, btn.dataset.username);
       });
     });
   }
   renderAccountsList();
 
+  // ---- ПКМ по строке аккаунта: «Изменить…» (перезайти под тем же логином —
+  // единственный способ обновить протухшие/неверные токены) / «Удалить» ----
+  const accountCtxMenu = document.getElementById("accountCtxMenu");
+  let ctxUserId = null, ctxUsername = null;
+  function openAccountCtxMenu(x, y, userId, username){
+    ctxUserId = userId; ctxUsername = username;
+    accountCtxMenu.style.display = "flex";
+    // сначала показываем (чтобы узнать реальные размеры), потом позиционируем —
+    // не даём меню вылезти за правый/нижний край окна
+    const w = accountCtxMenu.offsetWidth, h = accountCtxMenu.offsetHeight;
+    accountCtxMenu.style.left = Math.min(x, window.innerWidth - w - 8) + "px";
+    accountCtxMenu.style.top = Math.min(y, window.innerHeight - h - 8) + "px";
+  }
+  function closeAccountCtxMenu(){ accountCtxMenu.style.display = "none"; }
+  document.addEventListener("click", closeAccountCtxMenu);
+  document.addEventListener("contextmenu", (e) => {
+    if(!e.target.closest(".who-account-item")) closeAccountCtxMenu();
+  });
+  document.getElementById("accountCtxEdit").addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAccountCtxMenu();
+    whoWidget.classList.remove("open");
+    openAddAccountModal(ctxUsername);
+  });
+  document.getElementById("accountCtxDelete").addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAccountCtxMenu();
+    if(!confirm(L2I18n.t("shell.confirmDeleteAccount", "Убрать «{username}» из списка аккаунтов?").replace("{username}", ctxUsername))) return;
+    L2Cabinet.forgetAccount(ctxUserId);
+    renderAccountsList();
+  });
+
   const addAccountOverlay = document.getElementById("addAccountOverlay");
   const addAccountError = document.getElementById("addAccountError");
   const addAccountSubmit = document.getElementById("addAccountSubmit");
+  // prefillUsername задан → это «Изменить…» для уже сохранённого аккаунта
+  // (перезайти под тем же логином, чтобы обновить токен, без переключения на
+  // него — см. reauthAccount), иначе — обычное «Добавить аккаунт» с чистой формой
+  let isEditingAccount = false;
+  function openAddAccountModal(prefillUsername){
+    isEditingAccount = !!prefillUsername;
+    addAccountError.textContent = "";
+    document.getElementById("addAccountForm").reset();
+    const titleEl = document.getElementById("addAccountTitle");
+    const hintEl = document.getElementById("addAccountHint");
+    if(prefillUsername){
+      titleEl.textContent = L2I18n.t("shell.editAccountTitle", "Обновить вход");
+      titleEl.removeAttribute("data-i18n");
+      hintEl.textContent = L2I18n.t("shell.editAccountHint", "Введите пароль ещё раз — например, если он изменился и переключение перестало работать.");
+      hintEl.removeAttribute("data-i18n");
+      document.getElementById("addAccountUsername").value = prefillUsername;
+      addAccountSubmit.textContent = L2I18n.t("shell.editAccountSubmit", "Обновить");
+      addAccountSubmit.removeAttribute("data-i18n");
+    } else {
+      titleEl.setAttribute("data-i18n", "shell.addAccountTitle");
+      titleEl.textContent = L2I18n.t("shell.addAccountTitle", "Добавить аккаунт");
+      hintEl.setAttribute("data-i18n", "shell.addAccountHint");
+      hintEl.textContent = L2I18n.t("shell.addAccountHint", "Логин и пароль другого аккаунта — может быть тем же кланом или совсем другим. Дальше переключаться между ними можно будет прямо из этого меню, без повторного ввода пароля.");
+      addAccountSubmit.setAttribute("data-i18n", "shell.addAccountSubmit");
+      addAccountSubmit.textContent = L2I18n.t("shell.addAccountSubmit", "Добавить и переключиться");
+    }
+    addAccountOverlay.classList.add("show");
+    setTimeout(() => document.getElementById(prefillUsername ? "addAccountPassword" : "addAccountUsername").focus(), 0);
+  }
   document.getElementById("whoAddAccountBtn").addEventListener("click", (e) => {
     e.stopPropagation();
     whoWidget.classList.remove("open");
-    addAccountError.textContent = "";
-    document.getElementById("addAccountForm").reset();
-    addAccountOverlay.classList.add("show");
-    setTimeout(() => document.getElementById("addAccountUsername").focus(), 0);
+    openAddAccountModal(null);
   });
   document.getElementById("addAccountClose").addEventListener("click", () => {
     addAccountOverlay.classList.remove("show");
@@ -433,12 +527,23 @@
     const username = document.getElementById("addAccountUsername").value;
     const password = document.getElementById("addAccountPassword").value;
     try{
-      await L2Cabinet.addAccount(username, password);
-      location.reload();
+      if(isEditingAccount){
+        // остаёмся на текущем аккаунте — только чиним сохранённую запись
+        await L2Cabinet.reauthAccount(username, password);
+        addAccountOverlay.classList.remove("show");
+        renderAccountsList();
+        addAccountSubmit.disabled = false;
+        addAccountSubmit.textContent = L2I18n.t("shell.editAccountSubmit", "Обновить");
+      } else {
+        await L2Cabinet.addAccount(username, password);
+        location.reload();
+      }
     }catch(err){
       addAccountError.textContent = L2I18n.t("login.error", "Неверный логин или пароль");
       addAccountSubmit.disabled = false;
-      addAccountSubmit.textContent = L2I18n.t("shell.addAccountSubmit", "Добавить и переключиться");
+      addAccountSubmit.textContent = isEditingAccount
+        ? L2I18n.t("shell.editAccountSubmit", "Обновить")
+        : L2I18n.t("shell.addAccountSubmit", "Добавить и переключиться");
     }
   });
 
