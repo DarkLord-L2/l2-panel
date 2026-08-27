@@ -320,11 +320,6 @@
     "cab.taxNotPaid": ["Не оплачено", "Не оплачено", "Not paid"],
     "cab.appearanceTitle": ["Внешний вид", "Зовнішній вигляд", "Appearance"],
     "cab.classicTopbarLabel": ["Классическая шапка сайта (полоса сверху)", "Класична шапка сайту (смуга зверху)", "Classic site header (top strip)"],
-    "cab.classicTopbarHint": [
-      "Выключено — имя и роль в плавающем виджете справа сверху, название клана в меню слева. Включено — классическая полоса сверху, как раньше.",
-      "Вимкнено — ім'я і роль у плаваючому віджеті справа зверху, назва клану в меню зліва. Увімкнено — класична смуга зверху, як раніше.",
-      "Off — name and role in a floating widget top-right, clan name in the left menu. On — classic top strip, like before.",
-    ],
 
     "oc.title": ["Консоль", "Консоль", "Console"],
     "oc.emailLabel": ["Email", "Email", "Email"],
@@ -638,11 +633,6 @@
     "groups.membersTitle": ["Участники", "Учасники", "Members"],
     "groups.noMembersYet": ["В группе пока никого нет.", "У групі поки що нікого немає.", "There's no one in the group yet."],
     "groups.partyCheckTitle": ["Проверка пати", "Перевірка паті", "Party check"],
-    "groups.partyCheckHint": [
-      "Указан ли класс, % буста (та же формула, что в ДКП), сколько мероприятий посетили за всё время и оплачен ли налог за последнюю отслеживаемую неделю.",
-      "Чи вказаний клас, % бусту (та сама формула, що в ДКП), скільки заходів відвідали за весь час і чи оплачений податок за останній відстежуваний тиждень.",
-      "Whether class is set, boost % (same formula as DKP), how many events attended all-time, and whether the last tracked week's tax is paid.",
-    ],
     "groups.checkColNick": ["Ник", "Нік", "Nickname"],
     "groups.checkColClass": ["Класс", "Клас", "Class"],
     "groups.checkColBoost": ["% буста", "% бусту", "Boost %"],
