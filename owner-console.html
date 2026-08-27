@@ -268,9 +268,18 @@
     }
   });
 
-  document.getElementById("tempPassCopyBtn").addEventListener("click", () => {
+  document.getElementById("tempPassCopyBtn").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
     const val = document.getElementById("tempPassValue").textContent;
-    navigator.clipboard?.writeText(val).catch(() => {});
+    const original = btn.textContent;
+    try{
+      await navigator.clipboard.writeText(val);
+      btn.textContent = "✓ " + L2I18n.t("panel.toastCopied", "Скопировано");
+    }catch(err){
+      btn.textContent = "✗";
+    }
+    btn.disabled = true;
+    setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1000);
   });
 
   // таблица кланов построена через JS (не data-i18n) — перестраиваем при смене языка
