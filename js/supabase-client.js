@@ -66,12 +66,21 @@ async function persistCurrentAccountSession(){
   const { data: { session } } = await client.auth.getSession();
   if(!session) return;
   const profile = await getProfile().catch(() => null);
+  // у владельца платформы (public.platform_admins) нет строки в public.profiles —
+  // getProfile() для него вернёт null. Раньше в этом случае username откатывался
+  // на "session.user.email", то есть в список аккаунтов утекал настоящий email —
+  // проверяем этот случай отдельно и подписываем строку понятной меткой вместо адреса
+  let isPlatformAdmin = false;
+  if(!profile){
+    isPlatformAdmin = await client.rpc("is_platform_admin").then(r => r.data === true).catch(() => false);
+  }
   const list = loadSavedAccounts();
   const entry = {
     userId: session.user.id,
-    username: profile?.username || session.user.email?.replace(EMAIL_DOMAIN, "") || "",
+    username: profile?.username || (isPlatformAdmin ? "" : (session.user.email?.replace(EMAIL_DOMAIN, "") || "")),
     nickname: profile?.nickname || null,
     clanName: profile?.clans?.display_name || profile?.clans?.name || null,
+    isPlatformAdmin,
     access_token: session.access_token,
     refresh_token: session.refresh_token,
   };
