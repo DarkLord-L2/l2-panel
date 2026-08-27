@@ -17,6 +17,76 @@
 // по-прежнему видна в «Группах»/«Проверке буста» (member_classes) — просто не
 // автоматизирована по скрину явки.
 
+// ---- сверка распознанного OCR-ника со списком реальных ников клана (перепись) ----
+// точное/нормализованное совпадение уже спасает от похожих букв (0/O, кириллица/
+// латиница — CYR_LOOKALIKES) и регистра; но иногда Gemini теряет/путает целую
+// букву («Лунтик» → «Луник») — такое нормализация не ловит, нужно нечёткое
+// сравнение (расстояние Левенштейна) с самым близким известным ником
+const CYR_LOOKALIKES = { "а":"a","в":"b","е":"e","к":"k","м":"m","н":"h","о":"o","р":"p","с":"c","т":"t","у":"y","х":"x","ё":"e","0":"o","l":"i" };
+function normalizeNick(s){
+  return String(s || "")
+    .toLowerCase()
+    .split("").map(ch => CYR_LOOKALIKES[ch] || ch).join("")
+    .replace(/[^a-zа-яё0-9]/gi, "");
+}
+function levenshtein(a, b){
+  const m = a.length, n = b.length;
+  if(!m) return n;
+  if(!n) return m;
+  const row = new Array(n + 1);
+  for(let j = 0; j <= n; j++) row[j] = j;
+  for(let i = 1; i <= m; i++){
+    let prev = row[0];
+    row[0] = i;
+    for(let j = 1; j <= n; j++){
+      const tmp = row[j];
+      row[j] = a[i - 1] === b[j - 1] ? prev : 1 + Math.min(prev, row[j], row[j - 1]);
+      prev = tmp;
+    }
+  }
+  return row[n];
+}
+// чем короче ник, тем рискованнее угадывать буквами — совсем коротким (≤4)
+// доверяем только точному/нормализованному совпадению, длинным разрешаем
+// побольше «слабины»
+function maxAllowedDistance(len){
+  if(len <= 4) return 0;
+  if(len <= 7) return 1;
+  return 2;
+}
+
+// список ников из переписи — за всё время (не только последняя неделя), чтобы не
+// упустить того, кто просто выпал из самой свежей переписи, но реально на скрине.
+// Один запрос на всю страницу, а не на каждый день/мероприятие — кэшируется тут же
+let knownNicksPromise = null;
+function loadKnownNicks(db){
+  if(!knownNicksPromise){
+    knownNicksPromise = db.from("census_entries").select("nickname")
+      .then(({ data }) => [...new Set((data || []).map(r => r.nickname))]);
+  }
+  return knownNicksPromise;
+}
+
+// возвращает исправленный ник, если нашлось уверенное совпадение с переписью,
+// иначе — исходный OCR-текст без изменений (админ увидит и поправит вручную)
+function resolveNickname(raw, knownNicks){
+  if(!raw || !knownNicks || !knownNicks.length) return raw;
+  if(knownNicks.includes(raw)) return raw; // уже точь-в-точь как в переписи
+  const rawNorm = normalizeNick(raw);
+  const exact = knownNicks.find(k => normalizeNick(k) === rawNorm);
+  if(exact) return exact;
+
+  const limit = maxAllowedDistance(rawNorm.length);
+  if(limit === 0) return raw;
+  let best = null, bestDist = Infinity, tie = false;
+  knownNicks.forEach(k => {
+    const d = levenshtein(rawNorm, normalizeNick(k));
+    if(d < bestDist){ bestDist = d; best = k; tie = false; }
+    else if(d === bestDist) tie = true; // два одинаково близких ника — не угадываем
+  });
+  return (best && !tie && bestDist <= limit) ? best : raw;
+}
+
 function initEventRoster({ root, eventId, profile, isAdmin, db }){
   root.innerHTML = `
     <div class="chip-row" data-role="list"></div>
@@ -205,6 +275,14 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
           const dataUrl = await upscaleForOcr(rawDataUrl);
           const { stats: ocrRows, leader: ocrLeader } = await L2Cabinet.adminOcrEventStats(dataUrl);
           const rows = ocrRows.filter(r => r.nickname);
+
+          // сверяем каждый распознанный ник со списком реальных ников клана —
+          // точное/нормализованное совпадение чинит регистр и похожие буквы,
+          // нечёткое (Левенштейн) — редкие случаи потерянной/перепутанной буквы
+          // целиком («Лунтик» → «Луник»); при неуверенности ник не трогаем —
+          // админ всё равно видит все чипы перед сохранением и может поправить
+          const knownNicks = await loadKnownNicks(db);
+          rows.forEach(r => { r.nickname = resolveNickname(r.nickname, knownNicks); });
 
           // индекс скрина заводим лениво, только если он реально дал хоть одного ника —
           // «Отчёт по мероприятиям» использует эти индексы, чтобы группировать строки
