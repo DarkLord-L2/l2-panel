@@ -443,9 +443,13 @@
             showToast(L2I18n.t("shell.accessDeniedToast", "Доступ закрыт"));
           } else {
             // сохранённая сессия реально протухла (например, пароль сменили) —
-            // не висеть мёртвым грузом в списке, пусть добавят заново
+            // не висеть мёртвым грузом в списке, пусть добавят заново; но хотя бы
+            // объясняем тостом, а не молча стираем строку — раньше это выглядело
+            // как будто аккаунт «пропал» без причины
+            const username = btn.dataset.username;
             L2Cabinet.forgetAccount(btn.dataset.userId);
             renderAccountsList();
+            showToast(L2I18n.t("shell.staleAccountToast", "Сессия «{username}» устарела — добавьте аккаунт заново").replace("{username}", username));
           }
         }
         btn.disabled = false;

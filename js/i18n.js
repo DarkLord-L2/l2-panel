@@ -58,6 +58,7 @@
       "Enter the password again — for example, if it changed and switching stopped working.",
     ],
     "shell.accessDeniedToast": ["Доступ закрыт", "Доступ закрито", "Access denied"],
+    "shell.staleAccountToast": ["Сессия «{username}» устарела — добавьте аккаунт заново", "Сесія «{username}» застаріла — додайте акаунт знову", "The session for “{username}” has expired — add the account again"],
     "shell.profileNotFoundTitle": ["⚠ Профиль не найден", "⚠ Профіль не знайдено", "⚠ Profile not found"],
     "shell.profileNotFoundHint": [
       "Ваш логин существует, но для него не создана запись профиля. Обратитесь к клан-лидеру.",
