@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Проверка буста — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=23" />
+<link rel="stylesheet" href="js/theme.css?v=24" />
 <style>
   .gc-wrap{ padding:0 0 32px; }
   .gc-avg{ display:inline-flex; align-items:center; gap:8px; font-size:13px; color: var(--text-dim); margin:0; }
@@ -104,7 +104,7 @@
   /* окна пункта/участника/значений-по-классам открываются ПОВЕРХ панели участника —
      их z-index (70 в общем theme.css) был ниже, чем у затемнения панели (80/81),
      из-за чего клики и ввод текста уходили в затемнение, а не в само окно */
-  #itemOverlay, #memberOverlay, #classValuesOverlay{ z-index:95; }
+  #itemOverlay, #memberOverlay, #classValuesOverlay, #sectionImageOverlay, #shotLightbox{ z-index:95; }
   .gc-drawer-overlay.show{ display:block; }
   .gc-drawer{
     position:fixed; top:0; right:0; bottom:0;
@@ -151,6 +151,23 @@
     position:absolute; right:10px; top:50%; transform:translateY(-50%);
     display:flex; gap:6px;
   }
+  /* скриншот-подсказка раздела (например, «Бижа» — кому какое украшение по классам) —
+     маленький квадратик слева от названия, виден всем, не только в режиме редактирования */
+  .gc-sec-shot{
+    position:absolute; left:10px; top:50%; transform:translateY(-50%);
+    width:28px; height:28px; border-radius:6px; object-fit:cover;
+    border:1px solid var(--border-lit); cursor:zoom-in; background: var(--panel);
+  }
+  .gc-sec-shot:hover{ border-color: var(--gold); }
+  .gc-shot-paste{
+    border:2px dashed var(--border-lit); border-radius:8px; padding:14px;
+    display:flex; align-items:center; justify-content:center; min-height:140px;
+    text-align:center; color: var(--text-dim); font-size:13px; cursor:text; outline:none;
+  }
+  .gc-shot-paste:focus{ border-color: var(--gold); }
+  .gc-shot-paste img{ max-width:100%; max-height:260px; border-radius:6px; object-fit:contain; }
+  #shotLightbox{ cursor:zoom-out; }
+  #shotLightbox img{ max-width:92vw; max-height:92vh; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.6); }
   .gc-subgroup-title{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
     margin:12px 2px 6px;
@@ -437,6 +454,27 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="sectionImageOverlay">
+  <div class="modal" style="max-width:460px;">
+    <button class="modal-close" id="sectionImageClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 id="sectionImageModalTitle">Скриншот раздела</h2>
+    <p class="hint" data-i18n="gearCheck.sectionImageHint">Например, кому какое украшение по классам — просто картинка-подсказка, кликните область ниже и вставьте скриншот (Ctrl+V).</p>
+    <div class="gc-shot-paste" id="sectionImagePasteZone" tabindex="0">
+      <span id="sectionImagePasteHint" data-i18n="gearCheck.sectionImagePasteHint">Кликните сюда и нажмите Ctrl+V</span>
+      <img id="sectionImagePreviewImg" alt="" style="display:none;" />
+    </div>
+    <p class="error-msg" id="sectionImageError"></p>
+    <div style="display:flex; gap:10px; margin-top:10px;">
+      <button class="btn btn-primary" id="sectionImageSaveBtn" data-i18n="gearCheck.saveBtn">Сохранить</button>
+      <button class="btn btn-danger" id="sectionImageClearBtn" data-i18n="gearCheck.removeBtn">Убрать</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="shotLightbox">
+  <img id="shotLightboxImg" alt="" />
+</div>
+
 <div class="modal-overlay" id="classValuesOverlay">
   <div class="modal" style="max-width:480px;">
     <button class="modal-close" id="classValuesClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
@@ -489,7 +527,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=28"></script>
+<script src="js/i18n.js?v=29"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -727,7 +765,7 @@
 
   async function loadStructure(){
     const [{ data: s }, { data: it }] = await Promise.all([
-      db.from("boost_sections").select("id, name, sort_order").order("sort_order").order("name"),
+      db.from("boost_sections").select("id, name, sort_order, reference_image").order("sort_order").order("name"),
       db.from("boost_items")
         .select("id, section_id, name, icon, weight, sort_order, subtitle, per_class, full_width, subgroup, hidden, merged_with_prev, merge_all_required")
         .order("sort_order"),
@@ -987,19 +1025,33 @@
       const nameSpan = document.createElement("span");
       nameSpan.textContent = sec.name;
       title.appendChild(nameSpan);
+      // скриншот-подсказка раздела — виден всем (не только в режиме редактирования),
+      // клик открывает увеличенную версию
+      if(sec.reference_image){
+        const shot = document.createElement("img");
+        shot.className = "gc-sec-shot";
+        shot.src = sec.reference_image;
+        shot.alt = "";
+        shot.title = L2I18n.t("gearCheck.sectionShotTitle", "Открыть скриншот раздела");
+        shot.addEventListener("click", () => openShotLightbox(sec.reference_image));
+        title.appendChild(shot);
+      }
       if(isAdmin && editMode){
         const tools = document.createElement("div");
         tools.className = "sec-tools";
         const addItemBtn = document.createElement("button");
         addItemBtn.className = "btn icon-mini-btn"; addItemBtn.textContent = "+"; addItemBtn.title = L2I18n.t("gearCheck.addItemTitle", "Добавить пункт");
         addItemBtn.addEventListener("click", () => addItem(sec.id));
+        const shotBtn = document.createElement("button");
+        shotBtn.className = "btn icon-mini-btn"; shotBtn.textContent = "🖼"; shotBtn.title = L2I18n.t("gearCheck.sectionShotBtnTitle", "Скриншот раздела");
+        shotBtn.addEventListener("click", () => openSectionImageModal(sec));
         const renSec = document.createElement("button");
         renSec.className = "btn icon-mini-btn"; renSec.textContent = "✎"; renSec.title = L2I18n.t("gearCheck.renameSectionTitle", "Переименовать раздел");
         renSec.addEventListener("click", () => renameSection(sec));
         const delSec = document.createElement("button");
         delSec.className = "btn btn-danger icon-mini-btn"; delSec.textContent = "×"; delSec.title = L2I18n.t("gearCheck.deleteSectionTitle", "Удалить раздел");
         delSec.addEventListener("click", () => deleteSection(sec));
-        tools.append(addItemBtn, renSec, delSec);
+        tools.append(addItemBtn, shotBtn, renSec, delSec);
         title.appendChild(tools);
       }
       secEl.appendChild(title);
@@ -1223,6 +1275,72 @@
     if(error){ alert(error.message); return; }
     await loadStructure(); await loadValues(); renderDrawerBody(); renderTable();
   }
+
+  // ---------- скриншот-подсказка раздела (необязательный, вставляется через Ctrl+V) ----------
+  let sectionImageSecId = null;
+  let sectionImagePending = null; // null — не меняли, "" — убрать, dataURL — новая
+  function openSectionImageModal(sec){
+    sectionImageSecId = sec.id;
+    sectionImagePending = null;
+    document.getElementById("sectionImageModalTitle").textContent = L2I18n.t("gearCheck.sectionImageTitle", "Скриншот раздела «{name}»").replace("{name}", sec.name);
+    document.getElementById("sectionImageError").textContent = "";
+    renderSectionImagePreview(sec.reference_image || null);
+    document.getElementById("sectionImageOverlay").classList.add("show");
+    lockScroll();
+    setTimeout(() => document.getElementById("sectionImagePasteZone").focus(), 0);
+  }
+  function renderSectionImagePreview(dataUrl){
+    document.getElementById("sectionImagePreviewImg").src = dataUrl || BLANK_IMG;
+    document.getElementById("sectionImagePreviewImg").style.display = dataUrl ? "" : "none";
+    document.getElementById("sectionImagePasteHint").style.display = dataUrl ? "none" : "";
+  }
+  function closeSectionImageModal(){
+    document.getElementById("sectionImageOverlay").classList.remove("show");
+    unlockScroll();
+  }
+  document.getElementById("sectionImagePasteZone").addEventListener("paste", async (e) => {
+    const items = Array.from(e.clipboardData?.items || []);
+    const imgItem = items.find(i => i.type.startsWith("image/"));
+    if(!imgItem) return;
+    e.preventDefault();
+    const errEl = document.getElementById("sectionImageError");
+    errEl.textContent = "";
+    try{
+      // крупнее, чем иконки пунктов (96px) — это читаемый скриншот, а не значок;
+      // JPEG вместо PNG, чтобы не раздувать базу (картинка хранится как data-URL в Postgres)
+      const dataUrl = await downscaleImage(imgItem.getAsFile(), 1400, "image/jpeg", 0.82);
+      sectionImagePending = dataUrl;
+      renderSectionImagePreview(dataUrl);
+    }catch(err){
+      errEl.textContent = L2I18n.t("gearCheck.sectionImagePasteFailed", "Не удалось вставить картинку.");
+    }
+  });
+  document.getElementById("sectionImageClearBtn").addEventListener("click", () => {
+    sectionImagePending = "";
+    renderSectionImagePreview(null);
+  });
+  document.getElementById("sectionImageClose").addEventListener("click", closeSectionImageModal);
+  document.getElementById("sectionImageOverlay").addEventListener("click", (e) => {
+    if(e.target.id === "sectionImageOverlay") closeSectionImageModal();
+  });
+  document.getElementById("sectionImageSaveBtn").addEventListener("click", async () => {
+    if(sectionImagePending === null){ closeSectionImageModal(); return; } // ничего не вставляли/не убирали
+    const errEl = document.getElementById("sectionImageError");
+    const { error } = await db.from("boost_sections").update({ reference_image: sectionImagePending || null }).eq("id", sectionImageSecId);
+    if(error){ errEl.textContent = error.message; return; }
+    closeSectionImageModal();
+    await loadStructure(); renderDrawerBody(); renderTable();
+  });
+
+  function openShotLightbox(src){
+    document.getElementById("shotLightboxImg").src = src;
+    document.getElementById("shotLightbox").classList.add("show");
+    lockScroll();
+  }
+  document.getElementById("shotLightbox").addEventListener("click", () => {
+    document.getElementById("shotLightbox").classList.remove("show");
+    unlockScroll();
+  });
 
   function addItem(sectionId, subgroup){
     openItemModal("create", { sectionId, subgroup: subgroup || "" });
@@ -1526,7 +1644,7 @@
     }
   });
 
-  function downscaleImage(file, maxSize){
+  function downscaleImage(file, maxSize, mime, quality){
     return new Promise((resolve, reject) => {
       const img = new Image();
       const reader = new FileReader();
@@ -1538,7 +1656,7 @@
         const canvas = document.createElement("canvas");
         canvas.width = w; canvas.height = h;
         canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/png"));
+        resolve(canvas.toDataURL(mime || "image/png", quality));
       };
       img.onerror = reject;
       reader.readAsDataURL(file);

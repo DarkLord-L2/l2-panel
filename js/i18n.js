@@ -1608,6 +1608,16 @@
     "gearCheck.deleteSectionTitle": ["Удалить раздел", "Видалити розділ", "Delete section"],
     "gearCheck.noItemsHint": ["Пунктов нет.", "Пунктів немає.", "There are no items."],
     "gearCheck.addItemToSubgroupTitle": ["Добавить пункт в этот подраздел", "Додати пункт у цей підрозділ", "Add an item to this subgroup"],
+    "gearCheck.sectionShotBtnTitle": ["Скриншот раздела", "Скріншот розділу", "Section screenshot"],
+    "gearCheck.sectionShotTitle": ["Открыть скриншот раздела", "Відкрити скріншот розділу", "Open section screenshot"],
+    "gearCheck.sectionImageTitle": ["Скриншот раздела «{name}»", "Скріншот розділу «{name}»", "Screenshot for “{name}”"],
+    "gearCheck.sectionImageHint": [
+      "Например, кому какое украшение по классам — просто картинка-подсказка, кликните область ниже и вставьте скриншот (Ctrl+V).",
+      "Наприклад, кому яка прикраса за класами — просто картинка-підказка, клікніть область нижче і вставте скріншот (Ctrl+V).",
+      "For example, which class gets which jewelry piece — just a reference picture, click the area below and paste a screenshot (Ctrl+V).",
+    ],
+    "gearCheck.sectionImagePasteHint": ["Кликните сюда и нажмите Ctrl+V", "Клікніть сюди і натисніть Ctrl+V", "Click here and press Ctrl+V"],
+    "gearCheck.sectionImagePasteFailed": ["Не удалось вставить картинку.", "Не вдалося вставити картинку.", "Couldn't paste the image."],
 
     "gearCheck.fullyCounted": ["Засчитано полностью", "Зараховано повністю", "Fully counted"],
     "gearCheck.scoreOnlyIfAll": [
