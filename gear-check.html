@@ -480,7 +480,7 @@
       <label data-i18n="gearCheck.sectionImageByClassLabel">Свои картинки по классам</label>
       <div id="siClassList"></div>
       <div class="manual-add" style="max-width:none;">
-        <input type="text" id="siNewClass" data-i18n-attr="placeholder:gearCheck.addClassPlaceholder" placeholder="Добавить профессию" />
+        <select id="siNewClass"></select>
         <button class="btn" id="siAddClassBtn" data-i18n="gearCheck.addBtn">Добавить</button>
       </div>
     </div>
@@ -546,7 +546,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=30"></script>
+<script src="js/i18n.js?v=31"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -1343,51 +1343,69 @@
     if(sectionImagePendingByClass.has(cls)) return sectionImagePendingByClass.get(cls) || null;
     return sectionClassImages.get(sectionImageSecId + "|" + cls) || null;
   }
+  // список классов в модалке = уже известные (по участникам/заданным картинкам) плюс
+  // добавленные вручную через выпадающий список ниже (extraClasses — общий и с «Значениями по классам»)
   function renderSectionImageClassList(){
     const list = document.getElementById("siClassList");
     const classes = knownClasses();
     if(!classes.length){
       list.innerHTML = '<p class="hint">' + L2I18n.t("gearCheck.noClassesYetHint", "Классы ещё не заданы ни одному участнику — впишите класс через «⋮» у ника в таблице, либо добавьте профессию вручную ниже.") + '</p>';
-      return;
-    }
-    list.innerHTML = "";
-    classes.forEach(cls => {
-      const row = document.createElement("div");
-      row.className = "cv-row";
-      const label = document.createElement("div");
-      label.className = "cls-name"; label.textContent = cls;
-      const shot = document.createElement("div");
-      shot.className = "si-row-shot"; shot.tabIndex = 0;
-      shot.title = L2I18n.t("gearCheck.sectionImageClassPasteTitle", "Кликните и вставьте картинку (Ctrl+V) для «{cls}»").replace("{cls}", cls);
-      const val = currentClassImage(cls);
-      if(val){ const im = document.createElement("img"); im.src = val; im.alt = ""; shot.appendChild(im); }
-      else { shot.textContent = "🖼"; }
-      shot.addEventListener("paste", async (e) => {
-        const items = Array.from(e.clipboardData?.items || []);
-        const imgItem = items.find(i => i.type.startsWith("image/"));
-        if(!imgItem) return;
-        e.preventDefault();
-        try{
-          const dataUrl = await downscaleImage(imgItem.getAsFile(), 1400, "image/jpeg", 0.82);
-          sectionImagePendingByClass.set(cls, dataUrl);
-          renderSectionImageClassList();
-        }catch(err){
-          document.getElementById("sectionImageError").textContent = L2I18n.t("gearCheck.sectionImagePasteFailed", "Не удалось вставить картинку.");
-        }
+    } else {
+      list.innerHTML = "";
+      classes.forEach(cls => {
+        const row = document.createElement("div");
+        row.className = "cv-row";
+        const label = document.createElement("div");
+        label.className = "cls-name"; label.textContent = cls;
+        const shot = document.createElement("div");
+        shot.className = "si-row-shot"; shot.tabIndex = 0;
+        shot.title = L2I18n.t("gearCheck.sectionImageClassPasteTitle", "Кликните, чтобы выбрать файл, или вставьте картинку (Ctrl+V) для «{cls}»").replace("{cls}", cls);
+        const val = currentClassImage(cls);
+        if(val){ const im = document.createElement("img"); im.src = val; im.alt = ""; shot.appendChild(im); }
+        else { shot.textContent = "🖼"; }
+        // клик — сразу открывает системный выбор файла (однозначно понятно, что сработало),
+        // Ctrl+V после клика по этому же квадратику работает как более быстрый способ
+        shot.addEventListener("click", () => pickIcon({ type: "sectionClass", cls }));
+        shot.addEventListener("paste", async (e) => {
+          const items = Array.from(e.clipboardData?.items || []);
+          const imgItem = items.find(i => i.type.startsWith("image/"));
+          if(!imgItem) return;
+          e.preventDefault();
+          try{
+            const dataUrl = await downscaleImage(imgItem.getAsFile(), 1400, "image/jpeg", 0.82);
+            sectionImagePendingByClass.set(cls, dataUrl);
+            renderSectionImageClassList();
+          }catch(err){
+            document.getElementById("sectionImageError").textContent = L2I18n.t("gearCheck.sectionImagePasteFailed", "Не удалось вставить картинку.");
+          }
+        });
+        const clearBtn = document.createElement("button");
+        clearBtn.type = "button";
+        clearBtn.className = "btn btn-danger icon-mini-btn"; clearBtn.textContent = "×";
+        clearBtn.title = L2I18n.t("gearCheck.removeBtn", "Убрать");
+        clearBtn.addEventListener("click", (e) => { e.stopPropagation(); sectionImagePendingByClass.set(cls, ""); renderSectionImageClassList(); });
+        row.append(label, shot, clearBtn);
+        list.appendChild(row);
       });
-      const clearBtn = document.createElement("button");
-      clearBtn.type = "button";
-      clearBtn.className = "btn btn-danger icon-mini-btn"; clearBtn.textContent = "×";
-      clearBtn.title = L2I18n.t("gearCheck.removeBtn", "Убрать");
-      clearBtn.addEventListener("click", () => { sectionImagePendingByClass.set(cls, ""); renderSectionImageClassList(); });
-      row.append(label, shot, clearBtn);
-      list.appendChild(row);
-    });
+    }
+    renderSiNewClassOptions(classes);
+  }
+  // выпадающий список «Добавить профессию» — реальные классы L2 (js/classes.js), а не
+  // текст руками; уже показанные в списке выше из вариантов убираются
+  function renderSiNewClassOptions(alreadyShown){
+    const sel = document.getElementById("siNewClass");
+    const already = new Set(alreadyShown || knownClasses());
+    const options = (window.L2_CLASSES || []).filter(c => !already.has(c.name));
+    sel.innerHTML = options.length
+      ? options.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join("")
+      : `<option value="">${escapeHtml(L2I18n.t("gearCheck.allClassesAdded", "Все профессии уже в списке"))}</option>`;
   }
   function closeSectionImageModal(){
     document.getElementById("sectionImageOverlay").classList.remove("show");
     unlockScroll();
   }
+  // клик по «Общей» зоне — тоже сразу открывает системный выбор файла, Ctrl+V там же работает как раньше
+  document.getElementById("sectionImagePasteZone").addEventListener("click", () => pickIcon({ type: "sectionGeneral" }));
   document.getElementById("sectionImagePasteZone").addEventListener("paste", async (e) => {
     const items = Array.from(e.clipboardData?.items || []);
     const imgItem = items.find(i => i.type.startsWith("image/"));
@@ -1410,10 +1428,9 @@
     renderSectionImagePreview(null);
   });
   document.getElementById("siAddClassBtn").addEventListener("click", () => {
-    const val = document.getElementById("siNewClass").value.trim();
+    const val = document.getElementById("siNewClass").value;
     if(!val) return;
     if(!extraClasses.includes(val)) extraClasses.push(val);
-    document.getElementById("siNewClass").value = "";
     renderSectionImageClassList();
   });
   document.getElementById("sectionImageClose").addEventListener("click", closeSectionImageModal);
@@ -1747,11 +1764,21 @@
     const target = pendingIconTarget;
     pendingIconTarget = null;
     if(!file || !target) return;
-    const dataUrl = await downscaleImage(file, 96);
 
     if(target.type === "itemModal"){
+      const dataUrl = await downscaleImage(file, 96);
       itemModalPendingIcon = dataUrl;
       document.getElementById("itemIconPreview").src = dataUrl;
+    } else if(target.type === "sectionGeneral"){
+      // крупнее, чем иконки пунктов — читаемый скриншот, а не значок; JPEG вместо
+      // PNG, чтобы не раздувать базу (картинка хранится как data-URL в Postgres)
+      const dataUrl = await downscaleImage(file, 1400, "image/jpeg", 0.82);
+      sectionImagePendingGeneral = dataUrl;
+      renderSectionImagePreview(dataUrl);
+    } else if(target.type === "sectionClass"){
+      const dataUrl = await downscaleImage(file, 1400, "image/jpeg", 0.82);
+      sectionImagePendingByClass.set(target.cls, dataUrl);
+      renderSectionImageClassList();
     }
   });
 
