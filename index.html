@@ -239,6 +239,10 @@
   function renderSection(key, extra){
     const view = SECTION_VIEWS[key];
     content.innerHTML = "";
+    // сброс на случай ухода со страницы, пока «Проверка буста» держала виджет
+    // спрятанным (открытая панель участника, см. setProfileWidgetVisible) —
+    // сам iframe со своим состоянием сейчас будет уничтожен целиком
+    window.L2Nav.setProfileWidgetVisible(true);
     if(!view){ content.innerHTML = '<p class="hint">' + L2I18n.t("shell.sectionNotFound", "Раздел не найден.") + '</p>'; return; }
 
     if(view.type === "iframe"){
@@ -291,6 +295,14 @@
     // из меню «⋮» в «Группах» — клан-лидер/зам/лидер пати открывают личный кабинет участника
     openMyCabinet(nick, from){ renderSection("my_cabinet", { nick, from: from || "groups" }); },
     openSection(key){ renderSection(key); },
+    // из «Проверки буста» (gear-check.html) — там выезжающая справа панель того
+    // же участника перекрывается этим виджетом (оба в правом верхнем углу, но
+    // разные документы — z-index внутри iframe тут не помогает). Прячем виджет
+    // на время, пока панель открыта, вместо борьбы со стекингом между фреймами
+    setProfileWidgetVisible(visible){
+      if(!visible) whoWidget.classList.remove("open");
+      whoWidget.classList.toggle("who-widget-hidden", !visible);
+    },
   };
 
   const wanted = location.hash.replace("#", "");

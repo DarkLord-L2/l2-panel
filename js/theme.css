@@ -194,6 +194,10 @@ input[type="date"]{ color-scheme: dark; }
   background: var(--panel); border:1px solid var(--border); box-shadow: 0 4px 16px rgba(0,0,0,.35);
 }
 .who-widget:hover{ background: var(--panel-2); }
+/* временно спрятан — см. window.L2Nav.setProfileWidgetVisible (index.html),
+   вызывается из iframe-разделов с собственной выезжающей справа панелью, которую
+   этот виджет иначе перекрывает поверх (разные документы, z-index не помогает) */
+.who-widget.who-widget-hidden{ display:none; }
 .who-avatar{ width:30px; height:30px; border-radius:50%; object-fit:cover; flex:none; border:1px solid var(--border); background: var(--panel-2); }
 .who-text{ display:flex; flex-direction:column; line-height:1.25; }
 .who-name{ font-size:13px; font-weight:600; color: var(--text); }

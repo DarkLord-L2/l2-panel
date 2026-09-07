@@ -957,12 +957,17 @@
     document.getElementById("drawerOverlay").classList.add("show");
     document.getElementById("drawer").classList.add("show");
     lockScroll();
+    // виджет профиля живёт в родительском окне (index.html) и плавает в том же
+    // углу, куда выезжает эта панель — на время прячем его там же, вместо борьбы
+    // со стекингом между документами (см. window.L2Nav.setProfileWidgetVisible)
+    if(window.top && window.top.L2Nav) window.top.L2Nav.setProfileWidgetVisible(false);
   }
   function closeDrawer(){
     document.getElementById("drawerOverlay").classList.remove("show");
     document.getElementById("drawer").classList.remove("show");
     unlockScroll();
     currentNick = null;
+    if(window.top && window.top.L2Nav) window.top.L2Nav.setProfileWidgetVisible(true);
   }
   document.getElementById("drawerClose").addEventListener("click", closeDrawer);
   document.getElementById("drawerOverlay").addEventListener("click", closeDrawer);
