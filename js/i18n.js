@@ -568,6 +568,12 @@
       "Скопіювати список ніків (у поточному порядку/фільтрі)",
       "Copy the nickname list (current order/filter)",
     ],
+    "taxes.copyReportBtn": ["📋 Скопировать отчёт", "📋 Скопіювати звіт", "📋 Copy report"],
+    "taxes.copyReportTitle": [
+      "Скопировать готовый текст отчёта (шаблон — в Админ-панели → «Правила клана»)",
+      "Скопіювати готовий текст звіту (шаблон — в Адмін-панелі → «Правила клану»)",
+      "Copy the ready-made report text (template set in Admin panel → “Clan rules”)",
+    ],
     "taxes.searchNickLabel": ["Поиск по нику", "Пошук за ніком", "Search by nickname"],
     "taxes.partyLabel": ["Пати", "Паті", "Party"],
     "taxes.myPartyFallback": ["Моя пати", "Моя паті", "My party"],
@@ -797,6 +803,12 @@
       "Weekly tax amount per person. Used in the “Total for the week” box on the “Taxes” page — it's simply multiplied by the number of payers and added to donations; it doesn't change the “who paid” marks themselves.",
     ],
     "admin.amountPerPersonLabel": ["Сумма с человека", "Сума з людини", "Amount per person"],
+    "admin.taxReportTemplateTitle": ["Шаблон отчёта по налогам", "Шаблон звіту з податків", "Tax report template"],
+    "admin.taxReportTemplateHint": [
+      "Готовый текст для кнопки «📋 Скопировать отчёт» на странице «Налоги» — набирается один раз, дальше просто копируется каждую неделю с уже подставленными числами. Плейсхолдеры: {total} — общая сумма сбора, {taxAmount} — сумма с человека, {regularCount} — заплатили обычным способом, {aheadCount} — заплатили наперёд, {debtCount} — закрыли долг, {payerCount} — всего заплативших, {list} — пронумерованный список ников.",
+      "Готовий текст для кнопки «📋 Скопіювати звіт» на сторінці «Податки» — набирається один раз, далі просто копіюється щотижня з уже підставленими числами. Плейсхолдери: {total} — загальна сума збору, {taxAmount} — сума з людини, {regularCount} — заплатили звичайним способом, {aheadCount} — заплатили наперед, {debtCount} — закрили борг, {payerCount} — всього заплативших, {list} — пронумерований список ніків.",
+      "Ready-made text for the “📋 Copy report” button on the “Taxes” page — set up once, then just copied every week with the numbers already filled in. Placeholders: {total} — total collected, {taxAmount} — amount per person, {regularCount} — paid the regular way, {aheadCount} — paid ahead, {debtCount} — cleared a debt, {payerCount} — total payers, {list} — numbered nickname list.",
+    ],
     "admin.dkpSectionsTitle": ["Включённые разделы ДКП", "Увімкнені розділи ДКП", "Enabled DKP sections"],
     "admin.dkpSectionsHint": [
       "Полностью выключает раздел для всего клана — исчезает из меню у абсолютно всех, независимо от роли (та же настройка, что в «Разделы и права» → «Какие разделы вообще есть», просто отдельно и под рукой здесь).",

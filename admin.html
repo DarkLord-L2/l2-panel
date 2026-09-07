@@ -214,6 +214,13 @@
     </div>
     <p class="error-msg" id="weeklyTaxAmountError"></p>
   </section>
+  <section class="card">
+    <h2 data-i18n="admin.taxReportTemplateTitle">Шаблон отчёта по налогам</h2>
+    <p class="hint" data-i18n="admin.taxReportTemplateHint">Готовый текст для кнопки «📋 Скопировать отчёт» на странице «Налоги» — набирается один раз, дальше просто копируется каждую неделю с уже подставленными числами. Плейсхолдеры: {total} — общая сумма сбора, {taxAmount} — сумма с человека, {regularCount} — заплатили обычным способом, {aheadCount} — заплатили наперёд, {debtCount} — закрыли долг, {payerCount} — всего заплативших, {list} — пронумерованный список ников.</p>
+    <textarea id="taxReportTemplateInput" rows="8" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:13px; padding:9px 11px; border-radius:5px; border:1px solid var(--border); background:var(--panel-2); color:var(--text); resize:vertical;"></textarea>
+    <p class="error-msg" id="taxReportTemplateError"></p>
+    <p class="ok-msg" id="taxReportTemplateOk" style="display:none;" data-i18n="admin.saved">Сохранено.</p>
+  </section>
     </div>
 
     <div class="admin-tab-panel" data-panel="dkp">
@@ -403,7 +410,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=32"></script>
+<script src="js/i18n.js?v=33"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -604,6 +611,34 @@
     );
     if(error) errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
     input.disabled = false;
+  });
+
+  // ---------- шаблон отчёта по налогам (кнопка «📋 Скопировать отчёт» в taxes.html) ----------
+  // тот же дефолт продублирован в taxes.html (buildTaxReportText) — используется,
+  // пока клан не сохранил здесь свой текст (report_template === null)
+  const DEFAULT_TAX_REPORT_TEMPLATE =
+    "🐟 Звіт по податках:\n\n" +
+    "Загальна сума збору за цей тиждень {total} 💰 gold\n\n" +
+    "✍️ {regularCount} чоловіка скинули по {taxAmount} голд, і {aheadCount} людини закинули на наступний тиждень — дякую вам за підтримку. 😘\n" +
+    "{list}";
+  async function loadTaxReportTemplate(){
+    const { data, error } = await db.from("tax_settings").select("report_template").eq("clan_id", profile.clan_id).maybeSingle();
+    if(error){ console.error(error); return; }
+    document.getElementById("taxReportTemplateInput").value = data?.report_template ?? DEFAULT_TAX_REPORT_TEMPLATE;
+  }
+  document.getElementById("taxReportTemplateInput").addEventListener("change", async () => {
+    const input = document.getElementById("taxReportTemplateInput");
+    const errEl = document.getElementById("taxReportTemplateError");
+    const okEl = document.getElementById("taxReportTemplateOk");
+    errEl.textContent = ""; okEl.style.display = "none";
+    input.disabled = true;
+    const { error } = await db.from("tax_settings").upsert(
+      { clan_id: profile.clan_id, report_template: input.value },
+      { onConflict: "clan_id" }
+    );
+    input.disabled = false;
+    if(error){ errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message; return; }
+    okEl.style.display = "";
   });
 
   // ---------- «Раздел дропа»: показывать только тех, кто хоть раз ходил ----------
@@ -1490,7 +1525,7 @@
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(roleDisplayLabel(r)), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
   renderRoleLabelsList();
-  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadLootLeaderCoefficients(), loadWeeklyTaxAmount(), loadLootHideZero(), loadMinBoostPercent(), loadPayoutShowLeft(), loadClosePayoutState()]);
+  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadLootLeaderCoefficients(), loadWeeklyTaxAmount(), loadTaxReportTemplate(), loadLootHideZero(), loadMinBoostPercent(), loadPayoutShowLeft(), loadClosePayoutState()]);
   renderSectionOrder();
   renderSectionToggleList();
   renderDkpSectionToggleList();

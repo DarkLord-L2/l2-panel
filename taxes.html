@@ -201,6 +201,7 @@
             <button type="button" class="copy-btn" id="copyPayersBtn" data-i18n-attr="title:common.copyListTitle" title="Скопировать список ников">📋</button>
           </div>
           <div class="tools">
+            <button class="btn" id="copyTaxReportBtn" data-i18n="taxes.copyReportBtn" data-i18n-attr="title:taxes.copyReportTitle" title="Скопировать готовый текст отчёта (шаблон — в Админ-панели → «Правила клана»)">📋 Скопировать отчёт</button>
             <button class="btn btn-primary" id="addEntryBtn" style="display:none;" data-i18n="taxes.addPayments">+ Добавить оплаты</button>
             <button class="btn" id="trashModeBtn" data-i18n="taxes.deleteListMode" data-i18n-attr="title:census.deleteModeTitle" title="Режим удаления списком" style="display:none;">Удалить списком</button>
           </div>
@@ -494,7 +495,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=32"></script>
+<script src="js/i18n.js?v=33"></script>
 <script src="js/week-roster.js?v=6"></script>
 <script src="js/share-report.js?v=2"></script>
 <script>
@@ -1095,7 +1096,67 @@
     weeklyTaxAmount = Number(data?.weekly_tax_amount) || 0;
   }
 
+  // отдельный запрос от loadTaxSettings() специально: пока клан не выполнил
+  // миграцию schema_tax_report_template.sql, колонки report_template ещё нет —
+  // если бы оба поля читались одним select, из-за отсутствующей колонки падал бы
+  // и weekly_tax_amount тоже, ломая «Итого за неделю» без всякой связи с этой фичей
+  let taxReportTemplate = "";
+  async function loadTaxReportTemplateSetting(){
+    const { data, error } = await db.from("tax_settings").select("report_template").eq("clan_id", profile.clan_id).maybeSingle();
+    taxReportTemplate = (!error && data?.report_template) || DEFAULT_TAX_REPORT_TEMPLATE;
+  }
+
   function fmtGold(n){ return n.toLocaleString(L2I18n.locale()); }
+
+  // ---- «📋 Скопировать отчёт» — готовый текст для Telegram/Discord одним нажатием,
+  // вместо ручной сборки суммы/подсчёта/списка каждую неделю. Шаблон с плейсхолдерами
+  // настраивается один раз в Админ-панели → «Правила клана» (tax_settings.report_template,
+  // дефолт продублирован тут же — DEFAULT_TAX_REPORT_TEMPLATE в admin.html) ----
+  const DEFAULT_TAX_REPORT_TEMPLATE =
+    "🐟 Звіт по податках:\n\n" +
+    "Загальна сума збору за цей тиждень {total} 💰 gold\n\n" +
+    "✍️ {regularCount} чоловіка скинули по {taxAmount} голд, і {aheadCount} людини закинули на наступний тиждень — дякую вам за підтримку. 😘\n" +
+    "{list}";
+
+  // origin_week, не week_start — те же деньги, тот же принцип, что в loadTotalsBox()
+  // выше: «наперёд»/«долг» физически лежат в других week_start, но получены сейчас
+  async function loadTaxReportPayers(){
+    const { data, error } = await db.from("tax_payments")
+      .select("nickname, kind")
+      .eq("origin_week", isoOf(roster.getCurrentWeek()))
+      .order("nickname");
+    if(error) throw error;
+    const rows = data || [];
+    return {
+      regularCount: rows.filter(r => r.kind === "normal").length,
+      aheadCount: rows.filter(r => r.kind === "ahead").length,
+      debtCount: rows.filter(r => r.kind === "debt").length,
+      nicknames: rows.map(r => r.nickname),
+    };
+  }
+  function fillTaxReportTemplate(tpl, payers){
+    const payerCount = payers.regularCount + payers.aheadCount + payers.debtCount;
+    const list = payers.nicknames.map((n, i) => `${i + 1} ${n}`).join("\n");
+    return tpl
+      .replaceAll("{total}", fmtGold(payerCount * weeklyTaxAmount))
+      .replaceAll("{taxAmount}", fmtGold(weeklyTaxAmount))
+      .replaceAll("{regularCount}", payers.regularCount)
+      .replaceAll("{aheadCount}", payers.aheadCount)
+      .replaceAll("{debtCount}", payers.debtCount)
+      .replaceAll("{payerCount}", payerCount)
+      .replaceAll("{list}", list);
+  }
+  document.getElementById("copyTaxReportBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("copyTaxReportBtn");
+    try{
+      const payers = await loadTaxReportPayers();
+      if(!payers.nicknames.length){ flashCopyBtn(btn, "∅"); return; }
+      await navigator.clipboard.writeText(fillTaxReportTemplate(taxReportTemplate, payers));
+      flashCopyBtn(btn, "✓");
+    }catch(e){
+      flashCopyBtn(btn, "✗");
+    }
+  });
 
   async function loadTotalsBox(){
     const weekStart = roster.getCurrentWeek();
@@ -1129,6 +1190,7 @@
     loadTotalsBox();
     loadAheadDebtBox();
   });
+  loadTaxReportTemplateSetting();
   document.getElementById("prevWeekBtn").addEventListener("click", loadDonationsBox);
   document.getElementById("nextWeekBtn").addEventListener("click", loadDonationsBox);
   document.getElementById("todayBtn").addEventListener("click", loadDonationsBox);
