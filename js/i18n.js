@@ -1618,8 +1618,8 @@
     ],
     "gearCheck.sectionImageGeneralLabel": ["Общая (когда для класса участника своей нет)", "Загальна (коли для класу учасника своєї немає)", "General (used when the member's class has none of its own)"],
     "gearCheck.sectionImageByClassLabel": ["Свои картинки по классам", "Свої картинки за класами", "Class-specific pictures"],
-    "gearCheck.sectionImagePasteHint": ["Кликните — откроется выбор файла, либо вставьте скриншот (Ctrl+V)", "Клікніть — відкриється вибір файлу, або вставте скріншот (Ctrl+V)", "Click to choose a file, or paste a screenshot (Ctrl+V)"],
-    "gearCheck.sectionImageClassPasteTitle": ["Кликните, чтобы выбрать файл, или вставьте картинку (Ctrl+V) для «{cls}»", "Клікніть, щоб вибрати файл, або вставте картинку (Ctrl+V) для «{cls}»", "Click to choose a file, or paste a picture (Ctrl+V), for “{cls}”"],
+    "gearCheck.sectionImagePasteHint": ["Кликните сюда и нажмите Ctrl+V", "Клікніть сюди і натисніть Ctrl+V", "Click here and press Ctrl+V"],
+    "gearCheck.sectionImageClassPasteTitle": ["Кликните и вставьте картинку (Ctrl+V) для «{cls}»", "Клікніть і вставте картинку (Ctrl+V) для «{cls}»", "Click and paste a picture (Ctrl+V) for “{cls}”"],
     "gearCheck.allClassesAdded": ["Все профессии уже в списке", "Усі професії вже у списку", "All classes are already in the list"],
     "gearCheck.sectionImagePasteFailed": ["Не удалось вставить картинку.", "Не вдалося вставити картинку.", "Couldn't paste the image."],
 
