@@ -1612,11 +1612,14 @@
     "gearCheck.sectionShotTitle": ["Открыть скриншот раздела", "Відкрити скріншот розділу", "Open section screenshot"],
     "gearCheck.sectionImageTitle": ["Скриншот раздела «{name}»", "Скріншот розділу «{name}»", "Screenshot for “{name}”"],
     "gearCheck.sectionImageHint": [
-      "Например, кому какое украшение по классам — просто картинка-подсказка, кликните область ниже и вставьте скриншот (Ctrl+V).",
-      "Наприклад, кому яка прикраса за класами — просто картинка-підказка, клікніть область нижче і вставте скріншот (Ctrl+V).",
-      "For example, which class gets which jewelry piece — just a reference picture, click the area below and paste a screenshot (Ctrl+V).",
+      "Просто картинка-подсказка (не парсится), например кому какое украшение по классам. Значок у раздела откроет картинку класса участника, если задана, иначе — общую.",
+      "Просто картинка-підказка (не парситься), наприклад кому яка прикраса за класами. Значок у розділу відкриє картинку класу учасника, якщо задана, інакше — загальну.",
+      "Just a reference picture (not parsed), e.g. which class gets which jewelry piece. The section icon opens the member's class picture if set, otherwise the general one.",
     ],
+    "gearCheck.sectionImageGeneralLabel": ["Общая (когда для класса участника своей нет)", "Загальна (коли для класу учасника своєї немає)", "General (used when the member's class has none of its own)"],
+    "gearCheck.sectionImageByClassLabel": ["Свои картинки по классам", "Свої картинки за класами", "Class-specific pictures"],
     "gearCheck.sectionImagePasteHint": ["Кликните сюда и нажмите Ctrl+V", "Клікніть сюди і натисніть Ctrl+V", "Click here and press Ctrl+V"],
+    "gearCheck.sectionImageClassPasteTitle": ["Кликните и вставьте картинку (Ctrl+V) для «{cls}»", "Клікніть і вставте картинку (Ctrl+V) для «{cls}»", "Click and paste a picture (Ctrl+V) for “{cls}”"],
     "gearCheck.sectionImagePasteFailed": ["Не удалось вставить картинку.", "Не вдалося вставити картинку.", "Couldn't paste the image."],
 
     "gearCheck.fullyCounted": ["Засчитано полностью", "Зараховано повністю", "Fully counted"],

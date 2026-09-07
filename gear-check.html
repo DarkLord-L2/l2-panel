@@ -151,21 +151,28 @@
     position:absolute; right:10px; top:50%; transform:translateY(-50%);
     display:flex; gap:6px;
   }
-  /* скриншот-подсказка раздела (например, «Бижа» — кому какое украшение по классам) —
-     маленький квадратик слева от названия, виден всем, не только в режиме редактирования */
+  /* скриншот-подсказка раздела (например, «Скилы» — свои для каждого класса) — это
+     просто значок слева от названия (сама картинка тут не рисуется), виден всем,
+     не только в режиме редактирования; клик открывает картинку на весь экран */
   .gc-sec-shot{
     position:absolute; left:10px; top:50%; transform:translateY(-50%);
-    width:28px; height:28px; border-radius:6px; object-fit:cover;
-    border:1px solid var(--border-lit); cursor:zoom-in; background: var(--panel);
+    cursor:zoom-in;
   }
-  .gc-sec-shot:hover{ border-color: var(--gold); }
   .gc-shot-paste{
     border:2px dashed var(--border-lit); border-radius:8px; padding:14px;
-    display:flex; align-items:center; justify-content:center; min-height:140px;
+    display:flex; align-items:center; justify-content:center; min-height:100px;
     text-align:center; color: var(--text-dim); font-size:13px; cursor:text; outline:none;
   }
   .gc-shot-paste:focus{ border-color: var(--gold); }
-  .gc-shot-paste img{ max-width:100%; max-height:260px; border-radius:6px; object-fit:contain; }
+  .gc-shot-paste img{ max-width:100%; max-height:200px; border-radius:6px; object-fit:contain; }
+  /* маленький квадратик под конкретный класс в списке — тот же принцип, только компактнее */
+  .si-row-shot{
+    width:34px; height:34px; flex:none; border-radius:6px; cursor:pointer; outline:none;
+    border:1px dashed var(--border-lit); background: var(--panel-2);
+    display:flex; align-items:center; justify-content:center; overflow:hidden; color: var(--text-dim);
+  }
+  .si-row-shot:focus{ border-color: var(--gold); }
+  .si-row-shot img{ width:100%; height:100%; object-fit:cover; }
   #shotLightbox{ cursor:zoom-out; }
   #shotLightbox img{ max-width:92vw; max-height:92vh; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.6); }
   .gc-subgroup-title{
@@ -455,19 +462,31 @@
 </div>
 
 <div class="modal-overlay" id="sectionImageOverlay">
-  <div class="modal" style="max-width:460px;">
+  <div class="modal" style="max-width:480px;">
     <button class="modal-close" id="sectionImageClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
     <h2 id="sectionImageModalTitle">Скриншот раздела</h2>
-    <p class="hint" data-i18n="gearCheck.sectionImageHint">Например, кому какое украшение по классам — просто картинка-подсказка, кликните область ниже и вставьте скриншот (Ctrl+V).</p>
-    <div class="gc-shot-paste" id="sectionImagePasteZone" tabindex="0">
-      <span id="sectionImagePasteHint" data-i18n="gearCheck.sectionImagePasteHint">Кликните сюда и нажмите Ctrl+V</span>
-      <img id="sectionImagePreviewImg" alt="" style="display:none;" />
+    <p class="hint" data-i18n="gearCheck.sectionImageHint">Просто картинка-подсказка (не парсится), например кому какое украшение по классам. Значок у раздела откроет картинку класса участника, если задана, иначе — общую.</p>
+
+    <div class="field">
+      <label data-i18n="gearCheck.sectionImageGeneralLabel">Общая (когда для класса участника своей нет)</label>
+      <div class="gc-shot-paste" id="sectionImagePasteZone" tabindex="0">
+        <span id="sectionImagePasteHint" data-i18n="gearCheck.sectionImagePasteHint">Кликните сюда и нажмите Ctrl+V</span>
+        <img id="sectionImagePreviewImg" alt="" style="display:none;" />
+      </div>
+      <button class="btn btn-danger" id="sectionImageClearBtn" data-i18n="gearCheck.removeBtn" style="margin-top:8px;">Убрать</button>
     </div>
+
+    <div class="field">
+      <label data-i18n="gearCheck.sectionImageByClassLabel">Свои картинки по классам</label>
+      <div id="siClassList"></div>
+      <div class="manual-add" style="max-width:none;">
+        <input type="text" id="siNewClass" data-i18n-attr="placeholder:gearCheck.addClassPlaceholder" placeholder="Добавить профессию" />
+        <button class="btn" id="siAddClassBtn" data-i18n="gearCheck.addBtn">Добавить</button>
+      </div>
+    </div>
+
     <p class="error-msg" id="sectionImageError"></p>
-    <div style="display:flex; gap:10px; margin-top:10px;">
-      <button class="btn btn-primary" id="sectionImageSaveBtn" data-i18n="gearCheck.saveBtn">Сохранить</button>
-      <button class="btn btn-danger" id="sectionImageClearBtn" data-i18n="gearCheck.removeBtn">Убрать</button>
-    </div>
+    <button class="btn btn-primary" id="sectionImageSaveBtn" data-i18n="gearCheck.saveBtn">Сохранить</button>
   </div>
 </div>
 
@@ -527,7 +546,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=29"></script>
+<script src="js/i18n.js?v=30"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -626,6 +645,7 @@
   let selectedGroupId = null;  // id группы, SOLO_KEY, или null (экран выбора)
   const SOLO_KEY = "__solo__";
   let classValues = new Map(); // `${item_id}|${class_name}` -> текст подписи
+  let sectionClassImages = new Map(); // `${section_id}|${class_name}` -> картинка (data-URL)
   let extraClasses = [];       // профессии, добавленные в настройках вручную
   let currentNick = null;
   let editMode = false; // показывает карандаши/крестики у разделов и пунктов
@@ -778,6 +798,23 @@
     const { data } = await db.from("boost_class_values").select("item_id, class_name, value_text");
     classValues = new Map();
     (data || []).forEach(r => classValues.set(r.item_id + "|" + r.class_name, r.value_text || ""));
+  }
+
+  async function loadSectionClassImages(){
+    const { data } = await db.from("boost_section_class_images").select("section_id, class_name, image");
+    sectionClassImages = new Map();
+    (data || []).forEach(r => sectionClassImages.set(r.section_id + "|" + r.class_name, r.image));
+  }
+
+  // картинка-подсказка раздела для конкретного участника: своя для его класса,
+  // если задана, иначе общая (reference_image), иначе ничего
+  function sectionImageFor(sec, nick){
+    const cls = (memberInfo.get(nick) || {}).class_name;
+    if(cls){
+      const v = sectionClassImages.get(sec.id + "|" + cls);
+      if(v) return v;
+    }
+    return sec.reference_image || null;
   }
 
   // текст под названием пункта: общий или свой для класса участника
@@ -1026,14 +1063,16 @@
       nameSpan.textContent = sec.name;
       title.appendChild(nameSpan);
       // скриншот-подсказка раздела — виден всем (не только в режиме редактирования),
-      // клик открывает увеличенную версию
-      if(sec.reference_image){
-        const shot = document.createElement("img");
-        shot.className = "gc-sec-shot";
-        shot.src = sec.reference_image;
-        shot.alt = "";
+      // просто значок (сама картинка не рисуется тут), клик открывает её на весь экран;
+      // своя для класса участника, если задана, иначе общая — см. sectionImageFor()
+      const secImg = sectionImageFor(sec, currentNick);
+      if(secImg){
+        const shot = document.createElement("button");
+        shot.type = "button";
+        shot.className = "btn icon-mini-btn gc-sec-shot";
+        shot.textContent = "🖼";
         shot.title = L2I18n.t("gearCheck.sectionShotTitle", "Открыть скриншот раздела");
-        shot.addEventListener("click", () => openShotLightbox(sec.reference_image));
+        shot.addEventListener("click", () => openShotLightbox(secImg));
         title.appendChild(shot);
       }
       if(isAdmin && editMode){
@@ -1277,14 +1316,20 @@
   }
 
   // ---------- скриншот-подсказка раздела (необязательный, вставляется через Ctrl+V) ----------
+  // «Общая» — запасной вариант (boost_sections.reference_image), плюс необязательные
+  // свои картинки по классам (boost_section_class_images) — тот же принцип, что уже
+  // есть у подписей пунктов (classValues), только со скриншотом вместо текста
   let sectionImageSecId = null;
-  let sectionImagePending = null; // null — не меняли, "" — убрать, dataURL — новая
+  let sectionImagePendingGeneral = null; // null — не меняли, "" — убрать, dataURL — новая
+  let sectionImagePendingByClass = new Map(); // класс -> "" (убрать) | dataURL (новая); тронутые в этой сессии
   function openSectionImageModal(sec){
     sectionImageSecId = sec.id;
-    sectionImagePending = null;
+    sectionImagePendingGeneral = null;
+    sectionImagePendingByClass = new Map();
     document.getElementById("sectionImageModalTitle").textContent = L2I18n.t("gearCheck.sectionImageTitle", "Скриншот раздела «{name}»").replace("{name}", sec.name);
     document.getElementById("sectionImageError").textContent = "";
     renderSectionImagePreview(sec.reference_image || null);
+    renderSectionImageClassList();
     document.getElementById("sectionImageOverlay").classList.add("show");
     lockScroll();
     setTimeout(() => document.getElementById("sectionImagePasteZone").focus(), 0);
@@ -1293,6 +1338,51 @@
     document.getElementById("sectionImagePreviewImg").src = dataUrl || BLANK_IMG;
     document.getElementById("sectionImagePreviewImg").style.display = dataUrl ? "" : "none";
     document.getElementById("sectionImagePasteHint").style.display = dataUrl ? "none" : "";
+  }
+  function currentClassImage(cls){
+    if(sectionImagePendingByClass.has(cls)) return sectionImagePendingByClass.get(cls) || null;
+    return sectionClassImages.get(sectionImageSecId + "|" + cls) || null;
+  }
+  function renderSectionImageClassList(){
+    const list = document.getElementById("siClassList");
+    const classes = knownClasses();
+    if(!classes.length){
+      list.innerHTML = '<p class="hint">' + L2I18n.t("gearCheck.noClassesYetHint", "Классы ещё не заданы ни одному участнику — впишите класс через «⋮» у ника в таблице, либо добавьте профессию вручную ниже.") + '</p>';
+      return;
+    }
+    list.innerHTML = "";
+    classes.forEach(cls => {
+      const row = document.createElement("div");
+      row.className = "cv-row";
+      const label = document.createElement("div");
+      label.className = "cls-name"; label.textContent = cls;
+      const shot = document.createElement("div");
+      shot.className = "si-row-shot"; shot.tabIndex = 0;
+      shot.title = L2I18n.t("gearCheck.sectionImageClassPasteTitle", "Кликните и вставьте картинку (Ctrl+V) для «{cls}»").replace("{cls}", cls);
+      const val = currentClassImage(cls);
+      if(val){ const im = document.createElement("img"); im.src = val; im.alt = ""; shot.appendChild(im); }
+      else { shot.textContent = "🖼"; }
+      shot.addEventListener("paste", async (e) => {
+        const items = Array.from(e.clipboardData?.items || []);
+        const imgItem = items.find(i => i.type.startsWith("image/"));
+        if(!imgItem) return;
+        e.preventDefault();
+        try{
+          const dataUrl = await downscaleImage(imgItem.getAsFile(), 1400, "image/jpeg", 0.82);
+          sectionImagePendingByClass.set(cls, dataUrl);
+          renderSectionImageClassList();
+        }catch(err){
+          document.getElementById("sectionImageError").textContent = L2I18n.t("gearCheck.sectionImagePasteFailed", "Не удалось вставить картинку.");
+        }
+      });
+      const clearBtn = document.createElement("button");
+      clearBtn.type = "button";
+      clearBtn.className = "btn btn-danger icon-mini-btn"; clearBtn.textContent = "×";
+      clearBtn.title = L2I18n.t("gearCheck.removeBtn", "Убрать");
+      clearBtn.addEventListener("click", () => { sectionImagePendingByClass.set(cls, ""); renderSectionImageClassList(); });
+      row.append(label, shot, clearBtn);
+      list.appendChild(row);
+    });
   }
   function closeSectionImageModal(){
     document.getElementById("sectionImageOverlay").classList.remove("show");
@@ -1309,27 +1399,48 @@
       // крупнее, чем иконки пунктов (96px) — это читаемый скриншот, а не значок;
       // JPEG вместо PNG, чтобы не раздувать базу (картинка хранится как data-URL в Postgres)
       const dataUrl = await downscaleImage(imgItem.getAsFile(), 1400, "image/jpeg", 0.82);
-      sectionImagePending = dataUrl;
+      sectionImagePendingGeneral = dataUrl;
       renderSectionImagePreview(dataUrl);
     }catch(err){
       errEl.textContent = L2I18n.t("gearCheck.sectionImagePasteFailed", "Не удалось вставить картинку.");
     }
   });
   document.getElementById("sectionImageClearBtn").addEventListener("click", () => {
-    sectionImagePending = "";
+    sectionImagePendingGeneral = "";
     renderSectionImagePreview(null);
+  });
+  document.getElementById("siAddClassBtn").addEventListener("click", () => {
+    const val = document.getElementById("siNewClass").value.trim();
+    if(!val) return;
+    if(!extraClasses.includes(val)) extraClasses.push(val);
+    document.getElementById("siNewClass").value = "";
+    renderSectionImageClassList();
   });
   document.getElementById("sectionImageClose").addEventListener("click", closeSectionImageModal);
   document.getElementById("sectionImageOverlay").addEventListener("click", (e) => {
     if(e.target.id === "sectionImageOverlay") closeSectionImageModal();
   });
   document.getElementById("sectionImageSaveBtn").addEventListener("click", async () => {
-    if(sectionImagePending === null){ closeSectionImageModal(); return; } // ничего не вставляли/не убирали
     const errEl = document.getElementById("sectionImageError");
-    const { error } = await db.from("boost_sections").update({ reference_image: sectionImagePending || null }).eq("id", sectionImageSecId);
-    if(error){ errEl.textContent = error.message; return; }
+    errEl.textContent = "";
+    if(sectionImagePendingGeneral !== null){
+      const { error } = await db.from("boost_sections").update({ reference_image: sectionImagePendingGeneral || null }).eq("id", sectionImageSecId);
+      if(error){ errEl.textContent = error.message; return; }
+    }
+    const toDelete = [...sectionImagePendingByClass.entries()].filter(([, v]) => !v).map(([cls]) => cls);
+    const toUpsert = [...sectionImagePendingByClass.entries()].filter(([, v]) => v).map(([cls, v]) => ({
+      clan_id: profile.clan_id, section_id: sectionImageSecId, class_name: cls, image: v,
+    }));
+    if(toDelete.length){
+      const { error } = await db.from("boost_section_class_images").delete().eq("section_id", sectionImageSecId).in("class_name", toDelete);
+      if(error){ errEl.textContent = error.message; return; }
+    }
+    if(toUpsert.length){
+      const { error } = await db.from("boost_section_class_images").upsert(toUpsert, { onConflict: "section_id,class_name" });
+      if(error){ errEl.textContent = error.message; return; }
+    }
     closeSectionImageModal();
-    await loadStructure(); renderDrawerBody(); renderTable();
+    await loadStructure(); await loadSectionClassImages(); renderDrawerBody(); renderTable();
   });
 
   function openShotLightbox(src){
@@ -1668,7 +1779,7 @@
   document.getElementById("helpClose").addEventListener("click", () => { document.getElementById("helpOverlay").classList.remove("show"); unlockScroll(); });
   document.getElementById("helpOverlay").addEventListener("click", (e) => { if(e.target.id === "helpOverlay"){ e.currentTarget.classList.remove("show"); unlockScroll(); } });
 
-  await Promise.all([loadNicks(), loadStructure(), loadValues(), loadMemberInfo(), loadClassValues(), loadGroups(), loadMinBoostPercent()]);
+  await Promise.all([loadNicks(), loadStructure(), loadValues(), loadMemberInfo(), loadClassValues(), loadSectionClassImages(), loadGroups(), loadMinBoostPercent()]);
 
   // сюда попали кликом по «Показать буст» на карточке участника в группе — сразу открыть её таблицу
   const params = new URLSearchParams(location.search);
