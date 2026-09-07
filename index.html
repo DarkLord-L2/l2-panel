@@ -236,6 +236,10 @@
   const nav = document.getElementById("sidebarNav");
   const content = document.getElementById("content");
 
+  // объявлен здесь (а не рядом с остальной обвязкой виджета ниже), потому что
+  // renderSection() ссылается на него уже в первом вызове на этой же странице —
+  // до этой строки было ReferenceError («не может зайти», TDZ у const)
+  const whoWidget = document.getElementById("whoWidget");
   function renderSection(key, extra){
     const view = SECTION_VIEWS[key];
     content.innerHTML = "";
@@ -350,7 +354,6 @@
   const appShell = document.getElementById("appShell");
 
   // виджет «аватарка + имя + статус» справа сверху — клик раскрывает меню
-  const whoWidget = document.getElementById("whoWidget");
   const whoMenuCabinet = document.getElementById("whoMenuCabinet");
   if(!sections.some(s => s.key === "my_cabinet")) whoMenuCabinet.style.display = "none";
   whoMenuCabinet.addEventListener("click", (e) => {
