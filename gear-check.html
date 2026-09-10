@@ -1248,6 +1248,7 @@
     dragOffsetY = e.clientY - box.top;
     dragCard = card;
     dragSourceGrid = card.closest(".gc-item-grid");
+    dragLastTargetCard = null; dragLastAfterFlag = null; // сброс гистерезиса от прошлого драга
 
     dragPlaceholder = document.createElement("div");
     dragPlaceholder.className = "gc-item-card gc-drag-placeholder";
@@ -1264,11 +1265,27 @@
     document.body.style.userSelect = "none";
   }
 
+  // mousemove на реальной мыши может сыпаться чаще, чем браузер вообще успевает
+  // отрисовывать кадры — если пересчитывать «до/после» и переставлять плейсхолдер
+  // на каждое такое событие, решение иногда мечется между двумя соседними
+  // карточками (оценка на не до конца отрисованном промежуточном состоянии) —
+  // визуально дёргается. requestAnimationFrame схлопывает это в одно решение за кадр
+  let dragRafPending = false;
+  let dragLastEvent = null;
   window.addEventListener("mousemove", (e) => {
     if(!dragCard) return;
+    dragLastEvent = e;
     dragCard.style.left = (e.clientX - dragOffsetX) + "px";
     dragCard.style.top = (e.clientY - dragOffsetY) + "px";
-
+    if(dragRafPending) return;
+    dragRafPending = true;
+    requestAnimationFrame(() => {
+      dragRafPending = false;
+      if(!dragCard || !dragLastEvent) return;
+      updateDragPlaceholder(dragLastEvent);
+    });
+  });
+  function updateDragPlaceholder(e){
     const el = document.elementFromPoint(e.clientX, e.clientY);
     const grid = el && el.closest(".gc-item-grid");
     if(!grid) return;
@@ -1277,7 +1294,7 @@
     const after = getDragAfterElement(grid, e.clientX, e.clientY, dragPlaceholder);
     if(after == null) grid.appendChild(dragPlaceholder);
     else if(after !== dragPlaceholder) grid.insertBefore(dragPlaceholder, after);
-  });
+  }
   window.addEventListener("mouseup", () => { if(dragCard) onCardDragEnd(); });
 
   async function onCardDragEnd(){
@@ -1294,7 +1311,13 @@
   }
 
   // ближайшая по расстоянию карточка к курсору — «после неё», если курсор правее
-  // или ниже её середины, иначе «перед ней»; грид в 2 колонки, поэтому одного Y мало
+  // или ниже её середины, иначе «перед ней»; грид в 2 колонки, поэтому одного Y мало.
+  // Гистерезис: если ближайшая карточка та же, что и в прошлый вызов, и курсор всё
+  // ещё в узкой зоне у её центра — не переворачиваем решение туда-обратно от
+  // микродрожания мыши (это и была основная причина дёрганья), держим прошлый выбор
+  let dragLastTargetCard = null;
+  let dragLastAfterFlag = null;
+  const DRAG_DEAD_ZONE = 10; // px по X вокруг центра карточки
   function getDragAfterElement(grid, x, y, exclude){
     const cards = [...grid.querySelectorAll(".gc-item-card")].filter(c => c !== exclude);
     let closest = null, closestDist = Infinity;
@@ -1305,7 +1328,14 @@
       if(dist < closestDist){ closestDist = dist; closest = { card, cx, cy, w: box.width }; }
     });
     if(!closest) return null;
-    const after = x > closest.cx || (Math.abs(x - closest.cx) < closest.w * 0.3 && y > closest.cy);
+    let after;
+    if(closest.card === dragLastTargetCard && Math.abs(x - closest.cx) < DRAG_DEAD_ZONE){
+      after = dragLastAfterFlag;
+    } else {
+      after = x > closest.cx || (Math.abs(x - closest.cx) < closest.w * 0.3 && y > closest.cy);
+    }
+    dragLastTargetCard = closest.card;
+    dragLastAfterFlag = after;
     return after ? closest.card.nextElementSibling : closest.card;
   }
 
