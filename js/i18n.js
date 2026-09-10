@@ -1621,6 +1621,7 @@
     "gearCheck.noItemsHint": ["Пунктов нет.", "Пунктів немає.", "There are no items."],
     "gearCheck.addItemToSubgroupTitle": ["Добавить пункт в этот подраздел", "Додати пункт у цей підрозділ", "Add an item to this subgroup"],
     "gearCheck.sectionShotBtnTitle": ["Скриншот раздела", "Скріншот розділу", "Section screenshot"],
+    "gearCheck.dragHandleTitle": ["Перетащить — можно и в другой раздел", "Перетягнути — можна й в інший розділ", "Drag — can be moved to another section too"],
     "gearCheck.sectionShotTitle": ["Открыть скриншот раздела", "Відкрити скріншот розділу", "Open section screenshot"],
     "gearCheck.sectionImageTitle": ["Скриншот раздела «{name}»", "Скріншот розділу «{name}»", "Screenshot for “{name}”"],
     "gearCheck.sectionImageHint": [
