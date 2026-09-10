@@ -508,7 +508,7 @@
     <div id="cvList"></div>
 
     <div class="manual-add" style="max-width:none;">
-      <input type="text" id="cvNewClass" data-i18n-attr="placeholder:gearCheck.addClassPlaceholder" placeholder="Добавить профессию" />
+      <select id="cvNewClass"></select>
       <button class="btn" id="cvAddClassBtn" data-i18n="gearCheck.addBtn">Добавить</button>
     </div>
 
@@ -1673,23 +1673,35 @@
     const classes = knownClasses();
     if(!classes.length){
       list.innerHTML = '<p class="hint">' + L2I18n.t("gearCheck.noClassesYetHint", "Классы ещё не заданы ни одному участнику — впишите класс через «⋮» у ника в таблице, либо добавьте профессию вручную ниже.") + '</p>';
-      return;
+    } else {
+      list.innerHTML = "";
+      classes.forEach(cls => {
+        const row = document.createElement("div");
+        row.className = "cv-row";
+        const label = document.createElement("div");
+        label.className = "cls-name";
+        label.textContent = cls;
+        const input = document.createElement("input");
+        input.type = "text";
+        input.dataset.cls = cls;
+        input.value = classValues.get(itemId + "|" + cls) || "";
+        input.placeholder = L2I18n.t("gearCheck.classValuePlaceholder", "Значение для «{cls}» (не название класса)").replace("{cls}", cls);
+        row.append(label, input);
+        list.appendChild(row);
+      });
     }
-    list.innerHTML = "";
-    classes.forEach(cls => {
-      const row = document.createElement("div");
-      row.className = "cv-row";
-      const label = document.createElement("div");
-      label.className = "cls-name";
-      label.textContent = cls;
-      const input = document.createElement("input");
-      input.type = "text";
-      input.dataset.cls = cls;
-      input.value = classValues.get(itemId + "|" + cls) || "";
-      input.placeholder = L2I18n.t("gearCheck.classValuePlaceholder", "Значение для «{cls}» (не название класса)").replace("{cls}", cls);
-      row.append(label, input);
-      list.appendChild(row);
-    });
+    renderCvNewClassOptions(classes);
+  }
+  // выпадающий список «Добавить профессию» — реальные классы L2 (js/classes.js), а не
+  // текст руками; уже показанные в списке выше из вариантов убираются (тот же приём,
+  // что и в окне скриншота раздела — renderSiNewClassOptions)
+  function renderCvNewClassOptions(alreadyShown){
+    const sel = document.getElementById("cvNewClass");
+    const already = new Set(alreadyShown || knownClasses());
+    const options = (window.L2_CLASSES || []).filter(c => !already.has(c.name));
+    sel.innerHTML = options.length
+      ? options.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join("")
+      : `<option value="">${escapeHtml(L2I18n.t("gearCheck.allClassesAdded", "Все профессии уже в списке"))}</option>`;
   }
 
   function openClassValuesModal(){
@@ -1701,6 +1713,7 @@
       sel.innerHTML = "";
       document.getElementById("cvList").innerHTML =
         '<p class="hint">' + L2I18n.t("gearCheck.noPerClassItemsHint", "Нет пунктов с отметкой «Своя подпись для каждого класса» — включите её в окне пункта (карандаш у пункта в разделах ниже).") + '</p>';
+      renderCvNewClassOptions();
     } else {
       sel.innerHTML = items2.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join("");
       renderClassValuesList();
@@ -1721,10 +1734,9 @@
     if(e.target.id === "classValuesOverlay"){ e.currentTarget.classList.remove("show"); unlockScroll(); }
   });
   document.getElementById("cvAddClassBtn").addEventListener("click", () => {
-    const val = document.getElementById("cvNewClass").value.trim();
+    const val = document.getElementById("cvNewClass").value;
     if(!val) return;
     if(!extraClasses.includes(val)) extraClasses.push(val);
-    document.getElementById("cvNewClass").value = "";
     renderClassValuesList();
   });
   document.getElementById("cvSaveBtn").addEventListener("click", async () => {
