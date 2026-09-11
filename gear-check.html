@@ -248,6 +248,19 @@
   }
   .cvname-row .cvname-head{ display:flex; align-items:center; gap:8px; }
   .cvname-row .cls-name{ flex:1; width:auto; }
+  /* «Скопировать из другого пункта» — маленькая квадратная кнопка со своим
+     выпадающим списком (не общий select), список — только пункты, где уже
+     что-то настроено по классам, а не вообще все пункты подряд */
+  .cv-copy-wrap{ position:relative; display:inline-block; }
+  .cv-copy-dropdown{
+    position:absolute; top:calc(100% + 4px); left:0; z-index:10; min-width:220px;
+    background: var(--panel); border:1px solid var(--border-lit); border-radius:8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4); padding:6px;
+    display:flex; flex-direction:column; gap:2px; max-height:280px; overflow-y:auto;
+  }
+  .cv-copy-option{ padding:6px 8px; border-radius:5px; cursor:pointer; font-size:13px; color: var(--text); }
+  .cv-copy-option:hover{ background: var(--panel-2); }
+  .cv-copy-empty{ padding:6px 8px; font-size:12px; color: var(--text-dim); font-style:italic; }
 
   /* тумблер */
   .gc-switch{ position:relative; width:40px; height:22px; flex:none; }
@@ -540,10 +553,10 @@
     </div>
 
     <div class="field">
-      <label for="cvCopyFromItem" data-i18n="gearCheck.cvCopyLabel">Скопировать профессии из другого пункта</label>
-      <div class="manual-add" style="max-width:none;">
-        <select id="cvCopyFromItem"></select>
-        <button class="btn" id="cvCopyFromBtn" data-i18n="gearCheck.cvCopyBtn">Скопировать</button>
+      <label data-i18n="gearCheck.cvCopyLabel">Скопировать профессии из другого пункта</label>
+      <div class="cv-copy-wrap" id="cvCopyWrap">
+        <button type="button" class="btn icon-mini-btn" id="cvCopyFromBtn" data-i18n-attr="title:gearCheck.cvCopyBtn" title="Скопировать">📋</button>
+        <div class="cv-copy-dropdown" id="cvCopyFromDropdown" style="display:none;"></div>
       </div>
     </div>
 
@@ -2039,15 +2052,50 @@
       : `<option value="">${escapeHtml(L2I18n.t("gearCheck.allClassesAdded", "Все профессии уже в списке"))}</option>`;
   }
 
-  // выпадающий список «Скопировать профессии из другого пункта» — все пункты,
-  // кроме того, что сейчас выбран (копировать пункт сам в себя незачем)
-  function renderCvCopyFromOptions(){
-    const sel = document.getElementById("cvCopyFromItem");
+  // список в «Скопировать из другого пункта» — только пункты, где уже есть
+  // хоть что-то по классам (savedClassesForItem), а не вообще все пункты —
+  // копировать всё равно нечего оттуда, где никто ничего не настраивал
+  function copyableItems(){
     const itemId = document.getElementById("cvItemSelect").value;
-    const options = items.filter(i => i.id !== itemId);
-    sel.innerHTML = options.length
-      ? options.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join("")
-      : `<option value="">${escapeHtml(L2I18n.t("gearCheck.noOtherItemsHint", "Других пунктов нет"))}</option>`;
+    return items.filter(i => i.id !== itemId && savedClassesForItem(i.id).size > 0);
+  }
+  function closeCvCopyDropdown(){
+    document.getElementById("cvCopyFromDropdown").style.display = "none";
+  }
+  function renderCvCopyFromDropdown(){
+    const dd = document.getElementById("cvCopyFromDropdown");
+    const options = copyableItems();
+    if(!options.length){
+      dd.innerHTML = '<div class="cv-copy-empty">' + escapeHtml(L2I18n.t("gearCheck.noOtherItemsHint", "Других пунктов нет")) + '</div>';
+      return;
+    }
+    dd.innerHTML = "";
+    options.forEach(i => {
+      const opt = document.createElement("div");
+      opt.className = "cv-copy-option";
+      opt.textContent = i.name;
+      opt.addEventListener("click", () => { closeCvCopyDropdown(); copyClassValuesFromItem(i.id); });
+      dd.appendChild(opt);
+    });
+  }
+  function copyClassValuesFromItem(srcId){
+    const itemId = document.getElementById("cvItemSelect").value;
+    const errEl = document.getElementById("cvError");
+    const okEl = document.getElementById("cvOk");
+    errEl.textContent = ""; okEl.textContent = "";
+    const srcClasses = savedClassesForItem(srcId);
+    if(!srcClasses.size){
+      errEl.textContent = L2I18n.t("gearCheck.cvCopySourceEmpty", "В выбранном пункте пока нет своих названий/картинок по классам.");
+      return;
+    }
+    srcClasses.forEach(cls => {
+      const src = classValues.get(srcId + "|" + cls);
+      cvAddedClasses.add(cls);
+      cvCopiedValues.set(cls, { name: src?.name || "", value_text: src?.value_text || "" });
+      cvPendingIcons.set(cls, src?.icon || "");
+    });
+    renderClassValuesList();
+    okEl.textContent = L2I18n.t("gearCheck.cvCopyDone", "Скопировано — проверьте поля и нажмите «Сохранить».");
   }
 
   function openClassValuesModal(){
@@ -2062,12 +2110,11 @@
       document.getElementById("cvList").innerHTML =
         '<p class="hint">' + L2I18n.t("gearCheck.noItemsAtAllHint", "Пунктов ещё нет — сначала добавьте хотя бы один в разделах ниже.") + '</p>';
       renderCvNewClassOptions();
-      document.getElementById("cvCopyFromItem").innerHTML = "";
     } else {
       sel.innerHTML = items.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join("");
       renderClassValuesList();
-      renderCvCopyFromOptions();
     }
+    closeCvCopyDropdown();
     document.getElementById("classValuesOverlay").classList.add("show");
     lockScroll();
     setTimeout(() => document.getElementById("cvItemSelect").focus(), 0);
@@ -2081,28 +2128,16 @@
     cvAddedClasses = new Set();
     cvCopiedValues = new Map();
     renderClassValuesList();
-    renderCvCopyFromOptions();
+    closeCvCopyDropdown();
   });
-  document.getElementById("cvCopyFromBtn").addEventListener("click", () => {
-    const srcId = document.getElementById("cvCopyFromItem").value;
-    const itemId = document.getElementById("cvItemSelect").value;
-    const errEl = document.getElementById("cvError");
-    const okEl = document.getElementById("cvOk");
-    errEl.textContent = ""; okEl.textContent = "";
-    if(!srcId || !itemId || srcId === itemId) return;
-    const srcClasses = savedClassesForItem(srcId);
-    if(!srcClasses.size){
-      errEl.textContent = L2I18n.t("gearCheck.cvCopySourceEmpty", "В выбранном пункте пока нет своих названий/картинок по классам.");
-      return;
-    }
-    srcClasses.forEach(cls => {
-      const src = classValues.get(srcId + "|" + cls);
-      cvAddedClasses.add(cls);
-      cvCopiedValues.set(cls, { name: src?.name || "", value_text: src?.value_text || "" });
-      cvPendingIcons.set(cls, src?.icon || "");
-    });
-    renderClassValuesList();
-    okEl.textContent = L2I18n.t("gearCheck.cvCopyDone", "Скопировано — проверьте поля и нажмите «Сохранить».");
+  document.getElementById("cvCopyFromBtn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const dd = document.getElementById("cvCopyFromDropdown");
+    if(dd.style.display === "none"){ renderCvCopyFromDropdown(); dd.style.display = "flex"; }
+    else closeCvCopyDropdown();
+  });
+  document.addEventListener("click", (e) => {
+    if(!document.getElementById("cvCopyWrap").contains(e.target)) closeCvCopyDropdown();
   });
   document.getElementById("classValuesClose").addEventListener("click", () => {
     document.getElementById("classValuesOverlay").classList.remove("show");
