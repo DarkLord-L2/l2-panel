@@ -1702,6 +1702,12 @@
     "gearCheck.cvIconPasteTitle": ["Вставить картинку (Ctrl+V) для «{cls}»", "Вставити картинку (Ctrl+V) для «{cls}»", "Paste a picture (Ctrl+V) for “{cls}”"],
     "gearCheck.cvNamePlaceholder": ["Своё название для «{cls}»", "Своя назва для «{cls}»", "Own name for “{cls}”"],
     "gearCheck.saved": ["Сохранено.", "Збережено.", "Saved."],
+    "gearCheck.cvRemoveClassTitle": ["Убрать класс из списка (удалит сохранённые название/картинку/подпись)", "Прибрати клас зі списку (видалить збережені назву/картинку/підпис)", "Remove this class from the list (deletes its saved name/picture/caption)"],
+    "gearCheck.cvCopyLabel": ["Скопировать профессии из другого пункта", "Скопіювати професії з іншого пункту", "Copy classes from another item"],
+    "gearCheck.cvCopyBtn": ["Скопировать", "Скопіювати", "Copy"],
+    "gearCheck.cvCopySourceEmpty": ["В выбранном пункте пока нет своих названий/картинок по классам.", "У обраному пункті ще немає своїх назв/картинок за класами.", "The selected item has no per-class names/pictures yet."],
+    "gearCheck.cvCopyDone": ["Скопировано — проверьте поля и нажмите «Сохранить».", "Скопійовано — перевірте поля і натисніть «Зберегти».", "Copied — check the fields and click “Save”."],
+    "gearCheck.noOtherItemsHint": ["Других пунктов нет", "Інших пунктів немає", "No other items"],
 
     "reports.title": ["Отчёты по мероприятиям", "Звіти по заходах", "Event Reports"],
     "reports.weekLabel": ["Неделя", "Тиждень", "Week"],

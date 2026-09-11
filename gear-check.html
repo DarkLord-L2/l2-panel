@@ -539,6 +539,14 @@
       <select id="cvItemSelect"></select>
     </div>
 
+    <div class="field">
+      <label for="cvCopyFromItem" data-i18n="gearCheck.cvCopyLabel">Скопировать профессии из другого пункта</label>
+      <div class="manual-add" style="max-width:none;">
+        <select id="cvCopyFromItem"></select>
+        <button class="btn" id="cvCopyFromBtn" data-i18n="gearCheck.cvCopyBtn">Скопировать</button>
+      </div>
+    </div>
+
     <div id="cvList"></div>
 
     <div class="manual-add" style="max-width:none;">
@@ -580,7 +588,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=37"></script>
+<script src="js/i18n.js?v=38"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -1910,16 +1918,26 @@
   // «Добавить профессию» ниже) — отдельно от extraClasses (тот общий на весь клан
   // и используется ещё в окне скриншота раздела); сбрасывается вместе с cvPendingIcons
   let cvAddedClasses = new Set();
+  // черновые name/value_text, подставленные кнопкой «Скопировать» из другого пункта
+  // (пока не «Сохранить»); картинка копии идёт через cvPendingIcons — сбрасывается
+  // вместе с ними
+  let cvCopiedValues = new Map();
+  // классы, для которых у ЭТОГО пункта уже что-то сохранено в базе
+  function savedClassesForItem(itemId){
+    const set = new Set();
+    classValues.forEach((v, key) => {
+      const sep = key.lastIndexOf("|");
+      if(key.slice(0, sep) === itemId && (v.value_text || v.name || v.icon)) set.add(key.slice(sep + 1));
+    });
+    return set;
+  }
   // список классов для ЭТОГО пункта — только те, для кого уже что-то задано здесь
   // же (плюс добавленные вручную сейчас), а не «вообще все классы в клане»:
   // participants-derived knownClasses() тут не годится — тянет классы всех
   // участников разом, даже никак не относящихся к текущему пункту
   function classesForItem(itemId){
-    const set = new Set(cvAddedClasses);
-    classValues.forEach((v, key) => {
-      const sep = key.lastIndexOf("|");
-      if(key.slice(0, sep) === itemId && (v.value_text || v.name || v.icon)) set.add(key.slice(sep + 1));
-    });
+    const set = savedClassesForItem(itemId);
+    cvAddedClasses.forEach(c => set.add(c));
     return [...set].sort((a, b) => a.localeCompare(b));
   }
   function currentCvIcon(cls, itemId){
@@ -1972,19 +1990,37 @@
         clearIconBtn.title = L2I18n.t("gearCheck.removeBtn", "Убрать");
         clearIconBtn.addEventListener("click", () => { cvPendingIcons.set(cls, ""); renderClassValuesList(); });
 
+        const removeRowBtn = document.createElement("button");
+        removeRowBtn.type = "button";
+        removeRowBtn.className = "btn btn-danger icon-mini-btn"; removeRowBtn.textContent = "🗑";
+        removeRowBtn.title = L2I18n.t("gearCheck.cvRemoveClassTitle", "Убрать класс из списка (удалит сохранённые название/картинку/подпись)");
+        removeRowBtn.addEventListener("click", async () => {
+          cvAddedClasses.delete(cls);
+          cvPendingIcons.delete(cls);
+          cvCopiedValues.delete(cls);
+          if(savedClassesForItem(itemId).has(cls)){
+            const { error } = await db.from("boost_class_values").delete().eq("item_id", itemId).eq("class_name", cls);
+            if(error){ document.getElementById("cvError").textContent = error.message; return; }
+            await loadClassValues();
+            renderDrawerBody();
+            renderTable();
+          }
+          renderClassValuesList();
+        });
+
         const nameInput = document.createElement("input");
         nameInput.type = "text";
         nameInput.dataset.cls = cls; nameInput.dataset.role = "name";
-        nameInput.value = classValues.get(itemId + "|" + cls)?.name || "";
+        nameInput.value = cvCopiedValues.get(cls)?.name ?? classValues.get(itemId + "|" + cls)?.name ?? "";
         nameInput.placeholder = L2I18n.t("gearCheck.cvNamePlaceholder", "Своё название для «{cls}»").replace("{cls}", cls);
 
         const subInput = document.createElement("input");
         subInput.type = "text";
         subInput.dataset.cls = cls; subInput.dataset.role = "subtitle";
-        subInput.value = classValues.get(itemId + "|" + cls)?.value_text || "";
+        subInput.value = cvCopiedValues.get(cls)?.value_text ?? classValues.get(itemId + "|" + cls)?.value_text ?? "";
         subInput.placeholder = L2I18n.t("gearCheck.classValuePlaceholder", "Значение для «{cls}» (не название класса)").replace("{cls}", cls);
 
-        head.append(shot, clearIconBtn, label);
+        head.append(shot, clearIconBtn, label, removeRowBtn);
         row.append(head, nameInput, subInput);
         list.appendChild(row);
       });
@@ -2003,9 +2039,21 @@
       : `<option value="">${escapeHtml(L2I18n.t("gearCheck.allClassesAdded", "Все профессии уже в списке"))}</option>`;
   }
 
+  // выпадающий список «Скопировать профессии из другого пункта» — все пункты,
+  // кроме того, что сейчас выбран (копировать пункт сам в себя незачем)
+  function renderCvCopyFromOptions(){
+    const sel = document.getElementById("cvCopyFromItem");
+    const itemId = document.getElementById("cvItemSelect").value;
+    const options = items.filter(i => i.id !== itemId);
+    sel.innerHTML = options.length
+      ? options.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join("")
+      : `<option value="">${escapeHtml(L2I18n.t("gearCheck.noOtherItemsHint", "Других пунктов нет"))}</option>`;
+  }
+
   function openClassValuesModal(){
     cvPendingIcons = new Map();
     cvAddedClasses = new Set();
+    cvCopiedValues = new Map();
     const sel = document.getElementById("cvItemSelect");
     document.getElementById("cvError").textContent = "";
     document.getElementById("cvOk").textContent = "";
@@ -2014,9 +2062,11 @@
       document.getElementById("cvList").innerHTML =
         '<p class="hint">' + L2I18n.t("gearCheck.noItemsAtAllHint", "Пунктов ещё нет — сначала добавьте хотя бы один в разделах ниже.") + '</p>';
       renderCvNewClassOptions();
+      document.getElementById("cvCopyFromItem").innerHTML = "";
     } else {
       sel.innerHTML = items.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join("");
       renderClassValuesList();
+      renderCvCopyFromOptions();
     }
     document.getElementById("classValuesOverlay").classList.add("show");
     lockScroll();
@@ -2025,10 +2075,34 @@
 
   document.getElementById("classValuesBtn").addEventListener("click", openClassValuesModal);
   document.getElementById("cvItemSelect").addEventListener("change", () => {
-    // не тащим несохранённые картинки и вручную добавленные классы прошлого пункта в новый
+    // не тащим несохранённые картинки и вручную добавленные/скопированные классы
+    // прошлого пункта в новый
     cvPendingIcons = new Map();
     cvAddedClasses = new Set();
+    cvCopiedValues = new Map();
     renderClassValuesList();
+    renderCvCopyFromOptions();
+  });
+  document.getElementById("cvCopyFromBtn").addEventListener("click", () => {
+    const srcId = document.getElementById("cvCopyFromItem").value;
+    const itemId = document.getElementById("cvItemSelect").value;
+    const errEl = document.getElementById("cvError");
+    const okEl = document.getElementById("cvOk");
+    errEl.textContent = ""; okEl.textContent = "";
+    if(!srcId || !itemId || srcId === itemId) return;
+    const srcClasses = savedClassesForItem(srcId);
+    if(!srcClasses.size){
+      errEl.textContent = L2I18n.t("gearCheck.cvCopySourceEmpty", "В выбранном пункте пока нет своих названий/картинок по классам.");
+      return;
+    }
+    srcClasses.forEach(cls => {
+      const src = classValues.get(srcId + "|" + cls);
+      cvAddedClasses.add(cls);
+      cvCopiedValues.set(cls, { name: src?.name || "", value_text: src?.value_text || "" });
+      cvPendingIcons.set(cls, src?.icon || "");
+    });
+    renderClassValuesList();
+    okEl.textContent = L2I18n.t("gearCheck.cvCopyDone", "Скопировано — проверьте поля и нажмите «Сохранить».");
   });
   document.getElementById("classValuesClose").addEventListener("click", () => {
     document.getElementById("classValuesOverlay").classList.remove("show");
@@ -2067,6 +2141,7 @@
     if(error){ errEl.textContent = error.message; return; }
     okEl.textContent = L2I18n.t("gearCheck.saved", "Сохранено.");
     cvPendingIcons = new Map();
+    cvCopiedValues = new Map();
     await loadClassValues();
     renderDrawerBody();
     renderTable();
