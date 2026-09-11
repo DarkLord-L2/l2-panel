@@ -1600,11 +1600,11 @@
     "gearCheck.removeBtn": ["Убрать", "Прибрати", "Remove"],
     "gearCheck.saveBtn": ["Сохранить", "Зберегти", "Save"],
 
-    "gearCheck.classValuesTitle": ["Значения по классам", "Значення по класах", "Values by class"],
+    "gearCheck.classValuesTitle": ["Название/картинка/подпись по классам", "Назва/картинка/підпис за класами", "Name/picture/caption by class"],
     "gearCheck.classValuesHint": [
-      "Для пунктов с отметкой «Своя подпись для каждого класса»: у баффа — свой код, у тату — свои статы.",
-      "Для пунктів з відміткою «Свій підпис для кожного класу»: у баффа — свій код, у тату — свої стати.",
-      "For items marked “Own caption per class”: a buff has its own code, a tattoo has its own stats.",
+      "Для одного пункта можно задать своё название и картинку под каждый класс (не только подпись-приписку) — например, у мага это «Кольцо Архимага» со своей иконкой, у файтера — «Кольцо Дуэлянта» с другой. Пусто — остаётся общее название/картинка пункта.",
+      "Для одного пункту можна задати свою назву і картинку під кожен клас (не тільки підпис) — наприклад, у мага це «Кільце Архімага» зі своєю іконкою, у файтера — «Кільце Дуелянта» з іншою. Порожньо — лишається загальна назва/картинка пункту.",
+      "One item can have its own name and picture per class (not just a caption) — e.g. for a mage it's “Archmage's Ring” with its own icon, for a fighter “Duelist's Ring” with a different one. Leave blank to keep the item's general name/picture.",
     ],
     "gearCheck.itemLabel": ["Пункт", "Пункт", "Item"],
     "gearCheck.addClassPlaceholder": ["Добавить профессию", "Додати професію", "Add a class"],
@@ -1688,12 +1688,19 @@
       "Класи ще не задані жодному учаснику — впишіть клас через «⋮» у ніка в таблиці, або додайте професію вручну нижче.",
       "No classes have been set for any member yet — set one via “⋮” next to a nickname in the table, or add a class manually below.",
     ],
-    "gearCheck.classValuePlaceholder": ["Значение для «{cls}» (не название класса)", "Значення для «{cls}» (не назва класу)", "Value for “{cls}” (not the class name)"],
-    "gearCheck.noPerClassItemsHint": [
-      "Нет пунктов с отметкой «Своя подпись для каждого класса» — включите её в окне пункта (карандаш у пункта в разделах ниже).",
-      "Немає пунктів з відміткою «Свій підпис для кожного класу» — увімкніть її у вікні пункту (олівець у пункту в розділах нижче).",
-      "There are no items marked “Own caption per class” — enable it in the item window (the pencil next to an item in the sections below).",
+    "gearCheck.noCvClassesHint": [
+      "У этого пункта ещё нет своих названий/картинок по классам — добавьте профессию ниже.",
+      "У цього пункту ще немає своїх назв/картинок за класами — додайте професію нижче.",
+      "This item has no per-class names/pictures yet — add a class below.",
     ],
+    "gearCheck.classValuePlaceholder": ["Значение для «{cls}» (не название класса)", "Значення для «{cls}» (не назва класу)", "Value for “{cls}” (not the class name)"],
+    "gearCheck.noItemsAtAllHint": [
+      "Пунктов ещё нет — сначала добавьте хотя бы один в разделах ниже.",
+      "Пунктів ще немає — спершу додайте хоча б один у розділах нижче.",
+      "There are no items yet — add at least one in the sections below first.",
+    ],
+    "gearCheck.cvIconPasteTitle": ["Вставить картинку (Ctrl+V) для «{cls}»", "Вставити картинку (Ctrl+V) для «{cls}»", "Paste a picture (Ctrl+V) for “{cls}”"],
+    "gearCheck.cvNamePlaceholder": ["Своё название для «{cls}»", "Своя назва для «{cls}»", "Own name for “{cls}”"],
     "gearCheck.saved": ["Сохранено.", "Збережено.", "Saved."],
 
     "reports.title": ["Отчёты по мероприятиям", "Звіти по заходах", "Event Reports"],

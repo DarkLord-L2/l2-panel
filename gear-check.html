@@ -239,6 +239,15 @@
     padding:6px 9px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .cv-row input{ flex:1; }
+  /* «Название/картинка/подпись по классам» — своя карточка на класс (не одна тесная
+     строка с 5 элементами в ряд): сверху иконка+крестик+название класса, ниже —
+     во всю ширину два поля, иначе на любом окне поуже текст в них обрезался */
+  .cvname-row{
+    flex-direction:column; align-items:stretch; gap:6px;
+    padding:10px; border:1px solid var(--border); border-radius:8px; margin:10px 0;
+  }
+  .cvname-row .cvname-head{ display:flex; align-items:center; gap:8px; }
+  .cvname-row .cls-name{ flex:1; width:auto; }
 
   /* тумблер */
   .gc-switch{ position:relative; width:40px; height:22px; flex:none; }
@@ -520,10 +529,10 @@
 </div>
 
 <div class="modal-overlay" id="classValuesOverlay">
-  <div class="modal" style="max-width:480px;">
+  <div class="modal" style="max-width:640px;">
     <button class="modal-close" id="classValuesClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
-    <h2 data-i18n="gearCheck.classValuesTitle">Значения по классам</h2>
-    <p class="hint" data-i18n="gearCheck.classValuesHint">Для пунктов с отметкой «Своя подпись для каждого класса»: у баффа — свой код, у тату — свои статы.</p>
+    <h2 data-i18n="gearCheck.classValuesTitle">Название/картинка/подпись по классам</h2>
+    <p class="hint" data-i18n="gearCheck.classValuesHint">Для одного пункта можно задать своё название и картинку под каждый класс (не только подпись-приписку) — например, у мага это «Кольцо Архимага» со своей иконкой, у файтера — «Кольцо Дуэлянта» с другой. Пусто — остаётся общее название/картинка пункта.</p>
 
     <div class="field">
       <label for="cvItemSelect" data-i18n="gearCheck.itemLabel">Пункт</label>
@@ -571,7 +580,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=36"></script>
+<script src="js/i18n.js?v=37"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -851,9 +860,9 @@
   }
 
   async function loadClassValues(){
-    const { data } = await db.from("boost_class_values").select("item_id, class_name, value_text");
+    const { data } = await db.from("boost_class_values").select("item_id, class_name, value_text, name, icon");
     classValues = new Map();
-    (data || []).forEach(r => classValues.set(r.item_id + "|" + r.class_name, r.value_text || ""));
+    (data || []).forEach(r => classValues.set(r.item_id + "|" + r.class_name, { value_text: r.value_text || "", name: r.name || "", icon: r.icon || "" }));
   }
 
   async function loadSectionClassImages(){
@@ -878,7 +887,21 @@
     if(!item.per_class) return item.subtitle || "";
     const cls = (memberInfo.get(nick) || {}).class_name;
     if(!cls) return "";
-    return classValues.get(item.id + "|" + cls) || "";
+    return classValues.get(item.id + "|" + cls)?.value_text || "";
+  }
+
+  // название и картинка пункта — свои для класса участника, если заданы в
+  // «Значения по классам» (независимо от «Своя подпись для каждого класса» —
+  // это другая настройка, только про текст-подпись), иначе — обычные, из самого пункта
+  function nameFor(item, nick){
+    const cls = (memberInfo.get(nick) || {}).class_name;
+    const own = cls && classValues.get(item.id + "|" + cls)?.name;
+    return own || item.name;
+  }
+  function iconFor(item, nick){
+    const cls = (memberInfo.get(nick) || {}).class_name;
+    const own = cls && classValues.get(item.id + "|" + cls)?.icon;
+    return own || item.icon;
   }
 
   // все известные профессии: из карточек участников и из уже заданных значений
@@ -1034,7 +1057,7 @@
         const cls = "gc-cell" + (onItems.length === group.length ? " on" : "") + (group.length > 1 ? " gc-merged" : "");
         const title = group.length > 1
           ? ' title="' + escapeHtml(
-              group.map(i => `${i.name}: ${valueSet.has(keyOf(nick, i.id)) ? L2I18n.t("gearCheck.hasValue", "есть") : L2I18n.t("gearCheck.noValue", "нет")}`).join(", ") +
+              group.map(i => `${nameFor(i, nick)}: ${valueSet.has(keyOf(nick, i.id)) ? L2I18n.t("gearCheck.hasValue", "есть") : L2I18n.t("gearCheck.noValue", "нет")}`).join(", ") +
               (isAllRequired(group) ? L2I18n.t("gearCheck.mergedAllRequiredHint", " — балл только если есть всё") : "")
             ) + '"'
           : "";
@@ -1390,12 +1413,12 @@
 
     const img = document.createElement("img");
     img.alt = "";
-    img.src = item.icon || BLANK_IMG;
+    img.src = iconFor(item, currentNick) || BLANK_IMG;
     top.appendChild(img);
 
     const meta = document.createElement("div");
     meta.className = "meta";
-    meta.innerHTML = `<div class="nm">${escapeHtml(item.name)}${item.hidden ? ' <span class="hint">' + escapeHtml(L2I18n.t("gearCheck.hiddenTag", "(скрыто)")) + '</span>' : ""}</div>`;
+    meta.innerHTML = `<div class="nm">${escapeHtml(nameFor(item, currentNick))}${item.hidden ? ' <span class="hint">' + escapeHtml(L2I18n.t("gearCheck.hiddenTag", "(скрыто)")) + '</span>' : ""}</div>`;
     top.appendChild(meta);
 
     if(isAdmin && editMode){
@@ -1878,27 +1901,91 @@
     renderTable();
   });
 
-  // ---------- значения по классам (подписи, свои для каждой профессии) ----------
+  // ---------- название/картинка/подпись по классам ----------
+  // cvPendingIcons — картинки, вставленные в этой сессии окна (пока не «Сохранить»):
+  // "" убрать, dataURL новая; сбрасывается при открытии окна и смене пункта в списке,
+  // но НЕ при обычном перерисовывании списка (после вставки/добавления профессии)
+  let cvPendingIcons = new Map();
+  // классы, добавленные вручную для ТЕКУЩЕГО пункта в этой сессии окна (через
+  // «Добавить профессию» ниже) — отдельно от extraClasses (тот общий на весь клан
+  // и используется ещё в окне скриншота раздела); сбрасывается вместе с cvPendingIcons
+  let cvAddedClasses = new Set();
+  // список классов для ЭТОГО пункта — только те, для кого уже что-то задано здесь
+  // же (плюс добавленные вручную сейчас), а не «вообще все классы в клане»:
+  // participants-derived knownClasses() тут не годится — тянет классы всех
+  // участников разом, даже никак не относящихся к текущему пункту
+  function classesForItem(itemId){
+    const set = new Set(cvAddedClasses);
+    classValues.forEach((v, key) => {
+      const sep = key.lastIndexOf("|");
+      if(key.slice(0, sep) === itemId && (v.value_text || v.name || v.icon)) set.add(key.slice(sep + 1));
+    });
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }
+  function currentCvIcon(cls, itemId){
+    if(cvPendingIcons.has(cls)) return cvPendingIcons.get(cls) || null;
+    return classValues.get(itemId + "|" + cls)?.icon || null;
+  }
   function renderClassValuesList(){
     const itemId = document.getElementById("cvItemSelect").value;
     const list = document.getElementById("cvList");
-    const classes = knownClasses();
+    const classes = classesForItem(itemId);
     if(!classes.length){
-      list.innerHTML = '<p class="hint">' + L2I18n.t("gearCheck.noClassesYetHint", "Классы ещё не заданы ни одному участнику — впишите класс через «⋮» у ника в таблице, либо добавьте профессию вручную ниже.") + '</p>';
+      list.innerHTML = '<p class="hint">' + L2I18n.t("gearCheck.noCvClassesHint", "У этого пункта ещё нет своих названий/картинок по классам — добавьте профессию ниже.") + '</p>';
     } else {
       list.innerHTML = "";
       classes.forEach(cls => {
         const row = document.createElement("div");
-        row.className = "cv-row";
+        row.className = "cv-row cvname-row";
+        row.dataset.cls = cls;
+
+        const head = document.createElement("div");
+        head.className = "cvname-head";
+
         const label = document.createElement("div");
         label.className = "cls-name";
         label.textContent = cls;
-        const input = document.createElement("input");
-        input.type = "text";
-        input.dataset.cls = cls;
-        input.value = classValues.get(itemId + "|" + cls) || "";
-        input.placeholder = L2I18n.t("gearCheck.classValuePlaceholder", "Значение для «{cls}» (не название класса)").replace("{cls}", cls);
-        row.append(label, input);
+
+        const shot = document.createElement("div");
+        shot.className = "si-row-shot"; shot.tabIndex = 0;
+        shot.title = L2I18n.t("gearCheck.cvIconPasteTitle", "Вставить картинку (Ctrl+V) для «{cls}»").replace("{cls}", cls);
+        const iconVal = currentCvIcon(cls, itemId);
+        if(iconVal){ const im = document.createElement("img"); im.src = iconVal; im.alt = ""; shot.appendChild(im); }
+        else { shot.textContent = "🖼"; }
+        shot.addEventListener("paste", async (e) => {
+          const clip = Array.from(e.clipboardData?.items || []);
+          const imgItem = clip.find(i => i.type.startsWith("image/"));
+          if(!imgItem) return;
+          e.preventDefault();
+          try{
+            // размер как у обычной иконки пункта (96px) — это маленький значок, не скриншот
+            const dataUrl = await downscaleImage(imgItem.getAsFile(), 96);
+            cvPendingIcons.set(cls, dataUrl);
+            renderClassValuesList();
+          }catch(err){
+            document.getElementById("cvError").textContent = L2I18n.t("gearCheck.sectionImagePasteFailed", "Не удалось вставить картинку.");
+          }
+        });
+        const clearIconBtn = document.createElement("button");
+        clearIconBtn.type = "button";
+        clearIconBtn.className = "btn btn-danger icon-mini-btn"; clearIconBtn.textContent = "×";
+        clearIconBtn.title = L2I18n.t("gearCheck.removeBtn", "Убрать");
+        clearIconBtn.addEventListener("click", () => { cvPendingIcons.set(cls, ""); renderClassValuesList(); });
+
+        const nameInput = document.createElement("input");
+        nameInput.type = "text";
+        nameInput.dataset.cls = cls; nameInput.dataset.role = "name";
+        nameInput.value = classValues.get(itemId + "|" + cls)?.name || "";
+        nameInput.placeholder = L2I18n.t("gearCheck.cvNamePlaceholder", "Своё название для «{cls}»").replace("{cls}", cls);
+
+        const subInput = document.createElement("input");
+        subInput.type = "text";
+        subInput.dataset.cls = cls; subInput.dataset.role = "subtitle";
+        subInput.value = classValues.get(itemId + "|" + cls)?.value_text || "";
+        subInput.placeholder = L2I18n.t("gearCheck.classValuePlaceholder", "Значение для «{cls}» (не название класса)").replace("{cls}", cls);
+
+        head.append(shot, clearIconBtn, label);
+        row.append(head, nameInput, subInput);
         list.appendChild(row);
       });
     }
@@ -1909,7 +1996,7 @@
   // что и в окне скриншота раздела — renderSiNewClassOptions)
   function renderCvNewClassOptions(alreadyShown){
     const sel = document.getElementById("cvNewClass");
-    const already = new Set(alreadyShown || knownClasses());
+    const already = new Set(alreadyShown || []);
     const options = (window.L2_CLASSES || []).filter(c => !already.has(c.name));
     sel.innerHTML = options.length
       ? options.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join("")
@@ -1917,27 +2004,32 @@
   }
 
   function openClassValuesModal(){
-    const items2 = perClassItems();
+    cvPendingIcons = new Map();
+    cvAddedClasses = new Set();
     const sel = document.getElementById("cvItemSelect");
     document.getElementById("cvError").textContent = "";
     document.getElementById("cvOk").textContent = "";
-    if(!items2.length){
+    if(!items.length){
       sel.innerHTML = "";
       document.getElementById("cvList").innerHTML =
-        '<p class="hint">' + L2I18n.t("gearCheck.noPerClassItemsHint", "Нет пунктов с отметкой «Своя подпись для каждого класса» — включите её в окне пункта (карандаш у пункта в разделах ниже).") + '</p>';
+        '<p class="hint">' + L2I18n.t("gearCheck.noItemsAtAllHint", "Пунктов ещё нет — сначала добавьте хотя бы один в разделах ниже.") + '</p>';
       renderCvNewClassOptions();
     } else {
-      sel.innerHTML = items2.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join("");
+      sel.innerHTML = items.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join("");
       renderClassValuesList();
     }
     document.getElementById("classValuesOverlay").classList.add("show");
     lockScroll();
     setTimeout(() => document.getElementById("cvItemSelect").focus(), 0);
   }
-  function perClassItems(){ return items.filter(i => i.per_class); }
 
   document.getElementById("classValuesBtn").addEventListener("click", openClassValuesModal);
-  document.getElementById("cvItemSelect").addEventListener("change", renderClassValuesList);
+  document.getElementById("cvItemSelect").addEventListener("change", () => {
+    // не тащим несохранённые картинки и вручную добавленные классы прошлого пункта в новый
+    cvPendingIcons = new Map();
+    cvAddedClasses = new Set();
+    renderClassValuesList();
+  });
   document.getElementById("classValuesClose").addEventListener("click", () => {
     document.getElementById("classValuesOverlay").classList.remove("show");
     unlockScroll();
@@ -1948,7 +2040,7 @@
   document.getElementById("cvAddClassBtn").addEventListener("click", () => {
     const val = document.getElementById("cvNewClass").value;
     if(!val) return;
-    if(!extraClasses.includes(val)) extraClasses.push(val);
+    cvAddedClasses.add(val);
     renderClassValuesList();
   });
   document.getElementById("cvSaveBtn").addEventListener("click", async () => {
@@ -1957,16 +2049,24 @@
     errEl.textContent = ""; okEl.textContent = "";
     const itemId = document.getElementById("cvItemSelect").value;
     if(!itemId) return;
-    const rows = Array.from(document.getElementById("cvList").querySelectorAll("input[data-cls]")).map(inp => ({
-      clan_id: profile.clan_id,
-      item_id: itemId,
-      class_name: inp.dataset.cls,
-      value_text: inp.value.trim() || null,
-    }));
+    const rows = Array.from(document.getElementById("cvList").querySelectorAll(".cv-row[data-cls]")).map(row => {
+      const cls = row.dataset.cls;
+      const nameVal = row.querySelector('input[data-role="name"]').value.trim();
+      const subVal = row.querySelector('input[data-role="subtitle"]').value.trim();
+      return {
+        clan_id: profile.clan_id,
+        item_id: itemId,
+        class_name: cls,
+        value_text: subVal || null,
+        name: nameVal || null,
+        icon: currentCvIcon(cls, itemId) || null,
+      };
+    });
     if(!rows.length) return;
     const { error } = await db.from("boost_class_values").upsert(rows, { onConflict: "item_id,class_name" });
     if(error){ errEl.textContent = error.message; return; }
     okEl.textContent = L2I18n.t("gearCheck.saved", "Сохранено.");
+    cvPendingIcons = new Map();
     await loadClassValues();
     renderDrawerBody();
     renderTable();
