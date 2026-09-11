@@ -150,6 +150,7 @@
       <button type="button" class="admin-nav-item" data-tab="branding" data-i18n="admin.tabBranding">Оформление</button>
       <button type="button" class="admin-nav-item" data-tab="shares" data-i18n="admin.tabShares">Ссылки</button>
       <button type="button" class="admin-nav-item" data-tab="misc" data-i18n="admin.tabMisc">Разное</button>
+      <button type="button" class="admin-nav-item" data-tab="auditlog" data-i18n="admin.tabAuditLog">Лог действий</button>
     </nav>
 
     <div class="admin-content">
@@ -397,6 +398,20 @@
     <p class="error-msg" id="roleLabelsError"></p>
   </section>
     </div>
+
+    <div class="admin-tab-panel" data-panel="auditlog">
+  <section class="card">
+    <h2 data-i18n="admin.auditLogTitle">Лог действий администраторов</h2>
+    <p class="hint" data-i18n="admin.auditLogHint">Кто и что менял в Админ-панели — создание/удаление пользователей, смена роли/пати, снятие защиты, сумма налога, включение/выключение разделов. Свежие записи сверху.</p>
+    <table class="data-table" id="auditLogTable">
+      <thead><tr><th data-i18n="admin.auditColWhen">Когда</th><th data-i18n="admin.auditColWho">Кто</th><th data-i18n="admin.auditColWhat">Что сделал</th></tr></thead>
+      <tbody id="auditLogBody"></tbody>
+    </table>
+    <p class="hint" id="auditLogEmpty" style="display:none;" data-i18n="admin.auditLogEmpty">Записей ещё нет.</p>
+    <p class="error-msg" id="auditLogError"></p>
+    <button class="btn" id="auditLogLoadMoreBtn" style="display:none; margin-top:10px;" data-i18n="admin.auditLoadMore">Показать ещё</button>
+  </section>
+    </div>
     </div>
   </div>
 </div>
@@ -410,7 +425,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=34"></script>
+<script src="js/i18n.js?v=35"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -438,6 +453,48 @@
 
   const db = L2Cabinet.client;
   let roles = [], parties = [], sections = [];
+
+  // ---------- лог действий администраторов ----------
+  // не должна ронять основное действие, если запись лога не удалась (например,
+  // сеть моргнула) — поэтому глотаем ошибку молча, только в консоль
+  async function logAdminAction(summary){
+    try{
+      const { error } = await db.from("admin_audit_log").insert({ clan_id: profile.clan_id, actor_username: profile.username, summary });
+      if(error) console.error("logAdminAction:", error);
+    }catch(err){ console.error("logAdminAction:", err); }
+  }
+  const AUDIT_PAGE_SIZE = 50;
+  let auditLogOffset = 0;
+  async function loadAuditLog(reset){
+    const errEl = document.getElementById("auditLogError");
+    errEl.textContent = "";
+    if(reset) auditLogOffset = 0;
+    const { data, error } = await db.from("admin_audit_log")
+      .select("actor_username, summary, created_at")
+      .eq("clan_id", profile.clan_id)
+      .order("created_at", { ascending: false })
+      .range(auditLogOffset, auditLogOffset + AUDIT_PAGE_SIZE - 1);
+    if(error){ errEl.textContent = L2I18n.t("admin.loadFailed", "Не удалось загрузить: ") + error.message; return; }
+    const body = document.getElementById("auditLogBody");
+    if(reset) body.innerHTML = "";
+    (data || []).forEach(row => {
+      const tr = document.createElement("tr");
+      const tdWhen = document.createElement("td");
+      tdWhen.textContent = new Date(row.created_at).toLocaleString(L2I18n.locale());
+      const tdWho = document.createElement("td");
+      tdWho.textContent = row.actor_username;
+      const tdWhat = document.createElement("td");
+      tdWhat.textContent = row.summary;
+      tr.append(tdWhen, tdWho, tdWhat);
+      body.appendChild(tr);
+    });
+    const rows = data || [];
+    auditLogOffset += rows.length;
+    document.getElementById("auditLogEmpty").style.display = (reset && !rows.length) ? "" : "none";
+    document.getElementById("auditLogLoadMoreBtn").style.display = (rows.length === AUDIT_PAGE_SIZE) ? "" : "none";
+  }
+  document.getElementById("auditLogLoadMoreBtn").addEventListener("click", () => loadAuditLog(false));
+  document.querySelector('.admin-nav-item[data-tab="auditlog"]').addEventListener("click", () => loadAuditLog(true), { once: true });
 
   // «Названия ролей» — своё название роли для этого клана (public.roles общая
   // на всю платформу, её label трогать нельзя — задело бы все кланы разом)
@@ -562,6 +619,10 @@
         sectionToggles.set(s.key, cb.checked);
         renderSectionToggleList();
         renderDkpSectionToggleList();
+        const secLabel = L2I18n.t("section." + s.key, s.label);
+        logAdminAction(cb.checked
+          ? L2I18n.t("admin.auditSectionEnabled", "Включил раздел «{sec}» для всего клана").replace("{sec}", secLabel)
+          : L2I18n.t("admin.auditSectionDisabled", "Отключил раздел «{sec}» для всего клана").replace("{sec}", secLabel));
       }
       cb.disabled = false;
     });
@@ -610,6 +671,7 @@
       { onConflict: "clan_id" }
     );
     if(error) errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
+    else logAdminAction(L2I18n.t("admin.auditTaxAmountChanged", "Изменил сумму налога на {val}").replace("{val}", val));
     input.disabled = false;
   });
 
@@ -1052,8 +1114,10 @@
           sel.disabled = true;
           const errEl = document.getElementById("usersError");
           errEl.textContent = "";
+          const newRole = roles.find(r => r.id === sel.value);
           const { error } = await db.from("profiles").update({ role_id: sel.value }).eq("id", u.id);
           if(error) errEl.textContent = L2I18n.t("admin.changeRoleFailed", "Не удалось изменить роль: ") + error.message;
+          else logAdminAction(L2I18n.t("admin.auditRoleChanged", "Сменил роль «{name}» на «{role}»").replace("{name}", u.username).replace("{role}", newRole ? roleDisplayLabel(newRole) : sel.value));
           sel.disabled = false;
         });
         tdRole.appendChild(sel);
@@ -1077,8 +1141,10 @@
           partySel.disabled = true;
           const errEl = document.getElementById("usersError");
           errEl.textContent = "";
+          const newParty = parties.find(p => p.id === partySel.value);
           const { error } = await db.from("profiles").update({ party_id: partySel.value || null }).eq("id", u.id);
           if(error) errEl.textContent = L2I18n.t("admin.changePartyFailed", "Не удалось изменить пати: ") + error.message;
+          else logAdminAction(L2I18n.t("admin.auditPartyChanged", "Сменил пати «{name}» на «{party}»").replace("{name}", u.username).replace("{party}", newParty ? newParty.name : "—"));
           partySel.disabled = false;
         });
         tdParty.appendChild(partySel);
@@ -1101,6 +1167,7 @@
           unprotectBtn.disabled = true;
           try{
             await L2Cabinet.adminRemoveDeleteProtection(phrase, u.id);
+            logAdminAction(L2I18n.t("admin.auditProtectionRemoved", "Снял защиту от удаления с «{name}»").replace("{name}", u.username));
             await loadUsers();
           }catch(err){
             errEl.textContent = L2I18n.t("admin.removeProtectionFailed", "Не удалось снять защиту: ") + err.message;
@@ -1152,6 +1219,7 @@
           errEl.textContent = "";
           try{
             await L2Cabinet.adminDeleteUser(u.id, phrase);
+            logAdminAction(L2I18n.t("admin.auditUserDeleted", "Удалил пользователя «{name}»").replace("{name}", u.username));
             await loadUsers();
           }catch(err){
             errEl.textContent = L2I18n.t("admin.deleteFailed", "Не удалось удалить: ") + err.message;
@@ -1302,6 +1370,7 @@
 
     try{
       await L2Cabinet.adminCreateUser({ username, password, nickname: nickname || null, role_key: role?.key, party_id: partyId || null });
+      logAdminAction(L2I18n.t("admin.auditUserCreated", "Создал пользователя «{name}» ({role})").replace("{name}", username).replace("{role}", role ? roleDisplayLabel(role) : "—"));
       okEl.textContent = L2I18n.t("admin.userCreated", "Пользователь «{name}» создан.").replace("{name}", username);
       document.getElementById("createUserForm").reset();
       await loadUsers();

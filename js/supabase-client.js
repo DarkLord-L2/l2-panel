@@ -1,7 +1,7 @@
 // Общий модуль кабинета: подключение к Supabase, сессия, профиль, права по ролям.
 // Подключать после <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 //
-// ⚠️ TODO: вписать сюда данные вашего Supabase-проекта (Project Settings → API).
+// Данные проекта Supabase (Project Settings → API).
 // Оба значения публичные (anon key рассчитан на то, чтобы быть виден в браузере) —
 // реальная защита данных обеспечивается RLS-политиками в supabase/schema.sql, не секретностью этих строк.
 const SUPABASE_URL = "https://owacpvydbqxdhrxxitlj.supabase.co";
