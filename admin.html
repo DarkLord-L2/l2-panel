@@ -402,14 +402,13 @@
     <div class="admin-tab-panel" data-panel="auditlog">
   <section class="card">
     <h2 data-i18n="admin.auditLogTitle">Лог действий администраторов</h2>
-    <p class="hint" data-i18n="admin.auditLogHint">Кто и что менял в Админ-панели — создание/удаление пользователей, смена роли/пати, снятие защиты, сумма налога, включение/выключение разделов. Свежие записи сверху.</p>
+    <p class="hint" data-i18n="admin.auditLogHint">Кто и что менял в Админ-панели — создание/удаление пользователей, смена роли/пати, снятие защиты, сумма налога, включение/выключение разделов. Хранятся последние 10 записей, свежие сверху.</p>
     <table class="data-table" id="auditLogTable">
       <thead><tr><th data-i18n="admin.auditColWhen">Когда</th><th data-i18n="admin.auditColWho">Кто</th><th data-i18n="admin.auditColWhat">Что сделал</th></tr></thead>
       <tbody id="auditLogBody"></tbody>
     </table>
     <p class="hint" id="auditLogEmpty" style="display:none;" data-i18n="admin.auditLogEmpty">Записей ещё нет.</p>
     <p class="error-msg" id="auditLogError"></p>
-    <button class="btn" id="auditLogLoadMoreBtn" style="display:none; margin-top:10px;" data-i18n="admin.auditLoadMore">Показать ещё</button>
   </section>
     </div>
     </div>
@@ -425,7 +424,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=35"></script>
+<script src="js/i18n.js?v=36"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -463,20 +462,18 @@
       if(error) console.error("logAdminAction:", error);
     }catch(err){ console.error("logAdminAction:", err); }
   }
-  const AUDIT_PAGE_SIZE = 50;
-  let auditLogOffset = 0;
-  async function loadAuditLog(reset){
+  // хранится максимум 10 записей на клан (обрезает триггер в БД — см.
+  // schema_admin_audit_log_trim.sql), поэтому без пагинации — грузим все разом
+  async function loadAuditLog(){
     const errEl = document.getElementById("auditLogError");
     errEl.textContent = "";
-    if(reset) auditLogOffset = 0;
     const { data, error } = await db.from("admin_audit_log")
       .select("actor_username, summary, created_at")
       .eq("clan_id", profile.clan_id)
-      .order("created_at", { ascending: false })
-      .range(auditLogOffset, auditLogOffset + AUDIT_PAGE_SIZE - 1);
+      .order("created_at", { ascending: false });
     if(error){ errEl.textContent = L2I18n.t("admin.loadFailed", "Не удалось загрузить: ") + error.message; return; }
     const body = document.getElementById("auditLogBody");
-    if(reset) body.innerHTML = "";
+    body.innerHTML = "";
     (data || []).forEach(row => {
       const tr = document.createElement("tr");
       const tdWhen = document.createElement("td");
@@ -488,13 +485,9 @@
       tr.append(tdWhen, tdWho, tdWhat);
       body.appendChild(tr);
     });
-    const rows = data || [];
-    auditLogOffset += rows.length;
-    document.getElementById("auditLogEmpty").style.display = (reset && !rows.length) ? "" : "none";
-    document.getElementById("auditLogLoadMoreBtn").style.display = (rows.length === AUDIT_PAGE_SIZE) ? "" : "none";
+    document.getElementById("auditLogEmpty").style.display = (data || []).length ? "none" : "";
   }
-  document.getElementById("auditLogLoadMoreBtn").addEventListener("click", () => loadAuditLog(false));
-  document.querySelector('.admin-nav-item[data-tab="auditlog"]').addEventListener("click", () => loadAuditLog(true), { once: true });
+  document.querySelector('.admin-nav-item[data-tab="auditlog"]').addEventListener("click", () => loadAuditLog(), { once: true });
 
   // «Названия ролей» — своё название роли для этого клана (public.roles общая
   // на всю платформу, её label трогать нельзя — задело бы все кланы разом)
