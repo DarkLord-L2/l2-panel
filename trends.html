@@ -31,7 +31,7 @@
     content:""; position:absolute; top:0; left:0; right:0; height:3px;
     background: var(--tr-accent, #4f8fd1); border-radius:8px 8px 0 0;
   }
-  .tr-panel.tr-panel-tax::before{ --tr-accent: #cf9a4a; }
+  .tr-panel.tr-panel-tax{ --tr-accent: #cf9a4a; }
 
   .tr-panel-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
   .tr-panel-title{ display:flex; align-items:center; gap:8px; min-width:0; }
@@ -48,7 +48,20 @@
 
   .tr-panel .hint{ color:#9aa5c4; margin-top:4px; }
 
-  .tr-chart{ width:100%; height:190px; display:block; margin-top:10px; overflow:visible; }
+  /* переключатель масштаба — колесо мыши над графиком листает по дням/неделям
+     (у налогов — по неделям/месяцам), бейдж кликабелен же для тач-экранов и
+     просто показывает текущий масштаб. Дальше недели (у посещаемости) и месяца
+     (у налогов) не идём — по годам смысла нет, данных за такой срок не бывает */
+  .tr-gran-row{ margin-top:8px; }
+  .tr-gran-badge{
+    font-family:inherit; font-size:10.5px; font-weight:700; line-height:1;
+    color: var(--tr-accent, #4f8fd1); background: rgba(150,170,210,.12);
+    border:1px solid rgba(150,170,210,.22); border-radius:10px;
+    padding:3px 9px; cursor:pointer;
+  }
+  .tr-gran-badge:hover{ background: rgba(150,170,210,.2); }
+
+  .tr-chart{ width:100%; height:190px; display:block; margin-top:10px; overflow:visible; cursor:ns-resize; }
   .tr-gridline{ stroke: rgba(150,170,210,.12); stroke-width:1; }
   .tr-axis{ stroke: rgba(150,170,210,.35); stroke-width:1; }
   .tr-line{ fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
@@ -85,6 +98,9 @@
         </div>
       </div>
       <p class="hint" data-i18n="trends.attendanceHint">Сколько разных ников отметилось хотя бы на одном мероприятии за неделю — за последние 12 недель.</p>
+      <div class="tr-gran-row">
+        <button type="button" class="tr-gran-badge" id="attGranBadge" data-i18n-attr="title:trends.wheelHint" title="Прокрутите колесо мыши над графиком, чтобы сменить масштаб">По неделям ▾</button>
+      </div>
       <div id="attTrendChart"></div>
       <p class="hint tr-empty" id="attTrendEmpty" style="display:none;" data-i18n="trends.noDataHint">За этот период мероприятий ещё не было.</p>
       <p class="error-msg" id="attTrendError"></p>
@@ -102,6 +118,9 @@
         </div>
       </div>
       <p class="hint" data-i18n="trends.taxHint">Сколько всего собрано налога (заплативших × сумма налога) — за последние 6 месяцев.</p>
+      <div class="tr-gran-row">
+        <button type="button" class="tr-gran-badge" id="taxGranBadge" data-i18n-attr="title:trends.wheelHint" title="Прокрутите колесо мыши над графиком, чтобы сменить масштаб">По месяцам ▾</button>
+      </div>
       <div id="taxTrendChart"></div>
       <p class="hint tr-empty" id="taxTrendEmpty" style="display:none;" data-i18n="trends.noPaymentsHint">За этот период оплат ещё не было.</p>
       <p class="error-msg" id="taxTrendError"></p>
@@ -111,7 +130,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=43"></script>
+<script src="js/i18n.js?v=44"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -212,14 +231,20 @@
     svg += `<line x1="${padL}" y1="${h - padB}" x2="${w - padR}" y2="${h - padB}" class="tr-axis" />`;
     svg += `<path d="${areaPath}" fill="url(#${gradId})" class="tr-area" id="${gradId}area" />`;
     svg += `<path d="${linePath}" class="tr-line" id="${gradId}line" stroke="${color}" />`;
+    // при большом числе точек (например, «по дням» за 12 недель) подписи под
+    // каждой точкой слипались бы — показываем не каждую, а раз в labelStep
+    const labelStep = Math.max(1, Math.ceil(n / 12));
     pts.forEach((p, i) => {
       const display = format(p.value);
+      const showLabel = i % labelStep === 0 || i === pts.length - 1;
       svg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.2" fill="${color}" stroke="#181c29" stroke-width="1.5" ` +
              `class="tr-pt" style="transition-delay:${(i * 40) + 400}ms"><title>${escapeHtml(p.label)}: ${escapeHtml(display)}</title></circle>`;
-      if(p.value > 0){
+      if(p.value > 0 && showLabel){
         svg += `<text x="${p.x.toFixed(1)}" y="${(p.y - 9).toFixed(1)}" class="tr-value" data-target="${p.value}" text-anchor="middle">0</text>`;
       }
-      svg += `<text x="${p.x.toFixed(1)}" y="${h - padB + 15}" class="tr-label" text-anchor="middle">${escapeHtml(p.label)}</text>`;
+      if(showLabel){
+        svg += `<text x="${p.x.toFixed(1)}" y="${h - padB + 15}" class="tr-label" text-anchor="middle">${escapeHtml(p.label)}</text>`;
+      }
     });
     svg += `</svg>`;
     container.innerHTML = svg;
@@ -246,6 +271,28 @@
     else{ el.textContent = "— 0"; el.className = "tr-panel-stat-delta flat"; }
   }
 
+  // масштаб графика по колесу мыши (и по клику на бейдж — для тач-экранов, там
+  // колеса нет). Уровней всего два на график и дальше них не идём — например,
+  // у посещаемости это «неделя»/«день», по годам смысла нет вообще
+  function makeGranularityControl(levels, chartEl, badgeEl, render){
+    let level = levels[0];
+    function apply(){
+      badgeEl.textContent = L2I18n.t("trends.gran" + level, level) + " ▾";
+      render(level);
+    }
+    function cycle(dir){
+      const idx = levels.indexOf(level);
+      const next = levels[Math.max(0, Math.min(levels.length - 1, idx + dir))];
+      if(next !== level){ level = next; apply(); }
+    }
+    chartEl.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      cycle(e.deltaY < 0 ? 1 : -1);
+    }, { passive: false });
+    badgeEl.addEventListener("click", () => cycle(level === levels[0] ? 1 : -1));
+    return apply;
+  }
+
   async function loadAttendanceTrend(){
     const errEl = document.getElementById("attTrendError");
     const emptyEl = document.getElementById("attTrendEmpty");
@@ -258,35 +305,60 @@
     const weeks = Array.from({ length: WEEKS_BACK }, (_, i) => isoDate(addWeeks(fromMonday, i)));
 
     const { data: events, error: evErr } = await db.from("attendance_events")
-      .select("id, week_start")
+      .select("id, week_start, event_date")
       .gte("week_start", weeks[0]);
     if(evErr){ errEl.textContent = evErr.message; return; }
 
-    const weekByEvent = new Map((events || []).map(e => [e.id, e.week_start]));
-    const eventIds = (events || []).map(e => e.id);
+    const rawEvents = events || [];
+    const eventIds = rawEvents.map(e => e.id);
 
-    let entries = [];
+    let rawEntries = [];
     if(eventIds.length){
       const { data, error } = await db.from("attendance_entries").select("event_id, nickname").in("event_id", eventIds);
       if(error){ errEl.textContent = error.message; return; }
-      entries = data || [];
+      rawEntries = data || [];
     }
 
-    const attendeesByWeek = new Map(weeks.map(w => [w, new Set()]));
-    entries.forEach(e => {
-      const wk = weekByEvent.get(e.event_id);
-      if(wk && attendeesByWeek.has(wk)) attendeesByWeek.get(wk).add(normalizeNick(e.nickname));
-    });
+    function pointsByWeek(){
+      const weekByEvent = new Map(rawEvents.map(e => [e.id, e.week_start]));
+      const attendeesByWeek = new Map(weeks.map(w => [w, new Set()]));
+      rawEntries.forEach(e => {
+        const wk = weekByEvent.get(e.event_id);
+        if(wk && attendeesByWeek.has(wk)) attendeesByWeek.get(wk).add(normalizeNick(e.nickname));
+      });
+      return weeks.map(w => ({ label: shortLabel(w), value: attendeesByWeek.get(w).size }));
+    }
+    // «по дням» — те же уже загруженные события/явки, просто группировка по
+    // event_date (конкретной дате мероприятия) вместо недели — без лишнего
+    // запроса к базе; дни без единого мероприятия за эти 12 недель не показываем
+    // (иначе на графике почти сплошные нули между редкими рейдовыми днями)
+    function pointsByDay(){
+      const dateByEvent = new Map(rawEvents.map(e => [e.id, e.event_date]));
+      const days = [...new Set(rawEvents.map(e => e.event_date))].sort();
+      if(!days.length) return [];
+      const attendeesByDay = new Map(days.map(d => [d, new Set()]));
+      rawEntries.forEach(e => {
+        const d = dateByEvent.get(e.event_id);
+        if(d && attendeesByDay.has(d)) attendeesByDay.get(d).add(normalizeNick(e.nickname));
+      });
+      return days.map(d => ({ label: shortLabel(d), value: attendeesByDay.get(d).size }));
+    }
 
-    const points = weeks.map(w => ({ label: shortLabel(w), value: attendeesByWeek.get(w).size }));
-    const hasAny = points.some(p => p.value > 0);
-    emptyEl.style.display = hasAny ? "none" : "";
-    renderTrendChart(chartEl, points, { color: "#4f8fd1" });
-
-    const lastWeek = points[points.length - 1].value;
-    const prevWeek = points[points.length - 2].value;
+    // шапка (число + дельта) всегда по неделям — не скачет при переключении масштаба графика
+    const weekPoints = pointsByWeek();
+    const lastWeek = weekPoints[weekPoints.length - 1].value;
+    const prevWeek = weekPoints[weekPoints.length - 2].value;
     animateNumber(document.getElementById("statAttWeekValue"), lastWeek, v => String(Math.round(v)));
     renderDelta(document.getElementById("statAttDeltaValue"), lastWeek - prevWeek);
+
+    const apply = makeGranularityControl(["week", "day"], chartEl, document.getElementById("attGranBadge"), (level) => {
+      const points = level === "day" ? pointsByDay() : weekPoints;
+      const hasAny = points.length > 0 && points.some(p => p.value > 0);
+      emptyEl.style.display = hasAny ? "none" : "";
+      if(points.length) renderTrendChart(chartEl, points, { color: "#4f8fd1" });
+      else chartEl.innerHTML = "";
+    });
+    apply();
   }
 
   async function loadTaxTrend(){
@@ -307,29 +379,51 @@
 
     // origin_week — реальная неделя получения денег (наперёд/долг считаются там,
     // где по ним нажали «ОК», а не там, куда легла отметка), тот же принцип,
-    // что и «Итого за неделю» в taxes.html
+    // что и «Итого за неделю» в taxes.html. 6 месяцев с запасом покрывают и
+    // последние 12 недель — «по неделям» ниже не делает отдельного запроса
     const { data: payments, error: payErr } = await db.from("tax_payments")
       .select("origin_week")
       .gte("origin_week", isoDate(fromMonth));
     if(payErr){ errEl.textContent = payErr.message; return; }
 
-    const countByMonth = new Map(months.map(m => [monthKey(m), 0]));
-    (payments || []).forEach(p => {
-      const d = new Date(p.origin_week + "T00:00:00");
-      const key = monthKey(firstOfMonth(d));
-      if(countByMonth.has(key)) countByMonth.set(key, countByMonth.get(key) + 1);
-    });
+    const rawPayments = payments || [];
 
-    const points = months.map(m => ({ label: monthLabel(m), value: countByMonth.get(monthKey(m)) * weeklyTaxAmount }));
-    const hasAny = points.some(p => p.value > 0);
-    emptyEl.style.display = hasAny ? "none" : "";
-    renderTrendChart(chartEl, points, { color: "#cf9a4a", format: fmtGold });
+    function pointsByMonth(){
+      const countByMonth = new Map(months.map(m => [monthKey(m), 0]));
+      rawPayments.forEach(p => {
+        const d = new Date(p.origin_week + "T00:00:00");
+        const key = monthKey(firstOfMonth(d));
+        if(countByMonth.has(key)) countByMonth.set(key, countByMonth.get(key) + 1);
+      });
+      return months.map(m => ({ label: monthLabel(m), value: countByMonth.get(monthKey(m)) * weeklyTaxAmount }));
+    }
+    function pointsByWeek(){
+      const WEEKS_BACK = 12;
+      const thisMonday = mondayOf(new Date());
+      const fromMonday = addWeeks(thisMonday, -(WEEKS_BACK - 1));
+      const weeks = Array.from({ length: WEEKS_BACK }, (_, i) => isoDate(addWeeks(fromMonday, i)));
+      const countByWeek = new Map(weeks.map(w => [w, 0]));
+      rawPayments.forEach(p => {
+        if(countByWeek.has(p.origin_week)) countByWeek.set(p.origin_week, countByWeek.get(p.origin_week) + 1);
+      });
+      return weeks.map(w => ({ label: shortLabel(w), value: countByWeek.get(w) * weeklyTaxAmount }));
+    }
 
-    const thisMonthTotal = points[points.length - 1].value;
-    const sixMonthTotal = points.reduce((s, p) => s + p.value, 0);
+    // шапка (месяц + за полгода) всегда из месячной раскладки — не скачет при переключении масштаба
+    const monthPoints = pointsByMonth();
+    const thisMonthTotal = monthPoints[monthPoints.length - 1].value;
+    const sixMonthTotal = monthPoints.reduce((s, p) => s + p.value, 0);
     animateNumber(document.getElementById("statTaxMonthValue"), thisMonthTotal, fmtGold);
     document.getElementById("statTaxTotalValue").textContent =
       L2I18n.t("trends.statTaxTotalLabel", "Собрано за 6 месяцев") + ": " + fmtGold(sixMonthTotal);
+
+    const apply = makeGranularityControl(["month", "week"], chartEl, document.getElementById("taxGranBadge"), (level) => {
+      const points = level === "week" ? pointsByWeek() : monthPoints;
+      const hasAny = points.some(p => p.value > 0);
+      emptyEl.style.display = hasAny ? "none" : "";
+      renderTrendChart(chartEl, points, { color: "#cf9a4a", format: fmtGold });
+    });
+    apply();
   }
 
   await Promise.all([loadAttendanceTrend(), loadTaxTrend()]);
