@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Динамика — Кабинет клана</title>
+<link rel="stylesheet" href="js/theme.css?v=25" />
+<style>
+  /* «Динамика» — переработка сути (не просто цвета): столбики → сглаженная
+     линия с заливкой-градиентом под ней (собственно «динамика», а не статичные
+     колонки), 4 отдельные плитки статистики убраны — ключевая цифра и дельта
+     встроены прямо в шапку своего графика, а не висят отдельным блоком без
+     явной связи с ним. Раскладка — два равных блока рядом (не друг под другом
+     на всю ширину), на узком экране сами складываются в столбец. Только эта
+     страница, остального сайта не касается. */
+  html, body{ background: #07080d; }
+
+  .tr-wrap{ padding:4px 0 40px; }
+  .tr-wrap .page-head h1{ color: #f5f7fc; letter-spacing:.01em; font-weight:700; }
+
+  .tr-panels{ display:flex; flex-wrap:wrap; gap:16px; }
+  .tr-panel{
+    position:relative; flex:1 1 380px; min-width:0;
+    padding:18px 20px 20px;
+    background: #181c29;
+    border:1px solid rgba(150,170,210,.16);
+    border-radius:8px;
+    box-shadow: 0 4px 14px rgba(0,0,0,.45);
+  }
+  .tr-panel::before{
+    content:""; position:absolute; top:0; left:0; right:0; height:3px;
+    background: var(--tr-accent, #4f8fd1); border-radius:8px 8px 0 0;
+  }
+  .tr-panel.tr-panel-tax::before{ --tr-accent: #cf9a4a; }
+
+  .tr-panel-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  .tr-panel-title{ display:flex; align-items:center; gap:8px; min-width:0; }
+  .tr-dot{ width:7px; height:7px; border-radius:50%; flex:none; background: var(--tr-accent, #4f8fd1); }
+  .tr-panel-title h2{ margin:0; font-size:14.5px; font-weight:700; color:#f5f7fc; }
+
+  .tr-panel-stat{ flex:none; text-align:right; }
+  .tr-panel-stat-value{ display:block; font-size:23px; font-weight:700; color:#f5f7fc; line-height:1.15; }
+  .tr-panel-stat-delta{ display:inline-block; font-size:12px; font-weight:700; margin-top:2px; }
+  .tr-panel-stat-delta.up{ color: var(--ok); }
+  .tr-panel-stat-delta.down{ color: var(--danger-lit); }
+  .tr-panel-stat-delta.flat{ color:#9aa5c4; }
+  .tr-panel-stat-caption{ display:block; font-size:11px; color:#9aa5c4; margin-top:2px; }
+
+  .tr-panel .hint{ color:#9aa5c4; margin-top:4px; }
+
+  .tr-chart{ width:100%; height:190px; display:block; margin-top:10px; overflow:visible; }
+  .tr-gridline{ stroke: rgba(150,170,210,.12); stroke-width:1; }
+  .tr-axis{ stroke: rgba(150,170,210,.35); stroke-width:1; }
+  .tr-line{ fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
+  .tr-area{ opacity:0; transition: opacity .5s ease .3s; }
+  .tr-area.in{ opacity:1; }
+  .tr-pt{ opacity:0; transition: opacity .3s ease; }
+  .tr-pt.in{ opacity:1; }
+  .tr-value{ fill:#f5f7fc; font-size:11px; font-weight:700; font-family:inherit; }
+  .tr-label{ fill:#8791ab; font-size:9.5px; font-family:inherit; font-weight:500; }
+  .tr-empty{ margin:10px 0 0; color:#9aa5c4; }
+
+  @media (max-width:720px){
+    .tr-panel{ flex-basis:100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="tr-wrap" id="wrap" style="display:none;">
+  <div class="page-head">
+    <h1 data-i18n="section.trends">Динамика</h1>
+  </div>
+
+  <div class="tr-panels">
+    <section class="tr-panel" id="attPanel">
+      <div class="tr-panel-head">
+        <div class="tr-panel-title">
+          <span class="tr-dot"></span>
+          <h2 data-i18n="trends.attendanceTitle">Посещаемость по неделям</h2>
+        </div>
+        <div class="tr-panel-stat">
+          <span class="tr-panel-stat-value" id="statAttWeekValue">—</span>
+          <span class="tr-panel-stat-delta" id="statAttDeltaValue"></span>
+        </div>
+      </div>
+      <p class="hint" data-i18n="trends.attendanceHint">Сколько разных ников отметилось хотя бы на одном мероприятии за неделю — за последние 12 недель.</p>
+      <div id="attTrendChart"></div>
+      <p class="hint tr-empty" id="attTrendEmpty" style="display:none;" data-i18n="trends.noDataHint">За этот период мероприятий ещё не было.</p>
+      <p class="error-msg" id="attTrendError"></p>
+    </section>
+
+    <section class="tr-panel tr-panel-tax" id="taxPanel">
+      <div class="tr-panel-head">
+        <div class="tr-panel-title">
+          <span class="tr-dot"></span>
+          <h2 data-i18n="trends.taxTitle">Сбор налогов по месяцам</h2>
+        </div>
+        <div class="tr-panel-stat">
+          <span class="tr-panel-stat-value" id="statTaxMonthValue">—</span>
+          <span class="tr-panel-stat-caption" id="statTaxTotalValue"></span>
+        </div>
+      </div>
+      <p class="hint" data-i18n="trends.taxHint">Сколько всего собрано налога (заплативших × сумма налога) — за последние 6 месяцев.</p>
+      <div id="taxTrendChart"></div>
+      <p class="hint tr-empty" id="taxTrendEmpty" style="display:none;" data-i18n="trends.noPaymentsHint">За этот период оплат ещё не было.</p>
+      <p class="error-msg" id="taxTrendError"></p>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-client.js?v=21"></script>
+<script src="js/i18n.js?v=43"></script>
+<script>
+(async function(){
+  const session = await L2Cabinet.requireSession();
+  if(!session) return;
+
+  const profile = await L2Cabinet.getProfile();
+  if(!profile){
+    document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
+      '<h1>' + L2I18n.t("shell.profileNotFoundTitle", "⚠ Профиль не найден") + '</h1>' +
+      '<p class="hint">' + L2I18n.t("common.contactLeader", "Обратитесь к клан-лидеру.") + '</p></div></div>';
+    return;
+  }
+
+  const db = L2Cabinet.client;
+  document.getElementById("wrap").style.display = "";
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  }
+  const CYR_LOOKALIKES = { "а":"a","в":"b","е":"e","к":"k","м":"m","н":"h","о":"o","р":"p","с":"c","т":"t","у":"y","х":"x","ё":"e","0":"o","l":"i" };
+  function normalizeNick(s){
+    return String(s || "").toLowerCase().split("").map(ch => CYR_LOOKALIKES[ch] || ch).join("").replace(/[^a-zа-яё0-9]/gi, "");
+  }
+
+  function mondayOf(d){
+    const x = new Date(d);
+    const day = x.getDay(); // 0=вс..6=сб
+    const diff = day === 0 ? -6 : 1 - day;
+    x.setDate(x.getDate() + diff);
+    x.setHours(0,0,0,0);
+    return x;
+  }
+  function pad2(n){ return String(n).padStart(2, "0"); }
+  function isoDate(d){ return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate()); }
+  function addWeeks(d, n){ const x = new Date(d); x.setDate(x.getDate() + n * 7); return x; }
+  function shortLabel(iso){ const d = new Date(iso + "T00:00:00"); return pad2(d.getDate()) + "." + pad2(d.getMonth() + 1); }
+  function firstOfMonth(d){ const x = new Date(d); x.setDate(1); x.setHours(0,0,0,0); return x; }
+  function addMonths(d, n){ const x = new Date(d); x.setMonth(x.getMonth() + n); return x; }
+  function monthKey(d){ return d.getFullYear() + "-" + pad2(d.getMonth() + 1); }
+  function monthLabel(d){ return pad2(d.getMonth() + 1) + "." + String(d.getFullYear()).slice(2); }
+  function fmtGold(n){ return n.toLocaleString(L2I18n.locale()); }
+
+  function animateNumber(el, target, format, duration){
+    duration = duration || 600;
+    const start = performance.now();
+    function tick(now){
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = format(target * eased);
+      if(t < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // сглаженный линейный график с заливкой под линией — не столбики: смысл
+  // страницы именно в динамике/тренде, плавная линия читается как движение,
+  // а не как набор отдельных несвязанных колонок. Сглаживание — простой приём
+  // «квадратичные кривые через середины отрезков», без библиотек
+  let chartSeq = 0;
+  function renderTrendChart(container, points, opts){
+    opts = opts || {};
+    const color = opts.color || "#4f8fd1";
+    const format = opts.format || (v => String(Math.round(v)));
+    const gradId = "trArea" + (chartSeq++);
+
+    const w = 720, h = 190, padL = 10, padR = 10, padT = 28, padB = 22;
+    const innerW = w - padL - padR, innerH = h - padT - padB;
+    const maxV = Math.max(1, ...points.map(p => p.value));
+    const n = points.length;
+    const stepX = n > 1 ? innerW / (n - 1) : 0;
+
+    const pts = points.map((p, i) => ({
+      x: padL + i * stepX,
+      y: h - padB - (p.value / maxV) * innerH,
+      value: p.value,
+      label: p.label,
+    }));
+
+    let linePath = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+    for(let i = 1; i < pts.length; i++){
+      const midX = (pts[i - 1].x + pts[i].x) / 2;
+      const midY = (pts[i - 1].y + pts[i].y) / 2;
+      linePath += ` Q ${pts[i - 1].x.toFixed(1)} ${pts[i - 1].y.toFixed(1)} ${midX.toFixed(1)} ${midY.toFixed(1)}`;
+    }
+    linePath += ` T ${pts[pts.length - 1].x.toFixed(1)} ${pts[pts.length - 1].y.toFixed(1)}`;
+    const baseline = (h - padB).toFixed(1);
+    const areaPath = `${linePath} L ${pts[pts.length - 1].x.toFixed(1)} ${baseline} L ${pts[0].x.toFixed(1)} ${baseline} Z`;
+
+    let svg = `<svg viewBox="0 0 ${w} ${h}" class="tr-chart" preserveAspectRatio="none">`;
+    svg += `<defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">` +
+           `<stop offset="0%" stop-color="${color}" stop-opacity=".38"/>` +
+           `<stop offset="100%" stop-color="${color}" stop-opacity="0"/>` +
+           `</linearGradient></defs>`;
+    [0.25, 0.5, 0.75].forEach(f => {
+      const gy = (h - padB - innerH * f).toFixed(1);
+      svg += `<line x1="${padL}" y1="${gy}" x2="${w - padR}" y2="${gy}" class="tr-gridline" />`;
+    });
+    svg += `<line x1="${padL}" y1="${h - padB}" x2="${w - padR}" y2="${h - padB}" class="tr-axis" />`;
+    svg += `<path d="${areaPath}" fill="url(#${gradId})" class="tr-area" id="${gradId}area" />`;
+    svg += `<path d="${linePath}" class="tr-line" id="${gradId}line" stroke="${color}" />`;
+    pts.forEach((p, i) => {
+      const display = format(p.value);
+      svg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.2" fill="${color}" stroke="#181c29" stroke-width="1.5" ` +
+             `class="tr-pt" style="transition-delay:${(i * 40) + 400}ms"><title>${escapeHtml(p.label)}: ${escapeHtml(display)}</title></circle>`;
+      if(p.value > 0){
+        svg += `<text x="${p.x.toFixed(1)}" y="${(p.y - 9).toFixed(1)}" class="tr-value" data-target="${p.value}" text-anchor="middle">0</text>`;
+      }
+      svg += `<text x="${p.x.toFixed(1)}" y="${h - padB + 15}" class="tr-label" text-anchor="middle">${escapeHtml(p.label)}</text>`;
+    });
+    svg += `</svg>`;
+    container.innerHTML = svg;
+
+    // линия «дорисовывается» слева направо, заливка и точки проявляются следом
+    const lineEl = container.querySelector(".tr-line");
+    const len = lineEl.getTotalLength();
+    lineEl.style.strokeDasharray = len;
+    lineEl.style.strokeDashoffset = len;
+    lineEl.getBoundingClientRect();
+    lineEl.style.transition = "stroke-dashoffset .9s cubic-bezier(.22,.85,.25,1)";
+    requestAnimationFrame(() => { lineEl.style.strokeDashoffset = "0"; });
+    container.querySelector(".tr-area").classList.add("in");
+    container.querySelectorAll(".tr-pt").forEach(el => el.classList.add("in"));
+
+    container.querySelectorAll(".tr-value").forEach(el => {
+      animateNumber(el, Number(el.dataset.target), format, 700);
+    });
+  }
+
+  function renderDelta(el, delta){
+    if(delta > 0){ el.textContent = "▲ +" + delta; el.className = "tr-panel-stat-delta up"; }
+    else if(delta < 0){ el.textContent = "▼ " + delta; el.className = "tr-panel-stat-delta down"; }
+    else{ el.textContent = "— 0"; el.className = "tr-panel-stat-delta flat"; }
+  }
+
+  async function loadAttendanceTrend(){
+    const errEl = document.getElementById("attTrendError");
+    const emptyEl = document.getElementById("attTrendEmpty");
+    const chartEl = document.getElementById("attTrendChart");
+    errEl.textContent = "";
+
+    const WEEKS_BACK = 12;
+    const thisMonday = mondayOf(new Date());
+    const fromMonday = addWeeks(thisMonday, -(WEEKS_BACK - 1));
+    const weeks = Array.from({ length: WEEKS_BACK }, (_, i) => isoDate(addWeeks(fromMonday, i)));
+
+    const { data: events, error: evErr } = await db.from("attendance_events")
+      .select("id, week_start")
+      .gte("week_start", weeks[0]);
+    if(evErr){ errEl.textContent = evErr.message; return; }
+
+    const weekByEvent = new Map((events || []).map(e => [e.id, e.week_start]));
+    const eventIds = (events || []).map(e => e.id);
+
+    let entries = [];
+    if(eventIds.length){
+      const { data, error } = await db.from("attendance_entries").select("event_id, nickname").in("event_id", eventIds);
+      if(error){ errEl.textContent = error.message; return; }
+      entries = data || [];
+    }
+
+    const attendeesByWeek = new Map(weeks.map(w => [w, new Set()]));
+    entries.forEach(e => {
+      const wk = weekByEvent.get(e.event_id);
+      if(wk && attendeesByWeek.has(wk)) attendeesByWeek.get(wk).add(normalizeNick(e.nickname));
+    });
+
+    const points = weeks.map(w => ({ label: shortLabel(w), value: attendeesByWeek.get(w).size }));
+    const hasAny = points.some(p => p.value > 0);
+    emptyEl.style.display = hasAny ? "none" : "";
+    renderTrendChart(chartEl, points, { color: "#4f8fd1" });
+
+    const lastWeek = points[points.length - 1].value;
+    const prevWeek = points[points.length - 2].value;
+    animateNumber(document.getElementById("statAttWeekValue"), lastWeek, v => String(Math.round(v)));
+    renderDelta(document.getElementById("statAttDeltaValue"), lastWeek - prevWeek);
+  }
+
+  async function loadTaxTrend(){
+    const errEl = document.getElementById("taxTrendError");
+    const emptyEl = document.getElementById("taxTrendEmpty");
+    const chartEl = document.getElementById("taxTrendChart");
+    errEl.textContent = "";
+
+    const { data: settings, error: setErr } = await db.from("tax_settings")
+      .select("weekly_tax_amount").eq("clan_id", profile.clan_id).maybeSingle();
+    if(setErr){ errEl.textContent = setErr.message; return; }
+    const weeklyTaxAmount = Number(settings?.weekly_tax_amount) || 0;
+
+    const MONTHS_BACK = 6;
+    const thisMonth = firstOfMonth(new Date());
+    const fromMonth = addMonths(thisMonth, -(MONTHS_BACK - 1));
+    const months = Array.from({ length: MONTHS_BACK }, (_, i) => addMonths(fromMonth, i));
+
+    // origin_week — реальная неделя получения денег (наперёд/долг считаются там,
+    // где по ним нажали «ОК», а не там, куда легла отметка), тот же принцип,
+    // что и «Итого за неделю» в taxes.html
+    const { data: payments, error: payErr } = await db.from("tax_payments")
+      .select("origin_week")
+      .gte("origin_week", isoDate(fromMonth));
+    if(payErr){ errEl.textContent = payErr.message; return; }
+
+    const countByMonth = new Map(months.map(m => [monthKey(m), 0]));
+    (payments || []).forEach(p => {
+      const d = new Date(p.origin_week + "T00:00:00");
+      const key = monthKey(firstOfMonth(d));
+      if(countByMonth.has(key)) countByMonth.set(key, countByMonth.get(key) + 1);
+    });
+
+    const points = months.map(m => ({ label: monthLabel(m), value: countByMonth.get(monthKey(m)) * weeklyTaxAmount }));
+    const hasAny = points.some(p => p.value > 0);
+    emptyEl.style.display = hasAny ? "none" : "";
+    renderTrendChart(chartEl, points, { color: "#cf9a4a", format: fmtGold });
+
+    const thisMonthTotal = points[points.length - 1].value;
+    const sixMonthTotal = points.reduce((s, p) => s + p.value, 0);
+    animateNumber(document.getElementById("statTaxMonthValue"), thisMonthTotal, fmtGold);
+    document.getElementById("statTaxTotalValue").textContent =
+      L2I18n.t("trends.statTaxTotalLabel", "Собрано за 6 месяцев") + ": " + fmtGold(sixMonthTotal);
+  }
+
+  await Promise.all([loadAttendanceTrend(), loadTaxTrend()]);
+})();
+</script>
+</body>
+</html>

@@ -4,11 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=24" />
+<link rel="stylesheet" href="js/theme.css?v=25" />
 </head>
 <body>
 
 <div class="app-shell" id="appShell" style="display:none;">
+  <button type="button" class="nav-toggle" id="navToggle" data-i18n-attr="aria-label:shell.navToggle" aria-label="Меню">☰</button>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
   <div class="topbar" id="classicTopbar" style="display:none;">
     <div class="brand">
       <img id="classicBrandLogo" alt="" style="display:none;" />
@@ -81,7 +83,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=39"></script>
+<script src="js/i18n.js?v=43"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -103,6 +105,7 @@
     loot_split:  { type: "iframe", src: "loot-split.html" },
     loot_split_party: { type: "iframe", src: "loot-split-party.html" },
     loot_payout: { type: "iframe", src: "loot-payout.html" },
+    trends:      { type: "iframe", src: "trends.html" },
   };
 
   // Чисто визуальная группировка пунктов меню — на права доступа не влияет,
@@ -128,6 +131,7 @@
     loot_split:  '<path d="M6 3.2h12l3.6 5.3L12 21 2.4 8.5 6 3.2z"/><path d="M2.4 8.5h19.2M9 3.2l3 5.3 3-5.3"/>',
     loot_split_party: '<rect x="3.4" y="10.4" width="17.2" height="9.8" rx="1.6"/><path d="M3.4 10.4a8.6 5 0 0117.2 0"/><path d="M3.4 14.3h17.2"/><path d="M10.4 14.3v2.3a1.6 1.6 0 003.2 0v-2.3"/>',
     loot_payout: '<circle cx="8" cy="15.3" r="4.2"/><circle cx="16" cy="8.7" r="4.2"/><path d="m10.8 12.5 2.4-2.4"/>',
+    trends:      '<path d="M4 17l5-5 4 4 7-8"/><path d="M15 8h5v5"/>',
     group_uchet: '<path d="M4 7.2a2 2 0 012-2h3.4l1.6 1.8H18a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V7.2z"/>',
     group_dkp:   '<path d="M6 3.2h12l3.6 5.3L12 21 2.4 8.5 6 3.2z"/><path d="M2.4 8.5h19.2M9 3.2l3 5.3 3-5.3"/>',
     default:     '<circle cx="12" cy="12" r="2.2"/>',
@@ -232,6 +236,15 @@
   document.getElementById("signOutBtn").addEventListener("click", () => L2Cabinet.signOut());
   document.getElementById("classicSignOutBtn").addEventListener("click", () => L2Cabinet.signOut());
 
+  // мобильное меню — гамбургер открывает/закрывает выезжающий сайдбар (см.
+  // @media в theme.css); закрывается ещё и по клику на подложку или на сам
+  // пункт меню (незачем оставлять его открытым после перехода в раздел)
+  function setMobileNavOpen(open){ document.body.classList.toggle("mobile-nav-open", open); }
+  document.getElementById("navToggle").addEventListener("click", () => {
+    setMobileNavOpen(!document.body.classList.contains("mobile-nav-open"));
+  });
+  document.getElementById("sidebarBackdrop").addEventListener("click", () => setMobileNavOpen(false));
+
   const sections = await L2Cabinet.getVisibleSections(roleKey);
   const nav = document.getElementById("sidebarNav");
   const content = document.getElementById("content");
@@ -321,7 +334,7 @@
     label.textContent = L2I18n.t("section." + s.key, s.label);
     a.appendChild(label);
     a.style.setProperty("--i", navStagger++);
-    a.addEventListener("click", (e) => { e.preventDefault(); renderSection(s.key); });
+    a.addEventListener("click", (e) => { e.preventDefault(); renderSection(s.key); setMobileNavOpen(false); });
     return a;
   }
 
