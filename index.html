@@ -240,8 +240,19 @@
   // renderSection() ссылается на него уже в первом вызове на этой же странице —
   // до этой строки было ReferenceError («не может зайти», TDZ у const)
   const whoWidget = document.getElementById("whoWidget");
+  // от предыдущего renderSection() — если переключились на новый раздел, пока
+  // старый ещё не досчитал свой спиннер, останавливаем его опрос/таймаут
+  let sectionLoadWatcher = null;
+  function stopSectionLoadWatcher(){
+    if(!sectionLoadWatcher) return;
+    clearInterval(sectionLoadWatcher.poll);
+    clearTimeout(sectionLoadWatcher.fallback);
+    sectionLoadWatcher = null;
+  }
+
   function renderSection(key, extra){
     const view = SECTION_VIEWS[key];
+    stopSectionLoadWatcher();
     content.innerHTML = "";
     // сброс на случай ухода со страницы, пока «Проверка буста» держала виджет
     // спрятанным (открытая панель участника, см. setProfileWidgetVisible) —
@@ -250,6 +261,11 @@
     if(!view){ content.innerHTML = '<p class="hint">' + L2I18n.t("shell.sectionNotFound", "Раздел не найден.") + '</p>'; return; }
 
     if(view.type === "iframe"){
+      const loader = document.createElement("div");
+      loader.className = "section-loader";
+      loader.innerHTML = '<div class="spin"></div>';
+      content.appendChild(loader);
+
       const frame = document.createElement("iframe");
       frame.className = "content-frame";
       // ?v= — не даёт браузеру подсунуть закэшированную старую версию раздела
@@ -257,6 +273,26 @@
       if(extra) Object.keys(extra).forEach(k => { src += "&" + k + "=" + encodeURIComponent(extra[k]); });
       frame.src = src;
       content.appendChild(frame);
+
+      // пока сам раздел проверяет сессию и грузит первые данные, страница внутри
+      // iframe пустая — держим спиннер до появления её #wrap/#adminWrap (у кого
+      // их нет вообще, например «Панель умений», просто ждём готовности документа);
+      // запасной таймаут — чтобы не зависнуть навечно, если раздел сломан
+      const reveal = () => {
+        stopSectionLoadWatcher();
+        loader.remove();
+        frame.classList.add("ready");
+      };
+      const poll = setInterval(() => {
+        let doc;
+        try{ doc = frame.contentDocument; }catch(e){ return; }
+        if(!doc) return;
+        const w = doc.getElementById("wrap") || doc.getElementById("adminWrap");
+        if(w){ if(getComputedStyle(w).display !== "none") reveal(); }
+        else if(doc.readyState === "complete") reveal();
+      }, 60);
+      const fallback = setTimeout(reveal, 6000);
+      sectionLoadWatcher = { poll, fallback };
     } else {
       const label = L2I18n.t("section." + key, sections.find(s => s.key === key)?.label || key);
       const stub = document.createElement("div");
