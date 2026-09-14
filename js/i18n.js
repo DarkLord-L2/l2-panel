@@ -506,11 +506,7 @@
     "taxes.taxLineDefault": ["Налог: —", "Податок: —", "Tax: —"],
     "taxes.donateLineDefault": ["Донат: —", "Донат: —", "Donation: —"],
     "taxes.totalLabel": ["Всего", "Разом", "Total"],
-    "taxes.taxNotConfigured": [
-      "Сумма налога не настроена — задайте её в Админ-панели → «Правила клана».",
-      "Сума податку не налаштована — задайте її в Адмін-панелі → «Правила клану».",
-      "The tax amount isn't set — set it in Admin Panel → “Clan Rules”.",
-    ],
+    "taxes.taxNotConfiguredBtn": ["Задать сумму налога →", "Задати суму податку →", "Set the tax amount →"],
     "taxes.noDonationsThisWeek": ["На этой неделе пока никто не донатил.", "На цьому тижні поки що ніхто не донатив.", "No one has donated this week yet."],
     "taxes.allDonationsBtn": ["Все донаты →", "Усі донати →", "All donations →"],
     "taxes.aheadDebtTitle": ["Наперёд / Долг", "Наперед / Борг", "Ahead / Debt"],

@@ -81,7 +81,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=38"></script>
+<script src="js/i18n.js?v=39"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -334,7 +334,7 @@
     openGearCheck(groupId){ renderSection("gear_check", { group: groupId }); },
     // из меню «⋮» в «Группах» — клан-лидер/зам/лидер пати открывают личный кабинет участника
     openMyCabinet(nick, from){ renderSection("my_cabinet", { nick, from: from || "groups" }); },
-    openSection(key){ renderSection(key); },
+    openSection(key, extra){ renderSection(key, extra); },
     // из «Проверки буста» (gear-check.html) — там выезжающая справа панель того
     // же участника перекрывается этим виджетом (оба в правом верхнем углу, но
     // разные документы — z-index внутри iframe тут не помогает). Прячем виджет

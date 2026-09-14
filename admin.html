@@ -424,7 +424,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=38"></script>
+<script src="js/i18n.js?v=39"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -448,7 +448,12 @@
   document.querySelectorAll(".admin-nav-item").forEach(btn => {
     btn.addEventListener("click", () => setAdminTab(btn.dataset.tab));
   });
-  setAdminTab(localStorage.getItem(ADMIN_TAB_KEY) || "users");
+  // ?tab= — переход сразу на нужную вкладку по ссылке из другого раздела
+  // (например, кнопка «Задать сумму налога →» в «Налогах»), в приоритете
+  // над последней открытой вкладкой из localStorage
+  const knownTabs = new Set(Array.from(document.querySelectorAll(".admin-nav-item")).map(btn => btn.dataset.tab));
+  const urlTab = new URLSearchParams(location.search).get("tab");
+  setAdminTab((urlTab && knownTabs.has(urlTab)) ? urlTab : (localStorage.getItem(ADMIN_TAB_KEY) || "users"));
 
   const db = L2Cabinet.client;
   let roles = [], parties = [], sections = [];
