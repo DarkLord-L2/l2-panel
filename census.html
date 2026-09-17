@@ -1,33 +1,49 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Перепись клана — Кабинет клана</title>
 <link rel="stylesheet" href="js/theme.css?v=25" />
+<style>
+  /* «Перепись клана» больше не привязана к календарной неделе — вкладки на
+     произвольные даты (когда вздумается), а не ◀/▶ по 7 дней. Общий
+     js/week-roster.js тут больше не используется (он остался общим с
+     «Налогами», где неделя нужна взаправду) — вся логика теперь своя, в этом файле. */
+  .cw-tabs-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .cw-tabs{ display:flex; flex-wrap:wrap; gap:6px; flex:1; min-width:0; }
+  .cw-tab{ font-size:12.5px; padding:6px 12px; }
+  .cw-new-hint{ margin:8px 0 0; }
+  /* новый (по сравнению с предыдущей по времени переписью) ник — зелёная полоска
+     слева на чипе, тот же приём, что у активного пункта в сайдбаре */
+  .roster-chip.cw-new{ box-shadow: inset 3px 0 0 var(--ok); }
+</style>
 </head>
 <body>
 
 <div class="roster-wrap" id="wrap" style="display:none;">
   <div class="page-head">
     <h1 data-i18n="census.title">Перепись клана</h1>
+    <button class="btn" id="historyBtn" data-i18n="census.historyBtn">История</button>
   </div>
 
-  <section class="card week-nav">
-    <button class="btn" id="prevWeekBtn">◀</button>
-    <div class="week-label" id="weekLabel"></div>
-    <button class="btn" id="nextWeekBtn">▶</button>
-    <button class="btn" id="todayBtn" data-i18n="census.today">Сегодня</button>
+  <section class="card" id="cwTabsSection">
+    <div class="cw-tabs-row">
+      <div class="cw-tabs" id="cwTabs"></div>
+      <button class="btn btn-primary" id="newCensusBtn" style="display:none;" data-i18n="census.newCensusBtn" data-i18n-attr="title:census.newCensusBtnTitle" title="Начать новую перепись на сегодня">+ Новая перепись</button>
+    </div>
   </section>
 
-  <section class="card">
+  <section class="card" id="cwListSection">
     <div class="table-head-row">
-      <h2><span data-i18n="census.weekNicksPrefix">Ники недели (</span><span id="weekCount">0</span><span data-i18n="census.weekNicksSuffix">)</span></h2>
+      <h2><span id="cwHeading">—</span></h2>
       <div class="tools">
         <button class="btn btn-primary" id="addEntryBtn" style="display:none;" data-i18n="census.addEntry">+ Добавить перепись</button>
         <button class="btn" id="trashModeBtn" data-i18n="census.deleteMode" data-i18n-attr="title:census.deleteModeTitle" title="Режим удаления списком" style="display:none;">Удалить</button>
       </div>
     </div>
+
+    <p class="hint cw-new-hint" id="cwNewHint" style="display:none;"></p>
 
     <div style="margin-top:10px;">
       <input type="text" id="weekSearch" data-i18n-attr="placeholder:census.searchPlaceholder" placeholder="Поиск по нику..." style="max-width:260px; width:100%;" />
@@ -41,7 +57,7 @@
     </div>
 
     <div class="chip-row roster-row" id="weekBody"></div>
-    <p class="empty-hint" id="emptyHint" style="display:none;" data-i18n="census.emptyWeek">На этой неделе ещё никто не загружен.</p>
+    <p class="empty-hint" id="emptyHint" style="display:none;"></p>
   </section>
 
   <section class="card upload-card" id="uploadCard" style="display:none;">
@@ -64,6 +80,28 @@
       <button class="btn btn-ghost" id="cancelUploadBtn" data-i18n="common.cancel">Отмена</button>
     </div>
   </section>
+
+  <section class="card" id="historySection" style="display:none;">
+    <h2 data-i18n="census.historyTitle">История по нику</h2>
+    <p class="hint" data-i18n="census.historyHint">Когда кто впервые засветился в клане и когда виделся в последний раз — по всем переписям. Отсортировано по «Последний раз» — кто давно не появлялся, тот сверху.</p>
+    <div style="margin-top:10px;">
+      <input type="text" id="historySearch" data-i18n-attr="placeholder:census.historySearchPlaceholder" placeholder="Поиск по нику..." style="max-width:260px; width:100%;" />
+    </div>
+    <div style="overflow-x:auto; margin-top:10px;">
+      <table class="data-table" id="historyTable">
+        <thead>
+          <tr>
+            <th data-i18n="census.historyColNick">Ник</th>
+            <th data-i18n="census.historyColFirst">Впервые</th>
+            <th data-i18n="census.historyColLast">Последний раз</th>
+            <th data-i18n="census.historyColCount">Раз</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+    <p class="empty-hint" id="historyEmptyHint" style="display:none;" data-i18n="weekRoster.nothingFound">Ничего не найдено.</p>
+  </section>
 </div>
 
 <button class="help-btn" id="helpBtn" data-i18n-attr="title:common.howToUse" title="Как пользоваться">?</button>
@@ -72,10 +110,17 @@
     <button class="modal-close" id="helpClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
     <h2 data-i18n="census.helpTitle">Как пользоваться переписью</h2>
 
-    <details class="help-section">
-      <summary data-i18n="census.helpWeeksSummary">Недели</summary>
+    <details class="help-section" open>
+      <summary data-i18n="census.helpTabsSummary">Вкладки-даты</summary>
       <div class="help-body">
-        <p data-i18n="census.helpWeeksBody">Каждая календарная неделя (понедельник–воскресенье) — свой отдельный список участников клана. Переключайтесь между неделями стрелками ◀/▶ или кнопкой «Сегодня».</p>
+        <p data-i18n="census.helpTabsBody">Перепись больше не привязана к календарной неделе — каждая загрузка становится своей вкладкой с датой. «+ Новая перепись» начинает вкладку на сегодня, «+ Добавить перепись» дополняет уже открытую вкладку. Новые ники (которых не было в предыдущей по времени переписи) подсвечены зелёной полоской слева.</p>
+      </div>
+    </details>
+
+    <details class="help-section">
+      <summary data-i18n="census.helpHistorySummary">История</summary>
+      <div class="help-body">
+        <p data-i18n="census.helpHistoryBody">Кнопка «История» открывает таблицу по всем переписям сразу: когда каждый ник впервые появился, сколько раз встречался и когда виделся в последний раз. Список отсортирован так, что дольше всех отсутствующие — сверху, удобно для чистки клана.</p>
       </div>
     </details>
 
@@ -90,8 +135,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=44"></script>
-<script src="js/week-roster.js?v=6"></script>
+<script src="js/i18n.js?v=46"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -107,14 +151,365 @@
 
   const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
   const db = L2Cabinet.client;
-
   document.getElementById("wrap").style.display = "";
+  document.getElementById("addEntryBtn").style.display = isAdmin ? "" : "none";
+  document.getElementById("newCensusBtn").style.display = isAdmin ? "" : "none";
+  document.getElementById("trashModeBtn").style.display = isAdmin ? "" : "none";
 
-  initWeekRoster({
-    tableName: "census_entries",
-    profile, isAdmin, db,
-    addBtnIdleLabel: L2I18n.t("census.addEntry", "+ Добавить перепись"),
-    addBtnOpenLabel: L2I18n.t("weekRoster.hideUpload", "Скрыть загрузку"),
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  }
+  // те же приёмы сведения написаний ника (кириллица/латиница-омоглифы), что и в
+  // отчётах по посещаемости/налогам — один и тот же человек в разных скринах
+  // OCR иногда распознаётся то так, то этак
+  const CYR_LOOKALIKES = { "а":"a","в":"b","е":"e","к":"k","м":"m","н":"h","о":"o","р":"p","с":"c","т":"t","у":"y","х":"x","ё":"e","0":"o","l":"i" };
+  function normalizeNick(s){
+    return String(s || "").toLowerCase().split("").map(ch => CYR_LOOKALIKES[ch] || ch).join("").replace(/[^a-zа-яё0-9]/gi, "");
+  }
+  function pad2(n){ return String(n).padStart(2, "0"); }
+  function isoDate(d){ return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate()); }
+  function shortLabel(iso){ const d = new Date(iso + "T00:00:00"); return pad2(d.getDate()) + "." + pad2(d.getMonth() + 1); }
+  function fullLabel(iso){ const d = new Date(iso + "T00:00:00"); return pad2(d.getDate()) + "." + pad2(d.getMonth() + 1) + "." + d.getFullYear(); }
+
+  let allEntries = [];   // {id, week_start, nickname} — вообще все переписи клана разом
+  let dates = [];        // уникальные даты по возрастанию
+  let selectedDate = null;
+  let historyMode = false;
+  let pendingChips = [];
+  let selectMode = false;
+  let selectedIds = new Set();
+
+  function entriesForDate(d){ return allEntries.filter(e => e.week_start === d); }
+  function normSetForDate(d){ return new Set(entriesForDate(d).map(e => normalizeNick(e.nickname))); }
+
+  async function loadAll(){
+    const { data, error } = await db.from("census_entries").select("id, week_start, nickname").order("nickname");
+    if(error){ console.error(error); allEntries = []; }
+    else allEntries = data || [];
+    dates = [...new Set(allEntries.map(e => e.week_start))].sort();
+    if(!selectedDate || !dates.includes(selectedDate)) selectedDate = dates[dates.length - 1] || null;
+    selectedIds = new Set();
+    renderTabs();
+    renderList();
+    if(historyMode) renderHistory();
+  }
+
+  function renderTabs(){
+    const wrap = document.getElementById("cwTabs");
+    wrap.innerHTML = "";
+    [...dates].reverse().forEach(d => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn cw-tab" + (d === selectedDate ? " btn-primary" : "");
+      btn.textContent = shortLabel(d);
+      btn.title = fullLabel(d);
+      btn.addEventListener("click", () => {
+        if(d === selectedDate) return;
+        selectedDate = d;
+        selectMode = false; selectedIds = new Set();
+        document.getElementById("bulkTools").style.display = "none";
+        closeUploadCard();
+        renderTabs();
+        renderList();
+      });
+      wrap.appendChild(btn);
+    });
+  }
+
+  function resetUploadPreview(){
+    pendingChips = [];
+    document.getElementById("fileInput").value = "";
+    document.getElementById("uploadStatus").textContent = "";
+    document.getElementById("uploadError").textContent = "";
+    renderChips();
+  }
+  function closeUploadCard(){
+    document.getElementById("uploadCard").style.display = "none";
+    document.getElementById("addEntryBtn").textContent = L2I18n.t("census.addEntry", "+ Добавить перепись");
+  }
+  function openUploadCard(){
+    resetUploadPreview();
+    document.getElementById("uploadCard").style.display = "";
+    document.getElementById("addEntryBtn").textContent = L2I18n.t("weekRoster.hideUpload", "Скрыть загрузку");
+  }
+
+  document.getElementById("addEntryBtn").addEventListener("click", () => {
+    const card = document.getElementById("uploadCard");
+    if(card.style.display === "none") openUploadCard();
+    else closeUploadCard();
+  });
+
+  document.getElementById("newCensusBtn").addEventListener("click", () => {
+    const today = isoDate(new Date());
+    if(!dates.includes(today)){ dates.push(today); dates.sort(); }
+    selectedDate = today;
+    selectMode = false; selectedIds = new Set();
+    document.getElementById("bulkTools").style.display = "none";
+    renderTabs();
+    renderList();
+    openUploadCard();
+  });
+
+  function renderChips(){
+    const row = document.getElementById("chipRow");
+    row.innerHTML = "";
+    pendingChips.forEach((nick, i) => {
+      const chip = document.createElement("div");
+      chip.className = "chip";
+      const span = document.createElement("span");
+      span.textContent = nick;
+      const btn = document.createElement("button");
+      btn.textContent = "×";
+      btn.addEventListener("click", () => { pendingChips.splice(i, 1); renderChips(); });
+      chip.append(span, btn);
+      row.appendChild(chip);
+    });
+  }
+
+  const PER_COLUMN = 15;
+  const weekSearchEl = document.getElementById("weekSearch");
+  weekSearchEl.addEventListener("input", renderList);
+
+  function renderList(){
+    const body = document.getElementById("weekBody");
+    const emptyHintEl = document.getElementById("emptyHint");
+    const headingEl = document.getElementById("cwHeading");
+    const newHintEl = document.getElementById("cwNewHint");
+    body.innerHTML = "";
+
+    if(!selectedDate){
+      headingEl.textContent = "";
+      document.getElementById("weekSearch").style.display = "none";
+      newHintEl.style.display = "none";
+      emptyHintEl.textContent = L2I18n.t("census.noCensusYet", "Переписей ещё нет — нажмите «+ Новая перепись», чтобы начать.");
+      emptyHintEl.style.display = "";
+      return;
+    }
+    document.getElementById("weekSearch").style.display = "";
+
+    const entries = entriesForDate(selectedDate);
+    headingEl.textContent = L2I18n.t("census.entriesHeading", "Состав переписи {date} (").replace("{date}", fullLabel(selectedDate)) +
+      entries.length + L2I18n.t("census.entriesHeadingSuffix", ")");
+
+    // сравнение с предыдущей по времени переписью — просто чтобы подсветить новеньких
+    const idx = dates.indexOf(selectedDate);
+    const prevDate = idx > 0 ? dates[idx - 1] : null;
+    const prevSet = prevDate ? normSetForDate(prevDate) : null;
+    if(prevSet){
+      const newCount = entries.filter(e => !prevSet.has(normalizeNick(e.nickname))).length;
+      newHintEl.textContent = L2I18n.t("census.newSinceHint", "Новых по сравнению с переписью {date}: {n}")
+        .replace("{date}", shortLabel(prevDate)).replace("{n}", newCount);
+      newHintEl.style.display = "";
+    } else {
+      newHintEl.style.display = "none";
+    }
+
+    const q = weekSearchEl.value.trim().toLowerCase();
+    const visibleEntries = q ? entries.filter(e => e.nickname.toLowerCase().includes(q)) : entries;
+
+    if(!entries.length){
+      emptyHintEl.textContent = L2I18n.t("census.emptyCensus", "На эту дату ещё никто не загружен.");
+      emptyHintEl.style.display = "";
+    } else if(q && !visibleEntries.length){
+      emptyHintEl.textContent = L2I18n.t("weekRoster.nothingFound", "Ничего не найдено.");
+      emptyHintEl.style.display = "";
+    } else {
+      emptyHintEl.style.display = "none";
+    }
+
+    let col = null;
+    visibleEntries
+      .slice()
+      .sort((a, b) => a.nickname.localeCompare(b.nickname))
+      .forEach((entry, i) => {
+        if(i % PER_COLUMN === 0){
+          col = document.createElement("div");
+          col.className = "roster-col";
+          body.appendChild(col);
+        }
+
+        const chip = document.createElement("div");
+        chip.className = "chip roster-chip";
+        if(prevSet && !prevSet.has(normalizeNick(entry.nickname))) chip.classList.add("cw-new");
+
+        if(selectMode){
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.checked = selectedIds.has(entry.id);
+          cb.addEventListener("change", () => {
+            if(cb.checked) selectedIds.add(entry.id); else selectedIds.delete(entry.id);
+            updateDeleteSelectedLabel();
+          });
+          chip.appendChild(cb);
+        }
+
+        const span = document.createElement("span");
+        span.textContent = entry.nickname;
+        chip.appendChild(span);
+        col.appendChild(chip);
+      });
+  }
+
+  function updateDeleteSelectedLabel(){
+    document.getElementById("deleteSelectedBtn").textContent =
+      L2I18n.t("weekRoster.deleteSelectedBtn", "Удалить выбранных ({n})").replace("{n}", selectedIds.size);
+  }
+
+  document.getElementById("trashModeBtn").addEventListener("click", () => {
+    selectMode = !selectMode;
+    selectedIds = new Set();
+    document.getElementById("bulkTools").style.display = selectMode ? "" : "none";
+    updateDeleteSelectedLabel();
+    renderList();
+  });
+  document.getElementById("selectAllBtn").addEventListener("click", () => {
+    selectedIds = new Set(entriesForDate(selectedDate).map(e => e.id));
+    updateDeleteSelectedLabel();
+    renderList();
+  });
+  document.getElementById("deleteSelectedBtn").addEventListener("click", async () => {
+    if(!selectedIds.size) return;
+    if(!confirm(L2I18n.t("weekRoster.confirmDeleteSelected", "Удалить выбранных: {n}?").replace("{n}", selectedIds.size))) return;
+    const { error } = await db.from("census_entries").delete().in("id", Array.from(selectedIds));
+    if(!error){
+      selectMode = false;
+      document.getElementById("bulkTools").style.display = "none";
+      await loadAll();
+    }
+  });
+
+  // ---- загрузка и OCR (без изменений по сути — просто теперь пишет на selectedDate) ----
+  function fileToDataUrl(file){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  document.getElementById("filePickBtn").addEventListener("click", () => {
+    document.getElementById("fileInput").click();
+  });
+
+  document.getElementById("fileInput").addEventListener("change", async () => {
+    let files = Array.from(document.getElementById("fileInput").files);
+    const statusEl = document.getElementById("uploadStatus");
+    const errEl = document.getElementById("uploadError");
+    errEl.textContent = "";
+    if(!files.length) return;
+    if(files.length > 9){
+      files = files.slice(0, 9);
+      statusEl.textContent = L2I18n.t("weekRoster.onlyFirst9", "Взяты только первые 9 файлов.");
+    }
+
+    for(let i = 0; i < files.length; i++){
+      statusEl.textContent = L2I18n.t("weekRoster.scanning", "Распознаю скрин {n} из {total}…")
+        .replace("{n}", i + 1).replace("{total}", files.length);
+      try{
+        const dataUrl = await fileToDataUrl(files[i]);
+        const nicknames = await L2Cabinet.adminOcrNicknames(dataUrl);
+        nicknames.forEach(n => {
+          if(n && !pendingChips.includes(n)) pendingChips.push(n);
+        });
+        renderChips();
+      }catch(err){
+        errEl.textContent = L2I18n.t("weekRoster.scanError", "Скрин {n}: ").replace("{n}", i + 1) + err.message;
+      }
+    }
+    statusEl.textContent = L2I18n.t("weekRoster.scanDone", "Готово, распознано {n} ник(ов) — проверьте перед сохранением.")
+      .replace("{n}", pendingChips.length);
+  });
+
+  document.getElementById("manualAddBtn").addEventListener("click", () => {
+    const input = document.getElementById("manualNick");
+    const val = input.value.trim();
+    if(val && !pendingChips.includes(val)) pendingChips.push(val);
+    input.value = "";
+    renderChips();
+  });
+  document.getElementById("manualNick").addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){ e.preventDefault(); document.getElementById("manualAddBtn").click(); }
+  });
+
+  document.getElementById("cancelUploadBtn").addEventListener("click", () => {
+    resetUploadPreview();
+    closeUploadCard();
+  });
+
+  document.getElementById("saveWeekBtn").addEventListener("click", async () => {
+    const errEl = document.getElementById("uploadError");
+    errEl.textContent = "";
+    const existing = new Set(entriesForDate(selectedDate).map(e => e.nickname));
+    const toInsert = pendingChips.filter(n => !existing.has(n));
+    if(!toInsert.length){
+      resetUploadPreview();
+      closeUploadCard();
+      return;
+    }
+    const rows = toInsert.map(nickname => ({
+      clan_id: profile.clan_id,
+      week_start: selectedDate,
+      nickname,
+      created_by: profile.id,
+    }));
+    const { error } = await db.from("census_entries").insert(rows);
+    if(error){ errEl.textContent = L2I18n.t("weekRoster.saveFailed", "Не удалось сохранить: ") + error.message; return; }
+    resetUploadPreview();
+    closeUploadCard();
+    await loadAll();
+  });
+
+  // ---------- «История» — по всем переписям разом ----------
+  function computeHistory(){
+    const byNorm = new Map(); // normKey -> {display, first, last, dates:Set}
+    allEntries.forEach(e => {
+      const key = normalizeNick(e.nickname);
+      if(!byNorm.has(key)){
+        byNorm.set(key, { display: e.nickname, first: e.week_start, last: e.week_start, dates: new Set() });
+      }
+      const rec = byNorm.get(key);
+      if(e.week_start < rec.first) rec.first = e.week_start;
+      if(e.week_start > rec.last){ rec.last = e.week_start; rec.display = e.nickname; }
+      rec.dates.add(e.week_start);
+    });
+    return [...byNorm.values()].map(r => ({ ...r, count: r.dates.size }));
+  }
+
+  function renderHistory(){
+    const q = document.getElementById("historySearch").value.trim().toLowerCase();
+    const totalDates = dates.length;
+    const rows = computeHistory()
+      .filter(r => !q || r.display.toLowerCase().includes(q))
+      .sort((a, b) => a.last < b.last ? -1 : a.last > b.last ? 1 : a.display.localeCompare(b.display));
+
+    const body = document.getElementById("historyBody");
+    body.innerHTML = "";
+    rows.forEach(r => {
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        `<td>${escapeHtml(r.display)}</td>` +
+        `<td>${fullLabel(r.first)}</td>` +
+        `<td>${fullLabel(r.last)}</td>` +
+        `<td>${r.count} / ${totalDates}</td>`;
+      body.appendChild(tr);
+    });
+    document.getElementById("historyEmptyHint").style.display = rows.length ? "none" : "";
+  }
+  document.getElementById("historySearch").addEventListener("input", renderHistory);
+
+  document.getElementById("historyBtn").addEventListener("click", () => {
+    historyMode = !historyMode;
+    document.getElementById("historyBtn").classList.toggle("btn-primary", historyMode);
+    document.getElementById("cwTabsSection").style.display = historyMode ? "none" : "";
+    document.getElementById("cwListSection").style.display = historyMode ? "none" : "";
+    if(historyMode){
+      closeUploadCard();
+      document.getElementById("historySection").style.display = "";
+      renderHistory();
+    } else {
+      document.getElementById("historySection").style.display = "none";
+    }
   });
 
   document.getElementById("helpBtn").addEventListener("click", () => {
@@ -129,6 +524,9 @@
   window.addEventListener("keydown", (e) => {
     if(e.key === "Escape") document.getElementById("helpOverlay").classList.remove("show");
   });
+
+  updateDeleteSelectedLabel();
+  await loadAll();
 })();
 </script>
 </body>

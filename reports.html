@@ -274,7 +274,7 @@
         </div>
         <div class="field">
           <label>&nbsp;</label>
-          <button type="button" class="btn" id="groupByPartyBtn" data-i18n-attr="title:reports.groupByPartyBtnTitle" title="Список ниже разобьётся на блоки по пати — как «Скрин N», только по реальной группе человека, а не по тому, с какого скрина он распознан. Кто не состоит ни в одной группе — отдельным блоком «Соло»" data-i18n="reports.groupByPartyBtn">Смотреть по пати</button>
+          <button type="button" class="btn" id="showAllFlatBtn" data-i18n-attr="title:reports.showAllFlatBtnTitle" title="Единый список без разбивки по скринам мероприятия — все вперемешку, отсортированные по килам (или выбранной колонке) от большего к меньшему" data-i18n="reports.showAllFlatBtn">Показывать всех</button>
         </div>
       </div>
 
@@ -370,7 +370,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=44"></script>
+<script src="js/i18n.js?v=46"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -1119,27 +1119,6 @@
   // мероприятия и не только когда есть скрин с привязкой к batch_id), потому что
   // не зависит от того, как заносились данные явки. Кто не состоит ни в одной
   // группе — отдельным блоком с меткой «Соло» (та же, что настроена в «Метках пати»)
-  function groupRowsByRealParty(rows){
-    const byGroup = new Map(); // group id ("" — соло) -> rows[]
-    const names = new Map();
-    rows.forEach(r => {
-      const g = lookupGroups(r.nickname)[0];
-      const key = g ? g.id : "";
-      if(!byGroup.has(key)) byGroup.set(key, []);
-      byGroup.get(key).push(r);
-      if(g) names.set(key, g.name);
-    });
-    const result = [...byGroup.entries()].map(([id, groupRows]) => ({
-      id, name: id ? names.get(id) : groupLabelSoloName, rows: groupRows,
-    }));
-    result.sort((a, b) => {
-      if(!a.id && b.id) return 1;
-      if(a.id && !b.id) return -1;
-      return a.name.localeCompare(b.name);
-    });
-    return result;
-  }
-
   function totals(rows){
     // normalizeNick — та же причина, что в aggregateByNickname: один человек,
     // распознанный то кириллицей, то латиницей, не должен считаться за двоих
@@ -1398,25 +1377,14 @@
     body.appendChild(tr);
   }
 
-  function renderPartySubheader(body, group){
-    const tr = document.createElement("tr");
-    tr.className = "rep-batch-subhead";
-    const td = document.createElement("td");
-    td.colSpan = isAdmin ? 8 : 7;
-    const labelSpan = document.createElement("span");
-    labelSpan.className = "rep-batch-label";
-    labelSpan.textContent = group.name;
-    td.appendChild(labelSpan);
-    tr.appendChild(td);
-    body.appendChild(tr);
-  }
-
-  // «Смотреть по пати» — не завязано на конкретное мероприятие/наличие скринов,
-  // поэтому доступно всегда (в отличие от группировки по batch_id ниже)
-  let groupByParty = false;
-  document.getElementById("groupByPartyBtn").addEventListener("click", () => {
-    groupByParty = !groupByParty;
-    document.getElementById("groupByPartyBtn").classList.toggle("btn-primary", groupByParty);
+  // «Показывать всех» — единый список без разбивки по скринам мероприятия,
+  // сортированный (по умолчанию — по килам, от большего к меньшему), как обычная
+  // сортировка колонки; раньше тут была группировка по реальной пати, но она
+  // была не нужна — кнопку переделали под простой плоский список
+  let showAllFlat = false;
+  document.getElementById("showAllFlatBtn").addEventListener("click", () => {
+    showAllFlat = !showAllFlat;
+    document.getElementById("showAllFlatBtn").classList.toggle("btn-primary", showAllFlat);
     renderReportTable(lastPeriodRows);
   });
 
@@ -1444,12 +1412,7 @@
     body.innerHTML = "";
     document.getElementById("repEmpty").style.display = periodRowsRaw.length ? "none" : "";
 
-    if(groupByParty){
-      groupRowsByRealParty(periodRowsRaw).forEach(group => {
-        renderPartySubheader(body, group);
-        sortRows(aggregateByNickname(group.rows)).forEach(r => renderPersonRow(body, r));
-      });
-    } else if(periodValue.startsWith("event:")){
+    if(!showAllFlat && periodValue.startsWith("event:")){
       groupRowsByBatch(periodRowsRaw).forEach(batch => {
         // строки без привязки к скрину (домиграционные/добавленные вручную) —
         // без подписи-«шапки», просто обычными строками, не нужно мозолить
@@ -1458,6 +1421,8 @@
         sortRows(aggregateByNickname(batch.rows)).forEach(r => renderPersonRow(body, r));
       });
     } else {
+      // «Показывать всех» — та же ветка, что и обычный список без скринов:
+      // все строки одним списком, отсортированные (по умолчанию — килы, по убыванию)
       sortRows(aggregateByNickname(periodRowsRaw)).forEach(r => renderPersonRow(body, r));
     }
   }
