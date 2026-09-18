@@ -1494,9 +1494,16 @@
     openReportPicker();
   }
 
+  // клик переключает вид сразу и напрямую (не ждёт ответа от history.back()) —
+  // тот же приём, что и «Проверка буста»: соседние iframe пишут в общую историю
+  // браузера своей похожей логикой, и раньше клик, ждавший только history.back(),
+  // иногда «зависал». history.back() всё равно дёргаем следом лучшей попыткой —
+  // чтобы физическая кнопка «назад» браузера осталась синхронизирована
   document.getElementById("taxReportBackBtn").addEventListener("click", () => {
-    if(taxReportHistoryActive) history.back();
-    else exitTaxReportView();
+    const wasHistoryActive = taxReportHistoryActive;
+    taxReportHistoryActive = false;
+    exitTaxReportView();
+    if(wasHistoryActive) history.back();
   });
 
   // popstate ловит и «назад» (уходим из состояния taxReport — прячем отчёт), и

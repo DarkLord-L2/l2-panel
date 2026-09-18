@@ -1234,9 +1234,15 @@
     }
   });
 
+  // клик переключает вид сразу и напрямую (не ждёт ответа от history.back()) —
+  // тот же приём, что и «Проверка буста»: соседние iframe пишут в общую историю
+  // браузера своей похожей логикой, и раньше клик, ждавший только history.back(),
+  // иногда «зависал». history.back() всё равно дёргаем следом лучшей попыткой —
+  // чтобы физическая кнопка «назад» браузера осталась синхронизирована
   document.getElementById("groupBackBtn").addEventListener("click", async () => {
-    if(groupDetailHistoryActive) history.back();
-    else await exitGroupDetail();
+    const wasHistoryActive = groupDetailHistoryActive;
+    await exitGroupDetail();
+    if(wasHistoryActive) history.back();
   });
 
   // сюда попали кликом по «Группа» в журнале посещаемости — даём дорогу назад

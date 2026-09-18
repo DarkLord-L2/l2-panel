@@ -1397,9 +1397,15 @@
     await openReportView(from, to);
     await runPeriodReport(from, to);
   });
+  // клик переключает вид сразу и напрямую (не ждёт ответа от history.back()) —
+  // тот же приём, что и «Проверка буста»: соседние iframe пишут в общую историю
+  // браузера своей похожей логикой, и раньше клик, ждавший только history.back(),
+  // иногда «зависал». history.back() всё равно дёргаем следом лучшей попыткой —
+  // чтобы физическая кнопка «назад» браузера осталась синхронизирована
   document.getElementById("attBackBtn").addEventListener("click", () => {
-    if(attReportHistoryActive) history.back();
-    else exitAttReportView();
+    const wasHistoryActive = attReportHistoryActive;
+    exitAttReportView();
+    if(wasHistoryActive) history.back();
   });
 
   document.getElementById("attShareBtn").addEventListener("click", async () => {
