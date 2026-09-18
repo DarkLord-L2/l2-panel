@@ -832,6 +832,10 @@
     selectedGroupId = null;
     document.getElementById("gcTableView").style.display = "none";
     document.getElementById("gcPickView").style.display = "";
+    // showTableView() показывает эту кнопку при входе в группу — тут её прячем
+    // обратно, иначе она остаётся висеть на экране выбора, где возвращаться
+    // уже некуда, и клик по ней ничего не делает
+    document.getElementById("gcBackBtn").style.display = "none";
     renderPicker();
   }
 
