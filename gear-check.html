@@ -649,9 +649,14 @@
       }
     }
   });
+  // Сам клик переключает вид сразу и напрямую — не ждёт ответа от history.back().
+  // history.back() всё равно дёргаем следом (лучшая попытка снять отметку для
+  // физической кнопки «назад»), но раньше клик ЦЕЛИКОМ зависел от него: соседний
+  // iframe («Группы») пишет в ту же общую историю браузера своей похожей логикой,
+  // и из-за этого шаг назад иногда попадал не туда (или никуда) — кнопка «зависала».
   document.getElementById("gcBackBtn").addEventListener("click", () => {
-    if(gcHistoryActive) history.back();
-    else showPickerView();
+    showPickerView();
+    if(gcHistoryActive){ gcHistoryActive = false; history.back(); }
   });
 
   function escapeHtml(s){
