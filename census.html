@@ -23,8 +23,12 @@
 
 <div class="roster-wrap" id="wrap" style="display:none;">
   <div class="page-head">
-    <h1 data-i18n="census.title">Перепись клана</h1>
-    <button class="btn" id="historyBtn" data-i18n="census.historyBtn">История</button>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <h1 data-i18n="census.title">Перепись клана</h1>
+      <!-- рядом с заголовком, а не в правом углу шапки — там её перекрывает
+           виджет профиля (.who-widget, плавает поверх контента в углу) -->
+      <button class="btn" id="historyBtn" data-i18n="census.historyBtn">История</button>
+    </div>
   </div>
 
   <section class="card" id="cwTabsSection">
