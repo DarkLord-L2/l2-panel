@@ -256,6 +256,7 @@
   // от предыдущего renderSection() — если переключились на новый раздел, пока
   // старый ещё не досчитал свой спиннер, останавливаем его опрос/таймаут
   let sectionLoadWatcher = null;
+  let currentSectionKey = null;
   function stopSectionLoadWatcher(){
     if(!sectionLoadWatcher) return;
     clearInterval(sectionLoadWatcher.poll);
@@ -265,6 +266,7 @@
 
   function renderSection(key, extra){
     const view = SECTION_VIEWS[key];
+    currentSectionKey = key;
     stopSectionLoadWatcher();
     content.innerHTML = "";
     // сброс на случай ухода со страницы, пока «Проверка буста» держала виджет
@@ -399,6 +401,20 @@
 
   if(startKey) renderSection(startKey);
   else content.innerHTML = '<p class="hint">' + L2I18n.t("shell.noSectionsForRole", "Для вашей роли пока не открыто ни одного раздела.") + '</p>';
+
+  // физические «назад»/«вперёд» браузера — location.hash уже пишется при каждом
+  // переключении раздела (renderSection), но раньше ничего не слушало, когда
+  // браузер сам меняет hash обратно/вперёд: URL в адресной строке менялся,
+  // а раздел на экране — нет. Раскрытые внутри разделов (iframe) свои шаги
+  // «назад» (например, «Проверка буста» между списком групп и таблицей) на это
+  // не влияют — hashchange срабатывает только когда меняется hash САМОГО этого
+  // документа, а не документа внутри iframe
+  window.addEventListener("hashchange", () => {
+    const key = location.hash.replace("#", "");
+    if(!key || key === currentSectionKey) return;
+    if(!sections.some(s => s.key === key)) return;
+    renderSection(key);
+  });
 
   const appShell = document.getElementById("appShell");
 
