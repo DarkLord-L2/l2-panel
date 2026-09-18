@@ -348,6 +348,8 @@
     "cab.boostTitle": ["Проверка буста", "Перевірка бусту", "Gear check"],
     "cab.boostPercent": ["Процент буста: ", "Відсоток бусту: ", "Boost percent: "],
     "cab.boostNotConfigured": ["Разделы буста ещё не настроены.", "Розділи бусту ще не налаштовані.", "Boost sections haven't been configured yet."],
+    "cab.buffLabel": ["Баф:", "Баф:", "Buff:"],
+    "cab.buffCopyTitle": ["Скопировать", "Скопіювати", "Copy"],
 
     "cab.censusTitle": ["Перепись", "Перепис", "Census"],
     "cab.censusNoData": ["Переписи ещё не было.", "Перепису ще не було.", "There hasn't been a census yet."],

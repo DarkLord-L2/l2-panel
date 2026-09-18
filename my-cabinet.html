@@ -22,6 +22,24 @@
   .cab-head .name{ font-size:19px; font-weight:700; color: var(--text); }
   .cab-head .cls{ font-size:13px; color: var(--text-dim); }
 
+  /* «Баф» — компактная плашка у ника, посередине шапки кабинета: куда/от кого
+     брать баф для класса участника. Тот же текст и кнопка ⧉, что и в пункте
+     «Баф» на «Проверке буста» (gear-check.html) — просто вынесено сюда, чтобы
+     не лезть в отдельный раздел ради одной строки */
+  .cab-buff{
+    display:flex; align-items:center; gap:8px; margin:0 auto;
+    background: var(--panel-2); border:1px solid var(--border); border-radius:20px;
+    padding:6px 8px 6px 14px; font-size:12.5px; color: var(--text-dim); max-width:360px;
+  }
+  .cab-buff .lbl{ flex:none; color: var(--text); font-weight:600; }
+  .cab-buff .txt{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cab-buff .copy{
+    flex:none; width:22px; height:22px; padding:0;
+    border-radius:6px; border:1px solid var(--border);
+    background: var(--panel); color: var(--text-dim); cursor:pointer; font-size:12px; line-height:1;
+  }
+  .cab-buff .copy:hover{ color: var(--text); border-color: var(--border-lit); }
+
   .rep-filters{ display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; }
   .rep-filters .field{ margin:0; min-width:220px; }
   .rep-tiles{ display:grid; grid-template-columns:repeat(auto-fit, minmax(120px,1fr)); gap:8px; }
@@ -101,6 +119,11 @@
       <div>
         <div class="name" id="cabNickname"></div>
         <div class="cls" id="cabClass"></div>
+      </div>
+      <div class="cab-buff" id="cabBuffWrap" style="display:none;">
+        <span class="lbl" data-i18n="cab.buffLabel">Баф:</span>
+        <span class="txt" id="cabBuffText"></span>
+        <button class="copy" type="button" id="cabBuffCopyBtn" data-i18n-attr="title:cab.buffCopyTitle" title="Скопировать">⧉</button>
       </div>
     </section>
 
@@ -197,7 +220,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=46"></script>
+<script src="js/i18n.js?v=47"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -321,6 +344,48 @@
     const subEl = document.getElementById("cabSubAvatar");
     if(subSrc){ subEl.src = subSrc; subEl.style.display = ""; } else { subEl.style.display = "none"; }
   }
+
+  // ---------- «Баф» у ника: текст «откуда брать баф» для класса участника —
+  // тот же источник, что per-class подпись пункта «Баф» на «Проверке буста»
+  // (boost_items.per_class + boost_class_values.value_text), просто показан
+  // компактно тут же, без захода в отдельный раздел ----------
+  async function loadBuffText(className){
+    if(!className) return "";
+    const { data: sections } = await db.from("boost_sections").select("id").eq("name", "Баф").limit(1);
+    const sectionId = (sections || [])[0]?.id;
+    if(!sectionId) return "";
+    const { data: items } = await db.from("boost_items")
+      .select("id")
+      .eq("section_id", sectionId)
+      .eq("per_class", true)
+      .order("sort_order");
+    const itemIds = (items || []).map(i => i.id);
+    if(!itemIds.length) return "";
+    const { data: values } = await db.from("boost_class_values")
+      .select("item_id, value_text")
+      .eq("class_name", className)
+      .in("item_id", itemIds);
+    const byId = new Map((values || []).map(v => [v.item_id, v.value_text || ""]));
+    return itemIds.map(id => byId.get(id) || "").filter(Boolean).join(", ");
+  }
+
+  function renderBuffText(text){
+    const wrap = document.getElementById("cabBuffWrap");
+    if(!text){ wrap.style.display = "none"; return; }
+    const txtEl = document.getElementById("cabBuffText");
+    txtEl.textContent = text;
+    txtEl.title = text;
+    wrap.style.display = "";
+  }
+
+  document.getElementById("cabBuffCopyBtn").addEventListener("click", () => {
+    const text = document.getElementById("cabBuffText").textContent;
+    if(!text) return;
+    navigator.clipboard?.writeText(text).catch(() => {});
+    const btn = document.getElementById("cabBuffCopyBtn");
+    btn.textContent = "✓";
+    setTimeout(() => { btn.textContent = "⧉"; }, 1000);
+  });
 
   // ---------- статистика по мероприятиям (то же самое, что «Отчёты», но только мои строки) ----------
   let events = [];
@@ -621,6 +686,7 @@
 
   const memberInfo = await loadMyMemberInfo();
   renderHead(memberInfo);
+  renderBuffText(await loadBuffText(memberInfo.class_name));
 
   await Promise.all([loadEvents(), loadMyStats()]);
   renderPeriodOptions();
