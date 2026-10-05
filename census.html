@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Перепись клана — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=25" />
+<link rel="stylesheet" href="js/theme.css?v=26" />
 <style>
   /* «Перепись клана» больше не привязана к календарной неделе — вкладки на
      произвольные даты (когда вздумается), а не ◀/▶ по 7 дней. Общий
@@ -163,13 +163,6 @@
   function escapeHtml(s){
     return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
   }
-  // те же приёмы сведения написаний ника (кириллица/латиница-омоглифы), что и в
-  // отчётах по посещаемости/налогам — один и тот же человек в разных скринах
-  // OCR иногда распознаётся то так, то этак
-  const CYR_LOOKALIKES = { "а":"a","в":"b","е":"e","к":"k","м":"m","н":"h","о":"o","р":"p","с":"c","т":"t","у":"y","х":"x","ё":"e","0":"o","l":"i" };
-  function normalizeNick(s){
-    return String(s || "").toLowerCase().split("").map(ch => CYR_LOOKALIKES[ch] || ch).join("").replace(/[^a-zа-яё0-9]/gi, "");
-  }
   function pad2(n){ return String(n).padStart(2, "0"); }
   function isoDate(d){ return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate()); }
   function shortLabel(iso){ const d = new Date(iso + "T00:00:00"); return pad2(d.getDate()) + "." + pad2(d.getMonth() + 1); }
@@ -184,7 +177,7 @@
   let selectedIds = new Set();
 
   function entriesForDate(d){ return allEntries.filter(e => e.week_start === d); }
-  function normSetForDate(d){ return new Set(entriesForDate(d).map(e => normalizeNick(e.nickname))); }
+  function nickSetForDate(d){ return new Set(entriesForDate(d).map(e => e.nickname)); }
 
   async function loadAll(){
     const { data, error } = await db.from("census_entries").select("id, week_start, nickname").order("nickname");
@@ -254,6 +247,8 @@
     openUploadCard();
   });
 
+  // ник целиком из неотличимых на скрине символов — только подсвечиваем, не правим
+  function isAmbiguousNick(s){ return /^[0Oo1lIi|!]{3,}$/.test(String(s || "")); }
   function renderChips(){
     const row = document.getElementById("chipRow");
     row.innerHTML = "";
@@ -262,6 +257,11 @@
       chip.className = "chip";
       const span = document.createElement("span");
       span.textContent = nick;
+      if(isAmbiguousNick(nick)){
+        chip.classList.add("chip-warn");
+        chip.title = L2I18n.t("eventRoster.ambiguousNick", "Ник из похожих символов (0 O 1 l I i) — сверьте со скрином");
+        span.textContent = "⚠ " + nick;
+      }
       const btn = document.createElement("button");
       btn.textContent = "×";
       btn.addEventListener("click", () => { pendingChips.splice(i, 1); renderChips(); });
@@ -298,9 +298,9 @@
     // сравнение с предыдущей по времени переписью — просто чтобы подсветить новеньких
     const idx = dates.indexOf(selectedDate);
     const prevDate = idx > 0 ? dates[idx - 1] : null;
-    const prevSet = prevDate ? normSetForDate(prevDate) : null;
+    const prevSet = prevDate ? nickSetForDate(prevDate) : null;
     if(prevSet){
-      const newCount = entries.filter(e => !prevSet.has(normalizeNick(e.nickname))).length;
+      const newCount = entries.filter(e => !prevSet.has(e.nickname)).length;
       newHintEl.textContent = L2I18n.t("census.newSinceHint", "Новых по сравнению с переписью {date}: {n}")
         .replace("{date}", shortLabel(prevDate)).replace("{n}", newCount);
       newHintEl.style.display = "";
@@ -334,7 +334,7 @@
 
         const chip = document.createElement("div");
         chip.className = "chip roster-chip";
-        if(prevSet && !prevSet.has(normalizeNick(entry.nickname))) chip.classList.add("cw-new");
+        if(prevSet && !prevSet.has(entry.nickname)) chip.classList.add("cw-new");
 
         if(selectMode){
           const cb = document.createElement("input");
@@ -466,9 +466,10 @@
 
   // ---------- «История» — по всем переписям разом ----------
   function computeHistory(){
-    const byNorm = new Map(); // normKey -> {display, first, last, dates:Set}
+    // группируем по точному нику (с регистром): «Олежа» и «ОлЕжА» — разные игроки
+    const byNorm = new Map(); // nickname -> {display, first, last, dates:Set}
     allEntries.forEach(e => {
-      const key = normalizeNick(e.nickname);
+      const key = e.nickname;
       if(!byNorm.has(key)){
         byNorm.set(key, { display: e.nickname, first: e.week_start, last: e.week_start, dates: new Set() });
       }

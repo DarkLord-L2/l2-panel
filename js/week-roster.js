@@ -92,6 +92,8 @@ function initWeekRoster(config){
     addEntryBtn.textContent = addBtnIdleLabel;
   }
 
+  // ник целиком из неотличимых на скрине символов — только подсвечиваем, не правим
+  function isAmbiguousNick(s){ return /^[0Oo1lIi|!]{3,}$/.test(String(s || "")); }
   function renderChips(){
     const row = document.getElementById("chipRow");
     row.innerHTML = "";
@@ -100,6 +102,11 @@ function initWeekRoster(config){
       chip.className = "chip";
       const span = document.createElement("span");
       span.textContent = nick;
+      if(isAmbiguousNick(nick)){
+        chip.classList.add("chip-warn");
+        chip.title = L2I18n.t("eventRoster.ambiguousNick", "Ник из похожих символов (0 O 1 l I i) — сверьте со скрином");
+        span.textContent = "⚠ " + nick;
+      }
       const btn = document.createElement("button");
       btn.textContent = "×";
       btn.addEventListener("click", () => { pendingChips.splice(i, 1); renderChips(); });

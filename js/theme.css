@@ -438,6 +438,7 @@ table.data-table tr:hover td{ background: rgba(255,255,255,.02); }
   cursor:pointer;
 }
 .chip button:hover{ background: var(--danger-lit); }
+.chip.chip-warn{ border-color:#d9a300; background:rgba(217,163,0,.14); }
 
 .manual-add{ display:flex; gap:8px; margin:10px 0; max-width:320px; }
 .manual-add input{ flex:1; }

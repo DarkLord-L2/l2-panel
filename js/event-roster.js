@@ -67,24 +67,61 @@ function loadKnownNicks(db){
   return knownNicksPromise;
 }
 
-// возвращает исправленный ник, если нашлось уверенное совпадение с переписью,
-// иначе — исходный OCR-текст без изменений (админ увидит и поправит вручную)
-function resolveNickname(raw, knownNicks){
-  if(!raw || !knownNicks || !knownNicks.length) return raw;
-  if(knownNicks.includes(raw)) return raw; // уже точь-в-точь как в переписи
-  const rawNorm = normalizeNick(raw);
-  const exact = knownNicks.find(k => normalizeNick(k) === rawNorm);
-  if(exact) return exact;
+// ник целиком из символов, которые в шрифте игры не отличить друг от друга
+// (0 O o 1 l I i | !) — «0000000000», «1111111111», «iIiIiIiIIiIi». По картинке
+// такие ники не различить, поэтому их не «исправляем» по базе, а только
+// подсвечиваем админу: пусть сверит со скрином сам
+function isAmbiguousNick(s){
+  return /^[0Oo1lIi|!]{3,}$/.test(String(s || ""));
+}
 
-  const limit = maxAllowedDistance(rawNorm.length);
-  if(limit === 0) return raw;
-  let best = null, bestDist = Infinity, tie = false;
-  knownNicks.forEach(k => {
-    const d = levenshtein(rawNorm, normalizeNick(k));
-    if(d < bestDist){ bestDist = d; best = k; tie = false; }
-    else if(d === bestDist) tie = true; // два одинаково близких ника — не угадываем
+// Сверка распознанных ников ОДНОГО скрина с переписью. Правила:
+//  1) точное совпадение (с регистром) — ник не трогаем; в L2 «Олежа» и «ОлЕжА»
+//     могут быть двумя разными игроками;
+//  2) неоднозначные ники (isAmbiguousNick) — только точное совпадение, никакой
+//     нормализации/нечёткого поиска;
+//  3) нормализованное совпадение принимаем, только если кандидат ровно один и
+//     не занят другой строкой этого же скрина;
+//  4) нечёткий (Левенштейн) — аналогично, занятые ники не берём;
+//  5) один известный ник достаётся не больше чем одной строке скрина — иначе
+//     два разных человека склеились бы в одного.
+// Возвращает Set ников, которые НЕ удалось сопоставить из-за того, что кандидат
+// уже занят/неоднозначен (чтобы подсветить их в чипах).
+function resolveNicknames(rows, knownNicks){
+  const collided = new Set();
+  if(!rows.length || !knownNicks || !knownNicks.length) return collided;
+  const known = new Set(knownNicks);
+  const taken = new Set();
+  // проход 1: точные совпадения занимают свои ники первыми
+  rows.forEach(r => { if(known.has(r.nickname)) taken.add(r.nickname); });
+  // проход 2: остальные
+  rows.forEach(r => {
+    const raw = r.nickname;
+    if(known.has(raw)) return;
+    if(isAmbiguousNick(raw)) return;
+    const rawNorm = normalizeNick(raw);
+    if(!rawNorm) return;
+
+    const sameNorm = knownNicks.filter(k => normalizeNick(k) === rawNorm);
+    if(sameNorm.length){
+      const free = sameNorm.filter(k => !taken.has(k));
+      if(free.length === 1){ r.nickname = free[0]; taken.add(free[0]); }
+      else collided.add(raw); // несколько кандидатов или единственный уже занят
+      return;
+    }
+
+    const limit = maxAllowedDistance(rawNorm.length);
+    if(limit === 0) return;
+    let best = null, bestDist = Infinity, tie = false;
+    knownNicks.forEach(k => {
+      if(taken.has(k) || isAmbiguousNick(k)) return;
+      const d = levenshtein(rawNorm, normalizeNick(k));
+      if(d < bestDist){ bestDist = d; best = k; tie = false; }
+      else if(d === bestDist) tie = true; // два одинаково близких ника — не угадываем
+    });
+    if(best && !tie && bestDist <= limit){ r.nickname = best; taken.add(best); }
   });
-  return (best && !tie && bestDist <= limit) ? best : raw;
+  return collided;
 }
 
 function initEventRoster({ root, eventId, profile, isAdmin, db }){
@@ -139,6 +176,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
   let entries = [];
   let pending = [];
   let pendingStats = new Map(); // nickname -> {kills, deaths, pvp_damage, pve_damage}, из тех же скринов
+  let pendingCollided = new Set(); // ники, которые не удалось сверить с переписью из-за конфликта внутри скрина
   let pendingBatchOf = new Map(); // nickname -> индекс скрина (в этой сессии загрузки), с которого он распознан
   let batchCount = 0; // сколько скринов в этой сессии дали хотя бы одного распознанного ника
   // индекс скрина -> ник его пати-лидера (для «Раздачи») — распознаётся OCR из
@@ -197,6 +235,16 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
         chip.className = "chip";
         const span = document.createElement("span");
         span.textContent = nick;
+        const warn = isAmbiguousNick(nick)
+          ? L2I18n.t("eventRoster.ambiguousNick", "Ник из похожих символов (0 O 1 l I i) — сверьте со скрином")
+          : pendingCollided.has(nick)
+            ? L2I18n.t("eventRoster.collidedNick", "Похож на ник из переписи, но тот уже занят другой строкой скрина — оставлен как распознан, проверьте")
+            : "";
+        if(warn){
+          chip.classList.add("chip-warn");
+          chip.title = warn;
+          span.textContent = "⚠ " + nick;
+        }
         const btn = document.createElement("button");
         btn.textContent = "×";
         btn.addEventListener("click", () => { pending.splice(i, 1); renderChips(); });
@@ -209,6 +257,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
       pending = [];
       pendingStats = new Map();
       pendingBatchOf = new Map();
+      pendingCollided = new Set();
       batchCount = 0;
       batchLeaderOf = new Map();
       q("file-input").value = "";
@@ -282,7 +331,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
           // целиком («Лунтик» → «Луник»); при неуверенности ник не трогаем —
           // админ всё равно видит все чипы перед сохранением и может поправить
           const knownNicks = await loadKnownNicks(db);
-          rows.forEach(r => { r.nickname = resolveNickname(r.nickname, knownNicks); });
+          resolveNicknames(rows, knownNicks).forEach(n => pendingCollided.add(n));
 
           // индекс скрина заводим лениво, только если он реально дал хоть одного ника —
           // «Отчёт по мероприятиям» использует эти индексы, чтобы группировать строки
@@ -298,8 +347,9 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
             pendingBatchOf.set(r.nickname, bIdx);
           });
           if(bIdx != null && !batchLeaderOf.has(bIdx)){
-            const leaderMatch = ocrLeader && rows.find(r =>
-              r.nickname === ocrLeader || r.nickname.trim().toLowerCase() === ocrLeader.trim().toLowerCase()
+            const leaderMatch = ocrLeader && (
+              rows.find(r => r.nickname === ocrLeader) ||
+              rows.find(r => r.nickname.trim().toLowerCase() === ocrLeader.trim().toLowerCase())
             );
             batchLeaderOf.set(bIdx, (leaderMatch || rows[0]).nickname);
           }
