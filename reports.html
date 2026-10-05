@@ -204,6 +204,34 @@
   .rep-tile{ background: var(--panel-2); border:1px solid var(--border); border-radius:7px; padding:8px 10px; }
   .rep-tile .val{ font-size:16px; font-weight:700; color: var(--text); line-height:1.3; }
   .rep-tile .lbl{ font-size:10.5px; color: var(--text-dim); }
+  .rep-block{ margin-top:12px; padding-top:9px; border-top:1px solid var(--border); }
+  .rep-block h3{ font-size:11.5px; margin:0 0 6px; color: var(--text); font-weight:600; letter-spacing:.02em; }
+  .rep-hl-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap:5px; }
+  .rep-hl-card{ display:flex; align-items:center; gap:6px; padding:4px 7px; min-width:0;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--hl) 14%, var(--panel-2)), var(--panel-2) 70%);
+    border:1px solid color-mix(in srgb, var(--hl) 38%, var(--border)); border-radius:8px; }
+  .rep-hl-card img{ width:28px; height:28px; flex:0 0 28px; border-radius:7px; object-fit:cover;
+    border:1px solid color-mix(in srgb, var(--hl) 55%, var(--border)); background: var(--panel); }
+  .rep-hl-card .txt{ min-width:0; flex:1; }
+  .rep-hl-card .lbl{ font-size:8.5px; color: var(--text-dim); text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rep-hl-card .nick{ font-size:11.5px; line-height:1.25; font-weight:600; color: var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rep-hl-card .val{ font-size:12.5px; font-weight:700; color: var(--hl); line-height:1.2; }
+  .rep-cls-tabs{ display:flex; flex-wrap:wrap; gap:4px; margin:0 0 6px; }
+  .rep-cls-tab{ font:inherit; font-size:10.5px; padding:1px 8px; border-radius:999px; cursor:pointer;
+    border:1px solid var(--border); background: var(--panel-2); color: var(--text-dim); }
+  .rep-cls-tab:hover{ border-color: var(--border-lit); color: var(--text); }
+  .rep-cls-tab.active{ border-color: var(--gold-dim); color: var(--gold); background: var(--panel); }
+  .rep-cls-row{ display:flex; align-items:center; gap:6px; padding:2px 0; }
+  .rep-cls-row img{ width:20px; height:20px; flex:0 0 20px; border-radius:5px; object-fit:cover; border:1px solid var(--border); background: var(--panel); }
+  .rep-cls-row .body{ flex:1; min-width:0; }
+  .rep-cls-row .top{ display:flex; justify-content:space-between; gap:6px; font-size:11px; }
+  .rep-cls-row .nm{ color: var(--text); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rep-cls-row .meta{ color: var(--text-dim); font-size:9.5px; white-space:nowrap; }
+  .rep-cls-row .bar{ height:4px; border-radius:3px; background: var(--panel-2); margin-top:2px; overflow:hidden; }
+  .rep-cls-row .bar i{ display:block; height:100%; border-radius:4px; background: var(--cls-color, var(--gold)); }
+  .rep-cls-row .val{ flex:0 0 auto; min-width:38px; text-align:right; font-size:11.5px; font-weight:700; color: var(--cls-color, var(--gold)); }
+  .rep-cls-more{ margin-top:3px; font:inherit; font-size:10.5px; background:none; border:none; color: var(--text-dim); cursor:pointer; padding:2px 0; }
+  .rep-cls-more:hover{ color: var(--gold); }
 
   /* ---- сравнение пати между собой (радар на N групп + таблица с точными цифрами) ---- */
   .cmp-group-picker{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
@@ -240,13 +268,26 @@
   .rep-cmp-btn:disabled{ cursor:not-allowed; opacity:.15 !important; }
   table.pt-table th.pt-sortable{ cursor:pointer; user-select:none; }
   table.pt-table th.pt-sortable:hover{ color: var(--gold); }
-  table.pt-table td.pt-label{ white-space:normal; min-width:140px; }
+  table.pt-table td.pt-label{ white-space:normal; min-width:110px; }
+  table.pt-table th, table.pt-table td{ padding:2px 6px !important; }
+  table.pt-table{ font-size:11.5px; margin-top:4px; }
   table.pt-table tr.pt-off td{ opacity:.4; }
+  table.pt-table .pt-cell{ display:inline-flex; align-items:center; gap:5px; text-align:left; }
+  #partyTotalsOverlay .modal h2{ font-size:14px; margin:0 0 8px; }
+  #partyTotalsOverlay .btn{ padding:3px 10px; font-size:12px; min-height:0; }
+  #partyTotalsOverlay .field{ margin:0 0 6px; }
+  #partyTotalsOverlay .field select{ padding:3px 8px; font-size:12px; }
+  #partyTotalsOverlay .hint{ font-size:11px; margin:4px 0; }
+  table.pt-table .pt-arrow{ width:10px; color: var(--text-dim); font-size:11px; }
+  /* .modal img из theme.css даёт display:block и отступы 8px — в таблице они раздували строки */
+  table.pt-table img.pt-ico{ margin:0 !important; display:block; width:22px; height:22px; flex:0 0 22px; border-radius:6px; object-fit:cover;
+    border:1px solid var(--border-lit); background: var(--panel); }
+  table.pt-table img.pt-ico.sm{ width:16px; height:16px; flex-basis:16px; border-radius:4px; }
   table.pt-table tr.pt-party{ cursor:pointer; }
   table.pt-table tr.pt-party:hover td{ background: var(--panel-2); }
-  table.pt-table tr.pt-member td{ font-size:12px; color: var(--text); background: rgba(255,255,255,.035); }
-  table.pt-table tr.pt-member td.pt-label{ padding-left:28px; }
-  table.pt-table tr.pt-party td{ font-size:13px; }
+  table.pt-table tr.pt-member td{ font-size:11px; color: var(--text); background: rgba(255,255,255,.035); }
+  table.pt-table tr.pt-member td.pt-label{ padding-left:22px !important; }
+  table.pt-table tr.pt-party td{ font-size:12px; }
   table.pt-table td.pt-label{ color: var(--text); font-weight:600; }
   table.pt-table tr.pt-member td.pt-label{ font-weight:400; }
   /* цвета колонок: килы / смерти / PvP / PvE — одинаковые у пати, игроков и «Итого» */
@@ -254,7 +295,7 @@
   table.pt-table tbody td:nth-child(6){ color:#e57d7d; }
   table.pt-table tbody td:nth-child(8){ color:#e8b44a; }
   table.pt-table tbody td:nth-child(9){ color:#6aaeea; }
-  table.pt-table tbody td:nth-child(3){ color: var(--gold-dim); }
+  table.pt-table tbody td:nth-child(3){ color: var(--text); }
   table.pt-table tr.pt-party td:nth-child(n+5):not(:nth-child(7)){ font-weight:600; }
   table.pt-table tr.pt-total td{ border-top:2px solid var(--border-lit); font-weight:600; color: var(--gold); }
 </style>
@@ -331,6 +372,17 @@
         <div class="rep-tile" style="grid-column:1 / -1;"><div class="val" id="sumActive">0</div><div class="lbl" data-i18n="reports.tileActive">Всего активных</div></div>
       </div>
 
+      <div class="rep-block" id="repHighlights" style="display:none;">
+        <h3 data-i18n="reports.hlTitle">Лучшие за период</h3>
+        <div class="rep-hl-grid" id="repHlGrid"></div>
+      </div>
+
+      <div class="rep-block" id="repClassBreakdown" style="display:none;">
+        <h3 data-i18n="reports.classTitle">По профессиям</h3>
+        <div class="rep-cls-tabs" id="repClsTabs"></div>
+        <div id="repClsList"></div>
+      </div>
+
       <div id="cmpSection" style="display:none; margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
         <h2 data-i18n="reports.cmpPartiesTitle">Сравнение пати</h2>
         <p class="hint" style="margin:0 0 12px;" data-i18n="reports.cmpPartiesHint">Отметьте 2 и более пати — за тот же период, что выбран выше, в среднем на участника.</p>
@@ -375,7 +427,7 @@
 </div>
 
 <div class="modal-overlay" id="partyTotalsOverlay">
-  <div class="modal" style="width:min(940px,100%); max-width:940px;">
+  <div class="modal" style="width:min(780px,100%); max-width:780px; padding:12px 14px 14px;">
     <button class="modal-close" id="partyTotalsClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
     <h2 data-i18n="reports.ptTitle">Итоги по пати</h2>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin:0 0 12px;">
@@ -434,7 +486,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=48"></script>
+<script src="js/i18n.js?v=50"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -867,7 +919,7 @@
 
   async function loadGroups(){
     const [{ data: g }, { data: m }] = await Promise.all([
-      db.from("clan_groups").select("id, name").eq("hidden", false).order("name"),
+      db.from("clan_groups").select("id, name, class_name").eq("hidden", false).order("name"),
       db.from("clan_group_members").select("group_id, nickname, clan_groups(name)"),
     ]);
     groups = g || [];
@@ -1513,6 +1565,101 @@
     document.getElementById("sumActive").textContent = String(t.active);
   }
 
+  // ---------- «Лучшие за период» и «По профессиям» — под плитками общей статистики ----------
+  // Считаются по тем же строкам, что и таблица слева (период + фильтр по пати), без
+  // удалённых. Профессия/картинка — те же, что в таблице: аватарка человека, иначе
+  // иконка его профессии за этот период (pickDisplayClassForPeriod).
+  const HL_COLORS = { kills: "#6fcf8a", pvp: "#e8b44a", pve: "#6aaeea", kd: "#c792ea", people: "#9aa0b5" };
+  const CLS_METRICS = ["kills", "pvp", "pve", "people"];
+  let clsMetric = "kills";
+  let clsExpanded = false;
+  const CLS_TOP = 8;
+  let lastHighlightRows = [];
+
+  function periodPeopleViews(periodRowsRaw){
+    return aggregateByNickname(periodRowsRaw).filter(r => !r.removed).map(r => {
+      const info = lookupMemberInfo(r.nickname);
+      const picked = pickDisplayClassForPeriod(info, r.kills, r.nickname, r.entries);
+      return { r, cls: picked.name || "", src: info.icon || classIcon(picked.name) || BLANK_IMG };
+    });
+  }
+
+  function renderPeriodHighlights(periodRowsRaw){
+    lastHighlightRows = periodRowsRaw;
+    const hlBox = document.getElementById("repHighlights");
+    const clsBox = document.getElementById("repClassBreakdown");
+    const views = periodPeopleViews(periodRowsRaw);
+    if(!views.length){ hlBox.style.display = "none"; clsBox.style.display = "none"; return; }
+    const loc = L2I18n.locale();
+
+    // ---- карточки лучших ----
+    const best = (key, pool) => pool.reduce((m, v) => (!m || v.r[key] > m.r[key]) ? v : m, null);
+    const meanKills = views.reduce((s, v) => s + v.r.kills, 0) / views.length;
+    const cards = [
+      { key: "kills", color: HL_COLORS.kills, label: L2I18n.t("reports.hlKills", "Топ по килам"), v: best("kills", views), fmt: n => n.toLocaleString(loc) },
+      { key: "pvp",   color: HL_COLORS.pvp,   label: L2I18n.t("reports.hlPvp", "Топ PvP урон"), v: best("pvp", views), fmt: n => n.toLocaleString(loc) },
+      { key: "pve",   color: HL_COLORS.pve,   label: L2I18n.t("reports.hlPve", "Топ PvE урон"), v: best("pve", views), fmt: n => n.toLocaleString(loc) },
+      // K:D — только среди тех, у кого киллов не меньше среднего, иначе «3:0» бьёт всех
+      { key: "kd",    color: HL_COLORS.kd,    label: L2I18n.t("reports.hlKd", "Лучший K:D"), v: best("kd", views.filter(v => v.r.kills > 0 && v.r.kills >= meanKills)), fmt: n => n.toFixed(2) },
+    ].filter(c => c.v && c.v.r[c.key] > 0);
+    hlBox.style.display = cards.length ? "" : "none";
+    document.getElementById("repHlGrid").innerHTML = cards.map(c =>
+      `<div class="rep-hl-card" style="--hl:${c.color}">` +
+        `<img src="${c.v.src}" alt="" title="${escapeHtml(c.v.cls)}" />` +
+        `<div class="txt"><div class="lbl">${escapeHtml(c.label)}</div>` +
+        `<div class="nick" title="${escapeHtml(c.v.r.nickname)}">${escapeHtml(c.v.r.nickname)}</div>` +
+        `<div class="val">${c.fmt(c.v.r[c.key])}</div></div></div>`
+    ).join("");
+
+    // ---- по профессиям ----
+    const byClass = new Map();
+    views.forEach(v => {
+      if(!byClass.has(v.cls)) byClass.set(v.cls, { cls: v.cls, people: 0, kills: 0, deaths: 0, pvp: 0, pve: 0 });
+      const c = byClass.get(v.cls);
+      c.people += 1; c.kills += v.r.kills; c.deaths += v.r.deaths; c.pvp += v.r.pvp; c.pve += v.r.pve;
+    });
+    const list = [...byClass.values()].sort((a, b) => b[clsMetric] - a[clsMetric] || b.people - a.people);
+    const maxV = list.reduce((m, c) => Math.max(m, c[clsMetric]), 0) || 1;
+    const totalV = list.reduce((s, c) => s + c[clsMetric], 0) || 1;
+    const shown = clsExpanded ? list : list.slice(0, CLS_TOP);
+    const color = HL_COLORS[clsMetric];
+    const metricLabel = { kills: L2I18n.t("reports.colKills", "Килы"), pvp: L2I18n.t("reports.colPvp", "PvP"), pve: L2I18n.t("reports.colPve", "PvE"), people: L2I18n.t("reports.colPeople", "Чел.") };
+
+    clsBox.style.display = "";
+    document.getElementById("repClsTabs").innerHTML = CLS_METRICS.map(k =>
+      `<button type="button" class="rep-cls-tab${k === clsMetric ? " active" : ""}" data-cls-metric="${k}">${escapeHtml(metricLabel[k])}</button>`
+    ).join("");
+
+    document.getElementById("repClsList").innerHTML = shown.map(c => {
+      const kd = c.deaths > 0 ? c.kills / c.deaths : c.kills;
+      const share = Math.round(c[clsMetric] / totalV * 100);
+      const name = c.cls || L2I18n.t("reports.classNone", "Без профессии");
+      const src = c.cls ? (classIcon(c.cls) || BLANK_IMG) : BLANK_IMG;
+      return `<div class="rep-cls-row" style="--cls-color:${color}">` +
+        `<img src="${src}" alt="" />` +
+        `<div class="body"><div class="top"><span class="nm" title="${escapeHtml(name)}">${escapeHtml(name)}</span>` +
+        `<span class="meta">${c.people} ${escapeHtml(L2I18n.t("reports.classPeopleShort", "чел."))} · K:D ${kd.toFixed(2)}</span></div>` +
+        `<div class="bar"><i style="width:${Math.max(2, Math.round(c[clsMetric] / maxV * 100))}%"></i></div></div>` +
+        `<div class="val" title="${share}%">${c[clsMetric].toLocaleString(loc)}</div></div>`;
+    }).join("") + (list.length > CLS_TOP
+      ? `<button type="button" class="rep-cls-more" id="repClsMore">${escapeHtml(clsExpanded
+          ? L2I18n.t("reports.classCollapse", "Свернуть")
+          : L2I18n.t("reports.classShowAll", "Показать все") + " (" + list.length + ")")}</button>`
+      : "");
+  }
+
+  document.getElementById("repClsTabs").addEventListener("click", (e) => {
+    const k = e.target.closest("[data-cls-metric]")?.dataset.clsMetric;
+    if(!k || k === clsMetric) return;
+    clsMetric = k;
+    renderPeriodHighlights(lastHighlightRows);
+  });
+  document.getElementById("repClsList").addEventListener("click", (e) => {
+    if(!e.target.closest("#repClsMore")) return;
+    clsExpanded = !clsExpanded;
+    renderPeriodHighlights(lastHighlightRows);
+  });
+
   // ---------- общий каркас радара (пятиугольник: PvP, Килы, Смерти, K:D, PvE) ----------
   // оба радара на странице рисуются по одним и тем же осям, чтобы «звезда» сверху
   // и «звезда» в сравнении пати читались одинаково
@@ -1853,6 +2000,7 @@
 
     renderSummaryHeader();
     renderTiles(totals(periodRows));
+    renderPeriodHighlights(periodRows);
 
     let avg = null;
     if(periodValue.startsWith("week:") || periodValue.startsWith("weeks:")) avg = averageOfBuckets(bucketsFor(grouped, "week_start"));
@@ -1966,6 +2114,18 @@
 
   function ptCurrentParties(){ return ptMode === "event" ? ptEventParties : ptUploadParties; }
 
+  // картинки: аватарка человека (своя или иконка его профессии из «Групп»), иконка
+  // пати — класс группы клана с таким же названием (как на карточках в «Группах»),
+  // а если пати «Соло»/без группы — аватарка её лидера
+  function ptAvatar(nickname){
+    const info = lookupMemberInfo(nickname);
+    return info.icon || classIcon(info.class_name) || BLANK_IMG;
+  }
+  function ptPartyIcon(p){
+    const g = groups.find(x => x.name === p.label);
+    return (g && g.class_name && classIcon(g.class_name)) || (p.leader ? ptAvatar(p.leader) : BLANK_IMG);
+  }
+
   function ptRender(){
     const parties = ptCurrentParties();
     const loc = L2I18n.locale();
@@ -1994,13 +2154,14 @@
       if(ptSortKey === "label" || ptSortKey === "people") return a.nickname.localeCompare(b.nickname);
       return (a[ptSortKey] - b[ptSortKey]) * dir;
     }).map(m =>
-      `<tr class="pt-member ${p.checked ? "" : "pt-off"}"><td></td><td class="pt-label">${escapeHtml(m.nickname)}</td><td></td><td></td>` +
+      `<tr class="pt-member ${p.checked ? "" : "pt-off"}"><td></td><td class="pt-label"><span class="pt-cell"><img class="pt-ico sm" src="${ptAvatar(m.nickname)}" alt="" />${escapeHtml(m.nickname)}</span></td><td></td><td></td>` +
       `<td>${m.kills.toLocaleString(loc)}</td><td>${m.deaths.toLocaleString(loc)}</td><td>${m.kd.toFixed(2)}</td>` +
       `<td>${m.pvp.toLocaleString(loc)}</td><td>${m.pve.toLocaleString(loc)}</td></tr>`
     ).join("");
     body.innerHTML = sorted.map(p =>
       `<tr class="pt-party ${p.checked ? "" : "pt-off"}" data-pt-toggle="${escapeHtml(p.key)}"><td><input type="checkbox" data-pt-check="${escapeHtml(p.key)}" ${p.checked ? "checked" : ""} /></td>` +
-      `<td class="pt-label">${p.expanded ? "▾" : "▸"} ${escapeHtml(p.label)}</td><td>${escapeHtml(p.leader)}</td><td>${p.people}</td>` +
+      `<td class="pt-label"><span class="pt-cell"><span class="pt-arrow">${p.expanded ? "▾" : "▸"}</span><img class="pt-ico" src="${ptPartyIcon(p)}" alt="" />${escapeHtml(p.label)}</span></td>` +
+      `<td>${p.leader ? `<span class="pt-cell"><img class="pt-ico sm" src="${ptAvatar(p.leader)}" alt="" />${escapeHtml(p.leader)}</span>` : ""}</td><td>${p.people}</td>` +
       `<td>${p.kills.toLocaleString(loc)}</td><td>${p.deaths.toLocaleString(loc)}</td><td>${p.kd.toFixed(2)}</td>` +
       `<td>${p.pvp.toLocaleString(loc)}</td><td>${p.pve.toLocaleString(loc)}</td></tr>` +
       (p.expanded ? memberRows(p) : "")
