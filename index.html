@@ -209,6 +209,23 @@
     const key = raw.split("").map(ch => CYR_LOOKALIKES[ch] || ch).join("").replace(/[^A-Za-zА-Яа-яЁё0-9]/g, "");
     return key || "=" + raw;
   }
+  // «Кто я» (права лидера/зама пати, свой кабинет, своя аватарка): МЯГКОЕ сравнение —
+  // точное совпадение или то же написание без учёта регистра/похожих букв. Строгий
+  // normalizeNick тут не годится: ник в профиле мог быть набран другим регистром, чем
+  // в «Группах»/переписи, и человек потерял бы доступ. Ники из одних путаемых символов
+  // (0000000000, iIiIiI…) — только точно, чтобы они не совпали друг с другом.
+  const LOOSE_LOOKALIKES = { "а":"a","в":"b","е":"e","к":"k","м":"m","н":"h","о":"o","р":"p","с":"c","т":"t","у":"y","х":"x","ё":"e","0":"o","l":"i" };
+  function looseNick(s){
+    return String(s || "").toLowerCase().split("").map(ch => LOOSE_LOOKALIKES[ch] || ch).join("").replace(/[^a-zа-яё0-9]/g, "");
+  }
+  function sameNick(a, b){
+    a = String(a || "").trim(); b = String(b || "").trim();
+    if(!a || !b) return false;
+    if(a === b) return true;
+    if(/^[0Oo1lIi|!]{3,}$/.test(a) || /^[0Oo1lIi|!]{3,}$/.test(b)) return false;
+    const ka = looseNick(a);
+    return !!ka && ka === looseNick(b);
+  }
   const BLANK_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'></svg>";
 
   const roleKey = profile.roles?.key || "obychniy";
@@ -234,8 +251,7 @@
   async function loadMyAvatar(){
     if(!profile.nickname) return null;
     const { data } = await db.from("member_classes").select("nickname, class_name, icon");
-    const norm = normalizeNick(profile.nickname);
-    const mine = (data || []).find(r => normalizeNick(r.nickname) === norm);
+    const mine = (data || []).find(r => sameNick(r.nickname, profile.nickname));
     if(!mine) return null;
     return mine.icon || (window.L2_CLASS_ICON && mine.class_name ? window.L2_CLASS_ICON(mine.class_name) : null);
   }

@@ -269,7 +269,23 @@
     const key = raw.split("").map(ch => CYR_LOOKALIKES[ch] || ch).join("").replace(/[^A-Za-zА-Яа-яЁё0-9]/g, "");
     return key || "=" + raw;
   }
-  const myNorm = normalizeNick(profile.nickname || "");
+  // «Кто я» (права лидера/зама пати, свой кабинет, своя аватарка): МЯГКОЕ сравнение —
+  // точное совпадение или то же написание без учёта регистра/похожих букв. Строгий
+  // normalizeNick тут не годится: ник в профиле мог быть набран другим регистром, чем
+  // в «Группах»/переписи, и человек потерял бы доступ. Ники из одних путаемых символов
+  // (0000000000, iIiIiI…) — только точно, чтобы они не совпали друг с другом.
+  const LOOSE_LOOKALIKES = { "а":"a","в":"b","е":"e","к":"k","м":"m","н":"h","о":"o","р":"p","с":"c","т":"t","у":"y","х":"x","ё":"e","0":"o","l":"i" };
+  function looseNick(s){
+    return String(s || "").toLowerCase().split("").map(ch => LOOSE_LOOKALIKES[ch] || ch).join("").replace(/[^a-zа-яё0-9]/g, "");
+  }
+  function sameNick(a, b){
+    a = String(a || "").trim(); b = String(b || "").trim();
+    if(!a || !b) return false;
+    if(a === b) return true;
+    if(/^[0Oo1lIi|!]{3,}$/.test(a) || /^[0Oo1lIi|!]{3,}$/.test(b)) return false;
+    const ka = looseNick(a);
+    return !!ka && ka === looseNick(b);
+  }
 
   function classIcon(name){ return (window.L2_CLASS_ICON && name) ? window.L2_CLASS_ICON(name) : null; }
   const BLANK_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='38' height='38'></svg>";
@@ -371,8 +387,8 @@
     if(!profile.party_id) return false;
     const g = groupOfNick(nick);
     if(!g || profile.party_id !== g.id) return false;
-    return (g.leader_nickname && normalizeNick(g.leader_nickname) === myNorm) ||
-           (g.deputy_nickname && normalizeNick(g.deputy_nickname) === myNorm);
+    return (g.leader_nickname && sameNick(g.leader_nickname, profile.nickname)) ||
+           (g.deputy_nickname && sameNick(g.deputy_nickname, profile.nickname));
   }
 
   function filterNicks(list){

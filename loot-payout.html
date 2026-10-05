@@ -183,6 +183,23 @@
     const key = raw.split("").map(ch => CYR_LOOKALIKES[ch] || ch).join("").replace(/[^A-Za-zА-Яа-яЁё0-9]/g, "");
     return key || "=" + raw;
   }
+  // «Кто я» (права лидера/зама пати, свой кабинет, своя аватарка): МЯГКОЕ сравнение —
+  // точное совпадение или то же написание без учёта регистра/похожих букв. Строгий
+  // normalizeNick тут не годится: ник в профиле мог быть набран другим регистром, чем
+  // в «Группах»/переписи, и человек потерял бы доступ. Ники из одних путаемых символов
+  // (0000000000, iIiIiI…) — только точно, чтобы они не совпали друг с другом.
+  const LOOSE_LOOKALIKES = { "а":"a","в":"b","е":"e","к":"k","м":"m","н":"h","о":"o","р":"p","с":"c","т":"t","у":"y","х":"x","ё":"e","0":"o","l":"i" };
+  function looseNick(s){
+    return String(s || "").toLowerCase().split("").map(ch => LOOSE_LOOKALIKES[ch] || ch).join("").replace(/[^a-zа-яё0-9]/g, "");
+  }
+  function sameNick(a, b){
+    a = String(a || "").trim(); b = String(b || "").trim();
+    if(!a || !b) return false;
+    if(a === b) return true;
+    if(/^[0Oo1lIi|!]{3,}$/.test(a) || /^[0Oo1lIi|!]{3,}$/.test(b)) return false;
+    const ka = looseNick(a);
+    return !!ka && ka === looseNick(b);
+  }
 
   // последняя перепись — чтобы пометить красным крестиком тех, кто уже пропал
   // из клана; пусто, если переписи вообще нет — тогда никого не помечаем
@@ -359,8 +376,7 @@
   // его собственная часть, если он вообще отмечен лидером хоть одного мероприятия
   // за этот период (сопоставление по нику, устойчивое к разнице в написании)
   function findMyLeaderKey(){
-    const norm = normalizeNick(profile.nickname);
-    return leaderOrder.find(nick => normalizeNick(nick) === norm) || null;
+    return leaderOrder.find(nick => sameNick(nick, profile.nickname)) || null;
   }
   function renderMyLeaderInfo(leaderKey){
     const el = document.getElementById("lpMyLeaderInfo");
