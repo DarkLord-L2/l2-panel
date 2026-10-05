@@ -911,11 +911,17 @@
       "Їхня голда завжди ділиться порівну між тими, хто лишився в клані, у тому самому списку лідера — цей перемикач впливає тільки на те, чи видно саму строку того, хто вийшов (з його вихідною, ще не поділеною сумою, для довідки). Вимкнено — рядок просто прихований, поділ лишається тим самим.",
       "Their gold is always split evenly among those still in the clan within the same leader's list — this toggle only controls whether the departed member's own row is shown (with their original, not-yet-split amount, for reference). Off — the row is simply hidden, the split stays the same.",
     ],
+    "admin.leaderCoefSoloLabel": ["Применять коэффициент лидера и в «ДКП Соло»", "Застосовувати коефіцієнт лідера і в «ДКП Соло»", "Apply the leader coefficient in “DKP Solo” too"],
+    "admin.leaderCoefSoloHint": [
+      "Выключено — в «ДКП Соло» лидер считается как все, по коэффициенту своей профессии. Включено — в «ДКП Соло» у лидера пати вместо коэффициента профессии берётся его коэффициент лидера из списка ниже.",
+      "Вимкнено — у «ДКП Соло» лідер рахується як усі, за коефіцієнтом своєї професії. Увімкнено — у «ДКП Соло» у лідера паті замість коефіцієнта професії береться його коефіцієнт лідера зі списку нижче.",
+      "Off — in “DKP Solo” the leader is counted like everyone else, by their class coefficient. On — in “DKP Solo” a party leader uses their leader coefficient from the list below instead of the class coefficient.",
+    ],
     "admin.leaderCoefTitle": ["Коэффициент пати-лидерам", "Коефіцієнт паті-лідерам", "Party leader coefficient"],
     "admin.leaderCoefHint": [
-      "Свой множитель для каждого текущего пати-лидера (Группы → лидер) — коэффициенты не складываются: у лидера этот множитель ЗАМЕНЯЕТ собой коэффициент профессии, а не добавляется поверх него. На саму пати и на «ДКП Соло» не влияет. Список — по тем, кто прямо сейчас отмечен лидером хоть одной пати; нет строки — считается как 1.",
-      "Свій множник для кожного поточного паті-лідера (Групи → лідер) — коефіцієнти не складаються: у лідера цей множник ЗАМІНЮЄ собою коефіцієнт професії, а не додається поверх нього. На саму паті і на «ДКП Соло» не впливає. Список — за тими, хто прямо зараз відмічений лідером хоч однієї паті; немає рядка — вважається як 1.",
-      "A separate multiplier for each current party leader (Groups → leader) — coefficients don't stack: for the leader this multiplier REPLACES their class coefficient instead of adding on top of it. Does not affect the party itself or “DKP Solo”. The list is built from whoever is currently set as a party's leader; no row — treated as 1.",
+      "Свой множитель для каждого текущего пати-лидера (Группы → лидер) — коэффициенты не складываются: у лидера этот множитель ЗАМЕНЯЕТ собой коэффициент профессии, а не добавляется поверх него. На саму пати не влияет; в «ДКП Соло» — только если включена галочка ниже. Список — по тем, кто прямо сейчас отмечен лидером хоть одной пати; нет строки — считается как 1.",
+      "Свій множник для кожного поточного паті-лідера (Групи → лідер) — коефіцієнти не складаються: у лідера цей множник ЗАМІНЮЄ собою коефіцієнт професії, а не додається поверх нього. На саму паті не впливає; у «ДКП Соло» — лише якщо ввімкнена галочка нижче. Список — за тими, хто прямо зараз відмічений лідером хоч однієї паті; немає рядка — вважається як 1.",
+      "A separate multiplier for each current party leader (Groups → leader) — coefficients don't stack: for the leader this multiplier REPLACES their class coefficient instead of adding on top of it. Does not affect the party itself; in “DKP Solo” only if the checkbox below is on. The list is built from whoever is currently set as a party's leader; no row — treated as 1.",
     ],
     "admin.leaderCoefEmpty": [
       "Ни в одной пати пока не назначен лидер (Группы → лидер).",

@@ -313,7 +313,25 @@
     const { data } = await db.from("loot_class_coefficients").select("class_name, coefficient");
     coefficients = new Map((data || []).map(r => [r.class_name, Number(r.coefficient)]));
   }
+  // «Применять коэффициент лидера и в ДКП Соло» (Админ-панель → «ДКП») — у текущего
+  // пати-лидера (Группы → лидер) вместо коэффициента профессии берётся его личный
+  // коэффициент лидера; не стакается с профессией, нет строки — 1
+  let leaderCoefInSolo = false;
+  let leaderCoefByNorm = new Map(); // normalizeNick(nickname) -> coefficient
+  let leaderNormSet = new Set();    // normalizeNick(leader_nickname) всех видимых пати
+  async function loadLeaderCoefficients(){
+    const [{ data: coefs }, { data: groups }] = await Promise.all([
+      db.from("loot_leader_coefficients").select("nickname, coefficient"),
+      db.from("clan_groups").select("leader_nickname").eq("hidden", false),
+    ]);
+    leaderCoefByNorm = new Map((coefs || []).map(r => [normalizeNick(r.nickname), Number(r.coefficient)]));
+    leaderNormSet = new Set((groups || []).map(g => g.leader_nickname).filter(Boolean).map(normalizeNick));
+  }
   function coefficientOf(nick){
+    if(leaderCoefInSolo && leaderNormSet.has(normalizeNick(nick))){
+      const lc = leaderCoefByNorm.get(normalizeNick(nick));
+      return lc === undefined ? 1 : lc;
+    }
     const cls = classOf(nick);
     if(!cls) return 1;
     const c = coefficients.get(cls);
@@ -329,6 +347,10 @@
     const { data } = await db.from("loot_split_settings").select("hide_zero_attendance, min_boost_percent").eq("clan_id", profile.clan_id).maybeSingle();
     hideZeroAttendance = !!data?.hide_zero_attendance;
     minBoostPercent = Number(data?.min_boost_percent) || 0;
+    // отдельным запросом: пока миграция schema_loot_leader_coef_in_solo.sql не
+    // выполнена, ошибка колонки не должна ломать соседние настройки выше
+    const { data: ls, error: lsErr } = await db.from("loot_split_settings").select("leader_coef_in_solo").eq("clan_id", profile.clan_id).maybeSingle();
+    leaderCoefInSolo = !lsErr && !!ls?.leader_coef_in_solo;
   }
 
   async function loadEventsAndAttendance(fromStr, toStr){
@@ -651,7 +673,7 @@
     renderHead();
   });
 
-  await Promise.all([loadCensus(), loadMemberClasses(), loadBoostStructure(), loadBoostValues(), loadCoefficients(), loadLootSplitSettings()]);
+  await Promise.all([loadCensus(), loadMemberClasses(), loadBoostStructure(), loadBoostValues(), loadCoefficients(), loadLeaderCoefficients(), loadLootSplitSettings()]);
   renderTable([]);
   if(restoreDkpFilters()) await doSplit();
 

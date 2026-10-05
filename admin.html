@@ -271,7 +271,16 @@
   <div class="admin-coef-row">
     <section class="card">
       <h2 data-i18n="admin.leaderCoefTitle">Коэффициент пати-лидерам</h2>
-      <p class="hint" data-i18n="admin.leaderCoefHint">Свой множитель для каждого текущего пати-лидера (Группы → лидер) — коэффициенты не складываются: у лидера этот множитель ЗАМЕНЯЕТ собой коэффициент профессии, а не добавляется поверх него. На саму пати и на «ДКП Соло» не влияет. Список — по тем, кто прямо сейчас отмечен лидером хоть одной пати; нет строки — считается как 1.</p>
+      <p class="hint" data-i18n="admin.leaderCoefHint">Свой множитель для каждого текущего пати-лидера (Группы → лидер) — коэффициенты не складываются: у лидера этот множитель ЗАМЕНЯЕТ собой коэффициент профессии, а не добавляется поверх него. На саму пати не влияет; в «ДКП Соло» — только если включена галочка ниже. Список — по тем, кто прямо сейчас отмечен лидером хоть одной пати; нет строки — считается как 1.</p>
+      <div class="section-toggle-row">
+        <span class="label" data-i18n="admin.leaderCoefSoloLabel">Применять коэффициент лидера и в «ДКП Соло»</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="lootLeaderSoloInput" />
+          <span class="track"></span>
+        </label>
+      </div>
+      <p class="hint" data-i18n="admin.leaderCoefSoloHint">Выключено — в «ДКП Соло» лидер считается как все, по коэффициенту своей профессии. Включено — в «ДКП Соло» у лидера пати вместо коэффициента профессии берётся его коэффициент лидера из списка ниже.</p>
+      <p class="error-msg" id="lootLeaderSoloError"></p>
       <div class="loot-coef-list" id="lootLeaderCoefList"></div>
       <p class="hint" id="lootLeaderCoefEmpty" style="display:none;" data-i18n="admin.leaderCoefEmpty">Ни в одной пати пока не назначен лидер (Группы → лидер).</p>
       <p class="error-msg" id="lootLeaderCoefError"></p>
@@ -715,6 +724,28 @@
     cb.disabled = true;
     const { error } = await db.from("loot_split_settings").upsert(
       { clan_id: profile.clan_id, hide_zero_attendance: cb.checked },
+      { onConflict: "clan_id" }
+    );
+    if(error){
+      errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
+      cb.checked = !cb.checked;
+    }
+    cb.disabled = false;
+  });
+
+  // ---------- «Коэффициент лидера и в ДКП Соло» — галочка ----------
+  async function loadLootLeaderSolo(){
+    const { data, error } = await db.from("loot_split_settings").select("leader_coef_in_solo").eq("clan_id", profile.clan_id).maybeSingle();
+    if(error){ console.error(error); return; }
+    document.getElementById("lootLeaderSoloInput").checked = !!data?.leader_coef_in_solo;
+  }
+  document.getElementById("lootLeaderSoloInput").addEventListener("change", async () => {
+    const cb = document.getElementById("lootLeaderSoloInput");
+    const errEl = document.getElementById("lootLeaderSoloError");
+    errEl.textContent = "";
+    cb.disabled = true;
+    const { error } = await db.from("loot_split_settings").upsert(
+      { clan_id: profile.clan_id, leader_coef_in_solo: cb.checked },
       { onConflict: "clan_id" }
     );
     if(error){
@@ -1592,7 +1623,7 @@
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(roleDisplayLabel(r)), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
   renderRoleLabelsList();
-  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadLootLeaderCoefficients(), loadWeeklyTaxAmount(), loadTaxReportTemplate(), loadLootHideZero(), loadMinBoostPercent(), loadPayoutShowLeft(), loadClosePayoutState()]);
+  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadLootLeaderCoefficients(), loadWeeklyTaxAmount(), loadTaxReportTemplate(), loadLootHideZero(), loadLootLeaderSolo(), loadMinBoostPercent(), loadPayoutShowLeft(), loadClosePayoutState()]);
   renderSectionOrder();
   renderSectionToggleList();
   renderDkpSectionToggleList();
