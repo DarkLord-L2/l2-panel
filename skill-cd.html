@@ -1,0 +1,529 @@
+﻿<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>КД скилов — Кабинет клана</title>
+<link rel="stylesheet" href="js/theme.css?v=26" />
+<style>
+  html, body{ background: var(--bg); }
+  body{ margin:0; }
+
+  .cd-wrap{ padding:4px 0 40px; }
+  .cd-wrap .page-head{ justify-content:flex-start; gap:18px; flex-wrap:wrap; }
+  .cd-actions{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .cd-live{ font-size:11.5px; color: var(--text-dim); display:inline-flex; align-items:center; gap:6px; }
+  .cd-live i{ width:8px; height:8px; border-radius:50%; background: var(--border-lit); display:inline-block; }
+  .cd-live.on i{ background: var(--ok); box-shadow:0 0 6px var(--ok); }
+
+  /* доска — то самое «окошко»: ровно этот блок переезжает в плавающее окно поверх игры */
+  .cd-board{ background: var(--panel); border:1px solid var(--border); border-radius:10px; padding:10px 12px 12px; display:inline-block; max-width:100%; box-sizing:border-box; }
+  .cd-board.cd-floating{ display:block; border:0; border-radius:0; min-height:100vh; padding:8px 10px 10px; }
+  .cd-board-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 8px; }
+  .cd-clan{ font-size:15px; font-weight:700; color: var(--gold); letter-spacing:.01em; }
+  .cd-board-tools{ display:flex; gap:6px; align-items:center; }
+  .cd-board-tools .btn{ padding:3px 10px; font-size:12px; }
+  .cd-scroll{ overflow:auto; max-width:100%; }
+
+  table.cd-table{ border-collapse:separate; border-spacing:0; font-size:13px; }
+  table.cd-table th{ font-weight:600; font-size:10.5px; color: var(--text-dim); text-align:center; padding:2px 3px 6px; vertical-align:bottom; max-width:52px; }
+  table.cd-table th.cd-group-h{ text-align:left; font-size:11.5px; padding-left:4px; vertical-align:middle; }
+  .cd-skill-h img{ width:30px; height:30px; object-fit:contain; display:block; margin:0 auto 2px; border-radius:4px; }
+  .cd-skill-h span{ display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:52px; }
+  table.cd-table td{ padding:2px 3px; text-align:center; }
+  td.cd-group-name{ text-align:left; white-space:nowrap; font-weight:600; padding:2px 14px 2px 4px; color: var(--text); }
+  td.cd-group-name small{ display:block; font-weight:400; font-size:10.5px; color: var(--text-dim); }
+  tr.cd-row-me td.cd-group-name{ color: var(--gold); }
+
+  .cd-cell{
+    position:relative; width:44px; height:44px; border-radius:7px; padding:0;
+    border:1px solid var(--border); background: rgba(158,75,75,.16); cursor:default;
+    display:inline-flex; align-items:center; justify-content:center; color: var(--text-dim); font-size:15px; font-weight:700;
+  }
+  .cd-cell img{ width:32px; height:32px; object-fit:contain; filter:grayscale(.7) brightness(.5); transition:filter .15s; }
+  .cd-cell.on{ background: rgba(76,154,99,.16); border-color: var(--ok); color: var(--text); }
+  .cd-cell.on img{ filter:none; }
+  .cd-cell.on::after{
+    content:"✓"; position:absolute; right:-3px; bottom:-3px; width:16px; height:16px; border-radius:50%;
+    background: var(--ok); color:#fff; font-size:11px; line-height:16px; text-align:center; font-weight:700;
+  }
+  .cd-cell.edit{ cursor:pointer; }
+  .cd-cell.edit:hover{ border-color: var(--gold); }
+  .cd-cell.edit:active{ transform:scale(.94); }
+
+  .cd-empty{ padding:18px 6px; }
+  .cd-placeholder{ display:none; }
+  .cd-placeholder.show{ display:block; }
+
+  /* окно «Скилы» (только клан-лидер) */
+  .cd-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:flex-start; justify-content:center; padding:40px 12px; z-index:50; overflow:auto; }
+  .cd-overlay.show{ display:flex; }
+  .cd-modal{ background: var(--panel); border:1px solid var(--border-lit); border-radius:12px; padding:16px 18px; width:100%; max-width:520px; box-sizing:border-box; }
+  .cd-modal h2{ margin:0 0 4px; font-size:16px; }
+  .cd-skill-row{ display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border); }
+  .cd-skill-icon{
+    width:44px; height:44px; flex:none; border-radius:7px; border:1px dashed var(--border-lit); background: var(--panel-2);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; color: var(--text-dim); font-size:20px; overflow:hidden; padding:0;
+  }
+  .cd-skill-icon img{ width:100%; height:100%; object-fit:contain; }
+  .cd-skill-icon:hover, .cd-skill-icon.drag{ border-color: var(--gold); color: var(--gold); }
+  .cd-skill-row input[type="text"]{ flex:1; min-width:0; }
+  .cd-skill-row .btn{ padding:3px 8px; }
+  .cd-party-row{ display:flex; align-items:center; gap:10px; padding:8px 2px; border-bottom:1px solid var(--border); cursor:pointer; }
+  .cd-party-row input{ width:18px; height:18px; flex:none; }
+  .cd-party-row small{ color: var(--text-dim); margin-left:auto; }
+  .cd-modal-foot{ display:flex; justify-content:space-between; align-items:center; margin-top:14px; gap:10px; }
+</style>
+</head>
+<body>
+
+<div class="cd-wrap" id="wrap" style="display:none;">
+  <div class="page-head">
+    <h1>КД скилов</h1>
+    <div class="cd-actions">
+      <span class="cd-live" id="liveBadge"><i></i><span>связь…</span></span>
+      <button class="btn" id="skillsBtn" type="button" style="display:none;">⚙ Скилы</button>
+      <button class="btn" id="partiesBtn" type="button" style="display:none;">⚙ Пати</button>
+      <button class="btn btn-primary" id="popBtn" type="button">🗗 Окошко поверх игры</button>
+    </div>
+  </div>
+  <p class="hint" id="roleHint"></p>
+  <p class="error-msg" id="errMsg"></p>
+
+  <div id="boardHost">
+    <div class="cd-board" id="board"></div>
+  </div>
+  <div class="cd-placeholder card" id="placeholder">
+    <p class="hint" style="margin:0 0 10px;">Таблица открыта в отдельном окошке.</p>
+    <button class="btn" id="backBtn" type="button">Вернуть сюда</button>
+  </div>
+</div>
+
+<div class="cd-overlay" id="skillsOverlay">
+  <div class="cd-modal">
+    <h2>Скилы</h2>
+    <p class="hint">Это столбцы таблицы. Нажми на квадрат слева, чтобы выбрать картинку (или перетащи файл / вставь через Ctrl+V, пока курсор над квадратом). Название можно сокращать, оно подписывается под картинкой.</p>
+    <div id="skillList"></div>
+    <div class="cd-skill-row" id="newSkillRow">
+      <button class="cd-skill-icon" id="newIcon" type="button" title="Картинка">＋</button>
+      <input type="text" id="newName" placeholder="Название нового скила" maxlength="40" />
+      <button class="btn btn-primary" id="addSkillBtn" type="button">Добавить</button>
+    </div>
+    <p class="error-msg" id="skillsErr"></p>
+    <div class="cd-modal-foot"><span></span><button class="btn" id="skillsClose" type="button">Готово</button></div>
+  </div>
+</div>
+<div class="cd-overlay" id="partiesOverlay">
+  <div class="cd-modal">
+    <h2>Пати в таблице</h2>
+    <p class="hint">Галочка — пати показывается в таблице и в окошке. Без галочки пати скрыта у всех, отметки по ней не теряются.</p>
+    <div id="partyList"></div>
+    <p class="error-msg" id="partiesErr"></p>
+    <div class="cd-modal-foot"><span></span><button class="btn" id="partiesClose" type="button">Готово</button></div>
+  </div>
+</div>
+<input type="file" id="iconPicker" accept="image/*" style="display:none;" />
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-client.js?v=21"></script>
+<script src="js/i18n.js?v=48"></script>
+<script>
+(async function(){
+  const session = await L2Cabinet.requireSession();
+  if(!session) return;
+
+  const profile = await L2Cabinet.getProfile();
+  if(!profile){
+    document.body.innerHTML = '<div class="login-wrap"><div class="card login-card"><h1>⚠ Профиль не найден</h1>' +
+      '<p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+    return;
+  }
+
+  const db = L2Cabinet.client;
+  const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
+  const clanId = profile.clan_id;
+  const clanName = profile.clans?.display_name || profile.clans?.name || "Клан";
+  document.getElementById("wrap").style.display = "";
+
+  const $ = (id) => document.getElementById(id);
+  const board = $("board");
+  function esc(s){
+    return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  }
+  function showError(msg){ $("errMsg").textContent = msg || ""; }
+  const sameNick = (a, b) => String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+
+  let groups = [];            // [{id, name, leader_nickname}]
+  let skills = [];            // [{id, name, icon, sort_order}]
+  const marks = new Map();    // "groupId|skillId" -> true
+  const key = (g, s) => g + "|" + s;
+
+  // кто что видит: клан-лидер/админ — все пати и правит любую; остальные с назначенной пати — только свою
+  // (правит, если назначен её лидером); без пати — все, но только смотрит. Права на запись всё равно
+  // дублируются RLS-политиками в schema_skill_cd.sql — это лишь удобство интерфейса.
+  function visibleGroups(){
+    const on = groups.filter(g => g.cd_enabled !== false);
+    if(isAdmin || !profile.party_id) return on;
+    return on.filter(g => g.id === profile.party_id);
+  }
+  function canEdit(g){
+    if(isAdmin) return true;
+    return profile.party_id === g.id && !!g.leader_nickname && sameNick(g.leader_nickname, profile.nickname);
+  }
+  $("skillsBtn").style.display = isAdmin ? "" : "none";
+  $("partiesBtn").style.display = isAdmin ? "" : "none";
+  $("roleHint").textContent = isAdmin
+    ? "Лидеры пати отмечают, какие скилы у них есть — ты видишь это здесь сразу. Зелёная галочка — скил есть."
+    : (profile.party_id ? "Нажимай на скилы своей пати: зелёная галочка — скил есть. Клан-лидер видит отметки сразу." : "");
+
+  // ---------- загрузка ----------
+  async function loadGroups(){
+    let res = await db.from("clan_groups").select("id, name, sort_order, leader_nickname, cd_enabled")
+      .eq("hidden", false).order("sort_order").order("name");
+    if(res.error){ // колонка cd_enabled ещё не создана (не выполнена последняя часть schema_skill_cd.sql) — показываем все пати
+      res = await db.from("clan_groups").select("id, name, sort_order, leader_nickname")
+        .eq("hidden", false).order("sort_order").order("name");
+    }
+    if(res.error) throw res.error;
+    groups = res.data || [];
+  }
+  async function loadSkills(){
+    const { data, error } = await db.from("cd_skills").select("id, name, icon, sort_order")
+      .order("sort_order").order("created_at");
+    if(error) throw error;
+    skills = data || [];
+  }
+  async function loadMarks(){
+    const { data, error } = await db.from("cd_marks").select("group_id, skill_id, has");
+    if(error) throw error;
+    marks.clear();
+    for(const m of (data || [])) if(m.has) marks.set(key(m.group_id, m.skill_id), true);
+  }
+
+  // ---------- отрисовка доски ----------
+  function renderBoard(){
+    const vg = visibleGroups();
+    let html = '<div class="cd-board-head"><span class="cd-clan">' + esc(clanName) + '</span><div class="cd-board-tools">';
+    if(isAdmin) html += '<button class="btn btn-danger" type="button" data-act="reset">Сбросить всё</button>';
+    html += '</div></div>';
+
+    if(!skills.length){
+      html += '<p class="hint cd-empty">' + (isAdmin
+        ? 'Скилов пока нет. Нажми «⚙ Скилы» и добавь первые (с картинками).'
+        : 'Клан-лидер пока не добавил скилы.') + '</p>';
+    } else if(!vg.length){
+      html += '<p class="hint cd-empty">' + (isAdmin
+        ? 'Пати нет. Создай группы в разделе «Группы» — они появятся здесь строками.'
+        : 'Нет пати для показа.') + '</p>';
+    } else {
+      html += '<div class="cd-scroll"><table class="cd-table"><thead><tr><th class="cd-group-h">Группа</th>';
+      for(const s of skills){
+        html += '<th class="cd-skill-h" title="' + esc(s.name) + '">' +
+          (s.icon ? '<img src="' + esc(s.icon) + '" alt="" />' : '') + '<span>' + esc(s.name) + '</span></th>';
+      }
+      html += '</tr></thead><tbody>';
+      for(const g of vg){
+        const edit = canEdit(g);
+        html += '<tr' + (profile.party_id === g.id ? ' class="cd-row-me"' : '') + '><td class="cd-group-name">' + esc(g.name) +
+          (g.leader_nickname ? '<small>' + esc(g.leader_nickname) + '</small>' : '') + '</td>';
+        for(const s of skills){
+          const on = marks.has(key(g.id, s.id));
+          html += '<td><button type="button" class="cd-cell' + (on ? ' on' : '') + (edit ? ' edit' : '') +
+            '" data-g="' + g.id + '" data-s="' + s.id + '" title="' + esc(s.name) + '"' + (edit ? '' : ' tabindex="-1"') + '>' +
+            (s.icon ? '<img src="' + esc(s.icon) + '" alt="" />' : esc((s.name || "?").slice(0, 1).toUpperCase())) + '</button></td>';
+        }
+        html += '</tr>';
+      }
+      html += '</tbody></table></div>';
+    }
+    board.innerHTML = html;
+  }
+
+  // ---------- отметка (клик по клетке) ----------
+  board.addEventListener("click", async (e) => {
+    const resetBtn = e.target.closest('[data-act="reset"]');
+    if(resetBtn){
+      if(!confirm("Сбросить все отметки у всех пати?")) return;
+      showError("");
+      const { error } = await db.from("cd_marks").update({ has: false, updated_at: new Date().toISOString() })
+        .eq("clan_id", clanId);
+      if(error){ showError("Не удалось сбросить: " + error.message); return; }
+      marks.clear(); renderBoard();
+      return;
+    }
+    const cell = e.target.closest(".cd-cell.edit");
+    if(!cell) return;
+    const g = cell.dataset.g, s = cell.dataset.s, k = key(g, s);
+    const next = !marks.has(k);
+    if(next) marks.set(k, true); else marks.delete(k);
+    cell.classList.toggle("on", next);
+    showError("");
+    const { error } = await db.from("cd_marks").upsert(
+      { clan_id: clanId, group_id: g, skill_id: s, has: next, updated_at: new Date().toISOString() },
+      { onConflict: "group_id,skill_id" });
+    if(error){
+      if(next) marks.delete(k); else marks.set(k, true);
+      cell.classList.toggle("on", !next);
+      showError("Не удалось сохранить: " + error.message);
+    }
+  });
+
+  // ---------- realtime ----------
+  let liveOk = false;
+  function setLive(ok){
+    liveOk = ok;
+    const b = $("liveBadge");
+    b.classList.toggle("on", ok);
+    b.querySelector("span").textContent = ok ? "в реальном времени" : "нет связи (обновляю раз в 20 с)";
+  }
+  let marksTimer = null, skillsTimer = null;
+  function scheduleMarks(){
+    clearTimeout(marksTimer);
+    marksTimer = setTimeout(async () => { try { await loadMarks(); renderBoard(); } catch(e){ console.error(e); } }, 150);
+  }
+  function scheduleSkills(){
+    clearTimeout(skillsTimer);
+    skillsTimer = setTimeout(async () => {
+      try { await Promise.all([loadGroups(), loadSkills(), loadMarks()]); renderBoard(); if($("skillsOverlay").classList.contains("show")) renderSkillList(); }
+      catch(e){ console.error(e); }
+    }, 150);
+  }
+  const channel = db.channel("cd-skill-" + clanId)
+    .on("postgres_changes", { event: "*", schema: "public", table: "cd_marks" }, scheduleMarks)
+    .on("postgres_changes", { event: "*", schema: "public", table: "cd_skills" }, scheduleSkills)
+    .subscribe((status) => setLive(status === "SUBSCRIBED"));
+  setInterval(() => { if(!liveOk) scheduleMarks(); }, 20000);
+  window.addEventListener("pagehide", () => { try { db.removeChannel(channel); } catch(e){} closeFloating(); });
+
+  // ---------- плавающее окошко поверх игры ----------
+  // Сначала Document Picture-in-Picture (Chrome/Edge): окно всегда поверх остальных, в т.ч. поверх
+  // игры в оконном/безрамочном режиме. Если нельзя (другой браузер) — обычное маленькое окно.
+  // В обоих случаях доска (#board) просто переезжает в то окно, а скрипт остаётся тут же — поэтому
+  // клики и realtime работают без всякой передачи данных.
+  let floatWin = null;
+  function copyStyles(target){
+    const rootEl = document.documentElement;
+    for(const a of rootEl.attributes){ try { target.documentElement.setAttribute(a.name, a.value); } catch(e){} }
+    for(const n of document.querySelectorAll('link[rel="stylesheet"], style')){
+      const c = n.cloneNode(true);
+      if(c.tagName === "LINK") c.href = n.href;
+      target.head.appendChild(c);
+    }
+    const t = target.createElement("title"); t.textContent = clanName + " — КД скилов"; target.head.appendChild(t);
+  }
+  async function openFloating(){
+    if(floatWin) { try { floatWin.focus(); } catch(e){} return; }
+    showError("");
+    const w = Math.min(900, 190 + skills.length * 50);
+    const h = Math.min(700, 120 + Math.max(1, visibleGroups().length) * 52);
+    let win = null;
+    const pipApis = [];
+    try { if(window.documentPictureInPicture) pipApis.push(window.documentPictureInPicture); } catch(e){}
+    try { if(window.top !== window && window.top.documentPictureInPicture) pipApis.push(window.top.documentPictureInPicture); } catch(e){}
+    for(const api of pipApis){
+      try { win = await api.requestWindow({ width: w, height: h }); break; } catch(e){ win = null; }
+    }
+    if(!win){
+      win = window.open("", "cdSkillWin", "popup=yes,width=" + w + ",height=" + h);
+      if(!win){ showError("Браузер заблокировал окно. Разреши всплывающие окна для сайта и нажми ещё раз."); return; }
+      win.document.open(); win.document.write("<!doctype html><html><head><meta charset='utf-8'></head><body></body></html>"); win.document.close();
+    }
+    floatWin = win;
+    copyStyles(win.document);
+    win.document.body.style.margin = "0";
+    board.classList.add("cd-floating");
+    win.document.body.appendChild(board);
+    $("placeholder").classList.add("show");
+    $("popBtn").disabled = true;
+    win.addEventListener("pagehide", restoreBoard);
+    const closedPoll = setInterval(() => { try { if(!floatWin || floatWin.closed){ clearInterval(closedPoll); restoreBoard(); } } catch(e){ clearInterval(closedPoll); } }, 1000);
+  }
+  function restoreBoard(){
+    if(!floatWin) return;
+    floatWin = null;
+    board.classList.remove("cd-floating");
+    $("boardHost").appendChild(board);
+    $("placeholder").classList.remove("show");
+    $("popBtn").disabled = false;
+  }
+  function closeFloating(){
+    const w = floatWin;
+    restoreBoard();
+    try { if(w) w.close(); } catch(e){}
+  }
+  $("popBtn").addEventListener("click", openFloating);
+  $("backBtn").addEventListener("click", closeFloating);
+
+  // ---------- управление скилами (клан-лидер) ----------
+  function downscaleImage(file, maxSize){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = () => { img.src = reader.result; };
+      reader.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const cw = Math.round(img.width * scale), ch = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = cw; canvas.height = ch;
+        canvas.getContext("2d").drawImage(img, 0, 0, cw, ch);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+  function skillsError(msg){ $("skillsErr").textContent = msg || ""; }
+
+  function renderSkillList(){
+    const box = $("skillList");
+    box.innerHTML = skills.map((s, i) =>
+      '<div class="cd-skill-row" data-id="' + s.id + '">' +
+        '<button type="button" class="cd-skill-icon" data-act="icon" title="Сменить картинку">' + (s.icon ? '<img src="' + esc(s.icon) + '" alt="" />' : '＋') + '</button>' +
+        '<input type="text" data-act="name" value="' + esc(s.name) + '" maxlength="40" />' +
+        '<button type="button" class="btn" data-act="up"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+        '<button type="button" class="btn" data-act="down"' + (i === skills.length - 1 ? ' disabled' : '') + '>↓</button>' +
+        '<button type="button" class="btn btn-danger" data-act="del">✕</button>' +
+      '</div>').join("");
+  }
+
+  let pickerTarget = null; // id скила или "new"
+  let newIconData = null;
+  async function applyIcon(target, file){
+    if(!file || !/^image\//.test(file.type)) return;
+    skillsError("");
+    try {
+      const dataUrl = await downscaleImage(file, 64);
+      if(target === "new"){
+        newIconData = dataUrl;
+        $("newIcon").innerHTML = '<img src="' + dataUrl + '" alt="" />';
+      } else {
+        const { error } = await db.from("cd_skills").update({ icon: dataUrl }).eq("id", target);
+        if(error) throw error;
+        const s = skills.find(x => x.id === target); if(s) s.icon = dataUrl;
+        renderSkillList(); renderBoard();
+      }
+    } catch(e){ skillsError("Не удалось загрузить картинку: " + (e.message || e)); }
+  }
+  $("iconPicker").addEventListener("change", async (e) => {
+    const f = e.target.files[0]; e.target.value = "";
+    if(f && pickerTarget) await applyIcon(pickerTarget, f);
+  });
+  $("newIcon").addEventListener("click", () => { pickerTarget = "new"; $("iconPicker").click(); });
+
+  // перетаскивание файла и Ctrl+V — на квадрат картинки (у нового скила или у существующего)
+  let hoverIconTarget = null;
+  function iconTargetOf(el){
+    const b = el && el.closest && el.closest(".cd-skill-icon");
+    if(!b) return null;
+    if(b.id === "newIcon") return "new";
+    const row = b.closest(".cd-skill-row"); return row ? row.dataset.id : null;
+  }
+  const overlay = $("skillsOverlay");
+  overlay.addEventListener("mouseover", (e) => { hoverIconTarget = iconTargetOf(e.target); });
+  overlay.addEventListener("dragover", (e) => { const t = iconTargetOf(e.target); if(t){ e.preventDefault(); e.target.closest(".cd-skill-icon").classList.add("drag"); } });
+  overlay.addEventListener("dragleave", (e) => { const b = e.target.closest && e.target.closest(".cd-skill-icon"); if(b) b.classList.remove("drag"); });
+  overlay.addEventListener("drop", async (e) => {
+    const t = iconTargetOf(e.target); if(!t) return;
+    e.preventDefault(); e.target.closest(".cd-skill-icon").classList.remove("drag");
+    await applyIcon(t, e.dataTransfer.files[0]);
+  });
+  document.addEventListener("paste", async (e) => {
+    if(!overlay.classList.contains("show") || !hoverIconTarget) return;
+    const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith("image/"));
+    if(!item) return;
+    e.preventDefault();
+    await applyIcon(hoverIconTarget, item.getAsFile());
+  });
+
+  $("skillList").addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-act]"); if(!btn) return;
+    const row = btn.closest(".cd-skill-row"); const id = row.dataset.id;
+    const act = btn.dataset.act;
+    skillsError("");
+    if(act === "icon"){ pickerTarget = id; $("iconPicker").click(); return; }
+    if(act === "del"){
+      const s = skills.find(x => x.id === id);
+      if(!confirm("Удалить скил «" + (s ? s.name : "") + "» вместе со всеми отметками?")) return;
+      const { error } = await db.from("cd_skills").delete().eq("id", id);
+      if(error){ skillsError("Не удалось удалить: " + error.message); return; }
+      skills = skills.filter(x => x.id !== id);
+      for(const k of [...marks.keys()]) if(k.endsWith("|" + id)) marks.delete(k);
+      renderSkillList(); renderBoard(); return;
+    }
+    if(act === "up" || act === "down"){
+      const i = skills.findIndex(x => x.id === id), j = act === "up" ? i - 1 : i + 1;
+      if(i < 0 || j < 0 || j >= skills.length) return;
+      [skills[i], skills[j]] = [skills[j], skills[i]];
+      // пишем порядок заново для всех — просто и без дыр в нумерации
+      const results = await Promise.all(skills.map((s, idx) => { s.sort_order = idx; return db.from("cd_skills").update({ sort_order: idx }).eq("id", s.id); }));
+      const bad = results.find(r => r.error);
+      if(bad) skillsError("Не удалось сохранить порядок: " + bad.error.message);
+      renderSkillList(); renderBoard();
+    }
+  });
+  $("skillList").addEventListener("change", async (e) => {
+    if(e.target.dataset.act !== "name") return;
+    const id = e.target.closest(".cd-skill-row").dataset.id;
+    const name = e.target.value.trim();
+    const s = skills.find(x => x.id === id);
+    if(!name){ e.target.value = s ? s.name : ""; return; }
+    const { error } = await db.from("cd_skills").update({ name }).eq("id", id);
+    if(error){ skillsError("Не удалось сохранить название: " + error.message); return; }
+    if(s) s.name = name;
+    renderBoard();
+  });
+  async function addSkill(){
+    const name = $("newName").value.trim();
+    if(!name){ skillsError("Введи название скила."); return; }
+    skillsError("");
+    const { data, error } = await db.from("cd_skills")
+      .insert({ clan_id: clanId, name, icon: newIconData, sort_order: skills.length }).select("id, name, icon, sort_order").single();
+    if(error){ skillsError("Не удалось добавить: " + error.message); return; }
+    skills.push(data);
+    $("newName").value = ""; newIconData = null; $("newIcon").textContent = "＋";
+    renderSkillList(); renderBoard();
+  }
+  $("addSkillBtn").addEventListener("click", addSkill);
+  $("newName").addEventListener("keydown", (e) => { if(e.key === "Enter") addSkill(); });
+  $("skillsBtn").addEventListener("click", () => { renderSkillList(); skillsError(""); overlay.classList.add("show"); });
+  function closeSkills(){ overlay.classList.remove("show"); }
+  $("skillsClose").addEventListener("click", closeSkills);
+  overlay.addEventListener("click", (e) => { if(e.target === overlay) closeSkills(); });
+
+  // ---------- какие пати показывать (клан-лидер) ----------
+  const partiesOverlay = $("partiesOverlay");
+  function renderPartyList(){
+    $("partyList").innerHTML = groups.length ? groups.map(g =>
+      '<label class="cd-party-row"><input type="checkbox" data-g="' + g.id + '"' + (g.cd_enabled !== false ? ' checked' : '') + ' />' +
+      '<span>' + esc(g.name) + '</span>' + (g.leader_nickname ? '<small>' + esc(g.leader_nickname) + '</small>' : '') + '</label>').join("")
+      : '<p class="hint">Пати нет. Создай группы в разделе «Группы».</p>';
+  }
+  $("partyList").addEventListener("change", async (e) => {
+    const id = e.target.dataset.g; if(!id) return;
+    const g = groups.find(x => x.id === id); if(!g) return;
+    const on = e.target.checked;
+    $("partiesErr").textContent = "";
+    const { error } = await db.from("clan_groups").update({ cd_enabled: on }).eq("id", id);
+    if(error){
+      e.target.checked = !on;
+      $("partiesErr").textContent = "Не удалось сохранить: " + error.message + " (нужно выполнить последнюю часть schema_skill_cd.sql)";
+      return;
+    }
+    g.cd_enabled = on; renderBoard();
+  });
+  $("partiesBtn").addEventListener("click", () => { renderPartyList(); $("partiesErr").textContent = ""; partiesOverlay.classList.add("show"); });
+  $("partiesClose").addEventListener("click", () => partiesOverlay.classList.remove("show"));
+  partiesOverlay.addEventListener("click", (e) => { if(e.target === partiesOverlay) partiesOverlay.classList.remove("show"); });
+
+  // ---------- старт ----------
+  try {
+    await Promise.all([loadGroups(), loadSkills(), loadMarks()]);
+  } catch(e){
+    showError("Не удалось загрузить данные: " + (e.message || e) + ". Если раздел новый — нужно один раз выполнить supabase/schema_skill_cd.sql в SQL Editor.");
+  }
+  renderBoard();
+})();
+</script>
+</body>
+</html>

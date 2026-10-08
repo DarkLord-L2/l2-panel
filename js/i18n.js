@@ -36,6 +36,7 @@
     "section.loot_split_party": ["ДКП Пати", "ДКП Паті", "DKP Party"],
     "section.loot_payout": ["Раздача", "Роздача", "Payout"],
     "section.trends": ["Динамика", "Динаміка", "Trends"],
+    "section.skill_cd": ["КД скилов", "КД скілів", "Skill cooldowns"],
     "trends.attendanceTitle": ["Посещаемость по неделям", "Відвідуваність за тижнями", "Attendance by week"],
     "trends.attendanceHint": [
       "Сколько разных ников отметилось хотя бы на одном мероприятии за неделю — за последние 12 недель.",
