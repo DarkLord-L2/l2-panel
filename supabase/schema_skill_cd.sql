@@ -115,3 +115,6 @@ end $$;
 -- ---------- 5. какие пати показывать в таблице «КД скилов» (настраивает клан-лидер) ----------
 -- Выключенная пати пропадает из таблицы у всех (и из окошка), отметки по ней сохраняются.
 alter table public.clan_groups add column if not exists cd_enabled boolean not null default true;
+
+-- ---------- 6. номер пати в таблице «КД скилов» (задаёт клан-лидер, видят лидеры пати) ----------
+alter table public.clan_groups add column if not exists cd_number int;

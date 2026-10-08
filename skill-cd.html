@@ -51,6 +51,40 @@
   .cd-cell.edit:hover{ border-color: var(--gold); }
   .cd-cell.edit:active{ transform:scale(.94); }
 
+  /* сжатие: всё переключается классами на самой доске, поэтому работает и в плавающем окошке */
+  .cd-board{ position:relative; }
+  .cd-board-head{ padding-right:30px; }
+  .cd-menu-btn{
+    position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:5px; padding:0; line-height:20px;
+    border:1px solid transparent; background:none; color: var(--text-dim); cursor:pointer; font-size:15px; z-index:3;
+  }
+  .cd-menu-btn:hover, .cd-menu-btn.open{ border-color: var(--border-lit); color: var(--gold); background: var(--panel-2); }
+  .cd-menu{
+    position:absolute; top:28px; right:4px; z-index:4; background: var(--panel-2); border:1px solid var(--border-lit);
+    border-radius:8px; padding:8px 10px; min-width:210px; box-shadow:0 6px 20px rgba(0,0,0,.5);
+  }
+  .cd-menu label{ display:flex; align-items:center; gap:8px; font-size:12.5px; padding:3px 0; cursor:pointer; color: var(--text); }
+  .cd-menu-row{ display:flex; gap:6px; flex-wrap:wrap; margin-top:7px; }
+  .cd-menu-row .btn{ padding:3px 9px; font-size:11.5px; }
+  .cd-num{ display:inline-block; min-width:14px; color: var(--gold); font-weight:700; margin-right:6px; }
+  .cd-hide-head .cd-board-head{ display:none; }
+  .cd-hide-skillnames .cd-skill-h span{ display:none; }
+  .cd-hide-partynames .cd-pname, .cd-hide-partynames td.cd-group-name small{ display:none; }
+  .cd-hide-partynames th.cd-group-h{ visibility:hidden; } /* ячейка остаётся, иначе шапка скилов сдвигается на колонку */
+  .cd-hide-partynames td.cd-group-name{ padding-right:6px; }
+  .cd-hide-partynames .cd-num{ margin-right:0; }
+  .cd-small-party td.cd-group-name{ font-size:11px; padding-right:8px; }
+  .cd-small-party td.cd-group-name small{ display:none; }
+  .cd-small-party th.cd-group-h{ font-size:10px; }
+  .cd-compact .cd-cell{ width:34px; height:34px; border-radius:6px; }
+  .cd-compact .cd-cell img{ width:24px; height:24px; }
+  .cd-compact .cd-cell.on::after{ width:13px; height:13px; line-height:13px; font-size:9px; right:-2px; bottom:-2px; }
+  .cd-compact .cd-skill-h img{ width:24px; height:24px; }
+  .cd-compact table.cd-table td{ padding:1px 2px; }
+  .cd-compact table.cd-table th{ padding:1px 2px 3px; }
+  .cd-board.cd-floating{ padding:6px 8px 8px; }
+  .cd-board.cd-floating.cd-hide-head{ padding-top:20px; }
+
   .cd-empty{ padding:18px 6px; }
   .cd-placeholder{ display:none; }
   .cd-placeholder.show{ display:block; }
@@ -69,9 +103,11 @@
   .cd-skill-icon:hover, .cd-skill-icon.drag{ border-color: var(--gold); color: var(--gold); }
   .cd-skill-row input[type="text"]{ flex:1; min-width:0; }
   .cd-skill-row .btn{ padding:3px 8px; }
-  .cd-party-row{ display:flex; align-items:center; gap:10px; padding:8px 2px; border-bottom:1px solid var(--border); cursor:pointer; }
-  .cd-party-row input{ width:18px; height:18px; flex:none; }
-  .cd-party-row small{ color: var(--text-dim); margin-left:auto; }
+  .cd-party-row{ display:flex; align-items:center; gap:10px; padding:8px 2px; border-bottom:1px solid var(--border); }
+  .cd-party-row input[type="checkbox"]{ width:18px; height:18px; flex:none; }
+  .cd-party-row .cd-pn{ flex:1; min-width:0; cursor:pointer; }
+  .cd-party-row small{ color: var(--text-dim); }
+  .cd-party-row input.cd-num-in{ width:62px; flex:none; text-align:center; }
   .cd-modal-foot{ display:flex; justify-content:space-between; align-items:center; margin-top:14px; gap:10px; }
 </style>
 </head>
@@ -116,7 +152,7 @@
 <div class="cd-overlay" id="partiesOverlay">
   <div class="cd-modal">
     <h2>Пати в таблице</h2>
-    <p class="hint">Галочка — пати показывается в таблице и в окошке. Без галочки пати скрыта у всех, отметки по ней не теряются.</p>
+    <p class="hint">Галочка — пати показывается в таблице и в окошке. Без галочки пати скрыта у всех, отметки по ней не теряются. Справа номер пати: его видят лидеры, по номеру же строки сортируются (одинаковые номера допустимы).</p>
     <div id="partyList"></div>
     <p class="error-msg" id="partiesErr"></p>
     <div class="cd-modal-foot"><span></span><button class="btn" id="partiesClose" type="button">Готово</button></div>
@@ -158,6 +194,21 @@
   const marks = new Map();    // "groupId|skillId" -> true
   const key = (g, s) => g + "|" + s;
 
+  // настройки вида — у каждого свои (хранятся в браузере), чтобы лидер пати мог сжать окошко под себя
+  const VIEW_KEY = "l2CdView:" + profile.id;
+  const VIEW_DEFAULT = { hideHead: false, hideSkillNames: false, hidePartyNames: false, smallParty: false, compact: false };
+  let view = Object.assign({}, VIEW_DEFAULT);
+  try { Object.assign(view, JSON.parse(localStorage.getItem(VIEW_KEY) || "{}")); } catch(e){}
+  function saveView(){ try { localStorage.setItem(VIEW_KEY, JSON.stringify(view)); } catch(e){} }
+  let menuOpen = false;
+  function applyViewClasses(){
+    board.classList.toggle("cd-hide-head", !!view.hideHead);
+    board.classList.toggle("cd-hide-skillnames", !!view.hideSkillNames);
+    board.classList.toggle("cd-hide-partynames", !!view.hidePartyNames);
+    board.classList.toggle("cd-small-party", !!view.smallParty);
+    board.classList.toggle("cd-compact", !!view.compact);
+  }
+
   // кто что видит: клан-лидер/админ — все пати и правит любую; остальные с назначенной пати — только свою
   // (правит, если назначен её лидером); без пати — все, но только смотрит. Права на запись всё равно
   // дублируются RLS-политиками в schema_skill_cd.sql — это лишь удобство интерфейса.
@@ -178,14 +229,15 @@
 
   // ---------- загрузка ----------
   async function loadGroups(){
-    let res = await db.from("clan_groups").select("id, name, sort_order, leader_nickname, cd_enabled")
-      .eq("hidden", false).order("sort_order").order("name");
-    if(res.error){ // колонка cd_enabled ещё не создана (не выполнена последняя часть schema_skill_cd.sql) — показываем все пати
-      res = await db.from("clan_groups").select("id, name, sort_order, leader_nickname")
-        .eq("hidden", false).order("sort_order").order("name");
+    // колонки cd_enabled / cd_number добавляются последними частями schema_skill_cd.sql —
+    // если их ещё нет, пробуем набор поменьше, чтобы раздел всё равно открылся
+    let res = null;
+    for(const cols of ["id, name, sort_order, leader_nickname, cd_enabled, cd_number", "id, name, sort_order, leader_nickname, cd_enabled", "id, name, sort_order, leader_nickname"]){
+      res = await db.from("clan_groups").select(cols).eq("hidden", false).order("sort_order").order("name");
+      if(!res.error) break;
     }
     if(res.error) throw res.error;
-    groups = res.data || [];
+    groups = (res.data || []).slice().sort((a, b) => (a.cd_number ?? 1e9) - (b.cd_number ?? 1e9)); // стабильно: внутри одного номера остаётся прежний порядок
   }
   async function loadSkills(){
     const { data, error } = await db.from("cd_skills").select("id, name, icon, sort_order")
@@ -203,7 +255,19 @@
   // ---------- отрисовка доски ----------
   function renderBoard(){
     const vg = visibleGroups();
-    let html = '<div class="cd-board-head"><span class="cd-clan">' + esc(clanName) + '</span><div class="cd-board-tools">';
+    applyViewClasses();
+    let html = '<button class="cd-menu-btn' + (menuOpen ? ' open' : '') + '" type="button" data-act="menu" title="Вид таблицы">⋯</button>';
+    if(menuOpen){
+      const opt = (k, text) => '<label><input type="checkbox" data-view="' + k + '"' + (view[k] ? ' checked' : '') + ' /> ' + text + '</label>';
+      html += '<div class="cd-menu">' +
+        opt("hideHead", "Скрыть шапку") + opt("hideSkillNames", "Скрыть названия скилов") +
+        opt("hidePartyNames", "Скрыть названия пати (только номер)") + opt("smallParty", "Мелкие названия пати") +
+        opt("compact", "Мелкие клетки") +
+        '<div class="cd-menu-row"><button class="btn" type="button" data-act="preset-min">Минимум</button>' +
+        '<button class="btn" type="button" data-act="preset-all">Показать всё</button>' +
+        (isAdmin ? '<button class="btn btn-danger" type="button" data-act="reset">Сбросить всё</button>' : '') + '</div></div>';
+    }
+    html += '<div class="cd-board-head"><span class="cd-clan">' + esc(clanName) + '</span><div class="cd-board-tools">';
     if(isAdmin) html += '<button class="btn btn-danger" type="button" data-act="reset">Сбросить всё</button>';
     html += '</div></div>';
 
@@ -222,9 +286,12 @@
           (s.icon ? '<img src="' + esc(s.icon) + '" alt="" />' : '') + '<span>' + esc(s.name) + '</span></th>';
       }
       html += '</tr></thead><tbody>';
-      for(const g of vg){
+      vg.forEach((g, idx) => {
         const edit = canEdit(g);
-        html += '<tr' + (profile.party_id === g.id ? ' class="cd-row-me"' : '') + '><td class="cd-group-name">' + esc(g.name) +
+        // номер пати; если он не задан, а названия скрыты — показываем порядковый, чтобы строка не была безымянной
+        const num = g.cd_number != null ? g.cd_number : (view.hidePartyNames ? idx + 1 : "");
+        html += '<tr' + (profile.party_id === g.id ? ' class="cd-row-me"' : '') + '><td class="cd-group-name" title="' + esc(g.name) + '">' +
+          (num !== "" ? '<span class="cd-num">' + esc(num) + '</span>' : '') + '<span class="cd-pname">' + esc(g.name) + '</span>' +
           (g.leader_nickname ? '<small>' + esc(g.leader_nickname) + '</small>' : '') + '</td>';
         for(const s of skills){
           const on = marks.has(key(g.id, s.id));
@@ -233,14 +300,27 @@
             (s.icon ? '<img src="' + esc(s.icon) + '" alt="" />' : esc((s.name || "?").slice(0, 1).toUpperCase())) + '</button></td>';
         }
         html += '</tr>';
-      }
+      });
       html += '</tbody></table></div>';
     }
     board.innerHTML = html;
   }
 
   // ---------- отметка (клик по клетке) ----------
+  board.addEventListener("change", (e) => {
+    const k = e.target.dataset && e.target.dataset.view;
+    if(!k) return;
+    view[k] = e.target.checked; saveView(); renderBoard();
+  });
   board.addEventListener("click", async (e) => {
+    if(e.target.closest('[data-act="menu"]')){ menuOpen = !menuOpen; renderBoard(); return; }
+    const preset = e.target.closest('[data-act="preset-min"], [data-act="preset-all"]');
+    if(preset){
+      const min = preset.dataset.act === "preset-min";
+      view = { hideHead: min, hideSkillNames: min, hidePartyNames: min, smallParty: min, compact: min };
+      saveView(); renderBoard(); return;
+    }
+    if(menuOpen && !e.target.closest(".cd-menu")){ menuOpen = false; renderBoard(); }
     const resetBtn = e.target.closest('[data-act="reset"]');
     if(resetBtn){
       if(!confirm("Сбросить все отметки у всех пати?")) return;
@@ -495,11 +575,23 @@
   const partiesOverlay = $("partiesOverlay");
   function renderPartyList(){
     $("partyList").innerHTML = groups.length ? groups.map(g =>
-      '<label class="cd-party-row"><input type="checkbox" data-g="' + g.id + '"' + (g.cd_enabled !== false ? ' checked' : '') + ' />' +
-      '<span>' + esc(g.name) + '</span>' + (g.leader_nickname ? '<small>' + esc(g.leader_nickname) + '</small>' : '') + '</label>').join("")
+      '<div class="cd-party-row"><input type="checkbox" id="pc-' + g.id + '" data-g="' + g.id + '"' + (g.cd_enabled !== false ? ' checked' : '') + ' />' +
+      '<label class="cd-pn" for="pc-' + g.id + '">' + esc(g.name) + '</label>' + (g.leader_nickname ? '<small>' + esc(g.leader_nickname) + '</small>' : '') +
+      '<input type="number" class="cd-num-in" data-ng="' + g.id + '" min="0" max="99" placeholder="№" value="' + (g.cd_number != null ? g.cd_number : '') + '" title="Номер пати" /></div>').join("")
       : '<p class="hint">Пати нет. Создай группы в разделе «Группы».</p>';
   }
   $("partyList").addEventListener("change", async (e) => {
+    if(e.target.dataset.ng){
+      const ng = e.target.dataset.ng, g0 = groups.find(x => x.id === ng); if(!g0) return;
+      const raw = e.target.value.trim(); let val = raw === "" ? null : Math.max(0, Math.min(99, parseInt(raw, 10)));
+      if(Number.isNaN(val)) val = null;
+      $("partiesErr").textContent = "";
+      const { error } = await db.from("clan_groups").update({ cd_number: val }).eq("id", ng);
+      if(error){ e.target.value = g0.cd_number != null ? g0.cd_number : ""; $("partiesErr").textContent = "Не удалось сохранить номер: " + error.message + " (нужно выполнить последнюю часть schema_skill_cd.sql)"; return; }
+      g0.cd_number = val;
+      groups.sort((a, b) => (a.cd_number ?? 1e9) - (b.cd_number ?? 1e9));
+      renderBoard(); return;
+    }
     const id = e.target.dataset.g; if(!id) return;
     const g = groups.find(x => x.id === id); if(!g) return;
     const on = e.target.checked;
