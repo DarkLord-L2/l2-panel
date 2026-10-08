@@ -118,3 +118,6 @@ alter table public.clan_groups add column if not exists cd_enabled boolean not n
 
 -- ---------- 6. номер пати в таблице «КД скилов» (задаёт клан-лидер, видят лидеры пати) ----------
 alter table public.clan_groups add column if not exists cd_number int;
+
+-- ---------- 7. своё название пати только для «КД скилов» (в «Группах» название не меняется) ----------
+alter table public.clan_groups add column if not exists cd_name text;
