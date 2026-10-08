@@ -108,6 +108,11 @@
   .cd-board.cd-floating .cd-menu{ top:18px; right:1px; }
   .cd-board.cd-floating.cd-hide-head{ padding-top:6px; }
 
+  /* обратный отсчёт на выключенной клетке (таймер КД) */
+  .cd-cd{ position:absolute; left:0; right:0; bottom:1px; text-align:center; font-size:10px; font-weight:700; line-height:1; color:#fff; pointer-events:none; text-shadow:0 0 3px #000, 0 0 3px #000, 0 0 2px #000; }
+  .cd-cell.on .cd-cd{ display:none; }
+  .cd-compact .cd-cd{ font-size:8.5px; }
+
   .cd-empty{ padding:18px 6px; }
   .cd-placeholder{ display:none; }
   .cd-placeholder.show{ display:block; }
@@ -126,6 +131,7 @@
   .cd-skill-icon:hover, .cd-skill-icon.drag{ border-color: var(--gold); color: var(--gold); }
   .cd-skill-row input[type="text"]{ flex:1; min-width:0; }
   .cd-skill-row .btn{ padding:3px 8px; }
+  .cd-skill-row input.cd-time-in{ flex:none; width:74px; text-align:center; }
   .cd-party-row{ display:flex; align-items:center; gap:10px; padding:8px 2px; border-bottom:1px solid var(--border); }
   .cd-party-row input[type="checkbox"]{ width:18px; height:18px; flex:none; }
   .cd-party-row input.cd-pn-in{ flex:1; min-width:0; }
@@ -143,6 +149,7 @@
       <span class="cd-live" id="liveBadge"><i></i><span>связь…</span></span>
       <button class="btn" id="skillsBtn" type="button" style="display:none;">⚙ Скилы</button>
       <button class="btn" id="partiesBtn" type="button" style="display:none;">⚙ Пати</button>
+      <button class="btn" id="timerBtn" type="button" style="display:none;">⏱ Таймер</button>
       <button class="btn btn-primary" id="popBtn" type="button">🗗 Окошко поверх игры</button>
     </div>
   </div>
@@ -161,11 +168,12 @@
 <div class="cd-overlay" id="skillsOverlay">
   <div class="cd-modal">
     <h2>Скилы</h2>
-    <p class="hint">Это столбцы таблицы. Нажми на квадрат слева, чтобы выбрать картинку (или перетащи файл / вставь через Ctrl+V, пока курсор над квадратом). Название можно сокращать, оно подписывается под картинкой.</p>
+    <p class="hint">Это столбцы таблицы. Нажми на квадрат слева, чтобы выбрать картинку (или перетащи файл / вставь через Ctrl+V, пока курсор над квадратом). Название можно сокращать, оно подписывается под картинкой. Поле «КД» справа от названия — через сколько скил сам включится после того, как его выключили (например 5:00, 90, 30с, 1ч; пусто — сам не включается). Таймер вообще включается кнопкой «⏱ Таймер» вверху страницы.</p>
     <div id="skillList"></div>
     <div class="cd-skill-row" id="newSkillRow">
       <button class="cd-skill-icon" id="newIcon" type="button" title="Картинка">＋</button>
       <input type="text" id="newName" placeholder="Название нового скила" maxlength="40" />
+      <input type="text" class="cd-time-in" id="newCd" placeholder="КД" maxlength="9" title="Через сколько скил сам включится после выключения (например 5:00 или 90 или 30с). Пусто — без таймера." />
       <button class="btn btn-primary" id="addSkillBtn" type="button">Добавить</button>
     </div>
     <p class="error-msg" id="skillsErr"></p>
@@ -214,8 +222,46 @@
 
   let groups = [];            // [{id, name, leader_nickname}]
   let skills = [];            // [{id, name, icon, sort_order}]
-  const marks = new Map();    // "groupId|skillId" -> true
+  const marks = new Map();    // "groupId|skillId" -> { has, ready }; ready — время (мс), когда выключенный скил включится сам
   const key = (g, s) => g + "|" + s;
+
+  // таймер КД: колонки cd_marks.ready_at / cd_skills.cd_seconds и таблица cd_settings появляются
+  // последней частью schema_skill_cd.sql. Пока их нет — всё работает как раньше, без таймера.
+  let marksHaveReady = false, skillsHaveCd = false, settingsOk = false, timerOn = false;
+  const timerActive = () => timerOn && marksHaveReady;
+  function isOnMark(m){ return !!m && (m.has || (timerActive() && !!m.ready && Date.now() >= m.ready)); }
+  function leftSec(m){ return (timerActive() && m && !m.has && m.ready && Date.now() < m.ready) ? Math.ceil((m.ready - Date.now()) / 1000) : 0; }
+  const pad2 = (n) => String(n).padStart(2, "0");
+  function fmtLeft(sec){
+    if(sec <= 0) return "";
+    if(sec >= 3600) return Math.floor(sec / 3600) + "ч" + pad2(Math.floor(sec % 3600 / 60));
+    return Math.floor(sec / 60) + ":" + pad2(sec % 60);
+  }
+  function fmtDur(sec){
+    if(!sec) return "";
+    const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), x = sec % 60;
+    return h ? h + ":" + pad2(m) + ":" + pad2(x) : m + ":" + pad2(x);
+  }
+  // «5:00» / «1:30:00» (м:сс и ч:мм:сс), «90» = 90 минут, «30с», «5м», «2ч»
+  function parseDur(str){
+    const t = String(str || "").trim().toLowerCase().replace(",", ".");
+    if(!t) return { ok: true, sec: null };
+    let m = t.match(/^(\d+):(\d{1,2})(?::(\d{1,2}))?$/);
+    if(m){
+      const a = +m[1], b = +m[2], c = m[3] != null ? +m[3] : null;
+      if(b > 59 || (c != null && c > 59)) return { ok: false };
+      const sec = c == null ? a * 60 + b : a * 3600 + b * 60 + c;
+      return sec > 0 && sec <= 604800 ? { ok: true, sec } : { ok: sec === 0, sec: null };
+    }
+    m = t.match(/^(\d+(?:\.\d+)?)\s*(с|s|сек|м|m|мин|ч|h|час)?$/);
+    if(m){
+      const u = m[2] || "м";
+      const mult = /^(с|s|сек)$/.test(u) ? 1 : /^(ч|h|час)$/.test(u) ? 3600 : 60;
+      const sec = Math.round(parseFloat(m[1]) * mult);
+      return sec > 0 && sec <= 604800 ? { ok: true, sec } : { ok: sec === 0, sec: null };
+    }
+    return { ok: false };
+  }
 
   // настройки вида — у каждого свои (хранятся в браузере), чтобы лидер пати мог сжать окошко под себя
   const VIEW_KEY = "l2CdView:" + profile.id;
@@ -266,20 +312,39 @@
     groups = (res.data || []).map(g => Object.assign(g, { shownName: g.cd_name || g.name })).slice().sort((a, b) => (a.cd_number ?? 1e9) - (b.cd_number ?? 1e9)); // стабильно: внутри одного номера остаётся прежний порядок
   }
   async function loadSkills(){
-    const { data, error } = await db.from("cd_skills").select("id, name, icon, sort_order")
-      .order("sort_order").order("created_at");
-    if(error) throw error;
-    skills = data || [];
+    let res = await db.from("cd_skills").select("id, name, icon, sort_order, cd_seconds").order("sort_order").order("created_at");
+    skillsHaveCd = !res.error;
+    if(res.error) res = await db.from("cd_skills").select("id, name, icon, sort_order").order("sort_order").order("created_at");
+    if(res.error) throw res.error;
+    skills = res.data || [];
   }
   async function loadMarks(){
-    const { data, error } = await db.from("cd_marks").select("group_id, skill_id, has");
-    if(error) throw error;
+    let res = await db.from("cd_marks").select("group_id, skill_id, has, ready_at");
+    marksHaveReady = !res.error;
+    if(res.error) res = await db.from("cd_marks").select("group_id, skill_id, has");
+    if(res.error) throw res.error;
     marks.clear();
-    for(const m of (data || [])) if(m.has) marks.set(key(m.group_id, m.skill_id), true);
+    for(const m of (res.data || [])){
+      const ready = m.ready_at ? Date.parse(m.ready_at) : null;
+      if(m.has || ready) marks.set(key(m.group_id, m.skill_id), { has: !!m.has, ready });
+    }
+  }
+  async function loadSettings(){
+    const res = await db.from("cd_settings").select("timer_enabled").eq("clan_id", clanId).maybeSingle();
+    if(res.error){ settingsOk = false; timerOn = false; }
+    else { settingsOk = true; timerOn = res.data ? !!res.data.timer_enabled : true; }
+    updateTimerBtn();
+  }
+  function updateTimerBtn(){
+    const b = $("timerBtn");
+    b.style.display = isAdmin ? "" : "none";
+    b.textContent = "⏱ Таймер: " + (timerActive() ? "вкл" : "выкл");
+    b.classList.toggle("btn-primary", timerActive());
   }
 
   // ---------- отрисовка доски ----------
   function renderBoard(){
+    updateTimerBtn();
     const vg = visibleGroups();
     applyViewClasses();
     let html = '<button class="cd-menu-btn' + (menuOpen ? ' open' : '') + '" type="button" data-act="menu" title="Вид таблицы">⋯</button>';
@@ -320,10 +385,12 @@
           (num !== "" ? '<span class="cd-num">' + esc(num) + '</span>' : '') + '<span class="cd-pname">' + esc(g.shownName) + '</span>' +
           (g.leader_nickname ? '<small>' + esc(g.leader_nickname) + '</small>' : '') + '</td>';
         for(const s of skills){
-          const on = marks.has(key(g.id, s.id));
+          const m = marks.get(key(g.id, s.id));
+          const on = isOnMark(m);
           html += '<td><button type="button" class="cd-cell' + (on ? ' on' : '') + (edit ? ' edit' : '') +
             '" data-g="' + g.id + '" data-s="' + s.id + '" title="' + esc(s.name) + '"' + (edit ? '' : ' tabindex="-1"') + '>' +
-            (s.icon ? '<img src="' + esc(s.icon) + '" alt="" />' : esc((s.name || "?").slice(0, 1).toUpperCase())) + '</button></td>';
+            (s.icon ? '<img src="' + esc(s.icon) + '" alt="" />' : esc((s.name || "?").slice(0, 1).toUpperCase())) +
+            '<span class="cd-cd">' + (on ? '' : fmtLeft(leftSec(m))) + '</span></button></td>';
         }
         html += '</tr>';
       });
@@ -351,8 +418,9 @@
     if(resetBtn){
       if(!confirm("Сбросить все отметки у всех пати?")) return;
       showError("");
-      const { error } = await db.from("cd_marks").update({ has: false, updated_at: new Date().toISOString() })
-        .eq("clan_id", clanId);
+      const upd = { has: false, updated_at: new Date().toISOString() };
+      if(marksHaveReady) upd.ready_at = null;
+      const { error } = await db.from("cd_marks").update(upd).eq("clan_id", clanId);
       if(error){ showError("Не удалось сбросить: " + error.message); return; }
       marks.clear(); renderBoard();
       return;
@@ -360,19 +428,46 @@
     const cell = e.target.closest(".cd-cell.edit");
     if(!cell) return;
     const g = cell.dataset.g, s = cell.dataset.s, k = key(g, s);
-    const next = !marks.has(k);
-    if(next) marks.set(k, true); else marks.delete(k);
-    cell.classList.toggle("on", next);
+    const prev = marks.get(k);
+    const next = !isOnMark(prev); // с учётом таймера: скил, который уже сам включился, считается включённым — клик его выключает
+    // выключили — запускаем отсчёт, если у скила задано КД и таймер включён; включили руками — отсчёт сбрасывается
+    const sk = skills.find(x => x.id === s);
+    const ready = (!next && timerActive() && sk && sk.cd_seconds > 0) ? Date.now() + sk.cd_seconds * 1000 : null;
+    marks.set(k, { has: next, ready });
+    tickTimers();
     showError("");
-    const { error } = await db.from("cd_marks").upsert(
-      { clan_id: clanId, group_id: g, skill_id: s, has: next, updated_at: new Date().toISOString() },
-      { onConflict: "group_id,skill_id" });
+    const row = { clan_id: clanId, group_id: g, skill_id: s, has: next, updated_at: new Date().toISOString() };
+    if(marksHaveReady) row.ready_at = ready ? new Date(ready).toISOString() : null;
+    const { error } = await db.from("cd_marks").upsert(row, { onConflict: "group_id,skill_id" });
     if(error){
-      if(next) marks.delete(k); else marks.set(k, true);
-      cell.classList.toggle("on", !next);
+      if(prev) marks.set(k, prev); else marks.delete(k);
+      tickTimers();
       showError("Не удалось сохранить: " + error.message);
     }
   });
+
+  // ---------- таймер КД: раз в секунду обновляем отсчёт и включаем скилы, у которых время вышло ----------
+  // Само «включение по таймеру» в базе ничего не пишет: у выключенной отметки лежит время ready_at,
+  // и каждый экран сам считает «время вышло — значит скил есть». Поэтому у всех одно и то же,
+  // и работает даже когда никто из лидеров не заходил на страницу.
+  function tickTimers(){
+    for(const c of board.querySelectorAll(".cd-cell[data-g]")){
+      const m = marks.get(key(c.dataset.g, c.dataset.s));
+      const on = isOnMark(m);
+      c.classList.toggle("on", on);
+      const sp = c.querySelector(".cd-cd");
+      if(sp){ const txt = on ? "" : fmtLeft(leftSec(m)); if(sp.textContent !== txt) sp.textContent = txt; }
+    }
+  }
+  // таймер вешаем на то окно, где сейчас лежит доска: окошко поверх игры живёт само, а у «спящей» вкладки
+  // с сайтом браузер замедляет таймеры
+  let tickHandle = null, tickHost = window;
+  function startTick(){
+    try { if(tickHandle != null) tickHost.clearInterval(tickHandle); } catch(e){}
+    tickHost = floatWin || window;
+    tickHandle = tickHost.setInterval(tickTimers, 1000);
+  }
+  document.addEventListener("visibilitychange", tickTimers);
 
   // ---------- realtime ----------
   let liveOk = false;
@@ -390,16 +485,21 @@
   function scheduleSkills(){
     clearTimeout(skillsTimer);
     skillsTimer = setTimeout(async () => {
-      try { await Promise.all([loadGroups(), loadSkills(), loadMarks()]); renderBoard(); if($("skillsOverlay").classList.contains("show")) renderSkillList(); }
+      try { await Promise.all([loadGroups(), loadSkills(), loadMarks(), loadSettings()]); renderBoard(); if($("skillsOverlay").classList.contains("show")) renderSkillList(); }
       catch(e){ console.error(e); }
     }, 150);
   }
-  const channel = db.channel("cd-skill-" + clanId)
-    .on("postgres_changes", { event: "*", schema: "public", table: "cd_marks" }, scheduleMarks)
-    .on("postgres_changes", { event: "*", schema: "public", table: "cd_skills" }, scheduleSkills)
-    .subscribe((status) => setLive(status === "SUBSCRIBED"));
+  // канал создаём уже после первой загрузки: подписка на таблицу настроек, которой ещё нет, ломала бы весь канал
+  let channel = null;
+  function startRealtime(){
+    let ch = db.channel("cd-skill-" + clanId)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cd_marks" }, scheduleMarks)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cd_skills" }, scheduleSkills);
+    if(settingsOk) ch = ch.on("postgres_changes", { event: "*", schema: "public", table: "cd_settings" }, scheduleSkills);
+    channel = ch.subscribe((status) => setLive(status === "SUBSCRIBED"));
+  }
   setInterval(() => { if(!liveOk) scheduleMarks(); }, 20000);
-  window.addEventListener("pagehide", () => { try { db.removeChannel(channel); } catch(e){} closeFloating(); });
+  window.addEventListener("pagehide", () => { try { if(channel) db.removeChannel(channel); } catch(e){} closeFloating(); });
 
   // ---------- плавающее окошко поверх игры ----------
   // Сначала Document Picture-in-Picture (Chrome/Edge): окно всегда поверх остальных, в т.ч. поверх
@@ -441,12 +541,14 @@
     win.document.body.appendChild(board);
     $("placeholder").classList.add("show");
     $("popBtn").disabled = true;
+    startTick();
     win.addEventListener("pagehide", restoreBoard);
     const closedPoll = setInterval(() => { try { if(!floatWin || floatWin.closed){ clearInterval(closedPoll); restoreBoard(); } } catch(e){ clearInterval(closedPoll); } }, 1000);
   }
   function restoreBoard(){
     if(!floatWin) return;
     floatWin = null;
+    startTick();
     board.classList.remove("cd-floating");
     $("boardHost").appendChild(board);
     $("placeholder").classList.remove("show");
@@ -487,6 +589,7 @@
       '<div class="cd-skill-row" data-id="' + s.id + '">' +
         '<button type="button" class="cd-skill-icon" data-act="icon" title="Сменить картинку">' + (s.icon ? '<img src="' + esc(s.icon) + '" alt="" />' : '＋') + '</button>' +
         '<input type="text" data-act="name" value="' + esc(s.name) + '" maxlength="40" />' +
+        '<input type="text" class="cd-time-in" data-act="cd" value="' + esc(fmtDur(s.cd_seconds)) + '" placeholder="КД" maxlength="9" title="Через сколько скил сам включится после выключения: 5:00, 90 (мин), 30с, 1ч. Пусто — без таймера." />' +
         '<button type="button" class="btn" data-act="up"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
         '<button type="button" class="btn" data-act="down"' + (i === skills.length - 1 ? ' disabled' : '') + '>↓</button>' +
         '<button type="button" class="btn btn-danger" data-act="del">✕</button>' +
@@ -569,6 +672,16 @@
     }
   });
   $("skillList").addEventListener("change", async (e) => {
+    if(e.target.dataset.act === "cd"){
+      const id0 = e.target.closest(".cd-skill-row").dataset.id, s0 = skills.find(x => x.id === id0); if(!s0) return;
+      const pd = parseDur(e.target.value);
+      if(!pd.ok){ skillsError("Не понял время. Примеры: 5:00, 90, 30с, 1ч."); e.target.value = fmtDur(s0.cd_seconds); return; }
+      skillsError("");
+      const { error } = await db.from("cd_skills").update({ cd_seconds: pd.sec }).eq("id", id0);
+      if(error){ skillsError("Не удалось сохранить КД: " + error.message + " (нужно выполнить последнюю часть schema_skill_cd.sql)"); e.target.value = fmtDur(s0.cd_seconds); return; }
+      s0.cd_seconds = pd.sec; e.target.value = fmtDur(pd.sec);
+      return;
+    }
     if(e.target.dataset.act !== "name") return;
     const id = e.target.closest(".cd-skill-row").dataset.id;
     const name = e.target.value.trim();
@@ -582,12 +695,16 @@
   async function addSkill(){
     const name = $("newName").value.trim();
     if(!name){ skillsError("Введи название скила."); return; }
+    const pd = parseDur($("newCd").value);
+    if(!pd.ok){ skillsError("Не понял время КД. Примеры: 5:00, 90, 30с, 1ч."); return; }
     skillsError("");
-    const { data, error } = await db.from("cd_skills")
-      .insert({ clan_id: clanId, name, icon: newIconData, sort_order: skills.length }).select("id, name, icon, sort_order").single();
+    const row = { clan_id: clanId, name, icon: newIconData, sort_order: skills.length };
+    if(skillsHaveCd && pd.sec) row.cd_seconds = pd.sec;
+    const { data, error } = await db.from("cd_skills").insert(row)
+      .select(skillsHaveCd ? "id, name, icon, sort_order, cd_seconds" : "id, name, icon, sort_order").single();
     if(error){ skillsError("Не удалось добавить: " + error.message); return; }
     skills.push(data);
-    $("newName").value = ""; newIconData = null; $("newIcon").textContent = "＋";
+    $("newName").value = ""; $("newCd").value = ""; newIconData = null; $("newIcon").textContent = "＋";
     renderSkillList(); renderBoard();
   }
   $("addSkillBtn").addEventListener("click", addSkill);
@@ -647,13 +764,23 @@
   $("partiesClose").addEventListener("click", () => partiesOverlay.classList.remove("show"));
   partiesOverlay.addEventListener("click", (e) => { if(e.target === partiesOverlay) partiesOverlay.classList.remove("show"); });
 
+  $("timerBtn").addEventListener("click", async () => {
+    const next = !timerOn;
+    showError("");
+    const { error } = await db.from("cd_settings").upsert({ clan_id: clanId, timer_enabled: next }, { onConflict: "clan_id" });
+    if(error){ showError("Не удалось переключить таймер: " + error.message + " (нужно выполнить последнюю часть schema_skill_cd.sql)"); return; }
+    timerOn = next; settingsOk = true; updateTimerBtn(); renderBoard();
+  });
+
   // ---------- старт ----------
   try {
-    await Promise.all([loadGroups(), loadSkills(), loadMarks()]);
+    await Promise.all([loadGroups(), loadSkills(), loadMarks(), loadSettings()]);
   } catch(e){
     showError("Не удалось загрузить данные: " + (e.message || e) + ". Если раздел новый — нужно один раз выполнить supabase/schema_skill_cd.sql в SQL Editor.");
   }
   renderBoard();
+  startRealtime();
+  startTick();
 })();
 </script>
 </body>

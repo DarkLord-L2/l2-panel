@@ -121,3 +121,40 @@ alter table public.clan_groups add column if not exists cd_number int;
 
 -- ---------- 7. своё название пати только для «КД скилов» (в «Группах» название не меняется) ----------
 alter table public.clan_groups add column if not exists cd_name text;
+
+-- ---------- 8. таймер КД: скил, который выключили, сам «включается» через заданное время ----------
+-- cd_skills.cd_seconds — через сколько секунд после выключения скил считается снова готовым
+--   (пусто — без таймера).
+-- cd_marks.ready_at — когда выключенный скил включится сам; ставит страница в момент выключения.
+--   В базе сам «возврат» ничего не пишет: каждый экран сравнивает ready_at с текущим временем.
+-- cd_settings.timer_enabled — общий выключатель таймера на весь клан (кнопка «⏱ Таймер»).
+alter table public.cd_skills add column if not exists cd_seconds int;
+alter table public.cd_marks add column if not exists ready_at timestamptz;
+
+create table if not exists public.cd_settings (
+  clan_id uuid primary key references public.clans(id) on delete cascade,
+  timer_enabled boolean not null default true
+);
+alter table public.cd_settings enable row level security;
+
+drop policy if exists "cd_settings_select" on public.cd_settings;
+create policy "cd_settings_select" on public.cd_settings for select
+  using (clan_id in (select clan_id from public.profiles where id = auth.uid()));
+drop policy if exists "cd_settings_write_admins" on public.cd_settings;
+create policy "cd_settings_write_admins" on public.cd_settings for all
+  using (
+    public.current_role_key() in ('glavadmin','admin')
+    and clan_id in (select clan_id from public.profiles where id = auth.uid())
+  )
+  with check (
+    public.current_role_key() in ('glavadmin','admin')
+    and clan_id in (select clan_id from public.profiles where id = auth.uid())
+  );
+
+do $$
+begin
+  begin
+    alter publication supabase_realtime add table public.cd_settings;
+  exception when duplicate_object then null;
+  end;
+end $$;
