@@ -82,6 +82,18 @@
   .cd-compact .cd-skill-h img{ width:24px; height:24px; }
   .cd-compact table.cd-table td{ padding:1px 2px; }
   .cd-compact table.cd-table th{ padding:1px 2px 3px; }
+  .cd-nogaps table.cd-table td{ padding:0; }
+  .cd-nogaps table.cd-table th{ padding:0 0 2px; }
+  .cd-nogaps td.cd-group-name{ padding:0 8px 0 4px; }
+  /* сама клетка (рамка) подгоняется под размер картинки — иначе вокруг иконки остаётся пустое поле */
+  .cd-nogaps .cd-cell{ display:flex; box-sizing:border-box; width:34px; height:34px; border-radius:4px; }
+  .cd-nogaps.cd-compact .cd-cell{ width:26px; height:26px; }
+  .cd-nogaps.cd-noborders .cd-cell{ border-width:0; width:32px; height:32px; }
+  .cd-nogaps.cd-noborders.cd-compact .cd-cell{ width:24px; height:24px; }
+  .cd-nogaps.cd-noborders .cd-cell.edit:hover{ outline:1px solid var(--gold); outline-offset:-1px; }
+  .cd-nogaps .cd-skill-h img{ margin-bottom:2px; }
+  .cd-noborders .cd-cell, .cd-noborders .cd-cell.on{ border-color:transparent; background:none; }
+  .cd-noborders .cd-cell.edit:hover{ border-color: var(--gold); }
   .cd-board.cd-floating{ padding:6px 8px 8px; }
   .cd-board.cd-floating.cd-hide-head{ padding-top:20px; }
 
@@ -196,7 +208,7 @@
 
   // настройки вида — у каждого свои (хранятся в браузере), чтобы лидер пати мог сжать окошко под себя
   const VIEW_KEY = "l2CdView:" + profile.id;
-  const VIEW_DEFAULT = { hideHead: false, hideSkillNames: false, hidePartyNames: false, smallParty: false, compact: false };
+  const VIEW_DEFAULT = { hideHead: false, hideSkillNames: false, hidePartyNames: false, smallParty: false, compact: false, noGaps: false, noBorders: false };
   let view = Object.assign({}, VIEW_DEFAULT);
   try { Object.assign(view, JSON.parse(localStorage.getItem(VIEW_KEY) || "{}")); } catch(e){}
   function saveView(){ try { localStorage.setItem(VIEW_KEY, JSON.stringify(view)); } catch(e){} }
@@ -207,6 +219,8 @@
     board.classList.toggle("cd-hide-partynames", !!view.hidePartyNames);
     board.classList.toggle("cd-small-party", !!view.smallParty);
     board.classList.toggle("cd-compact", !!view.compact);
+    board.classList.toggle("cd-nogaps", !!view.noGaps);
+    board.classList.toggle("cd-noborders", !!view.noBorders);
   }
 
   // кто что видит: клан-лидер/админ — все пати и правит любую; остальные с назначенной пати — только свою
@@ -262,7 +276,7 @@
       html += '<div class="cd-menu">' +
         opt("hideHead", "Скрыть шапку") + opt("hideSkillNames", "Скрыть названия скилов") +
         opt("hidePartyNames", "Скрыть названия пати (только номер)") + opt("smallParty", "Мелкие названия пати") +
-        opt("compact", "Мелкие клетки") +
+        opt("compact", "Мелкие клетки") + opt("noGaps", "Без промежутков между скилами") + opt("noBorders", "Без обводки скилов") +
         '<div class="cd-menu-row"><button class="btn" type="button" data-act="preset-min">Минимум</button>' +
         '<button class="btn" type="button" data-act="preset-all">Показать всё</button>' +
         (isAdmin ? '<button class="btn btn-danger" type="button" data-act="reset">Сбросить всё</button>' : '') + '</div></div>';
@@ -317,7 +331,7 @@
     const preset = e.target.closest('[data-act="preset-min"], [data-act="preset-all"]');
     if(preset){
       const min = preset.dataset.act === "preset-min";
-      view = { hideHead: min, hideSkillNames: min, hidePartyNames: min, smallParty: min, compact: min };
+      view = { hideHead: min, hideSkillNames: min, hidePartyNames: min, smallParty: min, compact: min, noGaps: min, noBorders: min };
       saveView(); renderBoard(); return;
     }
     if(menuOpen && !e.target.closest(".cd-menu")){ menuOpen = false; renderBoard(); }
