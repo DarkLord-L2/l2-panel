@@ -268,26 +268,27 @@
   .rep-cmp-btn:disabled{ cursor:not-allowed; opacity:.15 !important; }
   table.pt-table th.pt-sortable{ cursor:pointer; user-select:none; }
   table.pt-table th.pt-sortable:hover{ color: var(--gold); }
-  table.pt-table td.pt-label{ white-space:normal; min-width:110px; }
-  table.pt-table th, table.pt-table td{ padding:2px 6px !important; }
-  table.pt-table{ font-size:11.5px; margin-top:4px; }
+  table.pt-table td.pt-label{ white-space:normal; min-width:138px; }
+  table.pt-table th, table.pt-table td{ padding:2.5px 7.5px !important; }
+  table.pt-table thead th{ font-size:13.75px; }
+  table.pt-table{ font-size:14.4px; margin-top:5px; }
   table.pt-table tr.pt-off td{ opacity:.4; }
-  table.pt-table .pt-cell{ display:inline-flex; align-items:center; gap:5px; text-align:left; }
-  #partyTotalsOverlay .modal h2{ font-size:14px; margin:0 0 8px; }
-  #partyTotalsOverlay .btn{ padding:3px 10px; font-size:12px; min-height:0; }
-  #partyTotalsOverlay .field{ margin:0 0 6px; }
-  #partyTotalsOverlay .field select{ padding:3px 8px; font-size:12px; }
-  #partyTotalsOverlay .hint{ font-size:11px; margin:4px 0; }
-  table.pt-table .pt-arrow{ width:10px; color: var(--text-dim); font-size:11px; }
+  table.pt-table .pt-cell{ display:inline-flex; align-items:center; gap:6px; text-align:left; }
+  #partyTotalsOverlay .modal h2{ font-size:17.5px; margin:0 0 10px; }
+  #partyTotalsOverlay .btn{ padding:4px 12.5px; font-size:15px; min-height:0; }
+  #partyTotalsOverlay .field{ margin:0 0 7.5px; }
+  #partyTotalsOverlay .field select{ padding:4px 10px; font-size:15px; }
+  #partyTotalsOverlay .hint{ font-size:13.75px; margin:5px 0; }
+  table.pt-table .pt-arrow{ width:12.5px; color: var(--text-dim); font-size:13.75px; }
   /* .modal img из theme.css даёт display:block и отступы 8px — в таблице они раздували строки */
-  table.pt-table img.pt-ico{ margin:0 !important; display:block; width:22px; height:22px; flex:0 0 22px; border-radius:6px; object-fit:cover;
+  table.pt-table img.pt-ico{ margin:0 !important; display:block; width:27.5px; height:27.5px; flex:0 0 27.5px; border-radius:7.5px; object-fit:cover;
     border:1px solid var(--border-lit); background: var(--panel); }
-  table.pt-table img.pt-ico.sm{ width:16px; height:16px; flex-basis:16px; border-radius:4px; }
+  table.pt-table img.pt-ico.sm{ width:20px; height:20px; flex-basis:20px; border-radius:5px; }
   table.pt-table tr.pt-party{ cursor:pointer; }
   table.pt-table tr.pt-party:hover td{ background: var(--panel-2); }
-  table.pt-table tr.pt-member td{ font-size:11px; color: var(--text); background: rgba(255,255,255,.035); }
-  table.pt-table tr.pt-member td.pt-label{ padding-left:22px !important; }
-  table.pt-table tr.pt-party td{ font-size:12px; }
+  table.pt-table tr.pt-member td{ font-size:13.75px; color: var(--text); background: rgba(255,255,255,.035); }
+  table.pt-table tr.pt-member td.pt-label{ padding-left:27.5px !important; }
+  table.pt-table tr.pt-party td{ font-size:15px; }
   table.pt-table td.pt-label{ color: var(--text); font-weight:600; }
   table.pt-table tr.pt-member td.pt-label{ font-weight:400; }
   /* цвета колонок: килы / смерти / PvP / PvE — одинаковые у пати, игроков и «Итого» */
@@ -427,7 +428,7 @@
 </div>
 
 <div class="modal-overlay" id="partyTotalsOverlay">
-  <div class="modal" style="width:min(780px,100%); max-width:780px; padding:12px 14px 14px;">
+  <div class="modal" style="width:min(975px,100%); max-width:975px; padding:15px 17.5px 17.5px;">
     <button class="modal-close" id="partyTotalsClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
     <h2 data-i18n="reports.ptTitle">Итоги по пати</h2>
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin:0 0 12px;">
