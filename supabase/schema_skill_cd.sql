@@ -158,3 +158,37 @@ begin
   exception when duplicate_object then null;
   end;
 end $$;
+
+-- ---------- 9. какие скилы есть у какой пати ----------
+-- Запись = у этой пати такого скила НЕТ (клетка в таблице не рисуется). По умолчанию скилы есть у всех пати,
+-- поэтому новый скил появляется у всех сам. Настраивает клан-лидер кнопкой «⚙ Скилы пати».
+create table if not exists public.cd_skill_off (
+  clan_id uuid not null references public.clans(id) on delete cascade,
+  group_id uuid not null references public.clan_groups(id) on delete cascade,
+  skill_id uuid not null references public.cd_skills(id) on delete cascade,
+  primary key (group_id, skill_id)
+);
+create index if not exists cd_skill_off_clan_idx on public.cd_skill_off(clan_id);
+alter table public.cd_skill_off enable row level security;
+
+drop policy if exists "cd_skill_off_select" on public.cd_skill_off;
+create policy "cd_skill_off_select" on public.cd_skill_off for select
+  using (clan_id in (select clan_id from public.profiles where id = auth.uid()));
+drop policy if exists "cd_skill_off_write_admins" on public.cd_skill_off;
+create policy "cd_skill_off_write_admins" on public.cd_skill_off for all
+  using (
+    public.current_role_key() in ('glavadmin','admin')
+    and clan_id in (select clan_id from public.profiles where id = auth.uid())
+  )
+  with check (
+    public.current_role_key() in ('glavadmin','admin')
+    and clan_id in (select clan_id from public.profiles where id = auth.uid())
+  );
+
+do $$
+begin
+  begin
+    alter publication supabase_realtime add table public.cd_skill_off;
+  exception when duplicate_object then null;
+  end;
+end $$;

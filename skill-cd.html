@@ -137,6 +137,18 @@
   .cd-party-row input.cd-pn-in{ flex:1; min-width:0; }
   .cd-party-row small{ color: var(--text-dim); }
   .cd-party-row input.cd-num-in{ width:62px; flex:none; text-align:center; }
+  /* матрица «какие скилы есть у какой пати» */
+  .cd-modal.cd-wide{ max-width:min(920px, 96vw); }
+  #offMatrix{ overflow:auto; max-height:60vh; }
+  .cd-off-table{ border-collapse:collapse; font-size:12px; }
+  .cd-off-table th{ padding:2px 5px; cursor:pointer; color: var(--text-dim); vertical-align:bottom; max-width:66px; font-weight:600; font-size:10.5px; }
+  .cd-off-table th:hover, .cd-off-table td.cd-off-g:hover{ color: var(--gold); }
+  .cd-off-table th img{ width:26px; height:26px; object-fit:contain; display:block; margin:0 auto 2px; }
+  .cd-off-table th span{ display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:66px; }
+  .cd-off-table td{ padding:5px; text-align:center; border-top:1px solid var(--border); }
+  .cd-off-table td.cd-off-g{ text-align:left; white-space:nowrap; cursor:pointer; padding-right:14px; font-weight:600; }
+  .cd-off-table td.cd-off-g.dim{ opacity:.5; }
+  .cd-off-table input{ width:18px; height:18px; cursor:pointer; }
   .cd-modal-foot{ display:flex; justify-content:space-between; align-items:center; margin-top:14px; gap:10px; }
 </style>
 </head>
@@ -149,6 +161,7 @@
       <span class="cd-live" id="liveBadge"><i></i><span>связь…</span></span>
       <button class="btn" id="skillsBtn" type="button" style="display:none;">⚙ Скилы</button>
       <button class="btn" id="partiesBtn" type="button" style="display:none;">⚙ Пати</button>
+      <button class="btn" id="offBtn" type="button" style="display:none;">⚙ Скилы пати</button>
       <button class="btn" id="timerBtn" type="button" style="display:none;">⏱ Таймер</button>
       <button class="btn btn-primary" id="popBtn" type="button">🗗 Окошко поверх игры</button>
     </div>
@@ -189,6 +202,15 @@
     <div class="cd-modal-foot"><span></span><button class="btn" id="partiesClose" type="button">Готово</button></div>
   </div>
 </div>
+<div class="cd-overlay" id="offOverlay">
+  <div class="cd-modal cd-wide">
+    <h2>Какие скилы у какой пати</h2>
+    <p class="hint">Галочка — у этой пати скил есть, в таблице у неё будет его клетка. Без галочки клетки у пати вообще не будет (никакого пустого квадрата). Нажми на название пати или на скил в шапке, чтобы включить или выключить сразу всю строку или весь столбец.</p>
+    <div id="offMatrix"></div>
+    <p class="error-msg" id="offErr"></p>
+    <div class="cd-modal-foot"><span></span><button class="btn" id="offClose" type="button">Готово</button></div>
+  </div>
+</div>
 <input type="file" id="iconPicker" accept="image/*" style="display:none;" />
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -227,6 +249,11 @@
 
   // таймер КД: колонки cd_marks.ready_at / cd_skills.cd_seconds и таблица cd_settings появляются
   // последней частью schema_skill_cd.sql. Пока их нет — всё работает как раньше, без таймера.
+  // у какой пати каких скилов НЕТ (клетки не рисуются). По умолчанию скилы есть у всех, поэтому хранится
+  // только исключение — новый скил сам появляется у всех пати. Таблица cd_skill_off — последняя часть
+  // schema_skill_cd.sql; пока её нет, у всех пати все скилы, как раньше.
+  const off = new Set();
+  let offOk = false;
   let marksHaveReady = false, skillsHaveCd = false, settingsOk = false, timerOn = false;
   const timerActive = () => timerOn && marksHaveReady;
   function isOnMark(m){ return !!m && (m.has || (timerActive() && !!m.ready && Date.now() >= m.ready)); }
@@ -329,6 +356,12 @@
       if(m.has || ready) marks.set(key(m.group_id, m.skill_id), { has: !!m.has, ready });
     }
   }
+  async function loadOff(){
+    const res = await db.from("cd_skill_off").select("group_id, skill_id");
+    offOk = !res.error;
+    off.clear();
+    if(!res.error) for(const r of (res.data || [])) off.add(key(r.group_id, r.skill_id));
+  }
   async function loadSettings(){
     const res = await db.from("cd_settings").select("timer_enabled").eq("clan_id", clanId).maybeSingle();
     if(res.error){ settingsOk = false; timerOn = false; }
@@ -346,6 +379,9 @@
   function renderBoard(){
     updateTimerBtn();
     const vg = visibleGroups();
+    // столбец скила не рисуем, если у всех показываемых пати его нет (например, лидеру одной пати
+    // не нужны чужие столбцы — иначе под ними остались бы пустые места)
+    const shownSkills = vg.length ? skills.filter(sk => vg.some(g => !off.has(key(g.id, sk.id)))) : skills;
     applyViewClasses();
     let html = '<button class="cd-menu-btn' + (menuOpen ? ' open' : '') + '" type="button" data-act="menu" title="Вид таблицы">⋯</button>';
     if(menuOpen){
@@ -372,7 +408,7 @@
         : 'Нет пати для показа.') + '</p>';
     } else {
       html += '<div class="cd-scroll"><table class="cd-table"><thead><tr><th class="cd-group-h">Группа</th>';
-      for(const s of skills){
+      for(const s of shownSkills){
         html += '<th class="cd-skill-h" title="' + esc(s.name) + '">' +
           (s.icon ? '<img src="' + esc(s.icon) + '" alt="" />' : '') + '<span>' + esc(s.name) + '</span></th>';
       }
@@ -384,7 +420,8 @@
         html += '<tr' + (profile.party_id === g.id ? ' class="cd-row-me"' : '') + '><td class="cd-group-name" title="' + esc(g.shownName) + '">' +
           (num !== "" ? '<span class="cd-num">' + esc(num) + '</span>' : '') + '<span class="cd-pname">' + esc(g.shownName) + '</span>' +
           (g.leader_nickname ? '<small>' + esc(g.leader_nickname) + '</small>' : '') + '</td>';
-        for(const s of skills){
+        for(const s of shownSkills){
+          if(off.has(key(g.id, s.id))){ html += '<td></td>'; continue; } // у этой пати такого скила нет — клетки нет
           const m = marks.get(key(g.id, s.id));
           const on = isOnMark(m);
           html += '<td><button type="button" class="cd-cell' + (on ? ' on' : '') + (edit ? ' edit' : '') +
@@ -485,7 +522,7 @@
   function scheduleSkills(){
     clearTimeout(skillsTimer);
     skillsTimer = setTimeout(async () => {
-      try { await Promise.all([loadGroups(), loadSkills(), loadMarks(), loadSettings()]); renderBoard(); if($("skillsOverlay").classList.contains("show")) renderSkillList(); }
+      try { await Promise.all([loadGroups(), loadSkills(), loadMarks(), loadSettings(), loadOff()]); renderBoard(); if($("offOverlay").classList.contains("show")) renderOffMatrix(); if($("skillsOverlay").classList.contains("show")) renderSkillList(); }
       catch(e){ console.error(e); }
     }, 150);
   }
@@ -496,6 +533,7 @@
       .on("postgres_changes", { event: "*", schema: "public", table: "cd_marks" }, scheduleMarks)
       .on("postgres_changes", { event: "*", schema: "public", table: "cd_skills" }, scheduleSkills);
     if(settingsOk) ch = ch.on("postgres_changes", { event: "*", schema: "public", table: "cd_settings" }, scheduleSkills);
+    if(offOk) ch = ch.on("postgres_changes", { event: "*", schema: "public", table: "cd_skill_off" }, scheduleSkills);
     channel = ch.subscribe((status) => setLive(status === "SUBSCRIBED"));
   }
   setInterval(() => { if(!liveOk) scheduleMarks(); }, 20000);
@@ -714,6 +752,65 @@
   $("skillsClose").addEventListener("click", closeSkills);
   overlay.addEventListener("click", (e) => { if(e.target === overlay) closeSkills(); });
 
+  // ---------- какие скилы есть у какой пати (клан-лидер) ----------
+  const offOverlay = $("offOverlay");
+  function renderOffMatrix(){
+    const box = $("offMatrix");
+    if(!skills.length || !groups.length){ box.innerHTML = '<p class="hint">Сначала добавь скилы («⚙ Скилы») и пати (раздел «Группы»).</p>'; return; }
+    box.innerHTML = '<table class="cd-off-table"><thead><tr><th></th>' + skills.map(sk =>
+        '<th data-col="' + sk.id + '" title="' + esc(sk.name) + ' — нажми, чтобы включить/выключить у всех пати">' +
+        (sk.icon ? '<img src="' + esc(sk.icon) + '" alt="" />' : '') + '<span>' + esc(sk.name) + '</span></th>').join("") +
+      '</tr></thead><tbody>' + groups.map(g =>
+        '<tr><td class="cd-off-g' + (g.cd_enabled === false ? ' dim' : '') + '" data-row="' + g.id + '" title="Нажми, чтобы включить/выключить всю строку">' +
+          (g.cd_number != null ? esc(g.cd_number) + '. ' : '') + esc(g.shownName) + '</td>' +
+        skills.map(sk => '<td><input type="checkbox" data-og="' + g.id + '" data-os="' + sk.id + '"' + (off.has(key(g.id, sk.id)) ? '' : ' checked') + ' /></td>').join("") +
+        '</tr>').join("") + '</tbody></table>';
+  }
+  async function setOff(pairs, makeOff){
+    if(!pairs.length) return;
+    $("offErr").textContent = "";
+    const prev = new Set(off);
+    pairs.forEach(pr => { if(makeOff) off.add(key(pr.g, pr.s)); else off.delete(key(pr.g, pr.s)); });
+    renderBoard(); renderOffMatrix();
+    let error = null;
+    if(makeOff){
+      ({ error } = await db.from("cd_skill_off").upsert(pairs.map(pr => ({ clan_id: clanId, group_id: pr.g, skill_id: pr.s })), { onConflict: "group_id,skill_id" }));
+    } else {
+      const byGroup = new Map();
+      pairs.forEach(pr => { if(!byGroup.has(pr.g)) byGroup.set(pr.g, []); byGroup.get(pr.g).push(pr.s); });
+      for(const [g, ids] of byGroup){
+        const r = await db.from("cd_skill_off").delete().eq("group_id", g).in("skill_id", ids);
+        if(r.error){ error = r.error; break; }
+      }
+    }
+    if(error){
+      off.clear(); prev.forEach(k => off.add(k));
+      renderBoard(); renderOffMatrix();
+      $("offErr").textContent = "Не удалось сохранить: " + error.message + " (нужно выполнить последнюю часть schema_skill_cd.sql)";
+    }
+  }
+  $("offMatrix").addEventListener("change", (e) => {
+    const g = e.target.dataset && e.target.dataset.og, sk = e.target.dataset && e.target.dataset.os;
+    if(!g || !sk) return;
+    setOff([{ g, s: sk }], !e.target.checked);
+  });
+  $("offMatrix").addEventListener("click", (e) => {
+    const th = e.target.closest("th[data-col]"), tr = e.target.closest("td[data-row]");
+    if(th){
+      const sk = th.dataset.col;
+      const any = groups.some(g => !off.has(key(g.id, sk))); // у кого-то есть → выключаем у всех, иначе включаем у всех
+      setOff(groups.map(g => ({ g: g.id, s: sk })), any);
+    } else if(tr){
+      const gid = tr.dataset.row;
+      const any = skills.some(sk => !off.has(key(gid, sk.id)));
+      setOff(skills.map(sk => ({ g: gid, s: sk.id })), any);
+    }
+  });
+  $("offBtn").style.display = isAdmin ? "" : "none";
+  $("offBtn").addEventListener("click", () => { renderOffMatrix(); $("offErr").textContent = ""; offOverlay.classList.add("show"); });
+  $("offClose").addEventListener("click", () => offOverlay.classList.remove("show"));
+  offOverlay.addEventListener("click", (e) => { if(e.target === offOverlay) offOverlay.classList.remove("show"); });
+
   // ---------- какие пати показывать (клан-лидер) ----------
   const partiesOverlay = $("partiesOverlay");
   function renderPartyList(){
@@ -774,7 +871,7 @@
 
   // ---------- старт ----------
   try {
-    await Promise.all([loadGroups(), loadSkills(), loadMarks(), loadSettings()]);
+    await Promise.all([loadGroups(), loadSkills(), loadMarks(), loadSettings(), loadOff()]);
   } catch(e){
     showError("Не удалось загрузить данные: " + (e.message || e) + ". Если раздел новый — нужно один раз выполнить supabase/schema_skill_cd.sql в SQL Editor.");
   }
