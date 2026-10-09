@@ -38,6 +38,19 @@
 
   .lp-copy-row{ margin:12px 0 0; }
 
+  /* итоги по всем лидерам (только клан-лидер): сколько кому отправить */
+  .lp-ov{ margin:0 0 16px; }
+  .lp-ov h3{ margin:0 0 6px; font-size:13px; color: var(--gold); }
+  table.lp-ov-table{ border-collapse:collapse; width:100%; max-width:560px; font-size:13px; }
+  table.lp-ov-table th{ padding:4px 10px; text-align:left; color: var(--text-dim); font-size:11px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; }
+  table.lp-ov-table td{ padding:6px 10px; border-top:1px solid var(--border); }
+  table.lp-ov-table tbody tr.lp-ov-row{ cursor:pointer; }
+  table.lp-ov-table tbody tr.lp-ov-row:hover td{ background: var(--panel-2); }
+  table.lp-ov-table td.lp-num, table.lp-ov-table th.lp-num{ text-align:right; white-space:nowrap; font-variant-numeric: tabular-nums; }
+  table.lp-ov-table tr.lp-ov-sum td{ font-weight:700; border-top:2px solid var(--border-lit); }
+  table.lp-ov-table tr.lp-ov-un td{ color: var(--text-dim); font-size:12px; }
+  tr.lp-total-row td{ font-weight:700; border-top:2px solid var(--border-lit) !important; }
+
   /* участник, которого нет в последней переписи — уже не в клане; красный крестик
      рядом с ником, никаких других изменений в таблице */
   .lp-left-cross{ color: var(--danger-lit); font-weight:700; margin-left:4px; }
@@ -120,6 +133,8 @@
     <p class="hint" id="lpNoDateHint" style="margin:-4px 0 12px;" data-i18n="payout.noDateHint">Даты не заданы — показывается статистика за всё время.</p>
     <p class="hint" id="lpNoGoldHint" style="margin:-4px 0 12px; display:none;"></p>
     <p class="error-msg" id="lpError"></p>
+    <p class="hint" id="lpEventsHint" style="margin:-4px 0 12px; display:none;"></p>
+    <div class="lp-ov" id="lpOverview" style="display:none;"></div>
 
     <div id="lpContent">
       <div class="lp-summary" id="lpSummary"></div>
@@ -298,7 +313,10 @@
   const PAYOUT_BATCH_MAX_AGE_MS = 24 * 60 * 60 * 1000; // «висит» 24 часа
   let dkpPayload = null; // { from, to, goldByNick: {nickname: gold}, goldByNorm: Map(norm -> gold), source: "solo"|"party" }
   async function loadDkpPayload(){
-    const { data } = await db.from("payout_batches").select("from_date, to_date, gold_by_nick, source, created_at").eq("clan_id", profile.clan_id).maybeSingle();
+    // event_ids — точный список мероприятий раздачи (schema_payout_event_ids.sql); если колонки ещё нет, читаем без неё
+    let res = await db.from("payout_batches").select("from_date, to_date, gold_by_nick, source, created_at, event_ids").eq("clan_id", profile.clan_id).maybeSingle();
+    if(res.error) res = await db.from("payout_batches").select("from_date, to_date, gold_by_nick, source, created_at").eq("clan_id", profile.clan_id).maybeSingle();
+    const data = res.data;
     if(!data || !data.gold_by_nick) return null;
     const ageMs = Date.now() - new Date(data.created_at).getTime();
     if(ageMs > PAYOUT_BATCH_MAX_AGE_MS) return null; // протухла — как будто её и нет
@@ -308,7 +326,7 @@
     // normalizeNick, а не точным совпадением строки
     const goldByNorm = new Map();
     Object.entries(data.gold_by_nick).forEach(([nick, gold]) => goldByNorm.set(normalizeNick(nick), gold));
-    return { from: data.from_date, to: data.to_date, goldByNick: data.gold_by_nick, goldByNorm, source: data.source, createdAt: data.created_at };
+    return { from: data.from_date, to: data.to_date, goldByNick: data.gold_by_nick, goldByNorm, source: data.source, createdAt: data.created_at, eventIds: Array.isArray(data.event_ids) ? data.event_ids : null };
   }
   async function deleteDkpPayload(){
     await db.from("payout_batches").delete().eq("clan_id", profile.clan_id);
@@ -316,7 +334,7 @@
   // лидер на скрине не распознаётся отдельным ОСР-полем — event-roster.js просто
   // помечает is_party_leader=true у первого валидного ника скрина (лидер пати в игре
   // всегда идёт первой строкой), группируем эти отметки по batch_id
-  async function loadPayoutStats(fromStr, toStr){
+  async function loadPayoutStats(fromStr, toStr, eventIds){
     const errEl = document.getElementById("lpError");
     errEl.textContent = "";
 
@@ -324,7 +342,9 @@
     // ограничивает соответствующую сторону (та же логика, что в датных фильтрах
     // «Донатов» в Налогах)
     let eventIdFilter = null;
-    if(fromStr || toStr){
+    if(Array.isArray(eventIds)){
+      eventIdFilter = new Set(eventIds); // точный список мероприятий раздачи — даты не нужны
+    } else if(fromStr || toStr){
       let evQ = db.from("attendance_events").select("id");
       if(fromStr) evQ = evQ.gte("event_date", fromStr);
       if(toStr) evQ = evQ.lte("event_date", toStr);
@@ -358,6 +378,21 @@
       rows.forEach(r => {
         if(r.nickname === leader) return;
         entry.members.set(r.nickname, (entry.members.get(r.nickname) || 0) + 1);
+      });
+    });
+
+    // сколько раз каждый ник (нормализованный) мелькал у какого лидера, включая самих лидеров в своих
+    // скринах: по этим числам голда человека делится между лидерами, у которых он был
+    visitsByNorm = new Map();
+    byBatch.forEach(rows => {
+      const lr = rows.find(r => r.is_party_leader);
+      if(!lr) return;
+      rows.forEach(r => {
+        const n = normalizeNick(r.nickname);
+        if(!visitsByNorm.has(n)) visitsByNorm.set(n, { total: 0, by: new Map() });
+        const v = visitsByNorm.get(n);
+        v.total += 1;
+        v.by.set(lr.nickname, (v.by.get(lr.nickname) || 0) + 1);
       });
     });
 
@@ -412,6 +447,37 @@
     return gold === null ? "—" : Math.round(gold).toLocaleString(L2I18n.locale());
   }
 
+  // Голда в раздаче посчитана на человека целиком, а не на каждого лидера. Если человек за период
+  // был у нескольких лидеров, его голда делится между ними пропорционально тому, сколько раз он был
+  // у каждого — иначе каждому лидеру показывалась бы его полная сумма (так сумма дублировалась
+  // и «каждый должен был дать по 3, а не по 1»).
+  let visitsByNorm = new Map(); // normalizeNick(nick) -> { total, by: Map(leaderNick -> раз) }
+  function shareGold(nick, leader){
+    const base = goldOf(nick);
+    if(base === null) return null;
+    const v = visitsByNorm.get(normalizeNick(nick));
+    if(!v || !v.total) return base;
+    return base * (v.by.get(leader) || 0) / v.total;
+  }
+
+  // коэффициент лидера (например ×2: на пати из 9 человек выходит 10 частей — 9 участникам и ещё одна
+  // часть лидеру) уже заложен в голде самой раздачи; тут он только подписывается рядом с лидером.
+  // В «ДКП Соло» он применяется лишь при включённой настройке «коэффициент лидера и в Соло»
+  let leaderCoefByNorm = new Map();
+  let leaderCoefInSolo = false;
+  async function loadLeaderCoefs(){
+    const { data } = await db.from("loot_leader_coefficients").select("nickname, coefficient");
+    leaderCoefByNorm = new Map((data || []).map(r => [normalizeNick(r.nickname), Number(r.coefficient)]));
+    const { data: ls, error } = await db.from("loot_split_settings").select("leader_coef_in_solo").eq("clan_id", profile.clan_id).maybeSingle();
+    leaderCoefInSolo = !error && !!ls?.leader_coef_in_solo;
+  }
+  function leaderCoefLabel(nick){
+    if(!dkpPayload) return null;
+    if(dkpPayload.source !== "party" && !leaderCoefInSolo) return null;
+    const c = leaderCoefByNorm.get(normalizeNick(nick));
+    return (c === undefined || c === 1) ? null : c;
+  }
+
   // общая для показа и для архивации математика: доли, голда, поровну поделённая
   // голда ушедших из клана, сортировка. Возвращает leaderRow отдельно (он не
   // участвует в сортировке участников, всегда идёт первой строкой) и ВСЕХ
@@ -419,7 +485,7 @@
   // ушедших применяется только при показе, архив хранит всё как есть)
   function computeLeaderRows(leader){
     const entry = leaderStats.get(leader);
-    const leaderGold = goldOf(leader);
+    const leaderGold = shareGold(leader, leader);
     const memberRows = Array.from(entry.members.entries())
       .map(([nickname, count]) => ({ nickname, count, left: isLeftClan(nickname) }));
 
@@ -428,10 +494,10 @@
     // показываем) при этом отображает его исходную, ещё не поделённую сумму —
     // просто для справки, сколько ему причиталось бы
     const stayRows = memberRows.filter(r => !r.left);
-    const redistributePool = memberRows.filter(r => r.left).reduce((s, r) => s + (goldOf(r.nickname) || 0), 0);
+    const redistributePool = memberRows.filter(r => r.left).reduce((s, r) => s + (shareGold(r.nickname, leader) || 0), 0);
     const perStayBonus = stayRows.length ? redistributePool / stayRows.length : 0;
     memberRows.forEach(r => {
-      const base = goldOf(r.nickname);
+      const base = shareGold(r.nickname, leader);
       r.gold = r.left || base === null ? base : base + perStayBonus;
     });
 
@@ -445,7 +511,11 @@
     // именно под ЭТИМ лидером), но параллельный смысл есть: сколько раз он сам
     // водил раздачу за период — тот же entry.partyCount
     const leaderRow = { nickname: leader, count: entry.partyCount, left: isLeftClan(leader), gold: leaderGold, isLeader: true };
-    return { leaderRow, memberRows, stayRows: stayRows.slice().sort(sortByGold) };
+    // «К отправке» этому лидеру: его собственная часть + части оставшихся в клане участников
+    // (с учётом перераспределённой доли ушедших); строки ушедших — только справка
+    const sentMembers = stayRows.reduce((sum, r) => sum + (r.gold || 0), 0);
+    const total = leaderGold === null ? null : (leaderGold || 0) + sentMembers;
+    return { leaderRow, memberRows, stayRows: stayRows.slice().sort(sortByGold), total, sentMembers };
   }
 
   function renderForLeader(leader){
@@ -464,11 +534,15 @@
     emptyEl.style.display = "none";
 
     const entry = leaderStats.get(leader);
+    const { leaderRow, memberRows, stayRows, total, sentMembers } = computeLeaderRows(leader);
+    const coefLbl = leaderCoefLabel(leader);
     document.getElementById("lpSummary").innerHTML =
       `<span class="stat">${L2I18n.t("payout.ledCount", "Раздач под руководством: ")}<b>${entry.partyCount}</b></span>` +
-      `<span class="stat">${L2I18n.t("payout.uniqueMembers", "Разных участников: ")}<b>${entry.members.size}</b></span>`;
-
-    const { leaderRow, memberRows, stayRows } = computeLeaderRows(leader);
+      `<span class="stat">${L2I18n.t("payout.uniqueMembers", "Разных участников: ")}<b>${entry.members.size}</b></span>` +
+      (total !== null
+        ? `<span class="stat">${L2I18n.t("payout.totalToSend", "К отправке лидеру: ")}<b>${fmtGold(total)}</b> ` +
+          `(${L2I18n.t("payout.totalMembers", "участникам")} ${fmtGold(sentMembers)} + ${L2I18n.t("payout.totalLeader", "лидеру")} ${fmtGold(leaderRow.gold)}${coefLbl ? " — ×" + coefLbl : ""})</span>`
+        : "");
     const visibleMemberRows = showLeftInPayout ? memberRows : stayRows;
     currentRows = [leaderRow, ...visibleMemberRows];
 
@@ -477,13 +551,58 @@
       const cross = r.left ? ` <span class="lp-left-cross" title="${escapeHtml(leftClanTitleOf(r.nickname))}">✗</span>` : "";
       const tag = tagBadgeOf(r.nickname);
       const badge = tag ? ` <span class="lp-tag-badge">${escapeHtml(tag)}</span>` : "";
-      const leaderBadge = r.isLeader ? ` <span class="lp-tag-badge lp-leader-badge">${escapeHtml(L2I18n.t("payout.leaderBadge", "пати-лидер"))}</span>` : "";
+      const leaderBadge = r.isLeader ? ` <span class="lp-tag-badge lp-leader-badge">${escapeHtml(L2I18n.t("payout.leaderBadge", "пати-лидер"))}${coefLbl ? " ×" + coefLbl : ""}</span>` : "";
       const countText = r.count === null ? "—" : r.count;
       return `<tr class="${r.isLeader ? "lp-leader-row" : ""}"><td>${escapeHtml(r.nickname)}${leaderBadge}${cross}${badge}</td>` +
         `<td class="lp-num lp-cnt">${countText}</td>` +
         `<td class="lp-num lp-gold">${fmtGold(r.gold)}</td></tr>`;
-    }).join("");
+    }).join("") + (total !== null
+      ? `<tr class="lp-total-row"><td>${L2I18n.t("payout.totalRow", "Итого к отправке")}</td><td></td><td class="lp-num lp-gold" title="${escapeHtml(L2I18n.t("payout.totalRowTitle", "Лидер + участники в клане; доля ушедших уже поделена между оставшимися"))}">${fmtGold(total)}</td></tr>`
+      : "");
   }
+
+  // итоги по ВСЕМ лидерам — чтобы клан-лидер сразу видел, сколько кому отправить, не листая каждого
+  function renderOverview(batchMatchesView){
+    const el = document.getElementById("lpOverview");
+    if(!isAdmin || !dkpPayload || !leaderOrder.length){ el.style.display = "none"; el.innerHTML = ""; return; }
+    let grand = 0;
+    const rows = leaderOrder.map(leader => {
+      const c = computeLeaderRows(leader);
+      grand += c.total || 0;
+      return { leader, parties: c.leaderRow.count, members: c.stayRows.length, total: c.total || 0, coef: leaderCoefLabel(leader) };
+    });
+    // сколько голды по списку раздачи вообще не попало ни к одному лидеру (человек был в журнале явки,
+    // но не на скринах с отмеченным лидером) — видно только когда экран смотрит ровно на период раздачи
+    const sumAll = Object.values(dkpPayload.goldByNick).reduce((sum, g) => sum + (Number(g) || 0), 0);
+    const unassigned = batchMatchesView ? sumAll - grand : 0;
+    el.innerHTML = `<h3>${escapeHtml(L2I18n.t("payout.overviewTitle", "Итого: что отправить каждому лидеру"))}</h3>` +
+      `<table class="lp-ov-table"><thead><tr><th>${escapeHtml(L2I18n.t("payout.leaderLabel", "Пати-лидер"))}</th>` +
+      `<th class="lp-num">${escapeHtml(L2I18n.t("payout.ovParties", "Раздач"))}</th><th class="lp-num">${escapeHtml(L2I18n.t("payout.ovMembers", "Участников"))}</th>` +
+      `<th class="lp-num">${escapeHtml(L2I18n.t("payout.ovTotal", "К отправке"))}</th></tr></thead><tbody>` +
+      rows.map(r => `<tr class="lp-ov-row" data-leader="${escapeHtml(r.leader)}"><td>${escapeHtml(r.leader)}${r.coef ? ` <span class="lp-tag-badge lp-leader-badge">×${r.coef}</span>` : ""}</td>` +
+        `<td class="lp-num">${r.parties}</td><td class="lp-num">${r.members}</td><td class="lp-num lp-gold">${fmtGold(r.total)}</td></tr>`).join("") +
+      `<tr class="lp-ov-sum"><td>${escapeHtml(L2I18n.t("payout.ovSum", "Всего лидерам"))}</td><td></td><td></td><td class="lp-num">${fmtGold(grand)}</td></tr>` +
+      (unassigned > 0.5 ? `<tr class="lp-ov-un"><td colspan="3" title="${escapeHtml(L2I18n.t("payout.ovUnassignedTitle", "Эти люди есть в расчёте ДКП, но не найдены на скринах с отмеченным пати-лидером"))}">${escapeHtml(L2I18n.t("payout.ovUnassigned", "Не привязано ни к одному лидеру"))}</td><td class="lp-num">${fmtGold(unassigned)}</td></tr>` : "") +
+      `</tbody></table><div class="lp-copy-row"><button class="btn" id="lpOvCopyBtn" type="button">${escapeHtml(L2I18n.t("payout.ovCopy", "📋 Скопировать итоги"))}</button></div>`;
+    el.style.display = "";
+    el._rows = rows;
+  }
+  document.getElementById("lpOverview").addEventListener("click", async (e) => {
+    const copy = e.target.closest("#lpOvCopyBtn");
+    if(copy){
+      const rows = document.getElementById("lpOverview")._rows || [];
+      const text = rows.map(r => `${r.leader} — ${fmtGold(r.total)}`).join("\n");
+      try { await navigator.clipboard.writeText(text); flashCopyBtn(copy, "✓"); } catch(err){ flashCopyBtn(copy, "✗"); }
+      return;
+    }
+    const tr = e.target.closest(".lp-ov-row");
+    if(tr && isAdmin){
+      const sel = document.getElementById("leaderSelect");
+      sel.value = tr.dataset.leader;
+      renderForLeader(sel.value || null);
+      document.getElementById("lpContent").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
 
   document.getElementById("leaderSelect").addEventListener("change", (e) => renderForLeader(e.target.value));
   document.getElementById("lpCopyBtn").addEventListener("click", (e) => {
@@ -495,12 +614,25 @@
   // Не-админ вообще не выбирает — ему сразу показывается его собственная часть
   async function reload(){
     const prevLeader = isAdmin ? (document.getElementById("leaderSelect").value || null) : null;
-    await loadPayoutStats(document.getElementById("fromDate").value, document.getElementById("toDate").value);
+    const fromV = document.getElementById("fromDate").value, toV = document.getElementById("toDate").value;
+    // пока даты на экране совпадают с датами раздачи, считаем по ТОЧНОМУ списку мероприятий, выбранных
+    // в «ДКП» (можно было пропустить, например, осаду); поменял даты руками — обычный фильтр по датам
+    const datesMatchBatch = !!dkpPayload && (fromV || "") === (dkpPayload.from || "") && (toV || "") === (dkpPayload.to || "");
+    const batchEventIds = datesMatchBatch ? dkpPayload.eventIds : null;
+    await loadPayoutStats(fromV, toV, batchEventIds);
+    const evHint = document.getElementById("lpEventsHint");
+    if(batchEventIds){
+      evHint.textContent = L2I18n.t("payout.eventsHint", "Считается по мероприятиям, выбранным в ДКП: {n} шт.").replace("{n}", batchEventIds.length);
+      evHint.style.display = "";
+    } else {
+      evHint.style.display = "none";
+    }
     if(isAdmin){
       renderLeaderSelect();
       const nextLeader = (prevLeader && leaderStats.has(prevLeader)) ? prevLeader : (leaderOrder[0] || null);
       document.getElementById("leaderSelect").value = nextLeader || "";
       renderForLeader(nextLeader);
+      renderOverview(datesMatchBatch);
     } else {
       const myLeader = findMyLeaderKey();
       renderMyLeaderInfo(myLeader);
@@ -541,6 +673,7 @@
     actionsEl.querySelectorAll("button").forEach(b => b.disabled = true);
     await deleteDkpPayload();
     dkpPayload = null;
+    renderOverview(false);
     actionsEl.style.display = "none";
     const hintEl = document.getElementById("lpNoGoldHint");
     hintEl.textContent = L2I18n.t("payout.noGoldHint",
@@ -565,11 +698,12 @@
     okEl.style.display = "none";
     btn.disabled = true;
 
-    await loadPayoutStats(dkpPayload.from, dkpPayload.to);
+    await loadPayoutStats(dkpPayload.from, dkpPayload.to, dkpPayload.eventIds);
     const leaders = leaderOrder.map(leader => {
-      const { leaderRow, memberRows } = computeLeaderRows(leader);
+      const { leaderRow, memberRows, total } = computeLeaderRows(leader);
       return {
         leader,
+        total,
         leaderGold: leaderRow.gold,
         partyCount: leaderRow.count,
         members: memberRows.map(r => ({ nickname: r.nickname, count: r.count, gold: r.gold, left: r.left })),
@@ -583,7 +717,7 @@
       split_date: dkpPayload.createdAt,
       source: dkpPayload.source,
       archived_by: profile.id,
-      data: { leaders },
+      data: { leaders, eventIds: dkpPayload.eventIds || null },
     });
 
     if(error){
@@ -631,7 +765,7 @@
           const cross = r.left ? ` <span class="lp-left-cross">✗</span>` : "";
           return `<tr${r.isLeader ? ' class="lp-archive-leader-row"' : ""}><td>${escapeHtml(r.nickname)}${leaderBadge}${cross}</td><td class="lp-num">${fmtGold(r.gold)}</td></tr>`;
         }).join("");
-        return `<div class="lp-archive-leader"><h3>${escapeHtml(l.leader)}</h3><table class="lp-archive-table"><tbody>${rowsHtml}</tbody></table></div>`;
+        return `<div class="lp-archive-leader"><h3>${escapeHtml(l.leader)}</h3><table class="lp-archive-table"><tbody>${rowsHtml}${l.total != null ? `<tr class="lp-archive-leader-row"><td>${escapeHtml(L2I18n.t("payout.totalRow", "Итого к отправке"))}</td><td class="lp-num">${fmtGold(l.total)}</td></tr>` : ""}</tbody></table></div>`;
       }).join("");
       const sourceLabel = entry.source === "party" ? L2I18n.t("section.loot_split_party", "ДКП Пати") : entry.source === "solo" ? L2I18n.t("section.loot_split", "ДКП Соло") : "";
       return `<div class="lp-archive-entry" data-id="${entry.id}">` +
@@ -694,7 +828,7 @@
       document.getElementById("fromDate").value = dkpPayload.from || "";
       document.getElementById("toDate").value = dkpPayload.to || "";
     }
-    await Promise.all([loadCensus(), loadRosterTag(), loadPayoutShowLeft()]);
+    await Promise.all([loadCensus(), loadRosterTag(), loadPayoutShowLeft(), loadLeaderCoefs()]);
     await reload();
   } else {
     // обычный пати-лидер не выбирает даты/лидера сам — сразу видит свою часть
@@ -704,7 +838,7 @@
     if(dkpPayload){
       document.getElementById("fromDate").value = dkpPayload.from || "";
       document.getElementById("toDate").value = dkpPayload.to || "";
-      await Promise.all([loadCensus(), loadRosterTag(), loadPayoutShowLeft()]);
+      await Promise.all([loadCensus(), loadRosterTag(), loadPayoutShowLeft(), loadLeaderCoefs()]);
       await reload();
     } else {
       document.getElementById("lpContent").style.display = "none";

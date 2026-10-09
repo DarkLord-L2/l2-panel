@@ -12,6 +12,16 @@
   .ls-filters .field{ margin:0; }
   .ls-filters input[type="date"]{ min-width:150px; }
   .ls-filters input[type="number"]{ width:140px; }
+
+  /* выбор конкретных мероприятий внутри периода (например, пропустить осаду) */
+  .ls-ev-picker{ margin:0 0 12px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background: var(--panel-2); }
+  .ls-ev-head{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 8px; font-size:12px; color: var(--text-dim); }
+  .ls-ev-head b{ color: var(--text); font-weight:600; }
+  .ls-ev-head .btn{ padding:2px 9px; font-size:11.5px; }
+  .ls-ev-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .ls-ev-chip{ display:inline-flex; align-items:center; gap:6px; padding:4px 9px; border-radius:7px; border:1px solid var(--border); background: var(--panel); font-size:12px; cursor:pointer; color: var(--text-dim); user-select:none; }
+  .ls-ev-chip.on{ border-color: var(--ok); color: var(--text); }
+  .ls-ev-chip input{ margin:0; }
   .ls-wrap .card{ padding-top:12px; }
 
   /* никакого overflow/скролл-бокса у обёртки — таблица продолжается вниз и вбок
@@ -117,6 +127,7 @@
       <button class="btn btn-primary" id="splitBtn" data-i18n="dkp.splitBtn">Разделить дроп</button>
       <button class="btn btn-danger" id="toPayoutBtn" data-i18n="dkp.toPayoutBtn" disabled style="display:none;">Раздать</button>
     </div>
+    <div class="ls-ev-picker" id="evPicker" style="display:none;"></div>
     <p class="hint" id="toPayoutHint" style="margin:-4px 0 10px; display:none;"></p>
     <p class="error-msg" id="lsError"></p>
 
@@ -214,6 +225,64 @@
 
   let events = [];                 // [{id, event_date, event_name, icon}] в диапазоне, по дате
   let attendedByEvent = new Map(); // event_id -> Set(normalizeNick)
+
+  // ---- выбор конкретных мероприятий внутри периода: период (даты) только сужает список,
+  // а в расчёт идут отмеченные галочкой — можно пропустить, например, осаду посреди периода.
+  // Храним СНЯТЫЕ (а не отмеченные), чтобы новые мероприятия по умолчанию попадали в расчёт ----
+  let periodEvents = [];             // [{id, event_date, event_name}] в выбранных датах
+  let excludedEventIds = new Set();  // снятые галочкой — не участвуют в расчёте и в «Раздаче»
+  async function refreshEventPicker(){
+    const from = document.getElementById("fromDate").value, to = document.getElementById("toDate").value;
+    if(!from || !to || from > to){ periodEvents = []; renderEventPicker(); return; }
+    const { data, error } = await db.from("attendance_events").select("id, event_date, event_name")
+      .gte("event_date", from).lte("event_date", to).order("event_date").order("sort_order");
+    periodEvents = error ? [] : (data || []);
+    renderEventPicker();
+  }
+  function renderEventPicker(){
+    const box = document.getElementById("evPicker");
+    if(!periodEvents.length){ box.style.display = "none"; box.innerHTML = ""; return; }
+    const on = periodEvents.filter(e => !excludedEventIds.has(e.id)).length;
+    const names = [...new Set(periodEvents.map(e => e.event_name || ""))];
+    const short = (iso) => { const [, m, d] = iso.split("-"); return d + "." + m; };
+    box.innerHTML =
+      '<div class="ls-ev-head"><b>' + L2I18n.t("dkp.eventsPickerTitle", "Мероприятия в расчёте") + ': ' + on + ' / ' + periodEvents.length + '</b>' +
+      '<button type="button" class="btn" data-evall="1">' + L2I18n.t("dkp.eventsAll", "Все") + '</button>' +
+      '<button type="button" class="btn" data-evall="0">' + L2I18n.t("dkp.eventsNone", "Никакие") + '</button>' +
+      (names.length > 1 ? '<span>' + L2I18n.t("dkp.eventsByName", "по названию") + ':</span>' + names.map(n =>
+        '<button type="button" class="btn" data-evname="' + escapeHtml(n) + '">' + escapeHtml(n || "—") + ' (' + periodEvents.filter(e => (e.event_name || "") === n).length + ')</button>').join("") : '') +
+      '</div><div class="ls-ev-chips">' + periodEvents.map(e => {
+        const checked = !excludedEventIds.has(e.id);
+        return '<label class="ls-ev-chip' + (checked ? ' on' : '') + '"><input type="checkbox" data-ev="' + e.id + '"' + (checked ? ' checked' : '') + ' /> ' +
+          short(e.event_date) + ' ' + escapeHtml(e.event_name || "") + '</label>';
+      }).join("") + '</div>';
+    box.style.display = "";
+  }
+  async function onEventSelectionChanged(){
+    saveDkpFilters();
+    renderEventPicker();
+    if(hasSplit) await doSplit();
+  }
+  document.getElementById("evPicker").addEventListener("change", (e) => {
+    const id = e.target.dataset && e.target.dataset.ev; if(!id) return;
+    if(e.target.checked) excludedEventIds.delete(id); else excludedEventIds.add(id);
+    onEventSelectionChanged();
+  });
+  document.getElementById("evPicker").addEventListener("click", (e) => {
+    const all = e.target.closest("[data-evall]");
+    if(all){
+      if(all.dataset.evall === "1") periodEvents.forEach(ev => excludedEventIds.delete(ev.id));
+      else periodEvents.forEach(ev => excludedEventIds.add(ev.id));
+      onEventSelectionChanged(); return;
+    }
+    const nm = e.target.closest("[data-evname]");
+    if(nm){
+      const group = periodEvents.filter(ev => (ev.event_name || "") === nm.dataset.evname);
+      const allIncluded = group.every(ev => !excludedEventIds.has(ev.id));
+      group.forEach(ev => { if(allIncluded) excludedEventIds.add(ev.id); else excludedEventIds.delete(ev.id); }); // все включены → выключаем все, иначе включаем все
+      onEventSelectionChanged();
+    }
+  });
 
   let lastRows = [];               // последний посчитанный «Разделить дроп»
   let leftMembersWeek = null;       // неделя переписи, в которой ушедшие встречались последний раз
@@ -361,7 +430,7 @@
       .lte("event_date", toStr)
       .order("event_date");
     if(evErr){ console.error(evErr); events = []; attendedByEvent = new Map(); return; }
-    events = evs || [];
+    events = (evs || []).filter(e => !excludedEventIds.has(e.id)); // сняты галочкой в «Мероприятия в расчёте»
 
     attendedByEvent = new Map();
     const eventIds = events.map(e => e.id);
@@ -586,6 +655,7 @@
       from: document.getElementById("fromDate").value,
       to: document.getElementById("toDate").value,
       gold: document.getElementById("goldInput").value,
+      excluded: [...excludedEventIds],
     }));
   }
   function restoreDkpFilters(){
@@ -595,10 +665,13 @@
     if(st.from) document.getElementById("fromDate").value = st.from;
     if(st.to) document.getElementById("toDate").value = st.to;
     if(st.gold != null && st.gold !== "") document.getElementById("goldInput").value = st.gold;
+    excludedEventIds = new Set(Array.isArray(st.excluded) ? st.excluded : []);
     return !!(st.from && st.to);
   }
   document.getElementById("fromDate").addEventListener("change", saveDkpFilters);
   document.getElementById("toDate").addEventListener("change", saveDkpFilters);
+  document.getElementById("fromDate").addEventListener("change", refreshEventPicker);
+  document.getElementById("toDate").addEventListener("change", refreshEventPicker);
 
   // «Раздать» пишет посчитанную голду по никам и период в общую на весь клан
   // таблицу payout_batches (не в sessionStorage — тот виден только в браузере
@@ -613,8 +686,7 @@
     btn.disabled = true;
     const goldByNick = {};
     lastRows.forEach(r => { goldByNick[r.nick] = r.gold; });
-    const { error } = await db.from("payout_batches").upsert(
-      {
+    const batchRow = {
         clan_id: profile.clan_id,
         from_date: document.getElementById("fromDate").value,
         to_date: document.getElementById("toDate").value,
@@ -622,9 +694,15 @@
         source: "solo",
         created_by: profile.id,
         created_at: new Date().toISOString(),
-      },
-      { onConflict: "clan_id" }
-    );
+        event_ids: events.map(e => e.id), // точный список мероприятий раздачи — «Раздача» считает по нему, а не по датам
+      };
+    let { error } = await db.from("payout_batches").upsert(batchRow, { onConflict: "clan_id" });
+    if(error && /event_ids/.test(error.message || "")){
+      // колонки event_ids ещё нет (не выполнен supabase/schema_payout_event_ids.sql) — отправляем как раньше, по датам
+      const { event_ids, ...rest } = batchRow;
+      ({ error } = await db.from("payout_batches").upsert(rest, { onConflict: "clan_id" }));
+      if(!error) document.getElementById("lsError").textContent = L2I18n.t("dkp.eventIdsMissing", "Отправлено без списка мероприятий: выполните supabase/schema_payout_event_ids.sql, иначе «Раздача» посчитает по датам.");
+    }
     if(error){
       document.getElementById("lsError").textContent = L2I18n.t("dkp.payoutSaveFailed", "Не удалось отправить в раздачу: ") + error.message;
     } else {
@@ -675,7 +753,9 @@
 
   await Promise.all([loadCensus(), loadMemberClasses(), loadBoostStructure(), loadBoostValues(), loadCoefficients(), loadLeaderCoefficients(), loadLootSplitSettings()]);
   renderTable([]);
-  if(restoreDkpFilters()) await doSplit();
+  const restoredFilters = restoreDkpFilters();
+  await refreshEventPicker();
+  if(restoredFilters) await doSplit();
 
   // заголовки/пустые состояния построены через JS (не data-i18n) — перестраиваем при смене языка
   window.addEventListener("storage", (e) => {
