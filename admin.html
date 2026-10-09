@@ -264,8 +264,23 @@
         <span class="track"></span>
       </label>
     </div>
-    <p class="hint" data-i18n="admin.payoutShowLeftHint">Их голда всегда делится поровну между оставшимися в клане в том же списке лидера — этот переключатель влияет только на то, видна ли сама строка ушедшего (с его исходной, ещё не поделённой суммой, для справки). Выключено — строка просто скрыта, деление остаётся тем же.</p>
+    <p class="hint" data-i18n="admin.payoutShowLeftHint">Этот переключатель влияет только на то, видна ли сама строка ушедшего (в ней всегда 0). Куда идёт его доля — решает настройка «Доля ушедших из клана» ниже.</p>
     <p class="error-msg" id="payoutShowLeftError"></p>
+  </section>
+
+  <section class="card">
+    <h2 data-i18n="admin.leftMoneyTitle">Доля ушедших из клана</h2>
+    <div class="field">
+      <label for="leftMoneyModeInput" data-i18n="admin.leftMoneyLabel">Что делать с деньгами тех, кто ушёл из клана</label>
+      <select id="leftMoneyModeInput">
+        <option value="party" data-i18n="admin.leftMoneyParty">Поделить между оставшимися в той же пати</option>
+        <option value="clan" data-i18n="admin.leftMoneyClan">Поделить между всеми оставшимися в клане</option>
+        <option value="box" data-i18n="admin.leftMoneyBox">Не делить — показать в отдельном окошке</option>
+        <option value="none" data-i18n="admin.leftMoneyNone">Не делить и не показывать</option>
+      </select>
+    </div>
+    <p class="hint" data-i18n="admin.leftMoneyHint">Ушедшим из клана (нет в последней переписи) в «Раздаче» всегда 0. Эта настройка решает, куда идёт их доля: поровну остальным в той же пати, поровну всем оставшимся в клане, в отдельное окошко «Доли ушедших» (ничего не делится, клан-лидер решает сам) или никуда.</p>
+    <p class="error-msg" id="leftMoneyModeError"></p>
   </section>
 
   <div class="admin-coef-row">
@@ -433,7 +448,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=48"></script>
+<script src="js/i18n.js?v=50"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -786,7 +801,26 @@
     const { data, error } = await db.from("loot_split_settings").select("show_left_in_payout").eq("clan_id", profile.clan_id).maybeSingle();
     if(error){ console.error(error); return; }
     document.getElementById("payoutShowLeftInput").checked = data?.show_left_in_payout ?? true;
+    // отдельным запросом: пока не выполнен schema_left_money_mode.sql, ошибка колонки не должна ломать настройку выше
+    const { data: lm, error: lmErr } = await db.from("loot_split_settings").select("left_money_mode").eq("clan_id", profile.clan_id).maybeSingle();
+    document.getElementById("leftMoneyModeInput").value = (!lmErr && lm?.left_money_mode) || "party";
   }
+
+  document.getElementById("leftMoneyModeInput").addEventListener("change", async () => {
+    const sel = document.getElementById("leftMoneyModeInput");
+    const errEl = document.getElementById("leftMoneyModeError");
+    errEl.textContent = "";
+    sel.disabled = true;
+    const { error } = await db.from("loot_split_settings").upsert(
+      { clan_id: profile.clan_id, left_money_mode: sel.value },
+      { onConflict: "clan_id" }
+    );
+    if(error){
+      errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message + " (нужно выполнить supabase/schema_left_money_mode.sql)";
+      await loadPayoutShowLeft();
+    }
+    sel.disabled = false;
+  });
 
   document.getElementById("payoutShowLeftInput").addEventListener("change", async () => {
     const cb = document.getElementById("payoutShowLeftInput");

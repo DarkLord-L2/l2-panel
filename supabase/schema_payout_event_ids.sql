@@ -6,3 +6,7 @@
 -- Выполнить в Supabase Dashboard → SQL Editor (после schema_payout_batches.sql)
 
 alter table public.payout_batches add column if not exists event_ids jsonb;
+
+-- unit_by_nick — цена ОДНОГО КМ на человека из «ДКП» (доля × % буста × коэффициент). «Раздача» платит
+-- «число КМ у лидера × цена»: человек получает деньги от того лидера, у которого был в этот день.
+alter table public.payout_batches add column if not exists unit_by_nick jsonb;
