@@ -88,7 +88,7 @@
   .cd-nogaps table.cd-table th{ padding:0 0 2px; }
   .cd-nogaps td.cd-group-name{ padding:0 8px 0 4px; }
   /* сама клетка (рамка) подгоняется под размер картинки — иначе вокруг иконки остаётся пустое поле */
-  .cd-nogaps .cd-cell{ display:flex; box-sizing:border-box; width:34px; height:34px; border-radius:4px; }
+  .cd-nogaps .cd-cell{ display:flex; box-sizing:border-box; width:34px; height:34px; border-radius:4px; margin:0 auto; } /* auto — по центру колонки, если в других строках клеток больше */
   .cd-nogaps.cd-compact .cd-cell{ width:26px; height:26px; }
   .cd-nogaps.cd-noborders .cd-cell{ border-width:0; width:32px; height:32px; }
   .cd-nogaps.cd-noborders.cd-compact .cd-cell{ width:24px; height:24px; }
@@ -116,7 +116,8 @@
   .cd-compact .cd-cd{ font-size:8.5px; }
 
   .cd-copies{ display:inline-flex; align-items:center; gap:3px; }
-  .cd-nogaps .cd-copies{ gap:0; }
+  .cd-nogaps .cd-copies{ display:flex; justify-content:center; gap:0; }
+  .cd-copies .cd-cell{ margin:0; }
   .cd-empty{ padding:18px 6px; }
   .cd-placeholder{ display:none; }
   .cd-placeholder.show{ display:block; }
