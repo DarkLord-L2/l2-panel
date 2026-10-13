@@ -163,7 +163,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=50"></script>
+<script src="js/i18n.js?v=51"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -338,12 +338,16 @@
   let showLeftInPayout = true;
   // что делать с долей ушедших из клана (Админ-панель → «ДКП»): party | clan | box | none
   let leftMoneyMode = "party";
+  // показывать ли строку «ещё у: …» под ником (Админ-панель → «ДКП»)
+  let showElseInfo = true;
   async function loadPayoutShowLeft(){
     const { data } = await db.from("loot_split_settings").select("show_left_in_payout").eq("clan_id", profile.clan_id).maybeSingle();
     showLeftInPayout = data?.show_left_in_payout ?? true;
     // отдельным запросом: пока не выполнен schema_left_money_mode.sql, ошибка колонки не должна ломать настройку выше
     const { data: lm, error: lmErr } = await db.from("loot_split_settings").select("left_money_mode").eq("clan_id", profile.clan_id).maybeSingle();
     leftMoneyMode = (!lmErr && lm?.left_money_mode) || "party";
+    const { data: se, error: seErr } = await db.from("loot_split_settings").select("payout_show_else").eq("clan_id", profile.clan_id).maybeSingle();
+    showElseInfo = seErr ? true : (se?.payout_show_else ?? true);
   }
 
   // голда больше не считается на этой странице — её присылает «ДКП Соло»/«ДКП Пати»
@@ -663,7 +667,7 @@
       // где человек ходил не в его день); деньги за те КМ платит тот лидер
       const vis = visitsByNorm.get(normalizeNick(r.nickname));
       const others = vis ? [...vis.by.entries()].filter(([l]) => l !== leader).sort((a, b) => b[1] - a[1]) : [];
-      const elseInfo = others.length
+      const elseInfo = (showElseInfo && others.length)
         ? `<span class="lp-else">${escapeHtml(L2I18n.t("payout.elseWord", "ещё у:"))} ${others.map(([l, c]) => escapeHtml(l) + " ×" + c).join(", ")}</span>` : "";
       const countText = r.count === null ? "—" : (r.count + " " + L2I18n.t("payout.kmShort", "КМ"));
       const titleParts = [];

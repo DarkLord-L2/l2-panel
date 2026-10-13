@@ -913,6 +913,13 @@
       "Цей перемикач впливає тільки на те, чи видно саму строку того, хто вийшов (у ній завжди 0). Куди йде його частка — вирішує налаштування «Частка тих, хто вийшов з клану» нижче.",
       "This toggle only controls whether the departed member's own row is shown (it is always 0). Where their share goes is decided by the “Share of members who left” setting below.",
     ],
+    "admin.payoutElseTitle": ["Где ещё был человек в «Раздаче»", "Де ще був людина в «Роздачі»", "Where else a member was, in “Payout”"],
+    "admin.payoutElseLabel": ["Показывать под ником «ещё у: …»", "Показувати під ніком «ще в: …»", "Show “also with: …” under the nickname"],
+    "admin.payoutElseHint": [
+      "Тусклая строка под ником в списке лидера: у каких других лидеров этот человек был за период (например «ещё у: Пятка ×2»). Выключено — строка не показывается, суммы не меняются.",
+      "Тьмяний рядок під ніком у списку лідера: у яких інших лідерів ця людина була за період (наприклад «ще в: Пятка ×2»). Вимкнено — рядок не показується, суми не змінюються.",
+      "A dim line under the nickname in a leader's list: which other leaders this member was with during the period (e.g. “also with: Pyatka ×2”). Off — the line is hidden, the amounts do not change.",
+    ],
     "admin.leftMoneyTitle": ["Доля ушедших из клана", "Частка тих, хто вийшов з клану", "Share of members who left the clan"],
     "admin.leftMoneyLabel": ["Что делать с деньгами тех, кто ушёл из клана", "Що робити з грошима тих, хто вийшов з клану", "What to do with the money of those who left the clan"],
     "admin.leftMoneyParty": ["Поделить между оставшимися в той же пати", "Поділити між тими, хто лишився в тій самій паті", "Split among those remaining in the same party"],
