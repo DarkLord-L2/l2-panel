@@ -136,6 +136,7 @@
     <p class="hint" id="lpNoGoldHint" style="margin:-4px 0 12px; display:none;"></p>
     <p class="error-msg" id="lpError"></p>
     <p class="hint" id="lpEventsHint" style="margin:-4px 0 12px; display:none;"></p>
+    <p class="hint" id="lpManualHint" style="margin:-4px 0 12px; display:none; color: var(--ok);"></p>
     <div class="lp-ov" id="lpOverview" style="display:none;"></div>
     <div class="lp-ov" id="lpLeftBox" style="display:none;"></div>
 
@@ -340,6 +341,10 @@
   let leftMoneyMode = "party";
   // показывать ли строку «ещё у: …» под ником (Админ-панель → «ДКП»)
   let showElseInfo = true;
+  // ручная оплата за 1 КМ (ДКП): если включена и цена > 0 — она в приоритете над расчётом ДКП
+  let manualKmPrice = 0;
+  let manualKmEnabled = false;
+  const manualActive = () => manualKmEnabled && manualKmPrice > 0;
   async function loadPayoutShowLeft(){
     const { data } = await db.from("loot_split_settings").select("show_left_in_payout").eq("clan_id", profile.clan_id).maybeSingle();
     showLeftInPayout = data?.show_left_in_payout ?? true;
@@ -348,6 +353,9 @@
     leftMoneyMode = (!lmErr && lm?.left_money_mode) || "party";
     const { data: se, error: seErr } = await db.from("loot_split_settings").select("payout_show_else").eq("clan_id", profile.clan_id).maybeSingle();
     showElseInfo = seErr ? true : (se?.payout_show_else ?? true);
+    const { data: mk, error: mkErr } = await db.from("loot_split_settings").select("manual_km_price, manual_km_enabled").eq("clan_id", profile.clan_id).maybeSingle();
+    manualKmPrice = mkErr ? 0 : (Number(mk?.manual_km_price) || 0);
+    manualKmEnabled = mkErr ? false : !!mk?.manual_km_enabled;
   }
 
   // голда больше не считается на этой странице — её присылает «ДКП Соло»/«ДКП Пати»
@@ -528,13 +536,19 @@
   // у каждого — иначе каждому лидеру показывалась бы его полная сумма (так сумма дублировалась
   // и «каждый должен был дать по 3, а не по 1»).
   let visitsByNorm = new Map(); // normalizeNick(nick) -> { total, by: Map(leaderNick -> раз) }
+  // цена одного КМ человека: ручная (ДКП → «Оплата за 1 КМ вручную», у лидера × его коэффициент) в приоритете,
+  // иначе — из расчёта ДКП
+  function unitOf(nick){
+    if(!dkpPayload) return null;
+    if(manualActive()) return manualKmPrice * (leaderCoefLabel(nick) || 1);
+    return dkpPayload.unitByNorm ? (dkpPayload.unitByNorm.get(normalizeNick(nick)) || 0) : null;
+  }
   function shareGold(nick, leader){
     if(!dkpPayload) return null;
     const v = visitsByNorm.get(normalizeNick(nick));
-    if(dkpPayload.unitByNorm){
+    if(manualActive() || dkpPayload.unitByNorm){
       // КМ у этого лидера × цена одного КМ этого человека
-      const unit = dkpPayload.unitByNorm.get(normalizeNick(nick)) || 0;
-      return unit * ((v && v.by.get(leader)) || 0);
+      return (unitOf(nick) || 0) * ((v && v.by.get(leader)) || 0);
     }
     const base = goldOf(nick);
     if(base === null) return null;
@@ -598,7 +612,7 @@
     } // box / none — ничего не делим, стоят нули
     memberRows.forEach(r => {
       const base = shareGold(r.nickname, leader);
-      r.unit = (dkpPayload && dkpPayload.unitByNorm) ? (dkpPayload.unitByNorm.get(normalizeNick(r.nickname)) || 0) : null; // цена одного КМ этого человека
+      r.unit = unitOf(r.nickname); // цена одного КМ этого человека
       r.gold = base === null ? null : (r.left ? 0 : base + perStayBonus);
       r.bonus = r.left ? 0 : perStayBonus;
     });
@@ -613,7 +627,7 @@
     // именно под ЭТИМ лидером), но параллельный смысл есть: сколько раз он сам
     // водил раздачу за период — тот же entry.partyCount
     const leaderRow = { nickname: leader, count: entry.partyCount, left: isLeftClan(leader), gold: leaderGold, isLeader: true,
-      unit: (dkpPayload && dkpPayload.unitByNorm) ? (dkpPayload.unitByNorm.get(normalizeNick(leader)) || 0) : null };
+      unit: unitOf(leader) };
     // «К отправке» этому лидеру: его собственная часть + части оставшихся в клане участников
     // (с учётом перераспределённой доли ушедших); строки ушедших — только справка
     const sentMembers = stayRows.reduce((sum, r) => sum + (r.gold || 0), 0);
@@ -757,11 +771,11 @@
       rows.map(r => `<tr class="lp-ov-row" data-leader="${escapeHtml(r.leader)}"><td>${escapeHtml(r.leader)}${r.coef ? ` <span class="lp-tag-badge lp-leader-badge">×${r.coef}</span>` : ""}</td>` +
         `<td class="lp-num">${r.parties}</td><td class="lp-num">${r.members}</td><td class="lp-num lp-gold">${fmtGold(r.total)}</td></tr>`).join("") +
       `<tr class="lp-ov-sum"><td>${escapeHtml(L2I18n.t("payout.ovSum", "Всего лидерам"))}</td><td></td><td></td><td class="lp-num">${fmtGold(grand)}</td></tr>` +
-      (unitMode && batchMatchesView && Math.abs(sumAll - grand) > 0.5
+      (unitMode && !manualActive() && batchMatchesView && Math.abs(sumAll - grand) > 0.5
         ? `<tr class="lp-ov-un"><td colspan="3" title="${escapeHtml(L2I18n.t("payout.ovDkpTitle", "Сумма, которую ДКП распределил по журналу посещаемости"))}">${escapeHtml(L2I18n.t("payout.ovDkpSum", "Голда в ДКП (по журналу явки)"))}</td><td class="lp-num">${fmtGold(sumAll)}</td></tr>` +
           `<tr class="lp-ov-un"><td colspan="3" title="${escapeHtml(L2I18n.t("payout.ovDiffTitle", "Выплата считается по КМ на скринах. Если число КМ на скринах и в журнале посещаемости не совпадает, суммы расходятся"))}">${escapeHtml(L2I18n.t("payout.ovDiff", "Разница выплаты по скринам и ДКП"))}</td><td class="lp-num">${grand - sumAll > 0 ? "+" : "−"}${fmtGold(Math.abs(grand - sumAll))}</td></tr>`
         : "") +
-      (!unitMode && unassigned > 0.5 ? `<tr class="lp-ov-un"><td colspan="3" title="${escapeHtml(L2I18n.t("payout.ovUnassignedTitle", "Эти люди есть в расчёте ДКП, но не найдены на скринах с отмеченным пати-лидером"))}">${escapeHtml(L2I18n.t("payout.ovUnassigned", "Не привязано ни к одному лидеру"))}</td><td class="lp-num">${fmtGold(unassigned)}</td></tr>` : "") +
+      (!unitMode && !manualActive() && unassigned > 0.5 ? `<tr class="lp-ov-un"><td colspan="3" title="${escapeHtml(L2I18n.t("payout.ovUnassignedTitle", "Эти люди есть в расчёте ДКП, но не найдены на скринах с отмеченным пати-лидером"))}">${escapeHtml(L2I18n.t("payout.ovUnassigned", "Не привязано ни к одному лидеру"))}</td><td class="lp-num">${fmtGold(unassigned)}</td></tr>` : "") +
       `</tbody></table><div class="lp-copy-row"><button class="btn" id="lpOvCopyBtn" type="button">${escapeHtml(L2I18n.t("payout.ovCopy", "📋 Скопировать итоги"))}</button></div>`;
     el.style.display = "";
     el._rows = rows;
@@ -799,6 +813,13 @@
     const datesMatchBatch = !!dkpPayload && (fromV || "") === (dkpPayload.from || "") && (toV || "") === (dkpPayload.to || "");
     const batchEventIds = datesMatchBatch ? dkpPayload.eventIds : null;
     await loadPayoutStats(fromV, toV, batchEventIds);
+    const manHint = document.getElementById("lpManualHint");
+    if(dkpPayload && manualActive()){
+      manHint.textContent = L2I18n.t("payout.manualHint", "Оплата за 1 КМ задана вручную: {p} (ДКП). Расчёт ДКП на суммы здесь не влияет.").replace("{p}", fmtGold(manualKmPrice));
+      manHint.style.display = "";
+    } else {
+      manHint.style.display = "none";
+    }
     const evHint = document.getElementById("lpEventsHint");
     if(batchEventIds){
       evHint.textContent = L2I18n.t("payout.eventsHint", "Считается по мероприятиям, выбранным в ДКП: {n} шт.").replace("{n}", batchEventIds.length);

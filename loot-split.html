@@ -14,6 +14,11 @@
   .ls-filters input[type="number"]{ width:140px; }
 
   /* выбор конкретных мероприятий внутри периода (например, пропустить осаду) */
+  .ls-manual{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 12px; padding:8px 12px; border:1px solid var(--border); border-radius:10px; background: var(--panel-2); }
+  .ls-manual-row{ display:flex; align-items:center; gap:7px; font-size:12.5px; cursor:pointer; }
+  .ls-manual input[type="number"]{ width:170px; }
+  .ls-manual-hint{ font-size:11.5px; color: var(--text-dim); flex:1 1 260px; }
+  .ls-manual.active{ border-color: var(--ok); }
   .ls-ev-picker{ margin:0 0 12px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background: var(--panel-2); }
   .ls-ev-head{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 8px; font-size:12px; color: var(--text-dim); }
   .ls-ev-head b{ color: var(--text); font-weight:600; }
@@ -126,6 +131,12 @@
       </div>
       <button class="btn btn-primary" id="splitBtn" data-i18n="dkp.splitBtn">Разделить дроп</button>
       <button class="btn btn-danger" id="toPayoutBtn" data-i18n="dkp.toPayoutBtn" disabled style="display:none;">Раздать</button>
+    </div>
+    <div class="ls-manual" id="manualBox" style="display:none;">
+      <label class="ls-manual-row"><input type="checkbox" id="manualOn" />
+        <span data-i18n="dkp.manualLabel">Оплата за 1 КМ вручную</span></label>
+      <input type="number" id="manualPrice" min="0" step="1" placeholder="голда за 1 КМ" />
+      <span class="ls-manual-hint" id="manualHint"></span>
     </div>
     <div class="ls-ev-picker" id="evPicker" style="display:none;"></div>
     <p class="hint" id="toPayoutHint" style="margin:-4px 0 10px; display:none;"></p>
@@ -796,6 +807,50 @@
 
   await Promise.all([loadCensus(), loadMemberClasses(), loadBoostStructure(), loadBoostValues(), loadCoefficients(), loadLeaderCoefficients(), loadLootSplitSettings()]);
   renderTable([]);
+  // ---- ручная оплата за 1 КМ (только клан-лидер): если включена и цена > 0, «Раздача» платит
+  // «число КМ у лидера × эта цена» всем (лидер — со своим коэффициентом), а расчёт ДКП на неё не влияет.
+  // Стёр цену или выключил — «Раздача» считает как раньше. Хранится в настройках клана, видна всем лидерам ----
+  function fmtMoney(n){ return Math.round(n).toLocaleString(L2I18n.locale()); }
+  function updateManualHint(){
+    const on = document.getElementById("manualOn").checked;
+    const price = Number(document.getElementById("manualPrice").value) || 0;
+    const active = on && price > 0;
+    document.getElementById("manualBox").classList.toggle("active", active);
+    document.getElementById("manualHint").textContent = active
+      ? L2I18n.t("dkp.manualActive", "Включено: «Раздача» платит {p} за каждый КМ у лидера, расчёт голды ниже на неё не влияет. Выключи или сотри цену — вернётся расчёт.").replace("{p}", fmtMoney(price))
+      : L2I18n.t("dkp.manualOff", "Выключено: «Раздача» считает по расчёту ДКП. Впиши цену за 1 КМ и включи — тогда она будет в приоритете.");
+  }
+  async function loadManualKm(){
+    if(!isAdmin) return;
+    const box = document.getElementById("manualBox");
+    const { data, error } = await db.from("loot_split_settings").select("manual_km_price, manual_km_enabled").eq("clan_id", profile.clan_id).maybeSingle();
+    box.style.display = "";
+    if(error){
+      document.getElementById("manualPrice").disabled = true;
+      document.getElementById("manualOn").disabled = true;
+      document.getElementById("manualHint").textContent = "Не удалось загрузить настройку (нужно выполнить supabase/schema_manual_km_price.sql): " + error.message;
+      return;
+    }
+    document.getElementById("manualPrice").value = data?.manual_km_price != null ? data.manual_km_price : "";
+    document.getElementById("manualOn").checked = !!data?.manual_km_enabled;
+    updateManualHint();
+  }
+  async function saveManualKm(){
+    const priceEl = document.getElementById("manualPrice"), onEl = document.getElementById("manualOn");
+    const raw = priceEl.value.trim();
+    const price = raw === "" ? null : Math.max(0, Number(raw) || 0);
+    priceEl.disabled = onEl.disabled = true;
+    const { error } = await db.from("loot_split_settings").upsert(
+      { clan_id: profile.clan_id, manual_km_price: price, manual_km_enabled: onEl.checked },
+      { onConflict: "clan_id" });
+    priceEl.disabled = onEl.disabled = false;
+    if(error){ document.getElementById("manualHint").textContent = "Не удалось сохранить: " + error.message; return; }
+    updateManualHint();
+  }
+  document.getElementById("manualOn").addEventListener("change", saveManualKm);
+  document.getElementById("manualPrice").addEventListener("change", saveManualKm);
+  await loadManualKm();
+
   const restoredFilters = restoreDkpFilters();
   await refreshEventPicker();
   if(restoredFilters) await doSplit();
