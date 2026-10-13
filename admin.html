@@ -269,6 +269,24 @@
   </section>
 
   <section class="card">
+    <h2 data-i18n="admin.manualKmTitle">Оплата за 1 КМ вручную</h2>
+    <div class="section-toggle-row">
+      <span class="label" data-i18n="admin.manualKmLabel">Включить ручную оплату</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="manualKmOnInput" />
+        <span class="track"></span>
+      </label>
+    </div>
+    <div class="tax-amount-row">
+      <span class="label" data-i18n="admin.manualKmPriceLabel">Голда за 1 КМ</span>
+      <input type="number" id="manualKmPriceInput" min="0" step="1" />
+    </div>
+    <p class="hint" data-i18n="admin.manualKmHint">Если включено и цена больше 0 — «Раздача» платит каждому «число КМ у лидера × эта цена» (лидер — со своим коэффициентом), а расчёт ДКП на суммы не влияет. Выключи или сотри цену — «Раздача» снова считает по расчёту ДКП. Процент буста и коэффициент профессии при ручной цене не применяются.</p>
+    <p class="error-msg" id="manualKmError"></p>
+    <p class="ok-msg" id="manualKmOk"></p>
+  </section>
+
+  <section class="card">
     <h2 data-i18n="admin.payoutElseTitle">Где ещё был человек в «Раздаче»</h2>
     <div class="section-toggle-row">
       <span class="label" data-i18n="admin.payoutElseLabel">Показывать под ником «ещё у: …»</span>
@@ -461,7 +479,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=51"></script>
+<script src="js/i18n.js?v=52"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -819,7 +837,48 @@
     document.getElementById("leftMoneyModeInput").value = (!lmErr && lm?.left_money_mode) || "party";
     const { data: se, error: seErr } = await db.from("loot_split_settings").select("payout_show_else").eq("clan_id", profile.clan_id).maybeSingle();
     document.getElementById("payoutShowElseInput").checked = seErr ? true : (se?.payout_show_else ?? true);
+    await loadManualKm();
   }
+
+  // ---------- «Оплата за 1 КМ вручную»: если включена и цена > 0, «Раздача» платит «КМ у лидера × цена»
+  // вместо расчёта ДКП; выключил или стёр цену — считает как раньше. После каждого сохранения читаем
+  // значение из базы обратно и показываем, что реально сохранилось ----------
+  async function loadManualKm(){
+    const errEl = document.getElementById("manualKmError");
+    const { data, error } = await db.from("loot_split_settings").select("manual_km_price, manual_km_enabled").eq("clan_id", profile.clan_id).maybeSingle();
+    const onEl = document.getElementById("manualKmOnInput"), priceEl = document.getElementById("manualKmPriceInput");
+    if(error){
+      onEl.disabled = priceEl.disabled = true;
+      errEl.textContent = L2I18n.t("admin.manualKmNoColumns", "Не удалось загрузить настройку — нужно выполнить supabase/schema_manual_km_price.sql: ") + error.message;
+      return;
+    }
+    onEl.disabled = priceEl.disabled = false;
+    onEl.checked = !!data?.manual_km_enabled;
+    priceEl.value = data?.manual_km_price != null ? data.manual_km_price : "";
+  }
+  async function saveManualKm(){
+    const onEl = document.getElementById("manualKmOnInput"), priceEl = document.getElementById("manualKmPriceInput");
+    const errEl = document.getElementById("manualKmError"), okEl = document.getElementById("manualKmOk");
+    errEl.textContent = ""; okEl.textContent = "";
+    const raw = priceEl.value.trim();
+    const price = raw === "" ? null : Math.max(0, Number(raw) || 0);
+    onEl.disabled = priceEl.disabled = true;
+    const { error } = await db.from("loot_split_settings").upsert(
+      { clan_id: profile.clan_id, manual_km_price: price, manual_km_enabled: onEl.checked },
+      { onConflict: "clan_id" });
+    if(error){
+      errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message + " (нужно выполнить supabase/schema_manual_km_price.sql)";
+      await loadManualKm();
+      return;
+    }
+    await loadManualKm(); // читаем обратно из базы — показываем то, что на самом деле сохранилось
+    const active = onEl.checked && (Number(priceEl.value) || 0) > 0;
+    okEl.textContent = active
+      ? L2I18n.t("admin.manualKmOkOn", "Сохранено. Включено: «Раздача» платит {p} за 1 КМ.").replace("{p}", Math.round(Number(priceEl.value)).toLocaleString(L2I18n.locale()))
+      : L2I18n.t("admin.manualKmOkOff", "Сохранено. Ручная оплата не действует — «Раздача» считает по расчёту ДКП.");
+  }
+  document.getElementById("manualKmOnInput").addEventListener("change", saveManualKm);
+  document.getElementById("manualKmPriceInput").addEventListener("change", saveManualKm);
 
   document.getElementById("payoutShowElseInput").addEventListener("change", async () => {
     const cb = document.getElementById("payoutShowElseInput");

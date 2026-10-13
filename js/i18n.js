@@ -913,6 +913,14 @@
       "Цей перемикач впливає тільки на те, чи видно саму строку того, хто вийшов (у ній завжди 0). Куди йде його частка — вирішує налаштування «Частка тих, хто вийшов з клану» нижче.",
       "This toggle only controls whether the departed member's own row is shown (it is always 0). Where their share goes is decided by the “Share of members who left” setting below.",
     ],
+    "admin.manualKmTitle": ["Оплата за 1 КМ вручную", "Оплата за 1 КМ вручну", "Manual payment per 1 KM"],
+    "admin.manualKmLabel": ["Включить ручную оплату", "Увімкнути ручну оплату", "Enable manual payment"],
+    "admin.manualKmPriceLabel": ["Голда за 1 КМ", "Голда за 1 КМ", "Gold per 1 KM"],
+    "admin.manualKmHint": [
+      "Если включено и цена больше 0 — «Раздача» платит каждому «число КМ у лидера × эта цена» (лидер — со своим коэффициентом), а расчёт ДКП на суммы не влияет. Выключи или сотри цену — «Раздача» снова считает по расчёту ДКП. Процент буста и коэффициент профессии при ручной цене не применяются.",
+      "Якщо увімкнено і ціна більша за 0 — «Роздача» платить кожному «кількість КМ у лідера × ця ціна» (лідер — зі своїм коефіцієнтом), а розрахунок ДКП на суми не впливає. Вимкни або зітри ціну — «Роздача» знову рахує за розрахунком ДКП. Відсоток бусту і коефіцієнт професії при ручній ціні не застосовуються.",
+      "If on and the price is above 0, “Payout” pays everyone “KMs with the leader × this price” (the leader with their coefficient) and the DKP calculation does not affect the amounts. Turn it off or clear the price and “Payout” goes back to the DKP calculation. Boost percent and class coefficient are not applied with a manual price.",
+    ],
     "admin.payoutElseTitle": ["Где ещё был человек в «Раздаче»", "Де ще був людина в «Роздачі»", "Where else a member was, in “Payout”"],
     "admin.payoutElseLabel": ["Показывать под ником «ещё у: …»", "Показувати під ніком «ще в: …»", "Show “also with: …” under the nickname"],
     "admin.payoutElseHint": [
