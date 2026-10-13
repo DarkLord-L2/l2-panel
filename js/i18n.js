@@ -913,6 +913,7 @@
       "Цей перемикач впливає тільки на те, чи видно саму строку того, хто вийшов (у ній завжди 0). Куди йде його частка — вирішує налаштування «Частка тих, хто вийшов з клану» нижче.",
       "This toggle only controls whether the departed member's own row is shown (it is always 0). Where their share goes is decided by the “Share of members who left” setting below.",
     ],
+    "dkp.manualTitle": ["Ручная цена за 1 КМ", "Ручна ціна за 1 КМ", "Manual price per 1 KM"],
     "admin.manualKmTitle": ["Оплата за 1 КМ вручную", "Оплата за 1 КМ вручну", "Manual payment per 1 KM"],
     "admin.manualKmLabel": ["Включить ручную оплату", "Увімкнути ручну оплату", "Enable manual payment"],
     "admin.manualKmPriceLabel": ["Голда за 1 КМ", "Голда за 1 КМ", "Gold per 1 KM"],

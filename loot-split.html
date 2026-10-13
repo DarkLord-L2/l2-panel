@@ -12,6 +12,13 @@
   .ls-filters .field{ margin:0; }
   .ls-filters input[type="date"]{ min-width:150px; }
   .ls-filters input[type="number"]{ width:140px; }
+  .ls-filters input[data-money]{ width:210px; }
+  /* ручная цена за 1 КМ — компактный блок справа в строке управления: название, ползунок, поле */
+  .ls-manual{ display:flex; align-items:center; gap:10px; margin-left:auto; align-self:flex-end; padding:6px 12px; border:1px solid var(--border); border-radius:10px; background: var(--panel-2); }
+  .ls-manual.active{ border-color: var(--ok); }
+  .ls-manual.error{ border-color: var(--danger); }
+  .ls-manual-title{ font-size:12.5px; color: var(--text-dim); white-space:nowrap; }
+  .ls-filters .ls-manual input[data-money]{ width:150px; }
 
   /* выбор конкретных мероприятий внутри периода (например, пропустить осаду) */
   .ls-ev-picker{ margin:0 0 12px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background: var(--panel-2); }
@@ -122,10 +129,15 @@
       </div>
       <div class="field">
         <label for="goldInput" data-i18n="dkp.goldLabel">Голда</label>
-        <input type="number" id="goldInput" min="0" step="1" value="0" />
+        <input type="number" id="goldInput" data-money min="0" step="1" value="0" />
       </div>
       <button class="btn btn-primary" id="splitBtn" data-i18n="dkp.splitBtn">Разделить дроп</button>
       <button class="btn btn-danger" id="toPayoutBtn" data-i18n="dkp.toPayoutBtn" disabled style="display:none;">Раздать</button>
+      <div class="ls-manual" id="manualBox" style="display:none;">
+        <span class="ls-manual-title" data-i18n="dkp.manualTitle">Ручная цена за 1 КМ</span>
+        <label class="toggle-switch"><input type="checkbox" id="manualOn" /><span class="track"></span></label>
+        <input type="number" id="manualPrice" data-money min="0" step="1" />
+      </div>
     </div>
     <div class="ls-ev-picker" id="evPicker" style="display:none;"></div>
     <p class="hint" id="toPayoutHint" style="margin:-4px 0 10px; display:none;"></p>
@@ -146,7 +158,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=52"></script>
+<script src="js/i18n.js?v=53"></script>
+<script src="js/num-format.js?v=1"></script>
 <script src="js/nick-match.js?v=2"></script>
 <script>
 (async function(){
@@ -769,6 +782,43 @@
 
   await Promise.all([loadCensus(), loadMemberClasses(), loadBoostStructure(), loadBoostValues(), loadCoefficients(), loadLeaderCoefficients(), loadLootSplitSettings()]);
   renderTable([]);
+  // ---- ручная цена за 1 КМ (только клан-лидер): включена и цена > 0 → «Раздача» платит «число КМ у лидера × цена»
+  // всем (лидер — со своим коэффициентом) вместо расчёта ДКП; выключил или стёр цену — считается как раньше.
+  // После каждого сохранения значение читается из базы обратно: рамка зелёная — действует, красная — не сохранилось ----
+  const manualBox = document.getElementById("manualBox");
+  const manualOn = document.getElementById("manualOn");
+  const manualPrice = document.getElementById("manualPrice");
+  function paintManual(){ manualBox.classList.toggle("active", manualOn.checked && (Number(manualPrice.value) || 0) > 0); }
+  async function loadManualKm(){
+    if(!isAdmin) return;
+    const { data, error } = await db.from("loot_split_settings").select("manual_km_price, manual_km_enabled").eq("clan_id", profile.clan_id).maybeSingle();
+    manualBox.style.display = "";
+    if(error){
+      manualOn.disabled = manualPrice.disabled = true;
+      manualBox.classList.add("error");
+      manualBox.title = "Нужно выполнить supabase/schema_manual_km_price.sql: " + error.message;
+      return;
+    }
+    manualOn.disabled = manualPrice.disabled = false;
+    manualBox.classList.remove("error");
+    manualBox.title = "";
+    manualPrice.value = data?.manual_km_price != null ? data.manual_km_price : "";
+    manualOn.checked = !!data?.manual_km_enabled;
+    paintManual();
+  }
+  async function saveManualKm(){
+    const raw = manualPrice.value.trim();
+    const price = raw === "" ? null : Math.max(0, Number(raw) || 0);
+    manualOn.disabled = manualPrice.disabled = true;
+    const { error } = await db.from("loot_split_settings").upsert(
+      { clan_id: profile.clan_id, manual_km_price: price, manual_km_enabled: manualOn.checked }, { onConflict: "clan_id" });
+    await loadManualKm();
+    if(error){ manualBox.classList.add("error"); manualBox.title = "Не удалось сохранить: " + error.message; }
+  }
+  manualOn.addEventListener("change", saveManualKm);
+  manualPrice.addEventListener("change", saveManualKm);
+  await loadManualKm();
+
   const restoredFilters = restoreDkpFilters();
   await refreshEventPicker();
   if(restoredFilters) await doSplit();

@@ -172,7 +172,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=52"></script>
+<script src="js/i18n.js?v=53"></script>
 <script src="js/nick-match.js?v=2"></script>
 <script>
 (async function(){
@@ -861,7 +861,7 @@
     await loadPayoutStats(fromV, toV, batchEventIds);
     const manHint = document.getElementById("lpManualHint");
     if(manualActive()){
-      manHint.textContent = L2I18n.t("payout.manualHint", "Оплата за 1 КМ задана вручную: {p} (Админ-панель → ДКП). Расчёт ДКП на суммы здесь не влияет.").replace("{p}", fmtGold(manualKmPrice)) +
+      manHint.textContent = L2I18n.t("payout.manualHint", "Оплата за 1 КМ задана вручную: {p} (ДКП). Расчёт ДКП на суммы здесь не влияет.").replace("{p}", fmtGold(manualKmPrice)) +
         (dkpPayload ? "" : " " + L2I18n.t("payout.manualNoBatch", "Суммы — за выбранный период. Чтобы лидеры пати увидели свою часть, нажми «Раздать» в «ДКП»."));
       manHint.style.display = "";
     } else {
@@ -927,7 +927,7 @@
     actionsEl.style.display = "none";
     const hintEl = document.getElementById("lpNoGoldHint");
     hintEl.textContent = L2I18n.t("payout.noGoldHint",
-      "Голда не показана — нажмите «Раздать» в «ДКП Соло»/«ДКП Пати» сразу после «Разделить дроп» (или включите ручную оплату за 1 КМ в Админ-панели → «ДКП»).");
+      "Голда не показана — нажмите «Раздать» в «ДКП Соло»/«ДКП Пати» сразу после «Разделить дроп» (или включите ручную цену за 1 КМ в «ДКП Соло»/«ДКП Пати»).");
     hintEl.style.display = manualActive() ? "none" : "";
     renderForLeader(document.getElementById("leaderSelect").value || null);
     actionsEl.querySelectorAll("button").forEach(b => b.disabled = false);
@@ -1078,7 +1078,7 @@
     if(!dkpPayload && !manualActive()){
       const hintEl = document.getElementById("lpNoGoldHint");
       hintEl.textContent = L2I18n.t("payout.noGoldHint",
-        "Голда не показана — нажмите «Раздать» в «ДКП Соло»/«ДКП Пати» сразу после «Разделить дроп» (или включите ручную оплату за 1 КМ в Админ-панели → «ДКП»).");
+        "Голда не показана — нажмите «Раздать» в «ДКП Соло»/«ДКП Пати» сразу после «Разделить дроп» (или включите ручную цену за 1 КМ в «ДКП Соло»/«ДКП Пати»).");
       hintEl.style.display = "";
     }
     await reload();
