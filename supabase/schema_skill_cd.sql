@@ -192,3 +192,48 @@ begin
   exception when duplicate_object then null;
   end;
 end $$;
+
+-- ---------- 10. несколько одинаковых скилов у одной пати ----------
+-- cd_marks.slot — номер копии скила (1..4): у каждой копии своя отметка и свой таймер КД.
+--   Первичный ключ расширяется до (group_id, skill_id, slot); старые отметки получают slot = 1.
+-- cd_skill_copies — сколько копий скила у пати (запись только когда больше одной; по умолчанию одна).
+--   Настраивает клан-лидер в «⚙ Скилы пати» (число в клетке: 0 — нет, 1 — один, 2–4 — несколько).
+alter table public.cd_marks add column if not exists slot smallint not null default 1;
+do $$
+begin
+  if exists (select 1 from pg_constraint where conname = 'cd_marks_pkey' and conrelid = 'public.cd_marks'::regclass and array_length(conkey, 1) = 2) then
+    alter table public.cd_marks drop constraint cd_marks_pkey;
+    alter table public.cd_marks add constraint cd_marks_pkey primary key (group_id, skill_id, slot);
+  end if;
+end $$;
+
+create table if not exists public.cd_skill_copies (
+  clan_id uuid not null references public.clans(id) on delete cascade,
+  group_id uuid not null references public.clan_groups(id) on delete cascade,
+  skill_id uuid not null references public.cd_skills(id) on delete cascade,
+  copies smallint not null check (copies between 2 and 4),
+  primary key (group_id, skill_id)
+);
+alter table public.cd_skill_copies enable row level security;
+
+drop policy if exists "cd_skill_copies_select" on public.cd_skill_copies;
+create policy "cd_skill_copies_select" on public.cd_skill_copies for select
+  using (clan_id in (select clan_id from public.profiles where id = auth.uid()));
+drop policy if exists "cd_skill_copies_write_admins" on public.cd_skill_copies;
+create policy "cd_skill_copies_write_admins" on public.cd_skill_copies for all
+  using (
+    public.current_role_key() in ('glavadmin','admin')
+    and clan_id in (select clan_id from public.profiles where id = auth.uid())
+  )
+  with check (
+    public.current_role_key() in ('glavadmin','admin')
+    and clan_id in (select clan_id from public.profiles where id = auth.uid())
+  );
+
+do $$
+begin
+  begin
+    alter publication supabase_realtime add table public.cd_skill_copies;
+  exception when duplicate_object then null;
+  end;
+end $$;

@@ -29,7 +29,9 @@
   table.cd-table th{ font-weight:600; font-size:10.5px; color: var(--text-dim); text-align:center; padding:2px 3px 6px; vertical-align:bottom; max-width:52px; }
   table.cd-table th.cd-group-h{ text-align:left; font-size:11.5px; padding-left:4px; vertical-align:middle; }
   .cd-skill-h img{ width:30px; height:30px; object-fit:contain; display:block; margin:0 auto 2px; border-radius:4px; }
-  .cd-skill-h span{ display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:52px; }
+  .cd-skill-h span{ display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:52px; margin:0 auto; text-align:center; }
+  /* над колонкой с несколькими копиями (шире одной клетки) подпись может занять всю её ширину */
+  .cd-skill-h.cd-multi-h span{ max-width: calc(var(--n, 2) * 46px); }
   table.cd-table td{ padding:2px 3px; text-align:center; }
   td.cd-group-name{ text-align:left; white-space:nowrap; font-weight:600; padding:2px 14px 2px 4px; color: var(--text); }
   td.cd-group-name small{ display:block; font-weight:400; font-size:10.5px; color: var(--text-dim); }
@@ -113,6 +115,8 @@
   .cd-cell.on .cd-cd{ display:none; }
   .cd-compact .cd-cd{ font-size:8.5px; }
 
+  .cd-copies{ display:inline-flex; align-items:center; gap:3px; }
+  .cd-nogaps .cd-copies{ gap:0; }
   .cd-empty{ padding:18px 6px; }
   .cd-placeholder{ display:none; }
   .cd-placeholder.show{ display:block; }
@@ -149,6 +153,11 @@
   .cd-off-table td.cd-off-g{ text-align:left; white-space:nowrap; cursor:pointer; padding-right:14px; font-weight:600; }
   .cd-off-table td.cd-off-g.dim{ opacity:.5; }
   .cd-off-table input{ width:18px; height:18px; cursor:pointer; }
+  .cd-off-n{ width:32px; height:26px; border-radius:6px; border:1px solid var(--border-lit); background: var(--panel-2); color: var(--text); cursor:pointer; font-weight:700; font-size:13px; padding:0; }
+  .cd-off-n.n0{ color: var(--text-dim); opacity:.55; }
+  .cd-off-n.n1{ border-color: var(--ok); }
+  .cd-off-n.nm{ border-color: var(--gold); color: var(--gold); }
+  .cd-off-n:hover{ border-color: var(--gold); }
   .cd-modal-foot{ display:flex; justify-content:space-between; align-items:center; margin-top:14px; gap:10px; }
 </style>
 </head>
@@ -205,7 +214,7 @@
 <div class="cd-overlay" id="offOverlay">
   <div class="cd-modal cd-wide">
     <h2>Какие скилы у какой пати</h2>
-    <p class="hint">Галочка — у этой пати скил есть, в таблице у неё будет его клетка. Без галочки клетки у пати вообще не будет (никакого пустого квадрата). Нажми на название пати или на скил в шапке, чтобы включить или выключить сразу всю строку или весь столбец.</p>
+    <p class="hint">Число — сколько копий этого скила у пати. 0 — скила нет (клетки в таблице не будет, никакого пустого квадрата), 1 — один, 2–4 — несколько одинаковых (например, у двух игроков один и тот же бафф): у каждой копии своя отметка и свой таймер КД. Нажимай на число, чтобы переключать. Нажми на название пати или на скил в шапке, чтобы включить (1) или выключить (0) сразу всю строку или весь столбец.</p>
     <div id="offMatrix"></div>
     <p class="error-msg" id="offErr"></p>
     <div class="cd-modal-foot"><span></span><button class="btn" id="offClose" type="button">Готово</button></div>
@@ -254,6 +263,14 @@
   // schema_skill_cd.sql; пока её нет, у всех пати все скилы, как раньше.
   const off = new Set();
   let offOk = false;
+  // несколько одинаковых скилов у одной пати (например, у двух игроков один и тот же бафф): у пары пати × скил
+  // бывает 1–4 копии, у каждой своя отметка и свой таймер КД. По умолчанию копия одна. Нужны колонка cd_marks.slot и
+  // таблица cd_skill_copies (последняя часть schema_skill_cd.sql); пока их нет — одна копия, как раньше.
+  const copies = new Map();  // "groupId|skillId" -> число копий (2..4); нет записи = 1
+  let copiesOk = false, slotOk = false;
+  const MAX_COPIES = 4;
+  const mkey = (g, s, slot) => g + "|" + s + "|" + (slot || 1);
+  const copiesOf = (g, s) => off.has(key(g, s)) ? 0 : ((slotOk && copiesOk && copies.get(key(g, s))) || 1);
   let marksHaveReady = false, skillsHaveCd = false, settingsOk = false, timerOn = false;
   const timerActive = () => timerOn && marksHaveReady;
   function isOnMark(m){ return !!m && (m.has || (timerActive() && !!m.ready && Date.now() >= m.ready)); }
@@ -346,14 +363,16 @@
     skills = res.data || [];
   }
   async function loadMarks(){
-    let res = await db.from("cd_marks").select("group_id, skill_id, has, ready_at");
+    let res = await db.from("cd_marks").select("group_id, skill_id, slot, has, ready_at");
+    slotOk = !res.error;
     marksHaveReady = !res.error;
+    if(res.error){ res = await db.from("cd_marks").select("group_id, skill_id, has, ready_at"); marksHaveReady = !res.error; }
     if(res.error) res = await db.from("cd_marks").select("group_id, skill_id, has");
     if(res.error) throw res.error;
     marks.clear();
     for(const m of (res.data || [])){
       const ready = m.ready_at ? Date.parse(m.ready_at) : null;
-      if(m.has || ready) marks.set(key(m.group_id, m.skill_id), { has: !!m.has, ready });
+      if(m.has || ready) marks.set(mkey(m.group_id, m.skill_id, m.slot), { has: !!m.has, ready });
     }
   }
   async function loadOff(){
@@ -361,6 +380,12 @@
     offOk = !res.error;
     off.clear();
     if(!res.error) for(const r of (res.data || [])) off.add(key(r.group_id, r.skill_id));
+  }
+  async function loadCopies(){
+    const res = await db.from("cd_skill_copies").select("group_id, skill_id, copies");
+    copiesOk = !res.error;
+    copies.clear();
+    if(!res.error) for(const r of (res.data || [])) if(r.copies > 1) copies.set(key(r.group_id, r.skill_id), Math.min(MAX_COPIES, r.copies));
   }
   async function loadSettings(){
     const res = await db.from("cd_settings").select("timer_enabled").eq("clan_id", clanId).maybeSingle();
@@ -409,7 +434,8 @@
     } else {
       html += '<div class="cd-scroll"><table class="cd-table"><thead><tr><th class="cd-group-h">Группа</th>';
       for(const s of shownSkills){
-        html += '<th class="cd-skill-h" title="' + esc(s.name) + '">' +
+        const maxCopies = Math.max(1, ...vg.map(g => copiesOf(g.id, s.id)));
+        html += '<th class="cd-skill-h' + (maxCopies > 1 ? ' cd-multi-h' : '') + '"' + (maxCopies > 1 ? ' style="--n:' + maxCopies + '"' : '') + ' title="' + esc(s.name) + '">' +
           (s.icon ? '<img src="' + esc(s.icon) + '" alt="" />' : '') + '<span>' + esc(s.name) + '</span></th>';
       }
       html += '</tr></thead><tbody>';
@@ -421,13 +447,18 @@
           (num !== "" ? '<span class="cd-num">' + esc(num) + '</span>' : '') + '<span class="cd-pname">' + esc(g.shownName) + '</span>' +
           (g.leader_nickname ? '<small>' + esc(g.leader_nickname) + '</small>' : '') + '</td>';
         for(const s of shownSkills){
-          if(off.has(key(g.id, s.id))){ html += '<td></td>'; continue; } // у этой пати такого скила нет — клетки нет
-          const m = marks.get(key(g.id, s.id));
-          const on = isOnMark(m);
-          html += '<td><button type="button" class="cd-cell' + (on ? ' on' : '') + (edit ? ' edit' : '') +
-            '" data-g="' + g.id + '" data-s="' + s.id + '" title="' + esc(s.name) + '"' + (edit ? '' : ' tabindex="-1"') + '>' +
-            (s.icon ? '<img src="' + esc(s.icon) + '" alt="" />' : esc((s.name || "?").slice(0, 1).toUpperCase())) +
-            '<span class="cd-cd">' + (on ? '' : fmtLeft(leftSec(m))) + '</span></button></td>';
+          const n = copiesOf(g.id, s.id);
+          if(n === 0){ html += '<td></td>'; continue; } // у этой пати такого скила нет — клетки нет
+          html += '<td>' + (n > 1 ? '<span class="cd-copies">' : '');
+          for(let slot = 1; slot <= n; slot++){ // каждая копия скила — своя клетка со своей отметкой и своим таймером
+            const m = marks.get(mkey(g.id, s.id, slot));
+            const on = isOnMark(m);
+            html += '<button type="button" class="cd-cell' + (on ? ' on' : '') + (edit ? ' edit' : '') +
+              '" data-g="' + g.id + '" data-s="' + s.id + '" data-slot="' + slot + '" title="' + esc(s.name) + (n > 1 ? ' #' + slot : '') + '"' + (edit ? '' : ' tabindex="-1"') + '>' +
+              (s.icon ? '<img src="' + esc(s.icon) + '" alt="" />' : esc((s.name || "?").slice(0, 1).toUpperCase())) +
+              '<span class="cd-cd">' + (on ? '' : fmtLeft(leftSec(m))) + '</span></button>';
+          }
+          html += (n > 1 ? '</span>' : '') + '</td>';
         }
         html += '</tr>';
       });
@@ -464,7 +495,7 @@
     }
     const cell = e.target.closest(".cd-cell.edit");
     if(!cell) return;
-    const g = cell.dataset.g, s = cell.dataset.s, k = key(g, s);
+    const g = cell.dataset.g, s = cell.dataset.s, slot = Number(cell.dataset.slot) || 1, k = mkey(g, s, slot);
     const prev = marks.get(k);
     const next = !isOnMark(prev); // с учётом таймера: скил, который уже сам включился, считается включённым — клик его выключает
     // выключили — запускаем отсчёт, если у скила задано КД и таймер включён; включили руками — отсчёт сбрасывается
@@ -475,7 +506,8 @@
     showError("");
     const row = { clan_id: clanId, group_id: g, skill_id: s, has: next, updated_at: new Date().toISOString() };
     if(marksHaveReady) row.ready_at = ready ? new Date(ready).toISOString() : null;
-    const { error } = await db.from("cd_marks").upsert(row, { onConflict: "group_id,skill_id" });
+    if(slotOk) row.slot = slot;
+    const { error } = await db.from("cd_marks").upsert(row, { onConflict: slotOk ? "group_id,skill_id,slot" : "group_id,skill_id" });
     if(error){
       if(prev) marks.set(k, prev); else marks.delete(k);
       tickTimers();
@@ -489,7 +521,7 @@
   // и работает даже когда никто из лидеров не заходил на страницу.
   function tickTimers(){
     for(const c of board.querySelectorAll(".cd-cell[data-g]")){
-      const m = marks.get(key(c.dataset.g, c.dataset.s));
+      const m = marks.get(mkey(c.dataset.g, c.dataset.s, c.dataset.slot));
       const on = isOnMark(m);
       c.classList.toggle("on", on);
       const sp = c.querySelector(".cd-cd");
@@ -522,7 +554,7 @@
   function scheduleSkills(){
     clearTimeout(skillsTimer);
     skillsTimer = setTimeout(async () => {
-      try { await Promise.all([loadGroups(), loadSkills(), loadMarks(), loadSettings(), loadOff()]); renderBoard(); if($("offOverlay").classList.contains("show")) renderOffMatrix(); if($("skillsOverlay").classList.contains("show")) renderSkillList(); }
+      try { await Promise.all([loadGroups(), loadSkills(), loadMarks(), loadSettings(), loadOff(), loadCopies()]); renderBoard(); if($("offOverlay").classList.contains("show")) renderOffMatrix(); if($("skillsOverlay").classList.contains("show")) renderSkillList(); }
       catch(e){ console.error(e); }
     }, 150);
   }
@@ -534,6 +566,7 @@
       .on("postgres_changes", { event: "*", schema: "public", table: "cd_skills" }, scheduleSkills);
     if(settingsOk) ch = ch.on("postgres_changes", { event: "*", schema: "public", table: "cd_settings" }, scheduleSkills);
     if(offOk) ch = ch.on("postgres_changes", { event: "*", schema: "public", table: "cd_skill_off" }, scheduleSkills);
+    if(copiesOk) ch = ch.on("postgres_changes", { event: "*", schema: "public", table: "cd_skill_copies" }, scheduleSkills);
     channel = ch.subscribe((status) => setLive(status === "SUBSCRIBED"));
   }
   setInterval(() => { if(!liveOk) scheduleMarks(); }, 20000);
@@ -695,7 +728,7 @@
       const { error } = await db.from("cd_skills").delete().eq("id", id);
       if(error){ skillsError("Не удалось удалить: " + error.message); return; }
       skills = skills.filter(x => x.id !== id);
-      for(const k of [...marks.keys()]) if(k.endsWith("|" + id)) marks.delete(k);
+      for(const k of [...marks.keys()]) if(k.split("|")[1] === id) marks.delete(k);
       renderSkillList(); renderBoard(); return;
     }
     if(act === "up" || act === "down"){
@@ -763,47 +796,61 @@
       '</tr></thead><tbody>' + groups.map(g =>
         '<tr><td class="cd-off-g' + (g.cd_enabled === false ? ' dim' : '') + '" data-row="' + g.id + '" title="Нажми, чтобы включить/выключить всю строку">' +
           (g.cd_number != null ? esc(g.cd_number) + '. ' : '') + esc(g.shownName) + '</td>' +
-        skills.map(sk => '<td><input type="checkbox" data-og="' + g.id + '" data-os="' + sk.id + '"' + (off.has(key(g.id, sk.id)) ? '' : ' checked') + ' /></td>').join("") +
+        skills.map(sk => {
+          const n = copiesOf(g.id, sk.id);
+          return '<td><button type="button" class="cd-off-n ' + (n === 0 ? 'n0' : n === 1 ? 'n1' : 'nm') + '" data-og="' + g.id + '" data-os="' + sk.id + '" title="Копий скила у пати: ' + n + '">' + n + '</button></td>';
+        }).join("") +
         '</tr>').join("") + '</tbody></table>';
   }
-  async function setOff(pairs, makeOff){
-    if(!pairs.length) return;
+  async function deleteByGroup(table, list){
+    const by = new Map();
+    list.forEach(i => { if(!by.has(i.g)) by.set(i.g, []); by.get(i.g).push(i.s); });
+    for(const [g, ids] of by){
+      const r = await db.from(table).delete().eq("group_id", g).in("skill_id", ids);
+      if(r.error) return r.error;
+    }
+    return null;
+  }
+  // items: [{ g, s, n }] — сколько копий скила s должно быть у пати g (0 — нет совсем)
+  async function applyCounts(items){
+    if(!items.length) return;
     $("offErr").textContent = "";
-    const prev = new Set(off);
-    pairs.forEach(pr => { if(makeOff) off.add(key(pr.g, pr.s)); else off.delete(key(pr.g, pr.s)); });
+    const prevOff = new Set(off), prevCopies = new Map(copies);
+    items.forEach(it => {
+      const k = key(it.g, it.s);
+      if(it.n === 0){ off.add(k); copies.delete(k); }
+      else { off.delete(k); if(it.n > 1) copies.set(k, it.n); else copies.delete(k); }
+    });
     renderBoard(); renderOffMatrix();
     let error = null;
-    if(makeOff){
-      ({ error } = await db.from("cd_skill_off").upsert(pairs.map(pr => ({ clan_id: clanId, group_id: pr.g, skill_id: pr.s })), { onConflict: "group_id,skill_id" }));
-    } else {
-      const byGroup = new Map();
-      pairs.forEach(pr => { if(!byGroup.has(pr.g)) byGroup.set(pr.g, []); byGroup.get(pr.g).push(pr.s); });
-      for(const [g, ids] of byGroup){
-        const r = await db.from("cd_skill_off").delete().eq("group_id", g).in("skill_id", ids);
-        if(r.error){ error = r.error; break; }
-      }
+    const zero = items.filter(i => i.n === 0), live = items.filter(i => i.n > 0), multi = items.filter(i => i.n > 1), noCopies = items.filter(i => i.n <= 1);
+    if(zero.length) ({ error } = await db.from("cd_skill_off").upsert(zero.map(i => ({ clan_id: clanId, group_id: i.g, skill_id: i.s })), { onConflict: "group_id,skill_id" }));
+    if(!error && live.length) error = await deleteByGroup("cd_skill_off", live);
+    if(!error && copiesOk){
+      if(multi.length) ({ error } = await db.from("cd_skill_copies").upsert(multi.map(i => ({ clan_id: clanId, group_id: i.g, skill_id: i.s, copies: i.n })), { onConflict: "group_id,skill_id" }));
+      if(!error && noCopies.length) error = await deleteByGroup("cd_skill_copies", noCopies);
     }
     if(error){
-      off.clear(); prev.forEach(k => off.add(k));
+      off.clear(); prevOff.forEach(k => off.add(k));
+      copies.clear(); prevCopies.forEach((v, k) => copies.set(k, v));
       renderBoard(); renderOffMatrix();
       $("offErr").textContent = "Не удалось сохранить: " + error.message + " (нужно выполнить последнюю часть schema_skill_cd.sql)";
     }
   }
-  $("offMatrix").addEventListener("change", (e) => {
-    const g = e.target.dataset && e.target.dataset.og, sk = e.target.dataset && e.target.dataset.os;
-    if(!g || !sk) return;
-    setOff([{ g, s: sk }], !e.target.checked);
-  });
   $("offMatrix").addEventListener("click", (e) => {
-    const th = e.target.closest("th[data-col]"), tr = e.target.closest("td[data-row]");
-    if(th){
+    const cellBtn = e.target.closest(".cd-off-n"), th = e.target.closest("th[data-col]"), tr = e.target.closest("td[data-row]");
+    const maxN = (slotOk && copiesOk) ? MAX_COPIES : 1; // без миграции — только «есть / нет»
+    if(cellBtn){
+      const g = cellBtn.dataset.og, sk = cellBtn.dataset.os;
+      applyCounts([{ g, s: sk, n: (copiesOf(g, sk) + 1) % (maxN + 1) }]);
+    } else if(th){
       const sk = th.dataset.col;
-      const any = groups.some(g => !off.has(key(g.id, sk))); // у кого-то есть → выключаем у всех, иначе включаем у всех
-      setOff(groups.map(g => ({ g: g.id, s: sk })), any);
+      const anyLive = groups.some(g => copiesOf(g.id, sk) > 0); // у кого-то есть → выключаем у всех, иначе включаем (по одной копии) у всех
+      applyCounts(groups.map(g => ({ g: g.id, s: sk, n: anyLive ? 0 : 1 })));
     } else if(tr){
       const gid = tr.dataset.row;
-      const any = skills.some(sk => !off.has(key(gid, sk.id)));
-      setOff(skills.map(sk => ({ g: gid, s: sk.id })), any);
+      const anyLive = skills.some(sk => copiesOf(gid, sk.id) > 0);
+      applyCounts(skills.map(sk => ({ g: gid, s: sk.id, n: anyLive ? 0 : 1 })));
     }
   });
   $("offBtn").style.display = isAdmin ? "" : "none";
@@ -871,7 +918,7 @@
 
   // ---------- старт ----------
   try {
-    await Promise.all([loadGroups(), loadSkills(), loadMarks(), loadSettings(), loadOff()]);
+    await Promise.all([loadGroups(), loadSkills(), loadMarks(), loadSettings(), loadOff(), loadCopies()]);
   } catch(e){
     showError("Не удалось загрузить данные: " + (e.message || e) + ". Если раздел новый — нужно один раз выполнить supabase/schema_skill_cd.sql в SQL Editor.");
   }
