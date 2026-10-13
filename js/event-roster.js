@@ -89,6 +89,17 @@ function isAmbiguousNick(s){
 // уже занят/неоднозначен (чтобы подсветить их в чипах).
 function resolveNicknames(rows, knownNicks){
   const collided = new Set();
+  // проход 0 — общий справочник (js/nick-match.js): ручные привязки и ник из ПОСЛЕДНЕЙ переписи (регистр, путаница
+  // символов) главнее старых написаний за всё время. Если два разных ника скрина сошлись на один — не трогаем второй
+  if(window.L2Nick && L2Nick.ready()){
+    const used = new Set(rows.map(r => r.nickname));
+    rows.forEach(r => {
+      const g = L2Nick.resolve(r.nickname);
+      if((g.how === "alias" || g.how === "case" || g.how === "ocr") && g.canon !== r.nickname && !used.has(g.canon)){
+        used.delete(r.nickname); r.nickname = g.canon; used.add(g.canon);
+      }
+    });
+  }
   if(!rows.length || !knownNicks || !knownNicks.length) return collided;
   const known = new Set(knownNicks);
   const taken = new Set();

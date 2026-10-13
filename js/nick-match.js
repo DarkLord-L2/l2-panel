@@ -94,7 +94,15 @@
     const aliasMap = new Map();
     (opts.aliases || []).forEach(a => { if(a && a.alias && a.canonical) aliasMap.set(norm(a.alias), a.canonical); });
 
+    const memo = new Map(); // результат по каждому написанию считаем один раз (отчёты гоняют ники тысячами)
     function resolve(nick){
+      const hit = memo.get(nick);
+      if(hit) return hit;
+      const res = resolveUncached(nick);
+      memo.set(nick, res);
+      return res;
+    }
+    function resolveUncached(nick){
       const k = norm(nick);
       // 1. ручная привязка клан-лидера — главнее любого угадывания
       if(aliasMap.has(k)){ const c = aliasMap.get(k); return { canon: c, key: norm(c), how: "alias", candidates: [] }; }
@@ -143,5 +151,74 @@
     return { resolve, key: (n) => resolve(n).key, canon: (n) => resolve(n).canon, suggest };
   }
 
-  global.L2Nick = { norm, caseKey, ocrKey, distance, createResolver };
+  // ---------- общий справочник ников клана (один на страницу) ----------
+  // Страницы вызывают `await L2Nick.init(db, clanId)` сразу после загрузки профиля — и дальше их собственные
+  // normalizeNick() возвращают ключ через этот справочник: все написания одного человека (регистр, путаница
+  // символов при распознавании, ручные привязки) получают ОДИН ключ, и сравнения «посещаемость ↔ перепись ↔ налоги ↔
+  // отчёты ↔ группы» перестают расходиться. Справочник: ники последней переписи (главные), потом остальные —
+  // старые переписи, составы групп, профессии; плюс ручные привязки (nick_aliases).
+  const CACHE_TTL_MS = 90 * 1000; // между разделами одной сессии не гоняем одни и те же запросы
+  let globalResolver = null;
+  let globalReady = false;
+  const cacheKey = (clanId) => "l2NickUniverse:" + clanId;
+
+  function readCache(clanId){
+    try {
+      const raw = global.sessionStorage.getItem(cacheKey(clanId));
+      if(!raw) return null;
+      const u = JSON.parse(raw);
+      return (u && Date.now() - u.t < CACHE_TTL_MS) ? u : null;
+    } catch(e){ return null; }
+  }
+  function writeCache(clanId, u){
+    try { global.sessionStorage.setItem(cacheKey(clanId), JSON.stringify(Object.assign({ t: Date.now() }, u))); } catch(e){}
+  }
+  async function fetchUniverse(db){
+    // census_entries — по неделям: PostgREST отдаёт максимум 1000 строк за запрос, поэтому последнюю неделю и
+    // «всё остальное» берём отдельно, чтобы свежие ники не потерялись среди истории
+    const lastWeekRes = await db.from("census_entries").select("week_start").order("week_start", { ascending: false }).limit(1);
+    const latestWeek = lastWeekRes.data && lastWeekRes.data[0] ? lastWeekRes.data[0].week_start : null;
+    const [latestRes, oldRes, groupRes, classRes, aliasRes] = await Promise.all([
+      latestWeek ? db.from("census_entries").select("nickname").eq("week_start", latestWeek).limit(1000) : Promise.resolve({ data: [] }),
+      latestWeek ? db.from("census_entries").select("nickname").neq("week_start", latestWeek).order("week_start", { ascending: false }).limit(1000) : Promise.resolve({ data: [] }),
+      db.from("clan_group_members").select("nickname").limit(1000),
+      db.from("member_classes").select("nickname").limit(1000),
+      db.from("nick_aliases").select("alias, canonical"),
+    ]);
+    const uniq = (res) => [...new Set(((res && res.data) || []).map(r => r.nickname).filter(Boolean))];
+    return {
+      latest: uniq(latestRes),
+      others: [...new Set([].concat(uniq(oldRes), uniq(groupRes), uniq(classRes)))],
+      aliases: aliasRes && !aliasRes.error ? (aliasRes.data || []) : [],
+    };
+  }
+  async function init(db, clanId){
+    if(globalReady) return;
+    let u = readCache(clanId);
+    if(!u){
+      try { u = await fetchUniverse(db); writeCache(clanId, u); }
+      catch(e){ console.error("L2Nick.init:", e); return; } // без справочника всё работает по-старому (строгая нормализация)
+    }
+    globalResolver = createResolver({ tiers: [u.latest, u.others], aliases: u.aliases });
+    globalReady = true;
+  }
+  // после изменения переписи или привязок: сбросить кэш (следующая загрузка страницы возьмёт свежее)
+  function invalidate(clanId){
+    try {
+      if(clanId) global.sessionStorage.removeItem(cacheKey(clanId));
+      else Object.keys(global.sessionStorage).filter(k => k.indexOf("l2NickUniverse:") === 0).forEach(k => global.sessionStorage.removeItem(k));
+    } catch(e){}
+  }
+  // ключ человека через общий справочник; пока справочник не загружен — прежняя строгая нормализация
+  function key(nick){ return globalReady ? globalResolver.key(nick) : norm(nick); }
+  // «это один и тот же человек» с учётом привязок и распознавания
+  function same(a, b){
+    a = String(a == null ? "" : a).trim(); b = String(b == null ? "" : b).trim();
+    if(!a || !b) return false;
+    if(a === b) return true;
+    return key(a) === key(b);
+  }
+
+  global.L2Nick = { norm, caseKey, ocrKey, distance, createResolver, init, invalidate, key, same,
+    ready: () => globalReady, resolve: (n) => globalReady ? globalResolver.resolve(n) : { canon: n, key: norm(n), how: "none", candidates: [] } };
 })(window);
