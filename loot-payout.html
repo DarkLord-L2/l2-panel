@@ -220,9 +220,41 @@
     return !!ka && ka === looseNick(b);
   }
 
+  function makeNickResolver(tiers){
+    const built = tiers.map(list => {
+      const exact = new Map(), loose = new Map(); // exact: ключ -> ник; loose: «мягкий» ключ -> Map(ключ -> ник)
+      (list || []).forEach(n => {
+        const k = normalizeNick(n);
+        if(!exact.has(k)) exact.set(k, n);
+        const lk = looseNick(n);
+        if(lk && !k.startsWith("=")){
+          if(!loose.has(lk)) loose.set(lk, new Map());
+          if(!loose.get(lk).has(k)) loose.get(lk).set(k, n);
+        }
+      });
+      return { exact, loose };
+    });
+    function resolve(nick){
+      const k = normalizeNick(nick);
+      if(k.startsWith("=")) return { key: k, display: nick };
+      const lk = looseNick(nick);
+      for(const t of built){
+        if(t.exact.has(k)) return { key: k, display: t.exact.get(k) };
+        const m = t.loose.get(lk);
+        if(m && m.size === 1){ const first = [...m.entries()][0]; return { key: first[0], display: first[1] }; }
+      }
+      return { key: k, display: nick };
+    }
+    return { key: (n) => resolve(n).key, canon: (n) => resolve(n).display };
+  }
+
   // последняя перепись — чтобы пометить красным крестиком тех, кто уже пропал
   // из клана; пусто, если переписи вообще нет — тогда никого не помечаем
   let censusNormSet = new Set();
+  let latestCensusNicks = [];   // ники последней переписи — главный справочник «кто есть в клане»
+  let nickResolver = null;      // строится в prepareNicks() после загрузки переписи и раздачи
+  let taggedNicks = [];
+  let leaderCoefRaw = [];
   // normalizeNick(nickname) -> самая свежая неделя переписи, в которой он вообще
   // встречался — для подсказки «был в переписи от {дата}» у тех, кто пропал
   // из клана давно, а не только на прошлой неделе
@@ -234,6 +266,7 @@
     censusNormSet = latest
       ? new Set((data || []).filter(r => r.week_start === latest).map(r => normalizeNick(r.nickname)))
       : new Set();
+    latestCensusNicks = latest ? [...new Set((data || []).filter(r => r.week_start === latest).map(r => r.nickname))] : [];
     lastSeenWeekByNorm = new Map();
     (data || []).forEach(r => {
       const norm = normalizeNick(r.nickname);
@@ -270,6 +303,7 @@
     tagLabel = settings?.label || "";
     tagEnabled = !!settings?.enabled;
     taggedNormSet = new Set((tagged || []).map(r => normalizeNick(r.nickname)));
+    taggedNicks = (tagged || []).map(r => r.nickname);
   }
   function tagBadgeOf(nick){
     return (tagEnabled && taggedNormSet.has(normalizeNick(nick))) ? tagLabel : null;
@@ -341,7 +375,7 @@
     // Если раздача старая (колонки нет) — как раньше, голда человека делится между лидерами по заходам
     const unitByNorm = (data.unit_by_nick && typeof data.unit_by_nick === "object")
       ? new Map(Object.entries(data.unit_by_nick).map(([n, u]) => [normalizeNick(n), Number(u) || 0])) : null;
-    return { from: data.from_date, to: data.to_date, goldByNick: data.gold_by_nick, goldByNorm, source: data.source, createdAt: data.created_at, eventIds: Array.isArray(data.event_ids) ? data.event_ids : null, unitByNorm };
+    return { from: data.from_date, to: data.to_date, goldByNick: data.gold_by_nick, goldByNorm, source: data.source, createdAt: data.created_at, eventIds: Array.isArray(data.event_ids) ? data.event_ids : null, unitByNorm, unitRaw: data.unit_by_nick || null };
   }
   async function deleteDkpPayload(){
     await db.from("payout_batches").delete().eq("clan_id", profile.clan_id);
@@ -379,7 +413,7 @@
       if(r.removed) return;
       if(eventIdFilter && !eventIdFilter.has(r.event_id)) return;
       if(!byBatch.has(r.batch_id)) byBatch.set(r.batch_id, []);
-      byBatch.get(r.batch_id).push(r);
+      byBatch.get(r.batch_id).push({ ...r, nickname: canonNick(r.nickname) });
     });
 
     leaderStats = new Map();
@@ -413,6 +447,29 @@
 
     leaderOrder = Array.from(leaderStats.keys())
       .sort((a, b) => leaderStats.get(b).partyCount - leaderStats.get(a).partyCount || a.localeCompare(b));
+  }
+
+  // Ники со скринов (event_stats) распознаются чуть иначе, чем в переписи/раздаче (регистр, похожие буквы).
+  // Приводим их к нику из переписи: тот же ключ используется для «ушёл ли из клана», голды, метки списка
+  // и коэффициента лидера, поэтому человек не теряется (раньше «BloodYRaB3n» ≠ «BloodyRaB3n» → «ушёл», голда 0)
+  const canonNick = (n) => nickResolver ? nickResolver.canon(n) : n;
+  function prepareNicks(){
+    const tier2 = [];
+    if(dkpPayload) tier2.push(...Object.keys(dkpPayload.goldByNick));
+    tier2.push(...taggedNicks, ...leaderCoefRaw.map(x => x[0]));
+    nickResolver = makeNickResolver([latestCensusNicks, tier2]);
+    taggedNormSet = new Set(taggedNicks.map(n => nickResolver.key(n)));
+    const lc = new Map(); leaderCoefRaw.forEach(([n, c]) => lc.set(nickResolver.key(n), c)); leaderCoefByNorm = lc;
+    if(dkpPayload){
+      const g = new Map();
+      Object.entries(dkpPayload.goldByNick).forEach(([nick, gold]) => { const k = nickResolver.key(nick); g.set(k, (g.get(k) || 0) + (Number(gold) || 0)); });
+      dkpPayload.goldByNorm = g;
+      if(dkpPayload.unitRaw){
+        const u = new Map();
+        Object.entries(dkpPayload.unitRaw).forEach(([nick, unit]) => { const k = nickResolver.key(nick); if(!u.has(k)) u.set(k, Number(unit) || 0); });
+        dkpPayload.unitByNorm = u;
+      }
+    }
   }
 
   function renderLeaderSelect(){
@@ -489,6 +546,7 @@
   async function loadLeaderCoefs(){
     const { data } = await db.from("loot_leader_coefficients").select("nickname, coefficient");
     leaderCoefByNorm = new Map((data || []).map(r => [normalizeNick(r.nickname), Number(r.coefficient)]));
+    leaderCoefRaw = (data || []).map(r => [r.nickname, Number(r.coefficient)]);
     const { data: ls, error } = await db.from("loot_split_settings").select("leader_coef_in_solo").eq("clan_id", profile.clan_id).maybeSingle();
     leaderCoefInSolo = !error && !!ls?.leader_coef_in_solo;
   }
@@ -536,6 +594,7 @@
     } // box / none — ничего не делим, стоят нули
     memberRows.forEach(r => {
       const base = shareGold(r.nickname, leader);
+      r.unit = (dkpPayload && dkpPayload.unitByNorm) ? (dkpPayload.unitByNorm.get(normalizeNick(r.nickname)) || 0) : null; // цена одного КМ этого человека
       r.gold = base === null ? null : (r.left ? 0 : base + perStayBonus);
       r.bonus = r.left ? 0 : perStayBonus;
     });
@@ -549,7 +608,8 @@
     // «Доли» у лидера — не то же самое, что у участников (там это число раздач
     // именно под ЭТИМ лидером), но параллельный смысл есть: сколько раз он сам
     // водил раздачу за период — тот же entry.partyCount
-    const leaderRow = { nickname: leader, count: entry.partyCount, left: isLeftClan(leader), gold: leaderGold, isLeader: true };
+    const leaderRow = { nickname: leader, count: entry.partyCount, left: isLeftClan(leader), gold: leaderGold, isLeader: true,
+      unit: (dkpPayload && dkpPayload.unitByNorm) ? (dkpPayload.unitByNorm.get(normalizeNick(leader)) || 0) : null };
     // «К отправке» этому лидеру: его собственная часть + части оставшихся в клане участников
     // (с учётом перераспределённой доли ушедших); строки ушедших — только справка
     const sentMembers = stayRows.reduce((sum, r) => sum + (r.gold || 0), 0);
@@ -587,6 +647,12 @@
     currentRows = [leaderRow, ...visibleMemberRows];
 
     renderLeftNote(poolLeft, leftCount, stayCount, bonusEach, clanStats);
+    // «обычная» цена КМ в этом списке — самая частая среди участников; у кого она другая, подписываем
+    // (цена = доля × % буста × коэффициент профессии/пати — расхождение значит, что у человека другой коэффициент или буст)
+    const unitCount = new Map();
+    visibleMemberRows.forEach(r => { if(r.unit){ const k = Math.round(r.unit); unitCount.set(k, (unitCount.get(k) || 0) + 1); } });
+    let modalUnit = 0, bestCnt = 0;
+    unitCount.forEach((c, k) => { if(c > bestCnt){ bestCnt = c; modalUnit = k; } });
     const body = document.getElementById("lpBody");
     body.innerHTML = currentRows.map(r => {
       const cross = r.left ? ` <span class="lp-left-cross" title="${escapeHtml(leftClanTitleOf(r.nickname))}">✗</span>` : "";
@@ -600,9 +666,13 @@
       const elseInfo = others.length
         ? `<span class="lp-else">${escapeHtml(L2I18n.t("payout.elseWord", "ещё у:"))} ${others.map(([l, c]) => escapeHtml(l) + " ×" + c).join(", ")}</span>` : "";
       const countText = r.count === null ? "—" : (r.count + " " + L2I18n.t("payout.kmShort", "КМ"));
-      const bonusTitle = (!r.isLeader && r.bonus > 0.5)
-        ? ` title="${escapeHtml(L2I18n.t("payout.bonusTitle", "В сумму входит {n} — доля ушедших из клана").replace("{n}", fmtGold(r.bonus)))}"` : "";
-      return `<tr class="${r.isLeader ? "lp-leader-row" : ""}"><td>${escapeHtml(r.nickname)}${leaderBadge}${cross}${badge}${elseInfo}</td>` +
+      const titleParts = [];
+      if(r.unit) titleParts.push(r.count + " " + L2I18n.t("payout.kmShort", "КМ") + " × " + fmtGold(r.unit));
+      if(!r.isLeader && r.bonus > 0.5) titleParts.push(L2I18n.t("payout.bonusTitle", "В сумму входит {n} — доля ушедших из клана").replace("{n}", fmtGold(r.bonus)));
+      const bonusTitle = titleParts.length ? ` title="${escapeHtml(titleParts.join(" · "))}"` : "";
+      const unitInfo = (!r.isLeader && r.unit && modalUnit && Math.abs(r.unit / modalUnit - 1) > 0.005)
+        ? `<span class="lp-else">${escapeHtml(L2I18n.t("payout.priceDiff", "цена КМ"))} ×${(r.unit / modalUnit).toFixed(2).replace(/\.?0+$/, "")} ${escapeHtml(L2I18n.t("payout.priceDiffOf", "от обычной"))} (${fmtGold(r.unit)})</span>` : "";
+      return `<tr class="${r.isLeader ? "lp-leader-row" : ""}"><td>${escapeHtml(r.nickname)}${leaderBadge}${cross}${badge}${elseInfo}${unitInfo}</td>` +
         `<td class="lp-num lp-cnt">${countText}</td>` +
         `<td class="lp-num lp-gold"${bonusTitle}>${fmtGold(r.gold)}</td></tr>`;
     }).join("") + (total !== null
@@ -936,6 +1006,7 @@
       document.getElementById("toDate").value = dkpPayload.to || "";
     }
     await Promise.all([loadCensus(), loadRosterTag(), loadPayoutShowLeft(), loadLeaderCoefs()]);
+    prepareNicks();
     await reload();
   } else {
     // обычный пати-лидер не выбирает даты/лидера сам — сразу видит свою часть
@@ -946,6 +1017,7 @@
       document.getElementById("fromDate").value = dkpPayload.from || "";
       document.getElementById("toDate").value = dkpPayload.to || "";
       await Promise.all([loadCensus(), loadRosterTag(), loadPayoutShowLeft(), loadLeaderCoefs()]);
+    prepareNicks();
       await reload();
     } else {
       document.getElementById("lpContent").style.display = "none";

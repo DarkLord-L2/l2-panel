@@ -298,7 +298,45 @@
   // последняя перепись — чтобы пометить красным крестиком тех, кто ещё числится
   // в пати (в «Группах»), но уже пропал из клана; пусто, если переписи вообще нет —
   // тогда никого не помечаем (нечего сравнивать)
+  // Запасное сопоставление ника: если точного совпадения (normalizeNick) нет, а среди известных ников
+  // ровно ОДИН отличается только регистром/похожими буквами — это тот же человек (ник со скрина или из
+  // журнала распознан чуть иначе: BloodYRaB3n / BloodyRaB3n). Если таких двое («Олежа» и «ОлЕжА» — разные
+  // игроки) — не склеиваем. tiers — списки ников по важности: сперва ищем в первом, потом во втором.
+  const LOOSE_LOOKALIKES_NICK = { "а":"a","в":"b","е":"e","к":"k","м":"m","н":"h","о":"o","р":"p","с":"c","т":"t","у":"y","х":"x","ё":"e","0":"o","l":"i" };
+  function looseNick(s){
+    return String(s || "").toLowerCase().split("").map(ch => LOOSE_LOOKALIKES_NICK[ch] || ch).join("").replace(/[^a-zа-яё0-9]/g, "");
+  }
+  function makeNickResolver(tiers){
+    const built = tiers.map(list => {
+      const exact = new Map(), loose = new Map(); // exact: ключ -> ник; loose: «мягкий» ключ -> Map(ключ -> ник)
+      (list || []).forEach(n => {
+        const k = normalizeNick(n);
+        if(!exact.has(k)) exact.set(k, n);
+        const lk = looseNick(n);
+        if(lk && !k.startsWith("=")){
+          if(!loose.has(lk)) loose.set(lk, new Map());
+          if(!loose.get(lk).has(k)) loose.get(lk).set(k, n);
+        }
+      });
+      return { exact, loose };
+    });
+    function resolve(nick){
+      const k = normalizeNick(nick);
+      if(k.startsWith("=")) return { key: k, display: nick };
+      const lk = looseNick(nick);
+      for(const t of built){
+        if(t.exact.has(k)) return { key: k, display: t.exact.get(k) };
+        const m = t.loose.get(lk);
+        if(m && m.size === 1){ const first = [...m.entries()][0]; return { key: first[0], display: first[1] }; }
+      }
+      return { key: k, display: nick };
+    }
+    return { key: (n) => resolve(n).key, canon: (n) => resolve(n).display };
+  }
+
   let censusNormSet = new Set();
+  let censusLatestNicks = [];
+  let censusResolver = null;
   // normalizeNick(nickname) -> самая свежая неделя переписи, в которой он вообще
   // встречался (не только последняя/предпоследняя) — для подсказки «был в
   // переписи от {дата}» у тех, кто пропал из клана давно, а не только на неделе
@@ -310,6 +348,8 @@
     censusNormSet = latest
       ? new Set((data || []).filter(r => r.week_start === latest).map(r => normalizeNick(r.nickname)))
       : new Set();
+    censusLatestNicks = latest ? [...new Set((data || []).filter(r => r.week_start === latest).map(r => r.nickname))] : [];
+    censusResolver = makeNickResolver([censusLatestNicks]);
     lastSeenWeekByNorm = new Map();
     (data || []).forEach(r => {
       const norm = normalizeNick(r.nickname);
@@ -317,7 +357,7 @@
       if(!prev || r.week_start > prev) lastSeenWeekByNorm.set(norm, r.week_start);
     });
   }
-  function isLeftClan(nick){ return censusNormSet.size > 0 && !censusNormSet.has(normalizeNick(nick)); }
+  function isLeftClan(nick){ return censusNormSet.size > 0 && !censusNormSet.has(censusResolver ? censusResolver.key(nick) : normalizeNick(nick)); }
   function fmtDate(iso){
     if(!iso) return "";
     const [y, m, d] = iso.split("-");
@@ -537,8 +577,10 @@
       .select("nickname, event_id")
       .in("event_id", eventIds);
     if(entErr){ console.error(entErr); return; }
+    // ник из журнала явки → ник пати из «Групп» (запасной вариант — перепись)
+    const attNick = makeNickResolver([[...membersByGroup.values()].flat(), censusLatestNicks]);
     (entries || []).forEach(row => {
-      const norm = normalizeNick(row.nickname);
+      const norm = attNick.key(row.nickname);
       if(!attendedByEvent.has(row.event_id)) attendedByEvent.set(row.event_id, new Set());
       attendedByEvent.get(row.event_id).add(norm);
     });
