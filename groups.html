@@ -491,7 +491,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=57"></script>
+<script src="js/i18n.js?v=58"></script>
+<script src="js/tax-flag.js?v=1"></script>
 <script src="js/layout-board.js?v=1"></script>
 <script src="js/nick-match.js?v=2"></script>
 <script src="js/classes.js?v=1"></script>
@@ -502,6 +503,7 @@
 
   const profile = await L2Cabinet.getProfile();
   if(profile){ try { await L2Nick.init(L2Cabinet.client, profile.clan_id); } catch(e){ console.error(e); } } // общий справочник ников
+  if(profile){ try { await L2Taxes.init(L2Cabinet.client, profile.clan_id); } catch(e){ console.error(e); } } // налоги включены?
   if(!profile){
     document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
       '<h1>' + L2I18n.t("shell.profileNotFoundTitle", "⚠ Профиль не найден") + '</h1>' +
@@ -668,6 +670,7 @@
   let latestTaxWeek = null;
   let taxPaidNormSet = new Set();
   async function loadTaxCheck(){
+    if(!L2Taxes.enabled()){ latestTaxWeek = null; taxPaidNormSet = new Set(); return; }
     const { data } = await db.from("tax_payments").select("nickname, week_start");
     const weeks = [...new Set((data || []).map(r => r.week_start))].sort();
     latestTaxWeek = weeks.length ? weeks[weeks.length - 1] : null;
@@ -688,7 +691,8 @@
       const pct = boostPercentOf(nick);
       const attCount = attendanceCountByNorm.get(normalizeNick(nick)) || 0;
       const taxOk = latestTaxWeek ? taxPaidNormSet.has(normalizeNick(nick)) : null;
-      const taxCell = taxOk === null
+      const taxesOff = !L2Taxes.enabled();
+      const taxCell = taxesOff ? L2I18n.t("taxes.disabledShort", "выключен") : taxOk === null
         ? "—"
         : taxOk ? L2I18n.t("groups.checkTaxPaid", "оплачен") : L2I18n.t("groups.checkTaxNotPaid", "не оплачен");
       return `<tr>` +
@@ -977,7 +981,7 @@
       const taxOk = latestTaxWeek ? taxPaidNormSet.has(normalizeNick(nick)) : null;
       stats += stat(L2I18n.t("groups.hcBoost", "Буст"), pct.toFixed(0) + "%", pct > 0 ? "" : "warn") +
         stat(L2I18n.t("groups.hcAttendance", "Явка"), att, att ? "" : "warn") +
-        stat(L2I18n.t("groups.hcTax", "Налог"), taxOk === null ? "—" : (taxOk ? L2I18n.t("groups.checkTaxPaid", "оплачен") : L2I18n.t("groups.checkTaxNotPaid", "не оплачен")), taxOk === null ? "" : (taxOk ? "ok" : "warn"));
+        stat(L2I18n.t("groups.hcTax", "Налог"), !L2Taxes.enabled() ? L2I18n.t("taxes.disabledShort", "выключен") : taxOk === null ? "—" : (taxOk ? L2I18n.t("groups.checkTaxPaid", "оплачен") : L2I18n.t("groups.checkTaxNotPaid", "не оплачен")), taxOk === null ? "" : (taxOk ? "ok" : "warn"));
     }
     const classesHtml = classes.length
       ? classes.map(c => { const src = classIcon(c.name); return `<div class="hc-class">${src ? `<img src="${src}" alt="" />` : ""}<span>${escapeHtml(c.name)}</span>${c.level ? `<span class="lv">${escapeHtml(String(c.level))} ${escapeHtml(L2I18n.t("groups.hcLevelShort", "ур."))}</span>` : ""}</div>`; }).join("")

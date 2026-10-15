@@ -437,7 +437,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=57"></script>
+<script src="js/i18n.js?v=58"></script>
+<script src="js/tax-flag.js?v=1"></script>
 <script src="js/nick-match.js?v=2"></script>
 <script src="js/event-roster.js?v=27"></script>
 <script src="js/share-report.js?v=2"></script>
@@ -448,6 +449,7 @@
 
   const profile = await L2Cabinet.getProfile();
   if(profile){ try { await L2Nick.init(L2Cabinet.client, profile.clan_id); } catch(e){ console.error(e); } } // общий справочник ников
+  if(profile){ try { await L2Taxes.init(L2Cabinet.client, profile.clan_id); } catch(e){ console.error(e); } } // налоги включены?
   if(!profile){
     document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
       '<h1>' + L2I18n.t("shell.profileNotFoundTitle", "⚠ Профиль не найден") + '</h1>' +
@@ -920,7 +922,9 @@
   let attReportRows = [];
   let attFilterVisibility = {};
 
-  function isFilterVisible(key){ return attFilterVisibility[key] !== false; }
+  // налоги выключены — фильтры про оплату («Ходил / Платил», «Платит и ходит», «Не платит и не ходит») не показываем
+  const TAX_FILTER_KEYS = new Set(["attended_or_paid", "no_tax_no_attend", "pays_and_attends"]);
+  function isFilterVisible(key){ return attFilterVisibility[key] !== false && !(!L2Taxes.enabled() && TAX_FILTER_KEYS.has(key)); }
 
   async function loadFilterVisibility(){
     const { data, error } = await db
@@ -982,7 +986,7 @@
       });
     }
 
-    const { data: payments, error: payErr } = await db
+    const { data: payments, error: payErr } = !L2Taxes.enabled() ? { data: [], error: null } : await db
       .from("tax_payments")
       .select("nickname")
       .gte("week_start", fromStr)
