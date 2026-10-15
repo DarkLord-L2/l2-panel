@@ -250,8 +250,11 @@
     const bottomOf = (map) => { let b = 0; for(const k in map){ b = Math.max(b, map[k].y + map[k].h); } return b; };
     function apply(){
       const els = items();
-      container.classList.toggle("lb-rows", state.mode === "rows" && !editing);
       const custom = editing || state.mode === "custom";
+      // раздел ещё скрыт (ширины нет) — ничего не трогаем: иначе карточки уже «absolute», но без мест — все слипаются в углу;
+      // раскладка применится, как только появится ширина (ResizeObserver или apply() после показа)
+      if(custom && cw() <= 0) return;
+      container.classList.toggle("lb-rows", state.mode === "rows" && !editing);
       container.classList.toggle("lb-custom", custom);
       container.classList.toggle("lb-editing", editing);
       if(!custom){
@@ -521,7 +524,7 @@
       new ResizeObserver(() => {
         if(dragging) return; // во время перетаскивания может появиться полоса прокрутки — не дёргаем раскладку
         const W = cw();
-        if(W !== lastW && W > 0 && (editing || state.mode === "custom")) apply();
+        if(W > 0 && (editing || state.mode === "custom") && (W !== lastW || items().some(el => !el.style.left))) apply();
       }).observe(container);
     }
 
