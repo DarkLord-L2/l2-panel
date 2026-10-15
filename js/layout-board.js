@@ -179,7 +179,9 @@
       apply();
     }
     let presetBox = null;
-    if(presets.length && opts.buttons){
+    // sharedButtons: несколько досок делят один ряд кнопок (блоки участников в группе) — панель шаблонов создаёт только первая,
+    // остальные подключаются к её кнопкам снаружи через applyPreset
+    if(presets.length && opts.buttons && !opts.sharedButtons){
       presetBox = document.createElement("div");
       presetBox.className = "lb-presets";
       const lab = document.createElement("span");
@@ -543,7 +545,7 @@
     }
 
     paintButtons();
-    return { apply, useKey, beginEdit, endEdit, cancelEdit: () => endEdit(false), isEditing: () => editing, mode: () => state.mode };
+    return { apply, useKey, beginEdit, endEdit, applyPreset, cancelEdit: () => endEdit(false), isEditing: () => editing, mode: () => state.mode };
   }
 
   global.L2LayoutBoard = { create };
