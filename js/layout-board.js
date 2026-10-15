@@ -34,7 +34,10 @@
     const st = document.createElement("style");
     st.id = "lb-style";
     st.textContent = `
-      .lb-btns{ position:fixed; bottom:16px; right:56px; display:flex; gap:4px; z-index:56; }
+      /* одна серая кнопка-карандаш рядом с «?» разворачивает/сворачивает все кнопки раскладки на странице */
+      .lb-master{ position:fixed; bottom:16px; right:56px; z-index:56; }
+      .lb-btns{ position:fixed; bottom:16px; right:96px; display:none; gap:4px; z-index:56; }
+      body.lb-open .lb-btns, .lb-btns.lb-editing-on{ display:flex; animation: lb-pop .18s ease-out; }
       .lb-btn{ width:32px; height:32px; padding:0; border-radius:6px; border:1px solid var(--border); background: var(--panel);
         color: var(--text-dim); cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:inherit; }
       .lb-btn:hover{ color: var(--text); border-color: var(--border-lit); }
@@ -53,6 +56,7 @@
       .lb-editing > [data-lbid]{ outline:1px dashed var(--gold-dim); cursor:move; user-select:none; -webkit-user-select:none;
         touch-action:none; transition:none !important; overflow:hidden; }
       .lb-editing > [data-lbid]:hover{ outline-color: var(--gold); }
+      .lb-editing.lb-reflow > [data-lbid]:not(.lb-active){ transition: left .14s ease, top .14s ease !important; }
       .lb-editing > [data-lbid].lb-active{ outline:2px solid var(--gold); z-index:5; }
       .lb-editing > [data-lbid] *{ pointer-events:none; }
       /* ручки: полосы внутри карточки по краям и крупные уголки — ловятся мышью без прицеливания */
@@ -81,12 +85,26 @@
     document.head.appendChild(st);
   }
 
+  function ensureMaster(){
+    if(document.getElementById("lbMaster") || !document.body) return;
+    const b = document.createElement("button");
+    b.type = "button"; b.id = "lbMaster"; b.className = "lb-btn lb-master";
+    b.innerHTML = ICONS.edit;
+    const T = (global.L2I18n && global.L2I18n.t) || ((k, f) => f);
+    b.title = T("layout.master", "Настройка расположения");
+    b.addEventListener("click", () => {
+      const open = document.body.classList.toggle("lb-open");
+      b.classList.toggle("active", open);
+    });
+    document.body.appendChild(b);
+  }
+
   function loadState(key){
     try {
       const o = JSON.parse(localStorage.getItem(key) || "null");
-      if(o && (o.mode === "tiles" || o.mode === "rows" || o.mode === "custom")) return { mode: o.mode, items: o.items || {}, preset: o.preset || null };
+      if(o && (o.mode === "tiles" || o.mode === "rows" || o.mode === "custom")) return { mode: o.mode, items: o.items || {}, preset: o.preset || null, order: Array.isArray(o.order) ? o.order : null };
     } catch(e){}
-    return { mode: "tiles", items: {}, preset: null };
+    return { mode: "tiles", items: {}, preset: null, order: null };
   }
   function saveState(key, st){
     try { localStorage.setItem(key, JSON.stringify(st)); } catch(e){}
@@ -94,6 +112,7 @@
 
   function create(opts){
     ensureStyle();
+    ensureMaster();
     const container = opts.container;
     const itemSel = opts.itemSel || "[data-lbid]";
     const minW = opts.minW || 110, minH = opts.minH || 56;
@@ -110,7 +129,9 @@
     let dragging = false;              // идёт перетаскивание — пересчёт по изменению ширины не нужен
     container.classList.toggle("lb-clip", !!opts.clip);
 
-    const items = () => [...container.children].filter(el => el.matches(itemSel));
+    const allItems = () => [...container.children].filter(el => el.matches(itemSel));
+    // скрытые (display:none) блоки в раскладку не берём — у них нет размера; покажут — apply() поставит их в свободное место
+    const items = () => allItems().filter(el => el.style.display !== "none");
     const cw = () => container.clientWidth || 0;
     const snap = (v) => Math.round(v / SNAP) * SNAP;
 
@@ -119,9 +140,23 @@
     // подходит к любому числу карточек и к любой ширине окна, а новый участник сам встаёт в ту же сетку.
     const presets = opts.presets || [];
     let presetActive = state.mode === "custom" ? (state.preset || null) : null;
-    function generate(presetId, els, W){
+    let workOrder = null; // порядок карточек в шаблоне на время редактирования (id по порядку); null — порядок по умолчанию
+    // порядок карточек в шаблоне: сначала то, что расставили руками (state.order), новые — после них; без ручного порядка —
+    // по opts.rank (например, лидер пати сверху, потом зам), при равенстве — как в списке
+    function sortEls(els, order){
+      const idx = new Map((order || []).map((id, i) => [id, i]));
+      const rank = opts.rank || (() => 0);
+      return els.map((el, i) => ({ el, i, id: el.dataset.lbid })).sort((a, b) => {
+        const ha = idx.has(a.id), hb = idx.has(b.id);
+        if(ha && hb) return idx.get(a.id) - idx.get(b.id);
+        if(ha !== hb) return ha ? -1 : 1;
+        return (rank(a.id) - rank(b.id)) || (a.i - b.i);
+      }).map(x => x.el);
+    }
+    function generate(presetId, elsIn, W, order){
       const pr = presets.find(x => x.id === presetId);
       if(!pr) return null;
+      const els = sortEls(elsIn, order);
       const sp = pr.spec;
       const gx = sp.gapX != null ? sp.gapX : (sp.gap != null ? sp.gap : 8), gy = sp.gapY != null ? sp.gapY : (sp.gap != null ? sp.gap : 8);
       const cols = sp.cols || Math.max(1, Math.floor((W + gx) / (sp.cellW + gx)));
@@ -138,7 +173,7 @@
       if(!editing) beginEdit();
       if(!editing) return;
       const W = cw(); if(W <= 0) return;
-      const map = generate(id, items(), W);
+      const map = generate(id, items(), W, workOrder);
       if(!map) return;
       work = map; presetActive = id;
       apply();
@@ -149,6 +184,7 @@
       presetBox.className = "lb-presets";
       const lab = document.createElement("span");
       lab.className = "lb-presets-label"; lab.textContent = T("layout.presets", "Шаблоны");
+      lab.title = T("layout.presetHint", "Выбери шаблон. В шаблоне карточки можно перетаскивать — остальные подвинутся, колонка останется ровной (Shift — поставить свободно, тянуть за край — изменить размер).");
       presetBox.appendChild(lab);
       presets.forEach(pr => {
         const b = document.createElement("button");
@@ -168,7 +204,7 @@
     } : null;
     if(btns){
       btns.rows.innerHTML = ICONS.rows;  btns.rows.title = T("layout.rows", "Полосами");
-      btns.tiles.innerHTML = ICONS.tiles; btns.tiles.title = T("layout.tiles", "Плитками");
+      btns.tiles.innerHTML = ICONS.tiles; btns.tiles.title = (opts.titles && opts.titles.tiles) || T("layout.tiles", "Плитками");
       btns.rows.addEventListener("click", () => setMode("rows"));
       btns.tiles.addEventListener("click", () => setMode("tiles"));
       btns.edit.addEventListener("click", () => { if(editing) endEdit(true); else beginEdit(); });
@@ -179,7 +215,7 @@
       btns.tiles.classList.toggle("active", !editing && state.mode === "tiles");
       btns.edit.classList.toggle("active", editing || state.mode === "custom");
       btns.edit.innerHTML = editing ? ICONS.save : ICONS.edit;
-      btns.edit.title = editing ? T("layout.save", "Сохранить расположение") : T("layout.edit", "Изменить расположение и размеры");
+      btns.edit.title = editing ? T("layout.save", "Сохранить расположение") : ((opts.titles && opts.titles.edit) || T("layout.edit", "Изменить расположение и размеры"));
       // шаблоны видны только пока идёт редактирование; выбранный подсвечен, пока карточки не двигали вручную
       opts.buttons.classList.toggle("lb-editing-on", editing);
       if(presetBox) presetBox.querySelectorAll("[data-preset]").forEach(b => b.classList.toggle("active", b.dataset.preset === presetActive));
@@ -219,7 +255,7 @@
       container.classList.toggle("lb-custom", custom);
       container.classList.toggle("lb-editing", editing);
       if(!custom){
-        els.forEach(clearInline);
+        allItems().forEach(clearInline);
         container.style.height = "";
         paintButtons();
         return;
@@ -231,7 +267,7 @@
       // ушедший не оставляет дыру. Если раскладку правили вручную (шаблона нет), новый встаёт в свободное место снизу
       let map = editing ? work : state.items;
       if(!editing && state.preset){
-        const g = generate(state.preset, els, W);
+        const g = generate(state.preset, els, W, state.order);
         if(g) map = g;
       }
       // карточки без сохранённого места (новые группы/участники) — по порядку в свободные места снизу
@@ -273,9 +309,9 @@
     }
     function setMode(mode){
       // «полосы»/«плитки» возвращают стандартную раскладку, своя пропадает; несохранённое редактирование — тоже
-      editing = false; work = null; presetActive = null;
+      editing = false; work = null; presetActive = null; workOrder = null;
       restoreDraggable();
-      state = { mode, items: {}, preset: null };
+      state = { mode, items: {}, preset: null, order: null };
       saveState(opts.key, state);
       apply();
     }
@@ -286,8 +322,10 @@
       if(W <= 0) return;
       work = {};
       presetActive = null;
-      if(state.mode === "custom" && state.preset && generate(state.preset, els, W)){
-        work = generate(state.preset, els, W);
+      workOrder = null;
+      if(state.mode === "custom" && state.preset && generate(state.preset, els, W, state.order)){
+        workOrder = state.order ? state.order.slice() : null;
+        work = generate(state.preset, els, W, workOrder);
         presetActive = state.preset;
       } else if(state.mode === "custom"){
         work = JSON.parse(JSON.stringify(state.items));
@@ -307,11 +345,12 @@
     function endEdit(commit){
       if(!editing) return;
       if(commit){
-        state = { mode: "custom", items: Object.assign({}, state.mode === "custom" && !presetActive ? state.items : {}, work), preset: presetActive };
+        state = { mode: "custom", items: Object.assign({}, state.mode === "custom" && !presetActive ? state.items : {}, work), preset: presetActive,
+          order: presetActive ? workOrder : null };
         saveState(opts.key, state);
       }
       presetActive = state.mode === "custom" ? (state.preset || null) : null;
-      editing = false; work = null;
+      editing = false; work = null; workOrder = null;
       restoreDraggable();
       apply();
     }
@@ -326,6 +365,7 @@
       e.preventDefault(); e.stopPropagation();
       const handle = e.target.closest(".lb-h");
       const dir = handle ? handle.dataset.h : "move";
+      if(dir === "move" && presetActive && !e.shiftKey){ startReorder(e, el, id); return; }
       const W = cw();
       const p0 = { x: r0.x * W, y: r0.y, w: r0.w * W, h: r0.h };
       const mw = Math.min(minW, p0.w), mh = Math.min(minH, p0.h); // карточка уже меньше общего минимума (низкая полоса) — не заставляем её вырасти
@@ -408,6 +448,69 @@
       global.addEventListener("pointerup", finish);
       global.addEventListener("pointercancel", finish);
     });
+    // Перестановка внутри шаблона: карточка следует за мышью, остальные плавно расступаются, при отпускании карточка встаёт
+    // в ближайшее место сетки — раскладка остаётся ровной. Порядок запоминается (state.order) вместе с шаблоном.
+    function startReorder(e, el, id){
+      const W = cw();
+      const els = items();
+      const baseOrder = sortEls(els, workOrder).map(x => x.dataset.lbid);
+      const slotMap = generate(presetActive, els, W, baseOrder);
+      const slots = baseOrder.map(k => slotMap[k]); // места сетки по номеру: место i принадлежит карточке baseOrder[i]
+      const r0 = slotMap[id];
+      const p0 = { x: r0.x * W, y: r0.y, w: r0.w * W, h: r0.h };
+      const cr0 = container.getBoundingClientRect();
+      const sx = e.clientX - cr0.left, sy = e.clientY - cr0.top;
+      let last = { x: e.clientX, y: e.clientY }, raf = 0, curOrder = baseOrder.slice(), curHeight = parseFloat(container.style.height) || 0;
+      dragging = true;
+      try { el.setPointerCapture(e.pointerId); } catch(_){}
+      el.classList.add("lb-active");
+      container.classList.add("lb-reflow");
+      const frame = () => {
+        raf = 0;
+        if(!dragging) return;
+        const vh = global.innerHeight, edge = 60;
+        let scroll = 0;
+        if(last.y > vh - edge) scroll = Math.min(16, (last.y - (vh - edge)) / 3 + 2);
+        else if(last.y < edge) scroll = -Math.min(16, (edge - last.y) / 3 + 2);
+        if(scroll) global.scrollBy(0, scroll);
+        const cr = container.getBoundingClientRect();
+        const dx = (last.x - cr.left) - sx, dy = (last.y - cr.top) - sy;
+        const x = Math.max(0, Math.min(W - p0.w, p0.x + dx)), y = Math.max(0, p0.y + dy);
+        el.style.left = Math.round(x) + "px"; el.style.top = Math.round(y) + "px";
+        // в какое место сетки встанет карточка — ближайшее к её центру
+        const cx = x + p0.w / 2, cy = y + p0.h / 2;
+        let best = 0, bd = Infinity;
+        slots.forEach((sl, i) => { const d = Math.pow(sl.x * W + sl.w * W / 2 - cx, 2) + Math.pow(sl.y + sl.h / 2 - cy, 2); if(d < bd){ bd = d; best = i; } });
+        const next = baseOrder.filter(k => k !== id); next.splice(best, 0, id);
+        if(next.join("\u0001") !== curOrder.join("\u0001")){
+          curOrder = next;
+          const m = generate(presetActive, els, W, curOrder);
+          els.forEach(o => { if(o !== el) place(o, m[o.dataset.lbid], W); });
+        }
+        const need = y + p0.h + 24;
+        if(need > curHeight){ curHeight = need; container.style.height = need + "px"; }
+        if(scroll) raf = requestAnimationFrame(frame);
+      };
+      const onMove = (ev) => { last = { x: ev.clientX, y: ev.clientY }; if(!raf) raf = requestAnimationFrame(frame); };
+      const finish = (ev) => {
+        if(raf){ cancelAnimationFrame(raf); raf = 0; }
+        if(dragging){ frame(); if(raf){ cancelAnimationFrame(raf); raf = 0; } }
+        dragging = false;
+        try { el.releasePointerCapture(e.pointerId); } catch(_){}
+        global.removeEventListener("pointermove", onMove);
+        global.removeEventListener("pointerup", finish);
+        global.removeEventListener("pointercancel", finish);
+        workOrder = curOrder;
+        work = generate(presetActive, els, W, workOrder);
+        el.classList.remove("lb-active");
+        container.classList.remove("lb-reflow");
+        apply(); // все карточки — на места шаблона, включая перетащенную
+      };
+      global.addEventListener("pointermove", onMove);
+      global.addEventListener("pointerup", finish);
+      global.addEventListener("pointercancel", finish);
+    }
+
     // в режиме редактирования клики по карточкам (открыть группу, меню «⋮») не должны срабатывать
     container.addEventListener("click", (e) => { if(editing){ e.stopPropagation(); e.preventDefault(); } }, true);
     // и контекстное меню/выделение не мешают
@@ -432,6 +535,7 @@
       opts.key = newKey;
       state = loadState(newKey);
       presetActive = state.mode === "custom" ? (state.preset || null) : null;
+      workOrder = null;
       lastW = 0;
     }
 
