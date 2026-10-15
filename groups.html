@@ -806,7 +806,7 @@
       icon: '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="1.5" y="2" width="6" height="3.4" rx=".8"/><rect x="8.5" y="2" width="6" height="3.4" rx=".8"/><rect x="1.5" y="6.3" width="6" height="3.4" rx=".8"/><rect x="8.5" y="6.3" width="6" height="3.4" rx=".8"/><rect x="1.5" y="10.6" width="6" height="3.4" rx=".8"/><rect x="8.5" y="10.6" width="6" height="3.4" rx=".8"/></svg>',
       spec: { cols: 2, cellH: 64, gap: 12, stretch: true } },
   ];
-  const membersBoard = L2LayoutBoard.create({ container: document.getElementById("groupMembers"), key: "l2LayoutMembers:" + profile.id,
+  const membersBoard = L2LayoutBoard.create({ container: document.getElementById("groupMembers"), key: "l2LayoutMembers:" + profile.id + ":none", // реальный ключ — по группе, ставится в openDetail
     buttons: document.getElementById("lbBtnsMembers"), minW: 150, minH: 48, defW: 240, defH: 68, wide: (w, h) => w >= 700 && w / h >= 8, presets: MEMBER_PRESETS, t: L2I18n.t });
 
   function renderGrid(filterText){
@@ -1462,6 +1462,8 @@
   function openDetail(groupId){
     groupsBoard.endEdit(true); // ушли из списка посреди редактирования — сохраняем, что успели
     currentGroupId = groupId;
+    // расположение участников хранится ОТДЕЛЬНО для каждой группы (личная настройка): у каждой пати своё
+    membersBoard.useKey("l2LayoutMembers:" + profile.id + ":" + groupId);
     const g = groups.find(x => x.id === groupId);
     document.getElementById("groupNameView").textContent = g.name;
     document.getElementById("groupNameEdit").style.display = "none";

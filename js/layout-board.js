@@ -422,8 +422,21 @@
       }).observe(container);
     }
 
+    // Раскладка хранится под ключом; у списка участников он свой для КАЖДОЙ группы — переключаем при входе в группу:
+    // несохранённое в прежней группе сохраняем, у новой загружаем её собственное (нет сохранённого — обычные плитки)
+    // Раскладку здесь НЕ применяем: в контейнере ещё карточки прежней группы — их ники не должны попасть в раскладку
+    // новой. Применится при отрисовке карточек новой группы (apply() после renderMembers).
+    function useKey(newKey){
+      if(newKey === opts.key) return;
+      if(editing) endEdit(true);
+      opts.key = newKey;
+      state = loadState(newKey);
+      presetActive = state.mode === "custom" ? (state.preset || null) : null;
+      lastW = 0;
+    }
+
     paintButtons();
-    return { apply, beginEdit, endEdit, cancelEdit: () => endEdit(false), isEditing: () => editing, mode: () => state.mode };
+    return { apply, useKey, beginEdit, endEdit, cancelEdit: () => endEdit(false), isEditing: () => editing, mode: () => state.mode };
   }
 
   global.L2LayoutBoard = { create };
