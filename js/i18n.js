@@ -960,6 +960,7 @@
     "roles.btn": ["Роли классов и цвета", "Ролі класів і кольори", "Class roles and colors"],
     "roles.title": ["Роли классов", "Ролі класів", "Class roles"],
     "roles.hint": ["У каждой карточки участника слева полоска цвета роли его основного класса. Здесь можно переназначить роль любому классу — настройка личная, хранится в этом браузере.", "У кожної картки учасника зліва смужка кольору ролі його основного класу. Тут можна перепризначити роль будь-якому класу — налаштування особисте, зберігається в цьому браузері.", "Each member card has a stripe in the color of the main class's role. Reassign a role to any class here — it's a personal setting stored in this browser."],
+    "roles.enabled": ["Показывать цвет роли на карточках", "Показувати колір ролі на картках", "Show role color on cards"],
     "roles.reset": ["Сбросить к стандартным", "Скинути до стандартних", "Reset to defaults"],
     "roles.done": ["Готово", "Готово", "Done"],
     "roles.tank": ["Танк", "Танк", "Tank"],

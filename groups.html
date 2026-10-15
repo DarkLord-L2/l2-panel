@@ -240,6 +240,10 @@
   #lbBtnsDensity .lb-btn{ width:28px; height:28px; }
   /* цвет роли: полоска слева у карточки участника + легенда с количеством */
   .gm-member-card[data-role]{ box-shadow: inset 4px 0 0 var(--role-c); }
+  body.roles-off .gm-member-card[data-role]{ box-shadow:none; }
+  body.roles-off .gm-member-card.drag-over[data-role]{ box-shadow: inset 0 0 0 1px var(--gold); }
+  .roles-switch{ display:flex; align-items:center; gap:8px; margin:10px 0 2px; font-size:13px; color: var(--text); cursor:pointer; }
+  .roles-list.off{ opacity:.45; }
   .gm-member-card.drag-over[data-role]{ box-shadow: inset 4px 0 0 var(--role-c), inset 0 0 0 1px var(--gold); }
   .roles-list{ display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:6px 14px; max-height:56vh; overflow:auto; margin:10px 0; padding-right:4px; }
   .roles-row{ display:flex; align-items:center; gap:8px; font-size:12.5px; color: var(--text); }
@@ -438,6 +442,7 @@
     <button class="modal-close" id="rolesClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
     <h2 data-i18n="roles.title">Роли классов</h2>
     <p class="hint" data-i18n="roles.hint">У каждой карточки участника слева полоска цвета роли его основного класса. Здесь можно переназначить роль любому классу — настройка личная, хранится в этом браузере.</p>
+    <label class="roles-switch"><input type="checkbox" id="rolesEnabled" checked /> <span data-i18n="roles.enabled">Показывать цвет роли на карточках</span></label>
     <div class="roles-list" id="rolesList"></div>
     <div style="display:flex; gap:8px; justify-content:space-between; margin-top:8px;">
       <button type="button" class="btn btn-ghost" id="rolesReset" data-i18n="roles.reset">Сбросить к стандартным</button>
@@ -558,7 +563,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=70"></script>
+<script src="js/i18n.js?v=71"></script>
 <script src="js/tax-flag.js?v=1"></script>
 <script src="js/layout-board.js?v=7"></script>
 <script src="js/nick-match.js?v=2"></script>
@@ -1648,7 +1653,16 @@
         list.appendChild(row);
       });
     }
-    document.getElementById("rolesBtn").addEventListener("click", () => { paint(); overlay.classList.add("show"); });
+    // общий выключатель цветов (личная настройка): выключено — полоски на карточках не показываются, назначения ролей сохраняются
+    const enabledBox = document.getElementById("rolesEnabled"), enabledKey = "l2RolesOn:" + profile.id;
+    const applyEnabled = () => { document.body.classList.toggle("roles-off", !enabledBox.checked); list.classList.toggle("off", !enabledBox.checked); };
+    try { enabledBox.checked = localStorage.getItem(enabledKey) !== "0"; } catch(e){}
+    applyEnabled();
+    enabledBox.addEventListener("change", () => {
+      try { localStorage.setItem(enabledKey, enabledBox.checked ? "1" : "0"); } catch(e){}
+      applyEnabled();
+    });
+    document.getElementById("rolesBtn").addEventListener("click", () => { paint(); applyEnabled(); overlay.classList.add("show"); });
     const close = () => overlay.classList.remove("show");
     document.getElementById("rolesClose").addEventListener("click", close);
     document.getElementById("rolesDone").addEventListener("click", close);
