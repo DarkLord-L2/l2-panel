@@ -159,12 +159,15 @@
       const els = sortEls(elsIn, order);
       const sp = pr.spec;
       const gx = sp.gapX != null ? sp.gapX : (sp.gap != null ? sp.gap : 8), gy = sp.gapY != null ? sp.gapY : (sp.gap != null ? sp.gap : 8);
-      const cols = sp.cols || Math.max(1, Math.floor((W + gx) / (sp.cellW + gx)));
-      const w = sp.stretch ? (W - gx * (cols - 1)) / cols : Math.min(sp.cellW, W);
+      const k = opts.scale ? (opts.scale() || 1) : 1; // «плотность»: шаблон — правило, его размеры масштабируются целиком
+      const cellW = Math.round((sp.cellW || 0) * k), cellH = Math.round(sp.cellH * k);
+      const gxs = Math.round(gx * k), gys = Math.round(gy * k);
+      const cols = sp.cols || Math.max(1, Math.floor((W + gxs) / (cellW + gxs)));
+      const w = sp.stretch ? (W - gxs * (cols - 1)) / cols : Math.min(cellW, W);
       const map = {};
       els.forEach((el, i) => {
         const c = i % cols, r = Math.floor(i / cols);
-        map[el.dataset.lbid] = { x: (c * (w + gx)) / W, y: r * (sp.cellH + gy), w: w / W, h: sp.cellH };
+        map[el.dataset.lbid] = { x: (c * (w + gxs)) / W, y: r * (cellH + gys), w: w / W, h: cellH };
       });
       return map;
     }
@@ -545,7 +548,12 @@
     }
 
     paintButtons();
-    return { apply, useKey, beginEdit, endEdit, applyPreset, cancelEdit: () => endEdit(false), isEditing: () => editing, mode: () => state.mode };
+    // масштаб изменился (ползунок плотности): шаблон пересобирается, ручная раскладка остаётся как есть
+    function rescale(){
+      if(editing && presetActive){ const m = generate(presetActive, items(), cw(), workOrder); if(m) work = m; }
+      apply();
+    }
+    return { apply, rescale, useKey, beginEdit, endEdit, applyPreset, cancelEdit: () => endEdit(false), isEditing: () => editing, mode: () => state.mode };
   }
 
   global.L2LayoutBoard = { create };

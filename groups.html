@@ -10,12 +10,12 @@
   .groups-toolbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:10px 0 14px; }
   .groups-toolbar .search{ min-width:220px; flex:1; max-width:320px; }
 
-  .group-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px; }
+  .group-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(calc(220px * var(--d, 1)), 1fr)); gap:16px; }
   .group-card{
     background: var(--panel);
     border:1px solid var(--border);
     border-radius:10px;
-    padding:14px 16px;
+    padding:calc(14px * var(--d, 1)) calc(16px * var(--d, 1));
     cursor:pointer;
     transition: border-color .12s;
     display:flex; flex-direction:column; gap:12px;
@@ -30,25 +30,25 @@
   .group-grid.lb-custom .group-card{ justify-content:space-between; }
   .group-card-head{ display:flex; align-items:center; gap:10px; min-width:0; }
   .group-card-icon{
-    width:40px; height:40px; border-radius:8px; object-fit:cover; flex:none;
+    width:calc(40px * var(--d, 1)); height:calc(40px * var(--d, 1)); border-radius:8px; object-fit:cover; flex:none;
     border:1px solid var(--border); background: var(--panel-2);
   }
   /* полоска профессий: иконки классов всех участников — состав группы виден с первого взгляда */
   .group-card-classes{ display:flex; flex-wrap:wrap; gap:3px; }
-  .gcs-ic{ width:18px; height:18px; border-radius:4px; object-fit:cover; box-sizing:border-box; flex:none;
+  .gcs-ic{ width:calc(18px * var(--d, 1)); height:calc(18px * var(--d, 1)); border-radius:4px; object-fit:cover; box-sizing:border-box; flex:none;
     background: var(--panel-2); border:1px solid var(--border); }
   .gcs-ic.leader{ border-color: var(--gold); box-shadow:0 0 0 1px var(--gold-dim); }
   .gcs-none{ display:flex; align-items:center; justify-content:center; font-size:10px; line-height:1; color: var(--text-dim); border-style:dashed; }
   .gcs-more{ font-size:10.5px; color: var(--text-dim); align-self:center; margin-left:2px; }
-  .group-grid.lb-rows .group-card-classes, .group-grid .group-card.lb-wide .group-card-classes{ flex:0 0 300px; width:300px; max-width:38%; justify-content:flex-start; align-content:center; } /* фиксированная колонка — роли у всех групп начинаются с одного места */
-  .group-grid.lb-rows .gcs-ic, .group-grid .group-card.lb-wide .gcs-ic{ width:22px; height:22px; }
+  .group-grid.lb-rows .group-card-classes, .group-grid .group-card.lb-wide .group-card-classes{ flex:0 0 calc(300px * var(--d, 1)); width:calc(300px * var(--d, 1)); max-width:38%; justify-content:flex-start; align-content:center; } /* фиксированная колонка — роли у всех групп начинаются с одного места */
+  .group-grid.lb-rows .gcs-ic, .group-grid .group-card.lb-wide .gcs-ic{ width:calc(22px * var(--d, 1)); height:calc(22px * var(--d, 1)); }
   .group-card-titles{ display:flex; flex-direction:column; gap:1px; min-width:0; }
-  .group-card-name{ font-size:14.5px; font-weight:600; color: var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .group-card-leader{ font-size:11.5px; color: var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .group-card-name{ font-size:calc(14.5px * var(--d, 1)); font-weight:600; color: var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .group-card-leader{ font-size:calc(11.5px * var(--d, 1)); color: var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .group-card-stats{ display:flex; gap:8px; }
   .group-card-stat{ flex:1; min-width:0; background: var(--panel-2); border:1px solid var(--border); border-radius:7px; padding:6px 10px; }
   .group-card-stat .lbl{ font-size:10px; color: var(--text-dim); }
-  .group-card-stat .val{ font-size:14px; font-weight:700; color: var(--text); }
+  .group-card-stat .val{ font-size:calc(14px * var(--d, 1)); font-weight:700; color: var(--text); }
   .group-card-foot{ display:flex; align-items:center; justify-content:space-between; }
   .group-card-count{ display:flex; align-items:center; gap:5px; font-size:11.5px; color: var(--text-dim); }
   .group-card-rank{
@@ -81,12 +81,12 @@
 
   /* карточки участников группы — фото/иконка класса подтягивается из «Проверки буста»,
      как аватарка в самой gear-check.html (своя фотка → иконка класса → заглушка) */
-  .gm-member-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:14px; margin:10px 0; }
+  .gm-member-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(calc(230px * var(--d, 1)), 1fr)); gap:14px; margin:10px 0; }
   .gm-member-card{
     position:relative;
-    display:flex; align-items:center; gap:12px;
+    display:flex; align-items:center; gap:calc(12px * var(--d, 1));
     background: var(--panel-2); border:1px solid var(--border); border-radius:8px;
-    padding:16px 18px;
+    padding:calc(16px * var(--d, 1)) calc(18px * var(--d, 1));
   }
   /* заметка группы (правила, время сбора) — видна админам и лидеру/заму этой группы */
   .group-note{ margin:12px 0 0; padding:10px 14px; background: var(--panel); border:1px solid var(--border); border-left:3px solid var(--gold-dim); border-radius:8px; }
@@ -130,21 +130,21 @@
   .gm-member-card.drag-over{ border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
   .gm-member-card .avatar-wrap{ position:relative; flex:none; }
   .gm-member-card .avatar{
-    width:38px; height:38px; border-radius:50%; object-fit:cover; display:block;
+    width:calc(38px * var(--d, 1)); height:calc(38px * var(--d, 1)); border-radius:50%; object-fit:cover; display:block;
     border:1px solid var(--border); background: var(--panel);
   }
   /* доп-профессии кружочками у аватарки; их может быть до трёх, поэтому лежат
      рядком с нахлёстом — иначе цепочка уезжала бы за пределы карточки */
   .gm-member-card .sub-avatar-row{ position:absolute; right:-3px; bottom:-3px; display:flex; }
   .gm-member-card .sub-avatar{
-    width:17px; height:17px; border-radius:50%; object-fit:cover; display:block;
+    width:calc(17px * var(--d, 1)); height:calc(17px * var(--d, 1)); border-radius:50%; object-fit:cover; display:block;
     border:2px solid var(--panel-2); background: var(--panel);
     margin-right:-6px;
   }
   .gm-member-card .sub-avatar:last-child{ margin-right:0; }
   .gm-member-card .who{ display:flex; flex-direction:column; gap:1px; min-width:0; }
-  .gm-member-card .name{ font-weight:600; color: var(--text); font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .gm-member-card .cls{ font-size:11.5px; color: var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .gm-member-card .name{ font-weight:600; color: var(--text); font-size:calc(14px * var(--d, 1)); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .gm-member-card .cls{ font-size:calc(11.5px * var(--d, 1)); color: var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .gm-member-menu-btn{
     margin-left:auto; flex:none;
     width:22px; height:22px; padding:0;
@@ -227,6 +227,39 @@
   #partyCheckCard{ width:fit-content; max-width:100%; }
   /* большие ячейки страницы группы («Участники», «Проверка пати») можно расставить самому; кнопки — над кнопками участников */
   #lbBtnsBlocks{ bottom:56px; align-items:center; }
+  body.note-off #groupNote{ display:none !important; } /* заметка группы выключена (личная настройка) */
+  #noteToggleBtn.off{ opacity:.55; }
+  #noteToggleBtn.off svg{ opacity:.7; }
+  /* ползунок плотности: размер карточек групп и участников одним движением */
+  #lbBtnsDensity{ bottom:56px; align-items:center; gap:8px; background: var(--panel); border:1px solid var(--border); border-radius:8px; padding:4px 10px; }
+  #lbBtnsDensity label{ font-size:11px; color: var(--text-dim); white-space:nowrap; }
+  #lbBtnsDensity input[type=range]{ width:110px; accent-color: var(--gold); }
+  #lbBtnsDensity .dens-val{ font-size:11px; color: var(--text); min-width:34px; text-align:right; font-variant-numeric: tabular-nums; }
+  #lbBtnsDensity .dens-reset{ background:none; border:0; color: var(--text-dim); cursor:pointer; font-size:12px; padding:0 2px; }
+  #lbBtnsDensity .dens-reset:hover{ color: var(--text); }
+  #lbBtnsDensity .lb-btn{ width:28px; height:28px; }
+  /* цвет роли: полоска слева у карточки участника + легенда с количеством */
+  .gm-member-card[data-role]{ box-shadow: inset 4px 0 0 var(--role-c); }
+  .gm-member-card.drag-over[data-role]{ box-shadow: inset 4px 0 0 var(--role-c), inset 0 0 0 1px var(--gold); }
+  .roles-list{ display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:6px 14px; max-height:56vh; overflow:auto; margin:10px 0; padding-right:4px; }
+  .roles-row{ display:flex; align-items:center; gap:8px; font-size:12.5px; color: var(--text); }
+  .roles-row img{ width:22px; height:22px; border-radius:5px; object-fit:cover; flex:none; }
+  .roles-row span{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .roles-row select{ font-size:12px; padding:2px 4px; max-width:110px; }
+  /* режим «для скрина»: прячем всё управление, остаётся только состав — чистая картинка для чата */
+  #shotExit, #shotCaption{ display:none; }
+  body.shot-mode .lb-btns, body.shot-mode .lb-master, body.shot-mode #helpBtn, body.shot-mode .gm-member-menu-btn, body.shot-mode .sec-tools,
+  body.shot-mode .manual-add, body.shot-mode .error-msg, body.shot-mode #groupDetailTools, body.shot-mode #backToJournalBtn,
+  body.shot-mode #groupBackBtn, body.shot-mode #groupClassRow, body.shot-mode .groups-toolbar, body.shot-mode #partyCheckCard,
+  body.shot-mode #groupNoteEditBtn, body.shot-mode #groupMembersEmpty, body.shot-mode .sec-empty,
+  body.shot-mode #groupNote:has(.group-note-text.empty){ display:none !important; }
+  body.shot-mode .lb-editing, body.shot-mode .lb-editing > [data-lbid]{ outline:none !important; background-image:none !important; }
+  body.shot-mode .gm-member-card.draggable, body.shot-mode .group-card{ cursor:default; }
+  body.shot-mode #shotCaption{ display:block; margin:22px 0 4px; text-align:center; font-size:12px; letter-spacing:.04em; color: var(--text-dim); }
+  body.shot-mode #shotExit{ display:flex; position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:90; align-items:center; gap:8px;
+    padding:6px 14px; border-radius:20px; border:1px solid var(--border-lit); background:rgba(20,20,24,.85); color: var(--text-dim); font-size:12px; cursor:pointer;
+    opacity:.55; transition:opacity .15s; font-family:inherit; }
+  body.shot-mode #shotExit:hover{ opacity:1; color: var(--text); }
   /* дополнительные блоки участников внутри группы («+» в ряду «Ячейки страницы») */
   .sec-head{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .sec-tools{ display:none; gap:4px; margin-left:4px; } /* ✎ и ✕ видны только в режиме редактирования участников */
@@ -237,6 +270,7 @@
   .sec-btn.danger:hover{ color: var(--danger-lit); border-color: var(--danger-lit); }
   .sec-title-input{ font:inherit; font-weight:700; color: var(--gold); background: var(--panel-2); border:1px solid var(--border-lit); border-radius:6px; padding:2px 8px; min-width:160px; max-width:100%; }
   .sec-card .manual-add{ margin-top:12px; }
+  #detailBlocks .sec-drop{ outline:2px dashed var(--gold); outline-offset:-6px; }
   #detailBlocks.lb-custom:not(.lb-editing) > [data-lbid]{ overflow:auto; }
   #detailBlocks.lb-custom > #partyCheckCard{ width:auto; }
   .gm-check-scroll{ overflow-x:auto; margin-top:10px; }
@@ -270,6 +304,7 @@
     <div class="lb-btns" id="lbBtnsGroups"><button type="button" class="lb-btn" data-lb="rows"></button><button type="button" class="lb-btn" data-lb="tiles"></button><button type="button" class="lb-btn" data-lb="edit"></button></div>
   </div>
 
+  <button type="button" id="shotExit"></button>
   <div id="detailView" style="display:none;">
     <div class="group-detail-head">
       <div class="group-name-row">
@@ -352,8 +387,10 @@
       </div>
     </section>
     </div>
+    <div id="shotCaption"></div>
+    <div class="lb-btns" id="lbBtnsDensity"><label for="densityRange" data-i18n="layout.density">Плотность</label><input type="range" id="densityRange" min="0.8" max="1.3" step="0.05" value="1" /><span class="dens-val" id="densityVal">100%</span><button type="button" class="dens-reset" id="densityReset" data-i18n-attr="title:layout.densityReset" title="Сбросить размер">↺</button><button type="button" class="lb-btn" id="rolesBtn" data-i18n-attr="title:roles.btn" title="Роли классов и цвета"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M8 1.8a6.2 6.2 0 100 12.4c1 0 1.4-.7 1.1-1.5-.3-.8.1-1.6 1-1.6h1.4a2.7 2.7 0 002.7-2.7C14.2 4.9 11.5 1.8 8 1.8z"/><circle cx="5" cy="7.2" r=".9"/><circle cx="7.8" cy="4.9" r=".9"/><circle cx="10.8" cy="6.2" r=".9"/></svg></button><button type="button" class="lb-btn" id="shotBtn" data-i18n-attr="title:shot.btn" title="Режим для скрина: спрятать всё управление"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M2 5.2a1 1 0 011-1h1.6l.9-1.4h5l.9 1.4H13a1 1 0 011 1V12a1 1 0 01-1 1H3a1 1 0 01-1-1z"/><circle cx="8" cy="8.4" r="2.4"/></svg></button></div>
     <div class="lb-btns" id="lbBtnsMembers"><button type="button" class="lb-btn" data-lb="rows"></button><button type="button" class="lb-btn" data-lb="tiles"></button><button type="button" class="lb-btn" data-lb="edit"></button></div>
-    <div class="lb-btns" id="lbBtnsBlocks"><span class="lb-presets-label" data-i18n="layout.blocksLabel">Ячейки страницы</span><button type="button" class="lb-btn" data-lb="rows" style="display:none;"></button><button type="button" class="lb-btn" data-lb="tiles"></button><button type="button" class="lb-btn" data-lb="edit"></button><button type="button" class="lb-btn" id="applyAllBtn" data-i18n-attr="title:layout.applyAll" title="Применить расположение этой группы ко всем группам"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="1.8" y="5.2" width="9" height="9" rx="1.4"/><path d="M5.2 5.2V3.2a1.4 1.4 0 011.4-1.4h6.2a1.4 1.4 0 011.4 1.4v6.2a1.4 1.4 0 01-1.4 1.4h-2"/></svg></button><button type="button" class="lb-btn" id="addSectionBtn" style="display:none;" data-i18n-attr="title:sections.add" title="Добавить блок участников"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg></button></div>
+    <div class="lb-btns" id="lbBtnsBlocks"><span class="lb-presets-label" data-i18n="layout.blocksLabel">Ячейки страницы</span><button type="button" class="lb-btn" data-lb="rows" style="display:none;"></button><button type="button" class="lb-btn" data-lb="tiles"></button><button type="button" class="lb-btn" data-lb="edit"></button><button type="button" class="lb-btn" id="applyAllBtn" data-i18n-attr="title:layout.applyAll" title="Применить расположение этой группы ко всем группам"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="1.8" y="5.2" width="9" height="9" rx="1.4"/><path d="M5.2 5.2V3.2a1.4 1.4 0 011.4-1.4h6.2a1.4 1.4 0 011.4 1.4v6.2a1.4 1.4 0 01-1.4 1.4h-2"/></svg></button><button type="button" class="lb-btn" id="noteToggleBtn" style="display:none;"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 1.8h6.2l3 3v9.4h-9.2z"/><path d="M9.5 1.8v3.2h3.2M5.5 8h5M5.5 10.6h5"/><path class="note-slash" d="M2 2l12 12" style="display:none;"/></svg></button><button type="button" class="lb-btn" id="addSectionBtn" style="display:none;" data-i18n-attr="title:sections.add" title="Добавить блок участников"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg></button></div>
   </div>
 
 </div>
@@ -396,6 +433,19 @@
 </div>
 
 <!-- Класс участника — то же самое окно, что в «Проверке буста» -->
+<div class="modal-overlay" id="rolesOverlay">
+  <div class="modal" style="width:620px; max-width:94vw;">
+    <button class="modal-close" id="rolesClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
+    <h2 data-i18n="roles.title">Роли классов</h2>
+    <p class="hint" data-i18n="roles.hint">У каждой карточки участника слева полоска цвета роли его основного класса. Здесь можно переназначить роль любому классу — настройка личная, хранится в этом браузере.</p>
+    <div class="roles-list" id="rolesList"></div>
+    <div style="display:flex; gap:8px; justify-content:space-between; margin-top:8px;">
+      <button type="button" class="btn btn-ghost" id="rolesReset" data-i18n="roles.reset">Сбросить к стандартным</button>
+      <button type="button" class="btn btn-primary" id="rolesDone" data-i18n="roles.done">Готово</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="memberOverlay">
   <div class="modal gc-member-modal" style="width:640px; max-width:94vw;">
     <button class="modal-close" id="memberClose" data-i18n-attr="title:common.close" title="Закрыть">×</button>
@@ -508,9 +558,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=64"></script>
+<script src="js/i18n.js?v=70"></script>
 <script src="js/tax-flag.js?v=1"></script>
-<script src="js/layout-board.js?v=6"></script>
+<script src="js/layout-board.js?v=7"></script>
 <script src="js/nick-match.js?v=2"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
@@ -823,8 +873,12 @@
 
   // ---- раскладка карточек (личная настройка, хранится в браузере): списки групп и участников можно показать
   // «плитками» (как было), «полосами» либо расставить самому — двигать и тянуть за края (три кнопки слева от «?») ----
+  // плотность (личная настройка): масштаб карточек групп и участников; шаблоны пересобираются, ручная раскладка остаётся как есть
+  let density = 1;
+  try { const v = parseFloat(localStorage.getItem("l2Density:" + profile.id)); if(v >= 0.8 && v <= 1.3) density = v; } catch(e){}
+  document.documentElement.style.setProperty("--d", String(density));
   const groupsBoard = L2LayoutBoard.create({ container: document.getElementById("groupGrid"), key: "l2LayoutGroups:" + profile.id,
-    buttons: document.getElementById("lbBtnsGroups"), clip: true, minW: 150, minH: 84, defW: 240, defH: 132, t: L2I18n.t });
+    buttons: document.getElementById("lbBtnsGroups"), clip: true, minW: 150, minH: 84, defW: 240, defH: 132, t: L2I18n.t, scale: () => density });
   // шаблоны расстановки участников (появляются слева от трёх кнопок, пока включено редактирование)
   const MEMBER_PRESETS = [
     { id: "compact", title: "Компактные плитки", // как можно больше узких карточек в ряд
@@ -852,7 +906,7 @@
   function membersBoardRank(nick){ const g = groups.find(x => x.id === currentGroupId); return g && g.leader_nickname === nick ? 0 : (g && g.deputy_nickname === nick ? 1 : 2); }
   const sectionViews = new Map();    // section id -> { card, grid, board, ... } — DOM и раскладка блока создаются один раз
   const membersBoard = L2LayoutBoard.create({ container: document.getElementById("groupMembers"), key: "l2LayoutMembers:" + profile.id + ":none", // реальный ключ — по группе, ставится в openDetail
-    buttons: document.getElementById("lbBtnsMembers"), minW: 150, minH: 48, defW: 240, defH: 68, wide: (w, h) => w >= 700 && w / h >= 8, presets: MEMBER_PRESETS, t: L2I18n.t,
+    buttons: document.getElementById("lbBtnsMembers"), minW: 150, minH: 48, defW: 240, defH: 68, wide: (w, h) => w >= 700 && w / h >= 8, presets: MEMBER_PRESETS, t: L2I18n.t, scale: () => density,
     // в шаблонах пати-лидер идёт первым, за ним зам; дальше как в списке (пока вручную не переставили)
     rank: membersBoardRank });
 
@@ -904,6 +958,40 @@
     setTimeout(() => { btn.innerHTML = old; btn.classList.remove("active"); }, 1600);
   }
   document.getElementById("applyAllBtn").addEventListener("click", applyLayoutToAllGroups);
+
+  // ---- режим «для скрина» (камера в ряду плотности): всё управление прячется, остаётся чистый состав; выход — кнопка сверху или Esc ----
+  (function wireShotMode(){
+    const exitBtn = document.getElementById("shotExit");
+    const set = (on) => {
+      if(on){
+        endMemberEdits(); blocksBoard.endEdit(true); groupsBoard.endEdit(true);
+        const clan = (profile.clans && profile.clans.name) || "";
+        document.getElementById("shotCaption").textContent = (clan ? clan + " · " : "") + new Date().toLocaleDateString(L2I18n.locale ? L2I18n.locale() : undefined);
+        exitBtn.textContent = "✕ " + L2I18n.t("shot.exit", "Выйти из режима скрина (Esc)");
+        hideHoverCard();
+        document.body.classList.remove("lb-open");
+      }
+      document.body.classList.toggle("shot-mode", on);
+    };
+    document.getElementById("shotBtn").addEventListener("click", () => set(true));
+    exitBtn.addEventListener("click", () => set(false));
+    document.addEventListener("keydown", (e) => { if(e.key === "Escape" && document.body.classList.contains("shot-mode")) set(false); });
+  })();
+
+  (function wireDensity(){
+    const range = document.getElementById("densityRange"), val = document.getElementById("densityVal");
+    const paint = () => { range.value = String(density); val.textContent = Math.round(density * 100) + "%"; };
+    const set = (v) => {
+      density = Math.min(1.3, Math.max(0.8, Math.round(v * 20) / 20));
+      document.documentElement.style.setProperty("--d", String(density));
+      try { localStorage.setItem("l2Density:" + profile.id, String(density)); } catch(e){}
+      paint();
+      groupsBoard.rescale(); allMemberBoards().forEach(b => b.rescale());
+    };
+    range.addEventListener("input", () => set(parseFloat(range.value)));
+    document.getElementById("densityReset").addEventListener("click", () => set(1));
+    paint();
+  })();
 
   function renderGrid(filterText){
     const grid = document.getElementById("groupGrid");
@@ -991,9 +1079,28 @@
     const d = new Date(iso); const p = (n) => String(n).padStart(2, "0");
     return p(d.getDate()) + "." + p(d.getMonth() + 1) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
   }
+  // выключатель заметки (кнопка в ряду «Ячейки страницы»): личная настройка, хранится в этом браузере
+  const noteOffKey = "l2NoteHidden:" + profile.id;
+  function paintNoteToggle(available){
+    const btn = document.getElementById("noteToggleBtn");
+    let off = false;
+    try { off = localStorage.getItem(noteOffKey) === "1"; } catch(e){}
+    document.body.classList.toggle("note-off", off);
+    btn.style.display = available ? "" : "none";
+    btn.classList.toggle("off", off);
+    btn.classList.toggle("active", !off);
+    btn.querySelector(".note-slash").style.display = off ? "" : "none";
+    btn.title = off ? L2I18n.t("groups.noteShow", "Показать заметку группы") : L2I18n.t("groups.noteHide", "Скрыть заметку группы");
+  }
+  document.getElementById("noteToggleBtn").addEventListener("click", () => {
+    let off = false;
+    try { off = localStorage.getItem(noteOffKey) === "1"; localStorage.setItem(noteOffKey, off ? "0" : "1"); } catch(e){}
+    paintNoteToggle(true);
+  });
   function renderGroupNote(){
     const box = document.getElementById("groupNote");
-    if(!notesOk || !currentGroupId || !canEditNote()){ box.style.display = "none"; return; }
+    if(!notesOk || !currentGroupId || !canEditNote()){ box.style.display = "none"; paintNoteToggle(false); return; }
+    paintNoteToggle(true);
     box.style.display = "";
     const n = groupNotes.get(currentGroupId);
     document.getElementById("groupNoteTitle").textContent = "📝 " + NOTE_T("noteTitle", "Заметка группы");
@@ -1094,7 +1201,7 @@
     const card = e.target.closest(".gm-member-card");
     if(!card || (e.relatedTarget && card.contains(e.relatedTarget))) return;
     if(window.matchMedia && !window.matchMedia("(hover: hover)").matches) return; // сенсорный экран — наведения нет
-    if(anyMemberEditing() || blocksBoard.isEditing() || document.querySelector(".gm-member-menu")) return;
+    if(document.body.classList.contains("shot-mode") || anyMemberEditing() || blocksBoard.isEditing() || document.querySelector(".gm-member-menu")) return;
     clearTimeout(hoverTimer);
     hoverTimer = setTimeout(() => showHoverCard(card), 280);
   });
@@ -1490,6 +1597,69 @@
     renderMembers();
   }
 
+  // ---------- роли классов: цвет полоски на карточке участника ----------
+  const ROLES = [
+    { key: "tank",    color: "#4aa3ff", fallback: "Танк" },
+    { key: "heal",    color: "#4ade80", fallback: "Хил" },
+    { key: "support", color: "#c084fc", fallback: "Саппорт" },
+    { key: "dd",      color: "#f87171", fallback: "ДД" },
+    { key: "mage",    color: "#fb923c", fallback: "Маг" },
+    { key: "arb",     color: "#fbbf24", fallback: "Лучник" },
+  ];
+  const ROLE_DEFAULT = {};
+  Object.entries({
+    tank: ["Phoenix Knight", "Hell Knight", "Eva's Templar", "Shillien Templar"],
+    heal: ["Cardinal", "Eva's Saint", "Shillien Saint"],
+    support: ["Hierophant", "Dominator", "Doomcryer", "Sword Muse", "Spectral Dancer"],
+    mage: ["Archmage", "Soultaker", "Arcana Lord", "Mystic Muse", "Elemental Master", "Storm Screamer", "Spectral Master"],
+    arb: ["Sagittarius", "Moonlight Sentinel", "Ghost Sentinel", "Trickster"], // жёлтый — все лучники и арбалетчики
+    dd: ["Dreadnought", "Duelist", "Adventurer", "Wind Rider", "Ghost Hunter", "Titan",
+      "Grand Khavatari", "Fortune Seeker", "Maestro", "Doombringer", "Soul Hound", "Female Soul Hound", "Judicator"],
+  }).forEach(([role, names]) => names.forEach(n => { ROLE_DEFAULT[n] = role; }));
+  const roleKeyStore = "l2RoleMap:" + profile.id;
+  let roleOverrides = {};
+  try { roleOverrides = JSON.parse(localStorage.getItem(roleKeyStore) || "{}") || {}; } catch(e){}
+  const roleName = (r) => L2I18n.t("roles." + r.key, r.fallback);
+  function roleOfClass(className){
+    if(!className) return null;
+    const key = roleOverrides[className] || ROLE_DEFAULT[className];
+    return ROLES.find(r => r.key === key) || null;
+  }
+  (function wireRolesModal(){
+    const overlay = document.getElementById("rolesOverlay"), list = document.getElementById("rolesList");
+    function paint(){
+      list.innerHTML = "";
+      (window.L2_CLASSES || []).forEach(cl => {
+        const cur = roleOverrides[cl.name] || ROLE_DEFAULT[cl.name] || "";
+        const row = document.createElement("label");
+        row.className = "roles-row";
+        row.innerHTML = `<img src="${cl.icon}" alt="" /><span title="${escapeHtml(cl.name)}">${escapeHtml(cl.name)}</span>`;
+        const sel = document.createElement("select");
+        sel.innerHTML = `<option value="">—</option>` + ROLES.map(r => `<option value="${r.key}"${r.key === cur ? " selected" : ""}>${escapeHtml(roleName(r))}</option>`).join("");
+        sel.style.borderLeft = "4px solid " + ((ROLES.find(r => r.key === cur) || {}).color || "transparent");
+        sel.addEventListener("change", () => {
+          // выбрана стандартная роль — переопределение не храним; «—» — класс без цвета
+          if(sel.value === (ROLE_DEFAULT[cl.name] || "")) delete roleOverrides[cl.name]; else roleOverrides[cl.name] = sel.value || "none";
+          try { localStorage.setItem(roleKeyStore, JSON.stringify(roleOverrides)); } catch(e){}
+          sel.style.borderLeft = "4px solid " + ((ROLES.find(r => r.key === sel.value) || {}).color || "transparent");
+          renderMembers();
+        });
+        row.appendChild(sel);
+        list.appendChild(row);
+      });
+    }
+    document.getElementById("rolesBtn").addEventListener("click", () => { paint(); overlay.classList.add("show"); });
+    const close = () => overlay.classList.remove("show");
+    document.getElementById("rolesClose").addEventListener("click", close);
+    document.getElementById("rolesDone").addEventListener("click", close);
+    overlay.addEventListener("click", (e) => { if(e.target === overlay) close(); });
+    document.getElementById("rolesReset").addEventListener("click", () => {
+      roleOverrides = {};
+      try { localStorage.removeItem(roleKeyStore); } catch(e){}
+      paint(); renderMembers();
+    });
+  })();
+
   function buildMemberCard(nick, g){
       const info = memberInfo.get(nick) || {};
       const avatarSrc = info.icon || classIcon(info.class_name) || BLANK_IMG;
@@ -1513,6 +1683,8 @@
       const isDeputy = g?.deputy_nickname === nick;
       const card = document.createElement("div");
       card.className = "gm-member-card";
+      const role = roleOfClass(info.class_name);
+      if(role){ card.dataset.role = role.key; card.style.setProperty("--role-c", role.color); }
       card.dataset.lbid = nick;
       card.innerHTML =
         `<div class="avatar-wrap"><img class="avatar" src="${avatarSrc}" alt="" />` +
@@ -1532,13 +1704,16 @@
       if(isAdmin){
         card.classList.add("draggable");
         card.draggable = true;
-        card.title = L2I18n.t("groups.dragToSwapTitle", "Перетащите на другого участника, чтобы поменять местами");
+        card.title = groupSections(currentGroupId).length
+          ? L2I18n.t("sections.dragTitle", "Перетащите на другого участника — поменять местами; в другой блок — перенести туда")
+          : L2I18n.t("groups.dragToSwapTitle", "Перетащите на другого участника, чтобы поменять местами");
         card.addEventListener("dragstart", (e) => {
           e.dataTransfer.setData("text/plain", nick);
           e.dataTransfer.effectAllowed = "move";
           card.classList.add("dragging");
+          draggingNick = nick;
         });
-        card.addEventListener("dragend", () => card.classList.remove("dragging"));
+        card.addEventListener("dragend", () => { card.classList.remove("dragging"); draggingNick = null; clearBlockDrop(); });
         card.addEventListener("dragover", (e) => {
           e.preventDefault();
           e.dataTransfer.dropEffect = "move";
@@ -1548,9 +1723,13 @@
         card.addEventListener("drop", (e) => {
           e.preventDefault();
           card.classList.remove("drag-over");
-          const draggedNick = e.dataTransfer.getData("text/plain");
-          // меняем местами только внутри одного блока; в другой блок — через меню «⋮» → «Переместить в блок…»
-          if(draggedNick && draggedNick !== nick && sectionIdOf(currentGroupId, draggedNick) === sectionIdOf(currentGroupId, nick)) swapMembers(draggedNick, nick);
+          const draggedNick = e.dataTransfer.getData("text/plain") || draggingNick;
+          if(!draggedNick || draggedNick === nick) return;
+          e.stopPropagation(); // карточка уже обработала бросок — блок целиком его не трогает
+          clearBlockDrop();
+          // внутри одного блока — поменять местами; из другого блока — человек встаёт на место этой карточки
+          if(sectionIdOf(currentGroupId, draggedNick) === sectionIdOf(currentGroupId, nick)) swapMembers(draggedNick, nick);
+          else moveMemberTo(draggedNick, sectionIdOf(currentGroupId, nick), nick);
         });
       }
 
@@ -1619,7 +1798,7 @@
     // доска блока делит ряд кнопок с основным списком участников: «редактировать» и шаблоны действуют на все блоки сразу
     const board = L2LayoutBoard.create({ container: grid, key: "l2LayoutMembers:" + profile.id + ":" + sec.group_id + ":s:" + sec.id,
       buttons: document.getElementById("lbBtnsMembers"), sharedButtons: true, minW: 150, minH: 48, defW: 240, defH: 68,
-      wide: (w, h) => w >= 700 && w / h >= 8, presets: MEMBER_PRESETS, t: L2I18n.t, rank: membersBoardRank });
+      wide: (w, h) => w >= 700 && w / h >= 8, presets: MEMBER_PRESETS, t: L2I18n.t, rank: membersBoardRank, scale: () => density });
     document.querySelectorAll("#lbBtnsMembers [data-preset]").forEach(b => b.addEventListener("click", () => board.applyPreset(b.dataset.preset)));
     v = { card, grid, board, titleEl: q(".sec-title"), countEl: q(".sec-count"), emptyEl: q(".sec-empty") };
     sectionViews.set(sec.id, v);
@@ -1702,6 +1881,65 @@
     document.getElementById("detailBlocks").classList.toggle("sec-edit", document.getElementById("lbBtnsMembers").classList.contains("lb-editing-on"));
   }).observe(document.getElementById("lbBtnsMembers"), { attributes: true, attributeFilter: ["class"] });
 
+  // ---- перетаскивание человека между блоками: бросить на карточку другого блока (встанет на её место) или на пустое место блока (в конец) ----
+  let draggingNick = null;
+  function clearBlockDrop(){ document.querySelectorAll(".sec-drop").forEach(el => el.classList.remove("sec-drop")); }
+  function dropBlockOf(target){
+    const blk = target.closest && target.closest("#detailBlocks > [data-lbid]");
+    if(!blk || (blk.dataset.lbid !== "members" && !blk.dataset.lbid.startsWith("sec:"))) return null;
+    return blk;
+  }
+  const blockSectionId = (blk) => blk.dataset.lbid === "members" ? null : blk.dataset.lbid.slice(4);
+  (function wireBlockDrop(){
+    const host = document.getElementById("detailBlocks");
+    host.addEventListener("dragover", (e) => {
+      if(!isAdmin || !draggingNick) return;
+      const blk = dropBlockOf(e.target);
+      if(!blk) return;
+      if((sectionIdOf(currentGroupId, draggingNick) || null) === (blockSectionId(blk) || null)) return; // свой же блок — обычный обмен местами
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      if(!blk.classList.contains("sec-drop")){ clearBlockDrop(); blk.classList.add("sec-drop"); }
+    });
+    host.addEventListener("dragleave", (e) => { if(!host.contains(e.relatedTarget)) clearBlockDrop(); });
+    host.addEventListener("drop", (e) => {
+      const nick = draggingNick || (e.dataTransfer && e.dataTransfer.getData("text/plain"));
+      const blk = dropBlockOf(e.target);
+      clearBlockDrop();
+      if(!isAdmin || !nick || !blk) return;
+      const sid = blockSectionId(blk);
+      if((sectionIdOf(currentGroupId, nick) || null) === (sid || null)) return;
+      e.preventDefault();
+      moveMemberTo(nick, sid, null);
+    });
+  })();
+
+  // перенос человека в блок: меняем блок и место в общем порядке (перед beforeNick, а без него — после последнего в блоке)
+  async function moveMemberTo(nick, sectionId, beforeNick){
+    const gid = currentGroupId;
+    if(!nick) return;
+    const ordered = currentOrderedNicks().filter(n => n !== nick);
+    let idx;
+    if(beforeNick && ordered.includes(beforeNick)) idx = ordered.indexOf(beforeNick);
+    else { let last = -1; ordered.forEach((n, i) => { if((sectionIdOf(gid, n) || null) === (sectionId || null)) last = i; }); idx = last + 1; }
+    ordered.splice(idx, 0, nick);
+    if(sectionId){
+      if(!sectionOfMember.has(gid)) sectionOfMember.set(gid, new Map());
+      sectionOfMember.get(gid).set(nick, sectionId);
+    } else forgetSection(gid, nick);
+    const prev = memberOrderMap.get(gid) || new Map();
+    const orderMap = new Map();
+    ordered.forEach((n, i) => orderMap.set(n, i));
+    memberOrderMap.set(gid, orderMap);
+    renderMembers();
+    const results = await Promise.all(ordered
+      .filter(n => n === nick || (prev.get(n) ?? 0) !== orderMap.get(n))
+      .map(n => db.from("clan_group_members").update(n === nick ? { section_id: sectionId, sort_order: orderMap.get(n) } : { sort_order: orderMap.get(n) })
+        .eq("group_id", gid).eq("nickname", n)));
+    const failed = results.find(r => r.error);
+    if(failed){ console.error(failed.error); alert(failed.error.message); }
+  }
+
   async function moveToSection(nick, sectionId){
     const { error } = await db.from("clan_group_members").update({ section_id: sectionId }).eq("group_id", currentGroupId).eq("nickname", nick);
     closeMemberMenu();
@@ -1756,6 +1994,7 @@
     document.getElementById("groupDetailTools").style.display = isAdmin ? "" : "none";
     document.getElementById("addMemberRow").style.display = isAdmin ? "" : "none";
     document.getElementById("addSectionBtn").style.display = isAdmin ? "" : "none";
+    document.getElementById("lbBtnsDensity").style.bottom = "96px";
     document.getElementById("groupClassRow").style.display = isAdmin ? "" : "none";
     document.getElementById("groupError").textContent = "";
     renderGroupClassPickerButton();
@@ -1783,6 +2022,7 @@
   async function exitGroupDetail(){
     endMemberEdits();
     blocksBoard.endEdit(true);
+    document.getElementById("lbBtnsDensity").style.bottom = "";
     document.getElementById("detailView").style.display = "none";
     document.getElementById("listView").style.display = "";
     document.getElementById("backToJournalBtn").style.display = "none";
