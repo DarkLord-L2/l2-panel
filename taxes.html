@@ -509,7 +509,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=22"></script>
-<script src="js/i18n.js?v=79"></script>
+<script src="js/i18n.js?v=80"></script>
 <script src="js/tax-flag.js?v=1"></script>
 <script src="js/num-format.js?v=1"></script>
 <script src="js/nick-match.js?v=4"></script>
@@ -943,7 +943,7 @@
     const list = document.getElementById("archiveWeeksList");
     list.innerHTML = "";
     if(!allWeeks.length){
-      list.innerHTML = '<p class="hint">Ещё нет ни одной недели с оплатами.</p>';
+      list.innerHTML = `<p class="hint">${L2I18n.t("taxes.noWeeksYet", "Ещё нет ни одной недели с оплатами.")}</p>`;
     }
     allWeeks.forEach(w => {
       const label = document.createElement("label");
@@ -1109,7 +1109,7 @@
         // у «наперёд» ещё и сумма — сколько недель вперёд оплачено × налог с
         // человека, чтобы сразу было видно, сколько денег это в итоге покрывает
         const badge = isAhead
-          ? fmtGold(weeks.length * weeklyTaxAmount) + " · до " + weekShortLabel(sorted[sorted.length - 1])
+          ? fmtGold(weeks.length * weeklyTaxAmount) + L2I18n.t("taxes.untilSep", " · до ") + weekShortLabel(sorted[sorted.length - 1])
           : "×" + weeks.length;
         listEl.appendChild(sideBoxRow(nickname, badge, () => openNickModal(nickname)));
       });

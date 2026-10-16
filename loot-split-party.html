@@ -192,7 +192,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=22"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=79"></script>
+<script src="js/i18n.js?v=80"></script>
 <script src="js/num-format.js?v=1"></script>
 <script src="js/nick-match.js?v=4"></script>
 <script>
@@ -924,7 +924,7 @@
     if(error){
       manualOn.disabled = manualPrice.disabled = true;
       manualBox.classList.add("error");
-      manualBox.title = "Нужно выполнить supabase/schema_manual_km_price.sql: " + error.message;
+      manualBox.title = L2I18n.t("dkp.manualNeedSql", "Нужно выполнить supabase/schema_manual_km_price.sql: ") + error.message;
       return;
     }
     manualOn.disabled = manualPrice.disabled = false;
@@ -941,7 +941,7 @@
     const { error } = await db.from("loot_split_settings").upsert(
       { clan_id: profile.clan_id, manual_km_price: price, manual_km_enabled: manualOn.checked }, { onConflict: "clan_id" });
     await loadManualKm();
-    if(error){ manualBox.classList.add("error"); manualBox.title = "Не удалось сохранить: " + error.message; }
+    if(error){ manualBox.classList.add("error"); manualBox.title = L2I18n.t("dkp.manualSaveFailed", "Не удалось сохранить: ") + error.message; }
   }
   manualOn.addEventListener("change", saveManualKm);
   manualPrice.addEventListener("change", saveManualKm);

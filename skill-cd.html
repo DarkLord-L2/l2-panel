@@ -170,14 +170,14 @@
 
 <div class="cd-wrap" id="wrap" style="display:none;">
   <div class="page-head">
-    <h1>КД скилов</h1>
+    <h1 data-i18n="section.skill_cd">КД скилов</h1>
     <div class="cd-actions">
-      <span class="cd-live" id="liveBadge"><i></i><span>связь…</span></span>
-      <button class="btn" id="skillsBtn" type="button" style="display:none;">⚙ Скилы</button>
-      <button class="btn" id="partiesBtn" type="button" style="display:none;">⚙ Пати</button>
-      <button class="btn" id="offBtn" type="button" style="display:none;">⚙ Скилы пати</button>
+      <span class="cd-live" id="liveBadge"><i></i><span data-i18n="cd.liveConnecting">связь…</span></span>
+      <button class="btn" id="skillsBtn" type="button" style="display:none;" data-i18n="cd.btnSkills">⚙ Скилы</button>
+      <button class="btn" id="partiesBtn" type="button" style="display:none;" data-i18n="cd.btnParties">⚙ Пати</button>
+      <button class="btn" id="offBtn" type="button" style="display:none;" data-i18n="cd.btnPartySkills">⚙ Скилы пати</button>
       <button class="btn" id="timerBtn" type="button" style="display:none;">⏱ Таймер</button>
-      <button class="btn btn-primary" id="popBtn" type="button">🗗 Окошко поверх игры</button>
+      <button class="btn btn-primary" id="popBtn" type="button" data-i18n="cd.btnPopup">🗗 Окошко поверх игры</button>
     </div>
   </div>
   <p class="hint" id="roleHint"></p>
@@ -187,49 +187,49 @@
     <div class="cd-board" id="board"></div>
   </div>
   <div class="cd-placeholder card" id="placeholder">
-    <p class="hint" style="margin:0 0 10px;">Таблица открыта в отдельном окошке.</p>
-    <button class="btn" id="backBtn" type="button">Вернуть сюда</button>
+    <p class="hint" style="margin:0 0 10px;" data-i18n="cd.floatOpened">Таблица открыта в отдельном окошке.</p>
+    <button class="btn" id="backBtn" type="button" data-i18n="cd.backHere">Вернуть сюда</button>
   </div>
 </div>
 
 <div class="cd-overlay" id="skillsOverlay">
   <div class="cd-modal">
-    <h2>Скилы</h2>
-    <p class="hint">Это столбцы таблицы. Нажми на квадрат слева, чтобы выбрать картинку (или перетащи файл / вставь через Ctrl+V, пока курсор над квадратом). Название можно сокращать, оно подписывается под картинкой. Поле «КД» справа от названия — через сколько скил сам включится после того, как его выключили (например 5:00, 90, 30с, 1ч; пусто — сам не включается). Таймер вообще включается кнопкой «⏱ Таймер» вверху страницы.</p>
+    <h2 data-i18n="cd.skillsTitle">Скилы</h2>
+    <p class="hint" data-i18n="cd.skillsHint">Это столбцы таблицы. Нажми на квадрат слева, чтобы выбрать картинку (или перетащи файл / вставь через Ctrl+V, пока курсор над квадратом). Название можно сокращать, оно подписывается под картинкой. Поле «КД» справа от названия — через сколько скил сам включится после того, как его выключили (например 5:00, 90, 30с, 1ч; пусто — сам не включается). Таймер вообще включается кнопкой «⏱ Таймер» вверху страницы.</p>
     <div id="skillList"></div>
     <div class="cd-skill-row" id="newSkillRow">
-      <button class="cd-skill-icon" id="newIcon" type="button" title="Картинка">＋</button>
-      <input type="text" id="newName" placeholder="Название нового скила" maxlength="40" />
-      <input type="text" class="cd-time-in" id="newCd" placeholder="КД" maxlength="9" title="Через сколько скил сам включится после выключения (например 5:00 или 90 или 30с). Пусто — без таймера." />
-      <button class="btn btn-primary" id="addSkillBtn" type="button">Добавить</button>
+      <button class="cd-skill-icon" id="newIcon" type="button" title="Картинка" data-i18n-attr="title:cd.picture">＋</button>
+      <input type="text" id="newName" placeholder="Название нового скила" maxlength="40" data-i18n-attr="placeholder:cd.newSkillPh" />
+      <input type="text" class="cd-time-in" id="newCd" placeholder="КД" maxlength="9" title="Через сколько скил сам включится после выключения (например 5:00 или 90 или 30с). Пусто — без таймера." data-i18n-attr="placeholder:cd.cdPh;title:cd.cdTitleNew" />
+      <button class="btn btn-primary" id="addSkillBtn" type="button" data-i18n="common.add">Добавить</button>
     </div>
     <p class="error-msg" id="skillsErr"></p>
-    <div class="cd-modal-foot"><span></span><button class="btn" id="skillsClose" type="button">Готово</button></div>
+    <div class="cd-modal-foot"><span></span><button class="btn" id="skillsClose" type="button" data-i18n="cd.done">Готово</button></div>
   </div>
 </div>
 <div class="cd-overlay" id="partiesOverlay">
   <div class="cd-modal">
-    <h2>Пати в таблице</h2>
-    <p class="hint">Галочка — пати показывается в таблице и в окошке. Без галочки пати скрыта у всех, отметки по ней не теряются. Название можно переименовать только для этого раздела: в «Группах» оно останется прежним (очисти поле, чтобы вернуть). Справа номер пати: его видят лидеры, по номеру же строки сортируются (одинаковые номера допустимы).</p>
+    <h2 data-i18n="cd.partiesTitle">Пати в таблице</h2>
+    <p class="hint" data-i18n="cd.partiesHint">Галочка — пати показывается в таблице и в окошке. Без галочки пати скрыта у всех, отметки по ней не теряются. Название можно переименовать только для этого раздела: в «Группах» оно останется прежним (очисти поле, чтобы вернуть). Справа номер пати: его видят лидеры, по номеру же строки сортируются (одинаковые номера допустимы).</p>
     <div id="partyList"></div>
     <p class="error-msg" id="partiesErr"></p>
-    <div class="cd-modal-foot"><span></span><button class="btn" id="partiesClose" type="button">Готово</button></div>
+    <div class="cd-modal-foot"><span></span><button class="btn" id="partiesClose" type="button" data-i18n="cd.done">Готово</button></div>
   </div>
 </div>
 <div class="cd-overlay" id="offOverlay">
   <div class="cd-modal cd-wide">
-    <h2>Какие скилы у какой пати</h2>
-    <p class="hint">Число — сколько копий этого скила у пати. 0 — скила нет (клетки в таблице не будет, никакого пустого квадрата), 1 — один, 2–4 — несколько одинаковых (например, у двух игроков один и тот же бафф): у каждой копии своя отметка и свой таймер КД. Нажимай на число, чтобы переключать. Нажми на название пати или на скил в шапке, чтобы включить (1) или выключить (0) сразу всю строку или весь столбец.</p>
+    <h2 data-i18n="cd.offTitle">Какие скилы у какой пати</h2>
+    <p class="hint" data-i18n="cd.offHint">Число — сколько копий этого скила у пати. 0 — скила нет (клетки в таблице не будет, никакого пустого квадрата), 1 — один, 2–4 — несколько одинаковых (например, у двух игроков один и тот же бафф): у каждой копии своя отметка и свой таймер КД. Нажимай на число, чтобы переключать. Нажми на название пати или на скил в шапке, чтобы включить (1) или выключить (0) сразу всю строку или весь столбец.</p>
     <div id="offMatrix"></div>
     <p class="error-msg" id="offErr"></p>
-    <div class="cd-modal-foot"><span></span><button class="btn" id="offClose" type="button">Готово</button></div>
+    <div class="cd-modal-foot"><span></span><button class="btn" id="offClose" type="button" data-i18n="cd.done">Готово</button></div>
   </div>
 </div>
 <input type="file" id="iconPicker" accept="image/*" style="display:none;" />
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=22"></script>
-<script src="js/i18n.js?v=79"></script>
+<script src="js/i18n.js?v=80"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -237,15 +237,16 @@
 
   const profile = await L2Cabinet.getProfile();
   if(!profile){
-    document.body.innerHTML = '<div class="login-wrap"><div class="card login-card"><h1>⚠ Профиль не найден</h1>' +
-      '<p class="hint">Обратитесь к клан-лидеру.</p></div></div>';
+    document.body.innerHTML = '<div class="login-wrap"><div class="card login-card"><h1>' + L2I18n.t("shell.profileNotFoundTitle", "⚠ Профиль не найден") + '</h1>' +
+      '<p class="hint">' + L2I18n.t("common.contactLeader", "Обратитесь к клан-лидеру.") + '</p></div></div>';
     return;
   }
 
   const db = L2Cabinet.client;
   const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
   const clanId = profile.clan_id;
-  const clanName = profile.clans?.display_name || profile.clans?.name || "Клан";
+  const T = (k, f) => L2I18n.t("cd." + k, f); // переводы раздела (js/i18n.js, ключи cd.*)
+  const clanName = profile.clans?.display_name || profile.clans?.name || T("clanFallback", "Клан");
   document.getElementById("wrap").style.display = "";
 
   const $ = (id) => document.getElementById(id);
@@ -283,7 +284,7 @@
   const pad2 = (n) => String(n).padStart(2, "0");
   function fmtLeft(sec){
     if(sec <= 0) return "";
-    if(sec >= 3600) return Math.floor(sec / 3600) + "ч" + pad2(Math.floor(sec % 3600 / 60));
+    if(sec >= 3600) return Math.floor(sec / 3600) + T("hShort", "ч") + pad2(Math.floor(sec % 3600 / 60));
     return Math.floor(sec / 60) + ":" + pad2(sec % 60);
   }
   function fmtDur(sec){
@@ -302,10 +303,10 @@
       const sec = c == null ? a * 60 + b : a * 3600 + b * 60 + c;
       return sec > 0 && sec <= 604800 ? { ok: true, sec } : { ok: sec === 0, sec: null };
     }
-    m = t.match(/^(\d+(?:\.\d+)?)\s*(с|s|сек|м|m|мин|ч|h|час)?$/);
+    m = t.match(/^(\d+(?:\.\d+)?)\s*(с|s|сек|sec|м|m|мин|min|хв|ч|h|hr|час|г|год)?$/);
     if(m){
       const u = m[2] || "м";
-      const mult = /^(с|s|сек)$/.test(u) ? 1 : /^(ч|h|час)$/.test(u) ? 3600 : 60;
+      const mult = /^(с|s|сек|sec)$/.test(u) ? 1 : /^(ч|h|hr|час|г|год)$/.test(u) ? 3600 : 60;
       const sec = Math.round(parseFloat(m[1]) * mult);
       return sec > 0 && sec <= 604800 ? { ok: true, sec } : { ok: sec === 0, sec: null };
     }
@@ -344,9 +345,12 @@
   }
   $("skillsBtn").style.display = isAdmin ? "" : "none";
   $("partiesBtn").style.display = isAdmin ? "" : "none";
-  $("roleHint").textContent = isAdmin
-    ? "Лидеры пати отмечают, какие скилы у них есть — ты видишь это здесь сразу. Зелёная галочка — скил есть."
-    : (profile.party_id ? "Нажимай на скилы своей пати: зелёная галочка — скил есть. Клан-лидер видит отметки сразу." : "");
+  function paintRoleHint(){
+    $("roleHint").textContent = isAdmin
+      ? T("hintAdmin", "Лидеры пати отмечают, какие скилы у них есть — ты видишь это здесь сразу. Зелёная галочка — скил есть.")
+      : (profile.party_id ? T("hintLeader", "Нажимай на скилы своей пати: зелёная галочка — скил есть. Клан-лидер видит отметки сразу.") : "");
+  }
+  paintRoleHint();
 
   // ---------- загрузка ----------
   async function loadGroups(){
@@ -401,7 +405,7 @@
   function updateTimerBtn(){
     const b = $("timerBtn");
     b.style.display = isAdmin ? "" : "none";
-    b.textContent = "⏱ Таймер: " + (timerActive() ? "вкл" : "выкл");
+    b.textContent = T("timerLabel", "⏱ Таймер: {s}").replace("{s}", timerActive() ? T("on", "вкл") : T("off", "выкл"));
     b.classList.toggle("btn-primary", timerActive());
   }
 
@@ -413,31 +417,31 @@
     // не нужны чужие столбцы — иначе под ними остались бы пустые места)
     const shownSkills = vg.length ? skills.filter(sk => vg.some(g => !off.has(key(g.id, sk.id)))) : skills;
     applyViewClasses();
-    let html = '<button class="cd-menu-btn' + (menuOpen ? ' open' : '') + '" type="button" data-act="menu" title="Вид таблицы">⋯</button>';
+    let html = '<button class="cd-menu-btn' + (menuOpen ? ' open' : '') + '" type="button" data-act="menu" title="' + esc(T("viewMenu", "Вид таблицы")) + '">⋯</button>';
     if(menuOpen){
-      const opt = (k, text) => '<label><input type="checkbox" data-view="' + k + '"' + (view[k] ? ' checked' : '') + ' /> ' + text + '</label>';
+      const opt = (k, text) => '<label><input type="checkbox" data-view="' + k + '"' + (view[k] ? ' checked' : '') + ' /> ' + esc(T("v_" + k, text)) + '</label>';
       html += '<div class="cd-menu">' +
         opt("hideHead", "Скрыть шапку") + opt("hideSkillNames", "Скрыть названия скилов") + opt("hideThead", "Скрыть иконки сверху (они есть в клетках)") +
         opt("hidePartyNames", "Скрыть названия пати (только номер)") + opt("smallParty", "Мелкие названия пати") +
         opt("compact", "Мелкие клетки") + opt("noGaps", "Без промежутков между скилами") + opt("noBorders", "Без обводки скилов") +
-        '<div class="cd-menu-row"><button class="btn" type="button" data-act="preset-min">Минимум</button>' +
-        '<button class="btn" type="button" data-act="preset-all">Показать всё</button>' +
-        (isAdmin ? '<button class="btn btn-danger" type="button" data-act="reset">Сбросить всё</button>' : '') + '</div></div>';
+        '<div class="cd-menu-row"><button class="btn" type="button" data-act="preset-min">' + esc(T("presetMin", "Минимум")) + '</button>' +
+        '<button class="btn" type="button" data-act="preset-all">' + esc(T("presetAll", "Показать всё")) + '</button>' +
+        (isAdmin ? '<button class="btn btn-danger" type="button" data-act="reset">' + esc(T("resetAll", "Сбросить всё")) + '</button>' : '') + '</div></div>';
     }
     html += '<div class="cd-board-head"><span class="cd-clan">' + esc(clanName) + '</span><div class="cd-board-tools">';
-    if(isAdmin) html += '<button class="btn btn-danger" type="button" data-act="reset">Сбросить всё</button>';
+    if(isAdmin) html += '<button class="btn btn-danger" type="button" data-act="reset">' + esc(T("resetAll", "Сбросить всё")) + '</button>';
     html += '</div></div>';
 
     if(!skills.length){
       html += '<p class="hint cd-empty">' + (isAdmin
-        ? 'Скилов пока нет. Нажми «⚙ Скилы» и добавь первые (с картинками).'
-        : 'Клан-лидер пока не добавил скилы.') + '</p>';
+        ? esc(T("noSkillsAdmin", "Скилов пока нет. Нажми «⚙ Скилы» и добавь первые (с картинками)."))
+        : esc(T("noSkills", "Клан-лидер пока не добавил скилы."))) + '</p>';
     } else if(!vg.length){
       html += '<p class="hint cd-empty">' + (isAdmin
-        ? 'Пати нет. Создай группы в разделе «Группы» — они появятся здесь строками.'
-        : 'Нет пати для показа.') + '</p>';
+        ? esc(T("noPartiesAdmin", "Пати нет. Создай группы в разделе «Группы» — они появятся здесь строками."))
+        : esc(T("noParties", "Нет пати для показа."))) + '</p>';
     } else {
-      html += '<div class="cd-scroll"><table class="cd-table"><thead><tr><th class="cd-group-h">Группа</th>';
+      html += '<div class="cd-scroll"><table class="cd-table"><thead><tr><th class="cd-group-h">' + esc(T("colGroup", "Группа")) + '</th>';
       for(const s of shownSkills){
         const maxCopies = Math.max(1, ...vg.map(g => copiesOf(g.id, s.id)));
         html += '<th class="cd-skill-h' + (maxCopies > 1 ? ' cd-multi-h' : '') + '"' + (maxCopies > 1 ? ' style="--n:' + maxCopies + '"' : '') + ' title="' + esc(s.name) + '">' +
@@ -489,12 +493,12 @@
     if(menuOpen && !e.target.closest(".cd-menu")){ menuOpen = false; renderBoard(); }
     const resetBtn = e.target.closest('[data-act="reset"]');
     if(resetBtn){
-      if(!confirm("Сбросить все отметки у всех пати?")) return;
+      if(!confirm(T("confirmReset", "Сбросить все отметки у всех пати?"))) return;
       showError("");
       const upd = { has: false, updated_at: new Date().toISOString() };
       if(marksHaveReady) upd.ready_at = null;
       const { error } = await db.from("cd_marks").update(upd).eq("clan_id", clanId);
-      if(error){ showError("Не удалось сбросить: " + error.message); return; }
+      if(error){ showError(T("resetFailed", "Не удалось сбросить: ") + error.message); return; }
       marks.clear(); renderBoard();
       return;
     }
@@ -516,7 +520,7 @@
     if(error){
       if(prev) marks.set(k, prev); else marks.delete(k);
       tickTimers();
-      showError("Не удалось сохранить: " + error.message);
+      showError(T("saveFailed", "Не удалось сохранить: ") + error.message);
     }
   });
 
@@ -549,7 +553,8 @@
     liveOk = ok;
     const b = $("liveBadge");
     b.classList.toggle("on", ok);
-    b.querySelector("span").textContent = ok ? "в реальном времени" : "нет связи (обновляю раз в 20 с)";
+    b.querySelector("span").removeAttribute("data-i18n"); // дальше подпись ставит сам раздел
+    b.querySelector("span").textContent = ok ? T("live", "в реальном времени") : T("noLive", "нет связи (обновляю раз в 20 с)");
   }
   let marksTimer = null, skillsTimer = null;
   function scheduleMarks(){
@@ -591,7 +596,7 @@
       if(c.tagName === "LINK") c.href = n.href;
       target.head.appendChild(c);
     }
-    const t = target.createElement("title"); t.textContent = clanName + " — КД скилов"; target.head.appendChild(t);
+    const t = target.createElement("title"); t.textContent = clanName + " — " + L2I18n.t("section.skill_cd", "КД скилов"); target.head.appendChild(t);
   }
   async function openFloating(){
     if(floatWin) { try { floatWin.focus(); } catch(e){} return; }
@@ -607,7 +612,7 @@
     }
     if(!win){
       win = window.open("", "cdSkillWin", "popup=yes,width=" + w + ",height=" + h);
-      if(!win){ showError("Браузер заблокировал окно. Разреши всплывающие окна для сайта и нажми ещё раз."); return; }
+      if(!win){ showError(T("popupBlocked", "Браузер заблокировал окно. Разреши всплывающие окна для сайта и нажми ещё раз.")); return; }
       win.document.open(); win.document.write("<!doctype html><html><head><meta charset='utf-8'></head><body></body></html>"); win.document.close();
     }
     floatWin = win;
@@ -663,9 +668,9 @@
     const box = $("skillList");
     box.innerHTML = skills.map((s, i) =>
       '<div class="cd-skill-row" data-id="' + s.id + '">' +
-        '<button type="button" class="cd-skill-icon" data-act="icon" title="Сменить картинку">' + (s.icon ? '<img src="' + esc(s.icon) + '" alt="" />' : '＋') + '</button>' +
+        '<button type="button" class="cd-skill-icon" data-act="icon" title="' + esc(T("changePicture", "Сменить картинку")) + '">' + (s.icon ? '<img src="' + esc(s.icon) + '" alt="" />' : '＋') + '</button>' +
         '<input type="text" data-act="name" value="' + esc(s.name) + '" maxlength="40" />' +
-        '<input type="text" class="cd-time-in" data-act="cd" value="' + esc(fmtDur(s.cd_seconds)) + '" placeholder="КД" maxlength="9" title="Через сколько скил сам включится после выключения: 5:00, 90 (мин), 30с, 1ч. Пусто — без таймера." />' +
+        '<input type="text" class="cd-time-in" data-act="cd" value="' + esc(fmtDur(s.cd_seconds)) + '" placeholder="' + esc(T("cdPh", "КД")) + '" maxlength="9" title="' + esc(T("cdTitle", "Через сколько скил сам включится после выключения: 5:00, 90 (мин), 30с, 1ч. Пусто — без таймера.")) + '" />' +
         '<button type="button" class="btn" data-act="up"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
         '<button type="button" class="btn" data-act="down"' + (i === skills.length - 1 ? ' disabled' : '') + '>↓</button>' +
         '<button type="button" class="btn btn-danger" data-act="del">✕</button>' +
@@ -688,7 +693,7 @@
         const s = skills.find(x => x.id === target); if(s) s.icon = dataUrl;
         renderSkillList(); renderBoard();
       }
-    } catch(e){ skillsError("Не удалось загрузить картинку: " + (e.message || e)); }
+    } catch(e){ skillsError(T("iconFailed", "Не удалось загрузить картинку: ") + (e.message || e)); }
   }
   $("iconPicker").addEventListener("change", async (e) => {
     const f = e.target.files[0]; e.target.value = "";
@@ -729,9 +734,9 @@
     if(act === "icon"){ pickerTarget = id; $("iconPicker").click(); return; }
     if(act === "del"){
       const s = skills.find(x => x.id === id);
-      if(!confirm("Удалить скил «" + (s ? s.name : "") + "» вместе со всеми отметками?")) return;
+      if(!confirm(T("confirmDelete", "Удалить скил «{name}» вместе со всеми отметками?").replace("{name}", s ? s.name : ""))) return;
       const { error } = await db.from("cd_skills").delete().eq("id", id);
-      if(error){ skillsError("Не удалось удалить: " + error.message); return; }
+      if(error){ skillsError(T("deleteFailed", "Не удалось удалить: ") + error.message); return; }
       skills = skills.filter(x => x.id !== id);
       for(const k of [...marks.keys()]) if(k.split("|")[1] === id) marks.delete(k);
       renderSkillList(); renderBoard(); return;
@@ -743,7 +748,7 @@
       // пишем порядок заново для всех — просто и без дыр в нумерации
       const results = await Promise.all(skills.map((s, idx) => { s.sort_order = idx; return db.from("cd_skills").update({ sort_order: idx }).eq("id", s.id); }));
       const bad = results.find(r => r.error);
-      if(bad) skillsError("Не удалось сохранить порядок: " + bad.error.message);
+      if(bad) skillsError(T("orderFailed", "Не удалось сохранить порядок: ") + bad.error.message);
       renderSkillList(); renderBoard();
     }
   });
@@ -751,10 +756,10 @@
     if(e.target.dataset.act === "cd"){
       const id0 = e.target.closest(".cd-skill-row").dataset.id, s0 = skills.find(x => x.id === id0); if(!s0) return;
       const pd = parseDur(e.target.value);
-      if(!pd.ok){ skillsError("Не понял время. Примеры: 5:00, 90, 30с, 1ч."); e.target.value = fmtDur(s0.cd_seconds); return; }
+      if(!pd.ok){ skillsError(T("badTime", "Не понял время. Примеры: 5:00, 90, 30с, 1ч.")); e.target.value = fmtDur(s0.cd_seconds); return; }
       skillsError("");
       const { error } = await db.from("cd_skills").update({ cd_seconds: pd.sec }).eq("id", id0);
-      if(error){ skillsError("Не удалось сохранить КД: " + error.message + " (нужно выполнить последнюю часть schema_skill_cd.sql)"); e.target.value = fmtDur(s0.cd_seconds); return; }
+      if(error){ skillsError(T("cdSaveFailed", "Не удалось сохранить КД: ") + error.message + T("needSql", " (нужно выполнить последнюю часть schema_skill_cd.sql)")); e.target.value = fmtDur(s0.cd_seconds); return; }
       s0.cd_seconds = pd.sec; e.target.value = fmtDur(pd.sec);
       return;
     }
@@ -764,21 +769,21 @@
     const s = skills.find(x => x.id === id);
     if(!name){ e.target.value = s ? s.name : ""; return; }
     const { error } = await db.from("cd_skills").update({ name }).eq("id", id);
-    if(error){ skillsError("Не удалось сохранить название: " + error.message); return; }
+    if(error){ skillsError(T("nameSaveFailed", "Не удалось сохранить название: ") + error.message); return; }
     if(s) s.name = name;
     renderBoard();
   });
   async function addSkill(){
     const name = $("newName").value.trim();
-    if(!name){ skillsError("Введи название скила."); return; }
+    if(!name){ skillsError(T("enterName", "Введи название скила.")); return; }
     const pd = parseDur($("newCd").value);
-    if(!pd.ok){ skillsError("Не понял время КД. Примеры: 5:00, 90, 30с, 1ч."); return; }
+    if(!pd.ok){ skillsError(T("badCdTime", "Не понял время КД. Примеры: 5:00, 90, 30с, 1ч.")); return; }
     skillsError("");
     const row = { clan_id: clanId, name, icon: newIconData, sort_order: skills.length };
     if(skillsHaveCd && pd.sec) row.cd_seconds = pd.sec;
     const { data, error } = await db.from("cd_skills").insert(row)
       .select(skillsHaveCd ? "id, name, icon, sort_order, cd_seconds" : "id, name, icon, sort_order").single();
-    if(error){ skillsError("Не удалось добавить: " + error.message); return; }
+    if(error){ skillsError(T("addFailed", "Не удалось добавить: ") + error.message); return; }
     skills.push(data);
     $("newName").value = ""; $("newCd").value = ""; newIconData = null; $("newIcon").textContent = "＋";
     renderSkillList(); renderBoard();
@@ -796,19 +801,19 @@
   const matrixGroups = () => groups.filter(g => g.cd_enabled !== false).concat(groups.filter(g => g.cd_enabled === false));
   function renderOffMatrix(){
     const box = $("offMatrix");
-    if(!skills.length || !groups.length){ box.innerHTML = '<p class="hint">Сначала добавь скилы («⚙ Скилы») и пати (раздел «Группы»).</p>'; return; }
+    if(!skills.length || !groups.length){ box.innerHTML = '<p class="hint">' + esc(T("matrixEmpty", "Сначала добавь скилы («⚙ Скилы») и пати (раздел «Группы»).")) + '</p>'; return; }
     box.innerHTML = '<table class="cd-off-table"><thead><tr><th></th>' + skills.map(sk =>
-        '<th data-col="' + sk.id + '" title="' + esc(sk.name) + ' — нажми, чтобы включить/выключить у всех пати">' +
+        '<th data-col="' + sk.id + '" title="' + esc(sk.name + T("colToggleTitle", " — нажми, чтобы включить/выключить у всех пати")) + '">' +
         (sk.icon ? '<img src="' + esc(sk.icon) + '" alt="" />' : '') + '<span>' + esc(sk.name) + '</span></th>').join("") +
       '</tr></thead><tbody>' + matrixGroups().map(g => {
         const hidden = g.cd_enabled === false;
-        return '<tr' + (hidden ? ' class="cd-off-dim" title="Пати скрыта (⚙ Пати) — здесь не меняется"' : '') + '><td class="cd-off-g"' +
-          (hidden ? '' : ' data-row="' + g.id + '" title="Нажми, чтобы включить/выключить всю строку"') + '>' +
+        return '<tr' + (hidden ? ' class="cd-off-dim" title="' + esc(T("rowHiddenTitle", "Пати скрыта (⚙ Пати) — здесь не меняется")) + '"' : '') + '><td class="cd-off-g"' +
+          (hidden ? '' : ' data-row="' + g.id + '" title="' + esc(T("rowToggleTitle", "Нажми, чтобы включить/выключить всю строку")) + '"') + '>' +
           (g.cd_number != null ? esc(g.cd_number) + '. ' : '') + esc(g.shownName) + '</td>' +
         skills.map(sk => {
           const n = copiesOf(g.id, sk.id);
           return '<td><button type="button" class="cd-off-n ' + (n === 0 ? 'n0' : n === 1 ? 'n1' : 'nm') + '" data-og="' + g.id + '" data-os="' + sk.id + '"' +
-            (hidden ? ' disabled' : '') + ' title="Копий скила у пати: ' + n + '">' + n + '</button></td>';
+            (hidden ? ' disabled' : '') + ' title="' + esc(T("copiesTitle", "Копий скила у пати: ")) + n + '">' + n + '</button></td>';
         }).join("") + '</tr>';
       }).join("") + '</tbody></table>';
   }
@@ -844,7 +849,7 @@
       off.clear(); prevOff.forEach(k => off.add(k));
       copies.clear(); prevCopies.forEach((v, k) => copies.set(k, v));
       renderBoard(); renderOffMatrix();
-      $("offErr").textContent = "Не удалось сохранить: " + error.message + " (нужно выполнить последнюю часть schema_skill_cd.sql)";
+      $("offErr").textContent = T("saveFailed", "Не удалось сохранить: ") + error.message + T("needSql", " (нужно выполнить последнюю часть schema_skill_cd.sql)");
     }
   }
   $("offMatrix").addEventListener("click", (e) => {
@@ -875,10 +880,10 @@
     $("partyList").innerHTML = groups.length ? groups.map(g =>
       '<div class="cd-party-row"><input type="checkbox" id="pc-' + g.id + '" data-g="' + g.id + '"' + (g.cd_enabled !== false ? ' checked' : '') + ' />' +
       '<input type="text" class="cd-pn-in" data-nm="' + g.id + '" maxlength="40" value="' + esc(g.shownName) + '" placeholder="' + esc(g.name) + '" title="' +
-      (g.cd_name ? 'В «Группах» называется: ' + esc(g.name) + '. Очисти поле, чтобы вернуть это название.' : 'Название только для этого раздела; в «Группах» не меняется.') + '" />' +
+      esc(g.cd_name ? T("partyNameOrig", "В «Группах» называется: {name}. Очисти поле, чтобы вернуть это название.").replace("{name}", g.name) : T("partyNameOnlyHere", "Название только для этого раздела; в «Группах» не меняется.")) + '" />' +
       (g.leader_nickname ? '<small>' + esc(g.leader_nickname) + '</small>' : '') +
-      '<input type="number" class="cd-num-in" data-ng="' + g.id + '" min="0" max="99" placeholder="№" value="' + (g.cd_number != null ? g.cd_number : '') + '" title="Номер пати" /></div>').join("")
-      : '<p class="hint">Пати нет. Создай группы в разделе «Группы».</p>';
+      '<input type="number" class="cd-num-in" data-ng="' + g.id + '" min="0" max="99" placeholder="№" value="' + (g.cd_number != null ? g.cd_number : '') + '" title="' + esc(T("partyNumber", "Номер пати")) + '" /></div>').join("")
+      : '<p class="hint">' + esc(T("noPartiesCreate", "Пати нет. Создай группы в разделе «Группы».")) + '</p>';
   }
   $("partyList").addEventListener("change", async (e) => {
     if(e.target.dataset.nm){
@@ -887,7 +892,7 @@
       if(val === "" || val === g1.name) val = null; // пусто или как в «Группах» — снова берём настоящее название
       $("partiesErr").textContent = "";
       const { error } = await db.from("clan_groups").update({ cd_name: val }).eq("id", nm);
-      if(error){ e.target.value = g1.shownName; $("partiesErr").textContent = "Не удалось сохранить название: " + error.message + " (нужно выполнить последнюю часть schema_skill_cd.sql)"; return; }
+      if(error){ e.target.value = g1.shownName; $("partiesErr").textContent = T("nameSaveFailed", "Не удалось сохранить название: ") + error.message + T("needSql", " (нужно выполнить последнюю часть schema_skill_cd.sql)"); return; }
       g1.cd_name = val; g1.shownName = val || g1.name;
       e.target.value = g1.shownName;
       renderBoard(); return;
@@ -898,7 +903,7 @@
       if(Number.isNaN(val)) val = null;
       $("partiesErr").textContent = "";
       const { error } = await db.from("clan_groups").update({ cd_number: val }).eq("id", ng);
-      if(error){ e.target.value = g0.cd_number != null ? g0.cd_number : ""; $("partiesErr").textContent = "Не удалось сохранить номер: " + error.message + " (нужно выполнить последнюю часть schema_skill_cd.sql)"; return; }
+      if(error){ e.target.value = g0.cd_number != null ? g0.cd_number : ""; $("partiesErr").textContent = T("numberSaveFailed", "Не удалось сохранить номер: ") + error.message + T("needSql", " (нужно выполнить последнюю часть schema_skill_cd.sql)"); return; }
       g0.cd_number = val;
       groups.sort((a, b) => (a.cd_number ?? 1e9) - (b.cd_number ?? 1e9));
       renderBoard(); return;
@@ -910,7 +915,7 @@
     const { error } = await db.from("clan_groups").update({ cd_enabled: on }).eq("id", id);
     if(error){
       e.target.checked = !on;
-      $("partiesErr").textContent = "Не удалось сохранить: " + error.message + " (нужно выполнить последнюю часть schema_skill_cd.sql)";
+      $("partiesErr").textContent = T("saveFailed", "Не удалось сохранить: ") + error.message + T("needSql", " (нужно выполнить последнюю часть schema_skill_cd.sql)");
       return;
     }
     g.cd_enabled = on; renderBoard();
@@ -923,15 +928,23 @@
     const next = !timerOn;
     showError("");
     const { error } = await db.from("cd_settings").upsert({ clan_id: clanId, timer_enabled: next }, { onConflict: "clan_id" });
-    if(error){ showError("Не удалось переключить таймер: " + error.message + " (нужно выполнить последнюю часть schema_skill_cd.sql)"); return; }
+    if(error){ showError(T("timerFailed", "Не удалось переключить таймер: ") + error.message + T("needSql", " (нужно выполнить последнюю часть schema_skill_cd.sql)")); return; }
     timerOn = next; settingsOk = true; updateTimerBtn(); renderBoard();
+  });
+
+  window.addEventListener("storage", (e) => {
+    if(e.key !== "l2Lang") return;
+    paintRoleHint(); setLive(liveOk); renderBoard();
+    if(overlay.classList.contains("show")) renderSkillList();
+    if(offOverlay.classList.contains("show")) renderOffMatrix();
+    if(partiesOverlay.classList.contains("show")) renderPartyList();
   });
 
   // ---------- старт ----------
   try {
     await Promise.all([loadGroups(), loadSkills(), loadMarks(), loadSettings(), loadOff(), loadCopies()]);
   } catch(e){
-    showError("Не удалось загрузить данные: " + (e.message || e) + ". Если раздел новый — нужно один раз выполнить supabase/schema_skill_cd.sql в SQL Editor.");
+    showError(T("loadFailed", "Не удалось загрузить данные: {msg}. Если раздел новый — нужно один раз выполнить supabase/schema_skill_cd.sql в SQL Editor.").replace("{msg}", e.message || e));
   }
   renderBoard();
   startRealtime();
