@@ -172,7 +172,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=73"></script>
+<script src="js/i18n.js?v=74"></script>
 <script src="js/nick-match.js?v=2"></script>
 <script>
 (async function(){
@@ -577,6 +577,7 @@
   function clanLeftStats(){
     let pool = 0, rows = 0;
     leaderOrder.forEach(l => {
+      if(isLeftClan(l)) pool += shareGold(l, l) || 0; // ушедший из клана лидер: его собственная доля тоже делится между оставшимися
       leaderStats.get(l).members.forEach((cnt, nick) => {
         if(isLeftClan(nick)) pool += shareGold(nick, l) || 0; else rows += 1;
       });
@@ -585,7 +586,10 @@
   }
   function computeLeaderRows(leader){
     const entry = leaderStats.get(leader);
-    const leaderGold = shareGold(leader, leader);
+    const leaderLeft = isLeftClan(leader);
+    const leaderShare = shareGold(leader, leader); // что причиталось бы самому лидеру
+    // лидер, которого кикнули из клана, ничего не получает: строка 0, а его доля делится так же, как доля ушедших участников
+    const leaderGold = (leaderShare === null) ? null : (leaderLeft ? 0 : leaderShare);
     const memberRows = Array.from(entry.members.entries())
       .map(([nickname, count]) => ({ nickname, count, left: isLeftClan(nickname) }));
 
@@ -593,7 +597,7 @@
     // в клане в этом же списке; сколько добавлено каждому — видно в подсказке и в примечании под таблицей
     const stayRows = memberRows.filter(r => !r.left);
     const leftOnes = memberRows.filter(r => r.left);
-    const redistributePool = leftOnes.reduce((s, r) => s + (shareGold(r.nickname, leader) || 0), 0);
+    const redistributePool = leftOnes.reduce((s, r) => s + (shareGold(r.nickname, leader) || 0), 0) + (leaderLeft ? (leaderShare || 0) : 0);
     let perStayBonus = 0;
     let clanStats = null;
     if(leftMoneyMode === "party"){
@@ -618,14 +622,14 @@
     // «Доли» у лидера — не то же самое, что у участников (там это число раздач
     // именно под ЭТИМ лидером), но параллельный смысл есть: сколько раз он сам
     // водил раздачу за период — тот же entry.partyCount
-    const leaderRow = { nickname: leader, count: entry.partyCount, left: isLeftClan(leader), gold: leaderGold, isLeader: true,
+    const leaderRow = { nickname: leader, count: entry.partyCount, left: leaderLeft, gold: leaderGold, isLeader: true,
       unit: unitOf(leader) };
     // «К отправке» этому лидеру: его собственная часть + части оставшихся в клане участников
     // (с учётом перераспределённой доли ушедших); строки ушедших — только справка
     const sentMembers = stayRows.reduce((sum, r) => sum + (r.gold || 0), 0);
     const total = leaderGold === null ? null : (leaderGold || 0) + sentMembers;
     return { leaderRow, memberRows, stayRows: stayRows.slice().sort(sortByGold), total, sentMembers,
-      poolLeft: redistributePool, leftCount: leftOnes.length, stayCount: stayRows.length, bonusEach: perStayBonus, clanStats };
+      poolLeft: redistributePool, leftCount: leftOnes.length + (leaderLeft ? 1 : 0), stayCount: stayRows.length, bonusEach: perStayBonus, clanStats };
   }
 
   function renderForLeader(leader){
@@ -649,7 +653,9 @@
     document.getElementById("lpSummary").innerHTML =
       `<span class="stat">${L2I18n.t("payout.ledCount", "Раздач под руководством: ")}<b>${entry.partyCount}</b></span>` +
       `<span class="stat">${L2I18n.t("payout.uniqueMembers", "Разных участников: ")}<b>${entry.members.size}</b></span>` +
-      (total !== null
+      (total !== null && leaderRow.left
+        ? `<span class="stat">${L2I18n.t("payout.leaderLeftTotal", "Лидер ушёл из клана — отправить участникам напрямую: ")}<b>${fmtGold(sentMembers)}</b></span>`
+        : total !== null
         ? `<span class="stat">${L2I18n.t("payout.totalToSend", "К отправке лидеру: ")}<b>${fmtGold(total)}</b> ` +
           `(${L2I18n.t("payout.totalMembers", "участникам")} ${fmtGold(sentMembers)} + ${L2I18n.t("payout.totalLeader", "лидеру")} ${fmtGold(leaderRow.gold)}${coefLbl ? " — ×" + coefLbl : ""})</span>`
         : "");
@@ -776,6 +782,11 @@
     if(!isAdmin || (!dkpPayload && !manualActive()) || leftMoneyMode !== "box"){ el.style.display = "none"; el.innerHTML = ""; return; }
     const byNick = new Map();
     leaderOrder.forEach(l => {
+      if(isLeftClan(l)){ // ушедший лидер: его собственная доля тоже не распределена
+        const e = byNick.get(l) || { nick: l, count: 0, gold: 0, leaders: [] };
+        e.count += leaderStats.get(l).partyCount; e.gold += shareGold(l, l) || 0; e.leaders.push(l);
+        byNick.set(l, e);
+      }
       leaderStats.get(l).members.forEach((cnt, nick) => {
         if(!isLeftClan(nick)) return;
         const g = shareGold(nick, l) || 0;
@@ -803,7 +814,7 @@
     const rows = leaderOrder.map(leader => {
       const c = computeLeaderRows(leader);
       grand += c.total || 0;
-      return { leader, parties: c.leaderRow.count, members: c.stayRows.length, total: c.total || 0, coef: leaderCoefLabel(leader) };
+      return { leader, parties: c.leaderRow.count, members: c.stayRows.length, total: c.total || 0, coef: leaderCoefLabel(leader), left: c.leaderRow.left };
     });
     // сколько голды по списку раздачи вообще не попало ни к одному лидеру (человек был в журнале явки,
     // но не на скринах с отмеченным лидером) — видно только когда экран смотрит ровно на период раздачи
@@ -814,7 +825,7 @@
       `<table class="lp-ov-table"><thead><tr><th>${escapeHtml(L2I18n.t("payout.leaderLabel", "Пати-лидер"))}</th>` +
       `<th class="lp-num">${escapeHtml(L2I18n.t("payout.ovParties", "Раздач"))}</th><th class="lp-num">${escapeHtml(L2I18n.t("payout.ovMembers", "Участников"))}</th>` +
       `<th class="lp-num">${escapeHtml(L2I18n.t("payout.ovTotal", "К отправке"))}</th></tr></thead><tbody>` +
-      rows.map(r => `<tr class="lp-ov-row" data-leader="${escapeHtml(r.leader)}"><td>${escapeHtml(r.leader)}${r.coef ? ` <span class="lp-tag-badge lp-leader-badge">×${r.coef}</span>` : ""}</td>` +
+      rows.map(r => `<tr class="lp-ov-row" data-leader="${escapeHtml(r.leader)}"><td>${escapeHtml(r.leader)}${r.left ? ` <span class="lp-left-cross" title="${escapeHtml(leftClanTitleOf(r.leader))}">✗</span>` : ""}${r.coef ? ` <span class="lp-tag-badge lp-leader-badge">×${r.coef}</span>` : ""}</td>` +
         `<td class="lp-num">${r.parties}</td><td class="lp-num">${r.members}</td><td class="lp-num lp-gold">${fmtGold(r.total)}</td></tr>`).join("") +
       `<tr class="lp-ov-sum"><td>${escapeHtml(L2I18n.t("payout.ovSum", "Всего лидерам"))}</td><td></td><td></td><td class="lp-num">${fmtGold(grand)}</td></tr>` +
       (unitMode && !manualActive() && batchMatchesView && Math.abs(sumAll - grand) > 0.5
@@ -955,6 +966,7 @@
         leader,
         total,
         leaderGold: leaderRow.gold,
+        leaderLeft: !!leaderRow.left,
         partyCount: leaderRow.count,
         members: memberRows.map(r => ({ nickname: r.nickname, count: r.count, gold: r.gold, left: r.left })),
       };
@@ -1009,7 +1021,7 @@
     document.getElementById("lpArchiveEmpty").style.display = archiveEntries.length ? "none" : "";
     wrap.innerHTML = archiveEntries.map(entry => {
       const leaders = (entry.data?.leaders || []).map(l => {
-        const rows = [{ nickname: l.leader, gold: l.leaderGold, isLeader: true, left: false }, ...l.members];
+        const rows = [{ nickname: l.leader, gold: l.leaderGold, isLeader: true, left: !!l.leaderLeft }, ...l.members];
         const rowsHtml = rows.map(r => {
           const leaderBadge = r.isLeader ? ` <span class="lp-tag-badge lp-leader-badge">${escapeHtml(L2I18n.t("payout.leaderBadge", "пати-лидер"))}</span>` : "";
           const cross = r.left ? ` <span class="lp-left-cross">✗</span>` : "";

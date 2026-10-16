@@ -959,6 +959,7 @@
     "groups.noteHide": ["Скрыть заметку группы", "Сховати нотатку групи", "Hide group note"],
     "groups.classNotSet": ["профессия не указана", "професія не вказана", "class not set"],
     "groups.levelShortTip": ["{n} ур.", "{n} рів.", "lv. {n}"],
+    "payout.leaderLeftTotal": ["Лидер ушёл из клана — отправить участникам напрямую: ", "Лідер пішов із клану — надіслати учасникам напряму: ", "The leader left the clan — send to the members directly: "],
     "groups.aliasOption": ["Привязать ник к игроку…", "Прив'язати нік до гравця…", "Link nickname to a player…"],
     "groups.aliasHint": ["Это тот же игрок, что…", "Це той самий гравець, що…", "This is the same player as…"],
     "groups.aliasOther": ["Другой ник…", "Інший нік…", "Other nickname…"],
