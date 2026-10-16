@@ -508,8 +508,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=78"></script>
+<script src="js/supabase-client.js?v=22"></script>
+<script src="js/i18n.js?v=79"></script>
 <script src="js/tax-flag.js?v=1"></script>
 <script src="js/num-format.js?v=1"></script>
 <script src="js/nick-match.js?v=4"></script>
@@ -907,7 +907,7 @@
   }
 
   async function distinctTaxWeeks(){
-    const { data, error } = await db.from("tax_payments").select("week_start").order("week_start", { ascending: false });
+    const { data, error } = await L2Cabinet.selectAll(() => db.from("tax_payments").select("week_start").order("week_start", { ascending: false }).order("id"));
     if(error){ console.error(error); return []; }
     return [...new Set((data || []).map(r => r.week_start))];
   }
@@ -1073,7 +1073,7 @@
   // оранжевым в списках недель (tax_payments.kind), просто собранная в одном месте
   // за все недели сразу, а не разбросана по будущим/прошлым неделям ----
   async function loadAheadDebtBox(){
-    const { data, error } = await db.from("tax_payments").select("nickname, kind, week_start").in("kind", ["ahead", "debt"]);
+    const { data, error } = await L2Cabinet.selectAll(() => db.from("tax_payments").select("nickname, kind, week_start").in("kind", ["ahead", "debt"]).order("id"));
     if(error){ console.error(error); return; }
 
     // «наперёд» — из списка пропадает только тот, у кого ВСЕ недели уже прошли
@@ -1312,8 +1312,8 @@
 
   async function buildReport(selectedWeeks){
     const [{ data: census, error: censusErr }, { data: payments, error: payErr }] = await Promise.all([
-      db.from("census_entries").select("nickname, week_start"),
-      db.from("tax_payments").select("nickname, week_start").in("week_start", selectedWeeks),
+      L2Cabinet.selectAll(() => db.from("census_entries").select("nickname, week_start").order("id")),
+      L2Cabinet.selectAll(() => db.from("tax_payments").select("nickname, week_start").in("week_start", selectedWeeks).order("id")),
     ]);
     if(censusErr) console.error(censusErr);
     if(payErr) console.error(payErr);

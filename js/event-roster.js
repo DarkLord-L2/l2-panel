@@ -59,7 +59,7 @@ function maxAllowedDistance(len){
 let knownNicksPromise = null;
 function loadKnownNicks(db){
   if(!knownNicksPromise){
-    knownNicksPromise = db.from("census_entries").select("nickname")
+    knownNicksPromise = L2Cabinet.selectAll(() => db.from("census_entries").select("nickname").order("id"))
       .then(({ data }) => [...new Set((data || []).map(r => r.nickname))]);
   }
   return knownNicksPromise;
@@ -177,9 +177,10 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
   }
   // root живёт только пока открыто окно этого дня — после закрытия дальше не
   // трогаем (иначе за сессию накопились бы «зомби»-обработчики на старых блоках)
-  window.addEventListener("storage", (e) => {
+  // окно дня закрыли (root убран из страницы) — обработчик снимает сам себя, чтобы за сессию они не копились
+  window.addEventListener("storage", function onLang(e){
+    if(!document.body.contains(root)){ window.removeEventListener("storage", onLang); return; }
     if(e.key !== "l2Lang") return;
-    if(!document.body.contains(root)) return;
     applyLangRefresh();
   });
 

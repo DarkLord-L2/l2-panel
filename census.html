@@ -138,8 +138,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=78"></script>
+<script src="js/supabase-client.js?v=22"></script>
+<script src="js/i18n.js?v=79"></script>
 <script src="js/nick-match.js?v=4"></script>
 <script>
 (async function(){
@@ -181,7 +181,7 @@
   function nickSetForDate(d){ return new Set(entriesForDate(d).map(e => e.nickname)); }
 
   async function loadAll(){
-    const { data, error } = await db.from("census_entries").select("id, week_start, nickname").order("nickname");
+    const { data, error } = await L2Cabinet.selectAll(() => db.from("census_entries").select("id, week_start, nickname").order("nickname").order("id"));
     if(error){ console.error(error); allEntries = []; }
     else allEntries = data || [];
     dates = [...new Set(allEntries.map(e => e.week_start))].sort();

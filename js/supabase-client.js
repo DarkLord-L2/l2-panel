@@ -379,8 +379,42 @@ async function clearMustChangePassword(){
   if(error) throw error;
 }
 
+// Все строки запроса, а не первые 1000. Supabase (PostgREST) отдаёт за один запрос не больше 1000 строк и остальное
+// МОЛЧА обрезает — на растущих таблицах (перепись по неделям, явка, статистика мероприятий, буст) данные терялись бы.
+// make() каждый раз строит НОВЫЙ запрос с устойчивым порядком (order по уникальному полю, обычно "id"), дальше
+// забираем его страницами по 1000. Возвращает то же, что обычный запрос: { data, error }.
+async function selectAll(make, pageSize = 1000){
+  const out = [];
+  for(let from = 0; from < 500000; from += pageSize){
+    const { data, error } = await make().range(from, from + pageSize - 1);
+    if(error) return { data: out.length ? out : null, error };
+    if(data && data.length) out.push(...data);
+    if(!data || data.length < pageSize) break;
+  }
+  return { data: out, error: null };
+}
+
+// Последние `count` недель переписи и ники в них — пара маленьких запросов вместо всей истории переписи.
+// weeks — от новой к старой; rows — [{nickname, week_start}] только этих недель.
+async function censusWeeks(count = 1){
+  const weeks = [];
+  for(let i = 0; i < count; i++){
+    let q = client.from("census_entries").select("week_start").order("week_start", { ascending: false }).limit(1);
+    if(weeks.length) q = q.lt("week_start", weeks[weeks.length - 1]);
+    const { data, error } = await q;
+    if(error) return { weeks, rows: [], error };
+    if(!data || !data.length) break;
+    weeks.push(data[0].week_start);
+  }
+  if(!weeks.length) return { weeks, rows: [], error: null };
+  const res = await selectAll(() => client.from("census_entries").select("nickname, week_start").in("week_start", weeks).order("id"));
+  return { weeks, rows: res.data || [], error: res.error };
+}
+
 window.L2Cabinet = {
   client,
+  selectAll,
+  censusWeeks,
   login,
   signOut,
   requireSession,

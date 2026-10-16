@@ -486,8 +486,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=78"></script>
+<script src="js/supabase-client.js?v=22"></script>
+<script src="js/i18n.js?v=79"></script>
 <script src="js/nick-match.js?v=4"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
@@ -960,10 +960,11 @@
   }
 
   async function loadAllStats(){
-    const { data, error } = await db
+    const { data, error } = await L2Cabinet.selectAll(() => db
       .from("event_stats")
       .select("nickname, kills, deaths, pvp_damage, pve_damage, event_id, removed, batch_id, " +
-        "attendance_events!inner(week_start), event_screenshot_batches(manual_label, created_at)");
+        "attendance_events!inner(week_start), event_screenshot_batches(manual_label, created_at)")
+      .order("id"));
     if(error){ console.error(error); allRawStats = []; return; }
     allRawStats = (data || []).map(r => ({
       nickname: r.nickname,

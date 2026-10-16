@@ -129,8 +129,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=78"></script>
+<script src="js/supabase-client.js?v=22"></script>
+<script src="js/i18n.js?v=79"></script>
 <script src="js/tax-flag.js?v=1"></script>
 <script src="js/nick-match.js?v=4"></script>
 <script>
@@ -331,7 +331,7 @@
 
     let rawEntries = [];
     if(eventIds.length){
-      const { data, error } = await db.from("attendance_entries").select("event_id, nickname").in("event_id", eventIds);
+      const { data, error } = await L2Cabinet.selectAll(() => db.from("attendance_entries").select("event_id, nickname").in("event_id", eventIds).order("id"));
       if(error){ errEl.textContent = error.message; return; }
       rawEntries = data || [];
     }
@@ -404,9 +404,10 @@
     // где по ним нажали «ОК», а не там, куда легла отметка), тот же принцип,
     // что и «Итого за неделю» в taxes.html. 6 месяцев с запасом покрывают и
     // последние 12 недель — «по неделям» ниже не делает отдельного запроса
-    const { data: payments, error: payErr } = await db.from("tax_payments")
+    const { data: payments, error: payErr } = await L2Cabinet.selectAll(() => db.from("tax_payments")
       .select("origin_week")
-      .gte("origin_week", isoDate(fromMonth));
+      .gte("origin_week", isoDate(fromMonth))
+      .order("id"));
     if(payErr){ errEl.textContent = payErr.message; return; }
 
     const rawPayments = payments || [];

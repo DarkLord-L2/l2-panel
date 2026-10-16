@@ -229,9 +229,9 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=21"></script>
+<script src="js/supabase-client.js?v=22"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=78"></script>
+<script src="js/i18n.js?v=79"></script>
 <script src="js/nick-match.js?v=4"></script>
 <script>
 (async function(){
@@ -308,9 +308,9 @@
   function classLevelCol(n){ return n === 1 ? "class_level" : "class_level_" + n; }
 
   async function loadCensus(){
-    const { data } = await db.from("census_entries").select("nickname, week_start");
-    let latest = null;
-    (data || []).forEach(r => { if(!latest || r.week_start > latest) latest = r.week_start; });
+    // только последняя неделя переписи — не вся история (она растёт каждую неделю)
+    const { rows: data, weeks: censusW } = await L2Cabinet.censusWeeks(1);
+    const latest = censusW[0] || null;
     nicks = [...new Set((data || []).filter(r => r.week_start === latest).map(r => r.nickname))]
       .sort((a,b)=>a.localeCompare(b));
   }
@@ -348,7 +348,7 @@
   // вообще нет ни разу, помечаем прямо в списке участников
   let attendedNormSet = new Set();
   async function loadAttendance(){
-    const { data } = await db.from("attendance_entries").select("nickname");
+    const { data } = await L2Cabinet.selectAll(() => db.from("attendance_entries").select("nickname").order("id"));
     attendedNormSet = new Set((data || []).map(r => normalizeNick(r.nickname)));
   }
   function neverAttended(nick){ return !attendedNormSet.has(normalizeNick(nick)); }

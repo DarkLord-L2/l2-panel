@@ -436,13 +436,13 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=78"></script>
+<script src="js/supabase-client.js?v=22"></script>
+<script src="js/i18n.js?v=79"></script>
 <script src="js/tax-flag.js?v=1"></script>
 <script src="js/nick-match.js?v=4"></script>
 <script src="js/classes.js?v=1"></script>
 <script src="js/class-icon-match.js?v=1"></script>
-<script src="js/event-roster.js?v=28"></script>
+<script src="js/event-roster.js?v=29"></script>
 <script src="js/share-report.js?v=2"></script>
 <script>
 (async function(){
@@ -939,7 +939,7 @@
 
   async function buildAttendanceReport(fromStr, toStr){
     const [{ data: census, error: censusErr }, { data: evs, error: evErr }] = await Promise.all([
-      db.from("census_entries").select("nickname, week_start"),
+      L2Cabinet.selectAll(() => db.from("census_entries").select("nickname, week_start").order("id")),
       db.from("attendance_events").select("id, event_date").gte("event_date", fromStr).lte("event_date", toStr),
     ]);
     if(censusErr) console.error(censusErr);
@@ -974,10 +974,7 @@
     const attendedCount = new Map();
     const nickDays = new Map(); // nickname -> Set(event_date), для матрицы по дням
     if(eventIds.length){
-      const { data: entries, error: entErr } = await db
-        .from("attendance_entries")
-        .select("nickname, event_id")
-        .in("event_id", eventIds);
+      const { data: entries, error: entErr } = await L2Cabinet.selectAll(() => db.from("attendance_entries").select("nickname, event_id").in("event_id", eventIds).order("id"));
       if(entErr) console.error(entErr);
       (entries || []).forEach(row => {
         const nickname = resolveNick(row.nickname);
@@ -988,11 +985,7 @@
       });
     }
 
-    const { data: payments, error: payErr } = !L2Taxes.enabled() ? { data: [], error: null } : await db
-      .from("tax_payments")
-      .select("nickname")
-      .gte("week_start", fromStr)
-      .lte("week_start", toStr);
+    const { data: payments, error: payErr } = !L2Taxes.enabled() ? { data: [], error: null } : await L2Cabinet.selectAll(() => db.from("tax_payments").select("nickname").gte("week_start", fromStr).lte("week_start", toStr).order("id"));
     if(payErr) console.error(payErr);
     const paidSet = new Set((payments || []).map(r => resolveNick(r.nickname)));
 
