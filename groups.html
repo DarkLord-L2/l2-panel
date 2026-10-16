@@ -563,10 +563,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=71"></script>
+<script src="js/i18n.js?v=73"></script>
 <script src="js/tax-flag.js?v=1"></script>
-<script src="js/layout-board.js?v=7"></script>
-<script src="js/nick-match.js?v=2"></script>
+<script src="js/layout-board.js?v=9"></script>
+<script src="js/nick-match.js?v=3"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -638,6 +638,7 @@
   let membersByGroup = new Map(); // group_id -> [nickname, ...]
   let memberOrderMap = new Map(); // group_id -> Map(nickname -> sort_order) — ручной порядок иконок
   let memberInfo = new Map();    // nickname -> {class_name, icon} — то же самое, что в «Проверке буста»
+  let memberInfoByKey = new Map(); // normalizeNick(nickname) -> то же самое (поиск по ключу человека)
   let currentGroupId = null;
   let memberModalNick = null;
   // дополнительные блоки участников внутри группы (clan_group_sections); участник без блока — в основном блоке «Участники»
@@ -653,8 +654,13 @@
       "class_level, class_level_2, class_level_3, class_level_4, icon"
     );
     memberInfo = new Map();
+    memberInfoByKey = new Map();
     (data || []).forEach(r => memberInfo.set(r.nickname, r));
+    (data || []).forEach(r => { const k = normalizeNick(r.nickname); if(!memberInfoByKey.has(k)) memberInfoByKey.set(k, r); });
   }
+  // профессии человека по нику из группы: точное написание, а если в «Проверке буста» он записан чуть иначе
+  // (регистр, путаница символов, ручная привязка) — через общий ключ ников
+  function infoOf(nick){ return memberInfo.get(nick) || memberInfoByKey.get(normalizeNick(nick)) || null; }
 
   // средние по группе на карточках в «Все группы»: К/Д и PvP-урон за всё время,
   // те же данные, что в «Отчётах» (js/event-roster.js их туда пишет) — тут просто
@@ -763,7 +769,7 @@
     const nicks = currentOrderedNicks();
     const body = document.getElementById("partyCheckBody");
     body.innerHTML = nicks.map(nick => {
-      const info = memberInfo.get(nick) || {};
+      const info = infoOf(nick) || {};
       const hasClass = !!info.class_name;
       const pct = boostPercentOf(nick);
       const attCount = attendanceCountByNorm.get(normalizeNick(nick)) || 0;
@@ -919,7 +925,7 @@
   // Раскладка своя у каждой группы. Редактирование ячеек и редактирование карточек внутри — по очереди (одно закрывается, когда открывают другое)
   const blocksBoard = L2LayoutBoard.create({ container: document.getElementById("detailBlocks"), key: "l2LayoutBlocks:" + profile.id + ":none",
     buttons: document.getElementById("lbBtnsBlocks"), minW: 240, minH: 96, defW: 480, defH: 240, gap: 16, t: L2I18n.t,
-    titles: { tiles: L2I18n.t("layout.blocksReset", "Ячейки друг под другом (как было)"), edit: L2I18n.t("layout.blocksEdit", "Двигать и менять размер больших ячеек: «Участники», «Проверка пати»") } });
+    titles: { tiles: () => L2I18n.t("layout.blocksReset", "Ячейки друг под другом (как было)"), edit: () => L2I18n.t("layout.blocksEdit", "Двигать и менять размер больших ячеек: «Участники», «Проверка пати»") } });
   // ряд кнопок участников управляет раскладкой ВСЕХ блоков участников группы сразу (основной + добавленные)
   const allMemberBoards = () => [membersBoard, ...[...sectionViews.values()].map(v => v.board)];
   const anyMemberEditing = () => allMemberBoards().some(b => b.isEditing());
@@ -1023,7 +1029,7 @@
       // без указанной профессии — пунктирный квадратик; сверх 14 иконок — «+N»
       const SHOW_ICONS = 14;
       const classStrip = nicks.slice(0, SHOW_ICONS).map(nick => {
-        const info = memberInfo.get(nick) || {};
+        const info = infoOf(nick) || {};
         const src = classIcon(info.class_name);
         const tip = nick + " — " + (info.class_name ? info.class_name + (info.class_level ? " " + info.class_level : "") : L2I18n.t("groups.classNotSet", "профессия не указана"));
         const leaderCls = (g.leader_nickname && nick === g.leader_nickname) ? " leader" : "";
@@ -1166,7 +1172,7 @@
   function showHoverCard(card){
     const nick = card.dataset.lbid;
     if(!nick || !card.isConnected) return;
-    const info = memberInfo.get(nick) || {};
+    const info = infoOf(nick) || {};
     const g = groups.find(x => x.id === currentGroupId);
     const st = statsByNick.get(normalizeNick(nick));
     const kd = st ? (st.deaths > 0 ? st.kills / st.deaths : st.kills) : null;
@@ -1386,6 +1392,17 @@
       });
       menu.appendChild(classBtn);
 
+      // ник не нашёлся среди игроков (опечатка, лишняя буква) — админ привязывает его вручную; привязка работает во всех разделах
+      if(!infoOf(nick)){
+        const aliasBtn = document.createElement("button");
+        aliasBtn.textContent = L2I18n.t("groups.aliasOption", "Привязать ник к игроку…");
+        aliasBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          renderAliasSubmenu(menu, nick);
+        });
+        menu.appendChild(aliasBtn);
+      }
+
       const assignBtn = document.createElement("button");
       assignBtn.textContent = L2I18n.t("groups.assignOption", "Назначить…");
       assignBtn.addEventListener("click", (e) => {
@@ -1509,7 +1526,7 @@
 
   function openMemberModal(nick){
     memberModalNick = nick;
-    const info = memberInfo.get(nick) || {};
+    const info = infoOf(nick) || {};
     document.getElementById("memberTitle").textContent = nick;
     CLASS_SLOTS.forEach((slot, i) => {
       slot.fill(info[classNameCol(i + 1)], info[classLevelCol(i + 1)]);
@@ -1544,6 +1561,60 @@
     await loadMemberInfo();
     renderMembers();
   });
+
+  // подсказки: самые похожие ники из «Проверки буста»/переписи; выбор → привязка (nick_aliases) → всё пересчитывается
+  async function saveNickAlias(alias, canonical){
+    closeMemberMenu();
+    const { error } = await db.from("nick_aliases").upsert(
+      { clan_id: profile.clan_id, alias, canonical, created_by: profile.id }, { onConflict: "clan_id,alias" });
+    if(error){
+      alert(L2I18n.t("groups.aliasSaveFailed", "Не удалось привязать ник: ") + error.message + " (supabase/schema_nick_aliases.sql)");
+      return;
+    }
+    try { await L2Nick.refresh(db, profile.clan_id); } catch(e){ console.error(e); }
+    await Promise.all([loadMemberInfo(), loadMemberStats(), loadBoostValues(), loadAttendanceCheck(), loadTaxCheck()]);
+    renderMembers();
+  }
+  function renderAliasSubmenu(menu, nick){
+    menu.innerHTML = "";
+    const list = document.createElement("div");
+    list.className = "move-list";
+    const head = document.createElement("p");
+    head.className = "hint";
+    head.style.cssText = "padding:6px 10px; margin:0; font-size:12px; max-width:220px;";
+    head.textContent = L2I18n.t("groups.aliasHint", "Это тот же игрок, что…");
+    list.appendChild(head);
+    const pool = [...memberInfo.keys()];
+    const sugg = (window.L2Nick && L2Nick.suggest) ? L2Nick.suggest(nick, pool, 5) : [];
+    sugg.forEach(sg => {
+      const btn = document.createElement("button");
+      const inf = memberInfo.get(sg.nick) || {};
+      btn.textContent = sg.nick + (inf.class_name ? " — " + inf.class_name : "");
+      btn.addEventListener("click", (e) => { e.stopPropagation(); saveNickAlias(nick, sg.nick); });
+      list.appendChild(btn);
+    });
+    const other = document.createElement("button");
+    other.textContent = L2I18n.t("groups.aliasOther", "Другой ник…");
+    other.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const v = (prompt(L2I18n.t("groups.aliasPrompt", "Как этого игрока зовут в «Проверке буста» / переписи?"), "") || "").trim();
+      if(!v) return;
+      if(!memberInfo.has(v) && !confirm(L2I18n.t("groups.aliasUnknown", "Такого ника нет среди игроков с профессиями. Привязать всё равно?"))) return;
+      saveNickAlias(nick, v);
+    });
+    list.appendChild(other);
+    menu.appendChild(list);
+    const backBtn = document.createElement("button");
+    backBtn.className = "move-back";
+    backBtn.textContent = L2I18n.t("groups.backOption", "← Назад");
+    backBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const card = menu.parentElement;
+      menu.remove();
+      toggleMemberMenu(card, nick);
+    });
+    menu.appendChild(backBtn);
+  }
 
   // подменяет содержимое уже открытого меню на список остальных групп — второй
   // клик снова открывать меню не нужно, всё происходит в том же попапе
@@ -1663,6 +1734,8 @@
       applyEnabled();
     });
     document.getElementById("rolesBtn").addEventListener("click", () => { paint(); applyEnabled(); overlay.classList.add("show"); });
+    // язык сменили при открытом окне — названия ролей в списках переводятся сразу
+    window.addEventListener("storage", (e) => { if(e.key === "l2Lang" && overlay.classList.contains("show")) paint(); });
     const close = () => overlay.classList.remove("show");
     document.getElementById("rolesClose").addEventListener("click", close);
     document.getElementById("rolesDone").addEventListener("click", close);
@@ -1675,7 +1748,7 @@
   })();
 
   function buildMemberCard(nick, g){
-      const info = memberInfo.get(nick) || {};
+      const info = infoOf(nick) || {};
       const avatarSrc = info.icon || classIcon(info.class_name) || BLANK_IMG;
 
       // все заданные профессии по порядку слотов; уровень пишем прямо в подписи
@@ -1688,7 +1761,7 @@
         .map(c => {
           const src = classIcon(c.name);
           if(!src) return "";
-          const title = c.name + (c.level ? ` — ${c.level} ур.` : "");
+          const title = c.name + (c.level ? " — " + L2I18n.t("groups.levelShortTip", "{n} ур.").replace("{n}", c.level) : "");
           return `<img class="sub-avatar" src="${src}" alt="" title="${escapeHtml(title)}" />`;
         })
         .join("");
@@ -1777,6 +1850,7 @@
     secs.forEach(sec => {
       const v = sectionViewFor(sec);
       v.titleEl.textContent = sec.title;
+      v.localize(); // язык мог смениться с прошлой отрисовки
       const nicks = all.filter(n => sectionIdOf(currentGroupId, n) === sec.id);
       v.grid.innerHTML = "";
       nicks.forEach(n => v.grid.appendChild(buildMemberCard(n, g)));
@@ -1803,18 +1877,21 @@
       `<p class="error-msg sec-error"></p>`;
     const q = (sel) => card.querySelector(sel);
     q(".sec-rename").textContent = "✎";
-    q(".sec-rename").title = L2I18n.t("sections.rename", "Переименовать блок");
-    q(".sec-del").title = L2I18n.t("sections.delete", "Удалить блок (люди вернутся в «Участники»)");
-    q(".sec-empty").textContent = L2I18n.t("sections.empty", "В блоке пока никого нет.");
-    q(".manual-add input").placeholder = L2I18n.t("groups.nickPlaceholder", "Ник участника");
-    q(".manual-add .btn").textContent = L2I18n.t("common.add", "Добавить");
+    const localize = () => {
+      q(".sec-rename").title = L2I18n.t("sections.rename", "Переименовать блок");
+      q(".sec-del").title = L2I18n.t("sections.delete", "Удалить блок (люди вернутся в «Участники»)");
+      q(".sec-empty").textContent = L2I18n.t("sections.empty", "В блоке пока никого нет.");
+      q(".manual-add input").placeholder = L2I18n.t("groups.nickPlaceholder", "Ник участника");
+      q(".manual-add .btn").textContent = L2I18n.t("common.add", "Добавить");
+    };
+    localize();
     const grid = q(".gm-member-grid");
     // доска блока делит ряд кнопок с основным списком участников: «редактировать» и шаблоны действуют на все блоки сразу
     const board = L2LayoutBoard.create({ container: grid, key: "l2LayoutMembers:" + profile.id + ":" + sec.group_id + ":s:" + sec.id,
       buttons: document.getElementById("lbBtnsMembers"), sharedButtons: true, minW: 150, minH: 48, defW: 240, defH: 68,
       wide: (w, h) => w >= 700 && w / h >= 8, presets: MEMBER_PRESETS, t: L2I18n.t, rank: membersBoardRank, scale: () => density });
     document.querySelectorAll("#lbBtnsMembers [data-preset]").forEach(b => b.addEventListener("click", () => board.applyPreset(b.dataset.preset)));
-    v = { card, grid, board, titleEl: q(".sec-title"), countEl: q(".sec-count"), emptyEl: q(".sec-empty") };
+    v = { card, grid, board, localize, titleEl: q(".sec-title"), countEl: q(".sec-count"), emptyEl: q(".sec-empty") };
     sectionViews.set(sec.id, v);
 
     const errEl = q(".sec-error"), input = q(".manual-add input");
@@ -2245,9 +2322,11 @@
   window.addEventListener("storage", (e) => {
     if(e.key !== "l2Lang") return;
     closeMemberMenu();
+    [groupsBoard, blocksBoard, ...allMemberBoards()].forEach(b => b.relabel());
     if(document.getElementById("detailView").style.display !== "none"){
       renderGroupLeaderRow();
       renderGroupClassPickerButton();
+      renderGroupNote();
       renderMembers();
     } else {
       renderGrid(document.getElementById("groupSearch").value);

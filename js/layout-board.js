@@ -181,7 +181,8 @@
       work = map; presetActive = id;
       apply();
     }
-    let presetBox = null;
+    let presetBox = null, presetLabel = null;
+    const optTitle = (k) => { const v = opts.titles && opts.titles[k]; return typeof v === "function" ? v() : v; };
     // sharedButtons: несколько досок делят один ряд кнопок (блоки участников в группе) — панель шаблонов создаёт только первая,
     // остальные подключаются к её кнопкам снаружи через applyPreset
     if(presets.length && opts.buttons && !opts.sharedButtons){
@@ -190,6 +191,7 @@
       const lab = document.createElement("span");
       lab.className = "lb-presets-label"; lab.textContent = T("layout.presets", "Шаблоны");
       lab.title = T("layout.presetHint", "Выбери шаблон. В шаблоне карточки можно перетаскивать — остальные подвинутся, колонка останется ровной (Shift — поставить свободно, тянуть за край — изменить размер).");
+      presetLabel = lab;
       presetBox.appendChild(lab);
       presets.forEach(pr => {
         const b = document.createElement("button");
@@ -209,7 +211,7 @@
     } : null;
     if(btns){
       btns.rows.innerHTML = ICONS.rows;  btns.rows.title = T("layout.rows", "Полосами");
-      btns.tiles.innerHTML = ICONS.tiles; btns.tiles.title = (opts.titles && opts.titles.tiles) || T("layout.tiles", "Плитками");
+      btns.tiles.innerHTML = ICONS.tiles; btns.tiles.title = optTitle("tiles") || T("layout.tiles", "Плитками");
       btns.rows.addEventListener("click", () => setMode("rows"));
       btns.tiles.addEventListener("click", () => setMode("tiles"));
       btns.edit.addEventListener("click", () => { if(editing) endEdit(true); else beginEdit(); });
@@ -220,7 +222,7 @@
       btns.tiles.classList.toggle("active", !editing && state.mode === "tiles");
       btns.edit.classList.toggle("active", editing || state.mode === "custom");
       btns.edit.innerHTML = editing ? ICONS.save : ICONS.edit;
-      btns.edit.title = editing ? T("layout.save", "Сохранить расположение") : ((opts.titles && opts.titles.edit) || T("layout.edit", "Изменить расположение и размеры"));
+      btns.edit.title = editing ? T("layout.save", "Сохранить расположение") : (optTitle("edit") || T("layout.edit", "Изменить расположение и размеры"));
       // шаблоны видны только пока идёт редактирование; выбранный подсвечен, пока карточки не двигали вручную
       opts.buttons.classList.toggle("lb-editing-on", editing);
       if(presetBox) presetBox.querySelectorAll("[data-preset]").forEach(b => b.classList.toggle("active", b.dataset.preset === presetActive));
@@ -548,12 +550,24 @@
     }
 
     paintButtons();
+    // язык сменили: подписи кнопок и шаблонов переводятся заново
+    function relabel(){
+      const mb = document.getElementById("lbMaster"); // общий карандаш у «?» создаётся один раз — подпись обновляем здесь
+      if(mb) mb.title = T("layout.master", "Настройка расположения");
+      if(btns){ btns.rows.title = T("layout.rows", "Полосами"); btns.tiles.title = optTitle("tiles") || T("layout.tiles", "Плитками"); }
+      if(presetLabel){
+        presetLabel.textContent = T("layout.presets", "Шаблоны");
+        presetLabel.title = T("layout.presetHint", "Выбери шаблон. В шаблоне карточки можно перетаскивать — остальные подвинутся, колонка останется ровной (Shift — поставить свободно, тянуть за край — изменить размер).");
+        presets.forEach(pr => { const b = presetBox && presetBox.querySelector('[data-preset="' + pr.id + '"]'); if(b) b.title = T("layout.preset." + pr.id, pr.title); });
+      }
+      paintButtons();
+    }
     // масштаб изменился (ползунок плотности): шаблон пересобирается, ручная раскладка остаётся как есть
     function rescale(){
       if(editing && presetActive){ const m = generate(presetActive, items(), cw(), workOrder); if(m) work = m; }
       apply();
     }
-    return { apply, rescale, useKey, beginEdit, endEdit, applyPreset, cancelEdit: () => endEdit(false), isEditing: () => editing, mode: () => state.mode };
+    return { apply, rescale, relabel, useKey, beginEdit, endEdit, applyPreset, cancelEdit: () => endEdit(false), isEditing: () => editing, mode: () => state.mode };
   }
 
   global.L2LayoutBoard = { create };

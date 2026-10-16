@@ -219,6 +219,17 @@
     return key(a) === key(b);
   }
 
-  global.L2Nick = { norm, caseKey, ocrKey, distance, createResolver, init, invalidate, key, same,
+  // самые похожие на nick ники из pool (опечатка, лишняя/пропущенная буква) — для ручной привязки
+  function suggest(nick, pool, max){
+    return (globalReady ? globalResolver : createResolver({ tiers: [pool || []] })).suggest(nick, pool, max);
+  }
+  // после ручной привязки: сбросить кэш и пересобрать справочник — ключи ников сразу меняются на этой странице
+  async function refresh(db, clanId){
+    invalidate(clanId);
+    globalReady = false; globalResolver = null;
+    await init(db, clanId);
+  }
+
+  global.L2Nick = { norm, caseKey, ocrKey, distance, createResolver, init, invalidate, refresh, suggest, key, same,
     ready: () => globalReady, resolve: (n) => globalReady ? globalResolver.resolve(n) : { canon: n, key: norm(n), how: "none", candidates: [] } };
 })(window);
