@@ -10,12 +10,10 @@
 // в «Отчётах по мероприятиям» больше нет — эта страница лишь показывает то,
 // что уже посчиталось здесь.
 //
-// Распознавание профессии по иконке пробовали (два прохода через Gemini, потом
-// локальное пиксельное сравнение с эталонами) и в итоге убрали целиком — ник и
-// цифры модель читает надёжно, а иконку (маленькая, 36 похожих вариантов) не
-// удалось распознавать стабильно ни одним из способов. Профессия участника
-// по-прежнему видна в «Группах»/«Проверке буста» (member_classes) — просто не
-// автоматизирована по скрину явки.
+// Профессию по иконке нейросеть не читает (пробовали — не вышло). Теперь иконки сравниваются с эталонами локально,
+// в браузере (js/class-icon-match.js): уверенные профессии записываются как правки «на это мероприятие»
+// (report_class_overrides, source = auto), сомнительные админ подтверждает вопросом перед сохранением. Ручные правки
+// из «Отчётов» всегда главнее автоматических.
 
 // ---- сверка распознанного OCR-ника со списком реальных ников клана (перепись) ----
 // точное/нормализованное совпадение уже спасает от похожих букв (0/O, кириллица/
@@ -146,6 +144,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
       <button class="btn" data-role="file-btn">${L2I18n.t("eventRoster.pickFilesBtn", "Выбрать файлы…")}</button>
       <p class="upload-status" data-role="status"></p>
       <div class="chip-row" data-role="chips"></div>
+      <div data-role="classes" class="er-classes"></div>
       <div class="manual-add">
         <input type="text" data-role="manual-input" placeholder="${L2I18n.t("eventRoster.manualPlaceholder", "Добавить ник вручную")}" />
         <button class="btn" data-role="manual-btn">${L2I18n.t("common.add", "Добавить")}</button>
@@ -197,6 +196,8 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
   // скрине не было (старый тип скрина без неё) или OCR её не распознал —
   // откатываемся на прежнее допущение «первая строка».
   let batchLeaderOf = new Map();
+  let pendingClass = new Map(); // ник -> { className, score, margin, needsCheck, top, crop, confirmed, skipped } — профессия по иконке скрина
+  let classNotes = [];          // пояснения, почему профессии на скрине не определены
 
   async function load(){
     const { data, error } = await db
@@ -262,10 +263,67 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
         chip.append(span, btn);
         row.appendChild(chip);
       });
+      renderClasses();
+    }
+
+    const classIconOf = (name) => { const c = (window.L2_CLASSES || []).find(x => x.name === name); return c ? c.icon : ""; };
+    const esc = (t) => String(t == null ? "" : t).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+
+    // профессии со скрина: уверенные — компактными метками, сомнительные — вопросом «реально X?» (подтвердить / выбрать другую / пропустить)
+    function renderClasses(){
+      const box = q("classes");
+      if(!box) return;
+      box.innerHTML = "";
+      const items = pending.filter(n => pendingClass.has(n)).map(n => [n, pendingClass.get(n)]);
+      if(!items.length && !classNotes.length) return;
+      const title = document.createElement("p");
+      title.className = "er-classes-title";
+      title.textContent = L2I18n.t("eventRoster.classesTitle", "Профессии по иконкам скрина");
+      box.appendChild(title);
+      classNotes.forEach(msg => {
+        const p = document.createElement("p");
+        p.className = "er-classes-note"; p.textContent = msg;
+        box.appendChild(p);
+      });
+
+      items.filter(([, c]) => c.needsCheck && !c.confirmed && !c.skipped).forEach(([nick, c]) => {
+        const card = document.createElement("div");
+        card.className = "er-class-q";
+        const names = [...new Set([...c.top.map(t => t.name), ...(window.L2_CLASSES || []).map(x => x.name)])];
+        card.innerHTML =
+          `<img class="er-crop" src="${c.crop}" alt="" title="${esc(L2I18n.t("eventRoster.classCropTitle", "Иконка на скрине"))}" />` +
+          `<span class="er-arrow">→</span>` +
+          `<img class="er-ref" src="${esc(classIconOf(c.className))}" alt="" />` +
+          `<span class="er-q-text"><b>${esc(nick)}</b> — ${esc(L2I18n.t("eventRoster.classQuestion", "реально {c}?").replace("{c}", c.className))}` +
+          `<small>${esc(L2I18n.t("eventRoster.classSimilar", "похожие: ") + c.top.slice(1, 3).map(t => t.name).join(", "))}</small></span>` +
+          `<span class="er-q-btns"><button class="btn btn-primary" data-act="yes">${esc(L2I18n.t("eventRoster.classYes", "Да"))}</button>` +
+          `<select data-act="other"><option value="">${esc(L2I18n.t("eventRoster.classOther", "Другая…"))}</option>${names.map(nm => `<option value="${esc(nm)}">${esc(nm)}</option>`).join("")}</select>` +
+          `<button class="btn btn-ghost" data-act="skip">${esc(L2I18n.t("eventRoster.classSkip", "Пропустить"))}</button></span>`;
+        card.querySelector('[data-act="yes"]').addEventListener("click", () => { c.confirmed = true; renderClasses(); });
+        card.querySelector('[data-act="skip"]').addEventListener("click", () => { c.skipped = true; renderClasses(); });
+        card.querySelector('[data-act="other"]').addEventListener("change", (e) => {
+          if(!e.target.value) return;
+          c.className = e.target.value; c.confirmed = true; renderClasses();
+        });
+        box.appendChild(card);
+      });
+
+      const row = document.createElement("div");
+      row.className = "chip-row er-class-chips";
+      items.filter(([, c]) => !(c.needsCheck && !c.confirmed && !c.skipped)).forEach(([nick, c]) => {
+        const chip = document.createElement("span");
+        chip.className = "chip er-class-chip" + (c.skipped ? " er-skipped" : "");
+        chip.innerHTML = (c.skipped ? "" : `<img src="${esc(classIconOf(c.className))}" alt="" />`) +
+          `<span>${esc(nick)} · ${esc(c.skipped ? L2I18n.t("eventRoster.classSkipped", "не определена") : c.className)}${c.confirmed ? " ✓" : ""}</span>`;
+        row.appendChild(chip);
+      });
+      if(row.children.length) box.appendChild(row);
     }
 
     function resetUpload(){
       pending = [];
+      pendingClass = new Map();
+      classNotes = [];
       pendingStats = new Map();
       pendingBatchOf = new Map();
       pendingCollided = new Set();
@@ -348,6 +406,22 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
           // «Отчёт по мероприятиям» использует эти индексы, чтобы группировать строки
           // по скрину (пати) и подписывать блок именем группы клана или «Соло»
           const bIdx = rows.length ? batchCount++ : null;
+
+          // профессии по иконкам этого же скрина (в оригинальном размере, не апскейленном); число иконок
+          // должно совпасть с числом распознанных ников — иначе профессии не определяем вовсе
+          if(rows.length && window.L2ClassIcons){
+            try{
+              const cr = await L2ClassIcons.analyze(rawDataUrl, rows.length);
+              if(cr.ok){
+                rows.forEach((r, ri) => pendingClass.set(r.nickname, Object.assign({ confirmed: false, skipped: false }, cr.rows[ri])));
+              } else if(cr.reason === "count_mismatch"){
+                classNotes.push(L2I18n.t("eventRoster.classMismatch", "Скрин {i}: иконок {a}, ников {b} — профессии не определены (выберите вручную в «Отчётах»).")
+                  .replace("{i}", i + 1).replace("{a}", cr.found).replace("{b}", cr.expected));
+              } else {
+                classNotes.push(L2I18n.t("eventRoster.classNoTable", "Скрин {i}: таблица с иконками не найдена — профессии не определены.").replace("{i}", i + 1));
+              }
+            }catch(clsErr){ console.error(clsErr); }
+          }
 
           rows.forEach(r => {
             if(!pending.includes(r.nickname)) pending.push(r.nickname);
@@ -446,10 +520,43 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
         if(statsErr){ errEl.textContent = L2I18n.t("eventRoster.statsSaveFailed", "Явка сохранена, но статистика — нет: ") + statsErr.message; return; }
       }
 
+      // профессии по иконкам → правки «на это мероприятие» (ручные правки из «Отчётов» не трогаем)
+      const clsErr = await saveClassOverrides();
+      if(clsErr){ errEl.textContent = L2I18n.t("eventRoster.classSaveFailed", "Явка сохранена, но профессии — нет: ") + clsErr; await load(); return; }
+
       resetUpload();
       q("upload").style.display = "none";
       await load();
     });
+
+    // нормализованный ник — тот же ключ, что в «Отчётах» (report_class_overrides.nickname_norm)
+    const classKey = (n) => (window.L2Nick ? (L2Nick.ready() ? L2Nick.key(n) : L2Nick.norm(n)) : String(n).toLowerCase());
+    async function saveClassOverrides(){
+      const items = pending.filter(n => pendingClass.has(n)).map(n => [n, pendingClass.get(n)])
+        .filter(([, c]) => !c.skipped && (!c.needsCheck || c.confirmed));
+      if(!items.length) return "";
+      const period = "event:" + eventId;
+      // что уже стоит на этом мероприятии: ручные правки (source != auto) главнее распознанных
+      let hasSource = true;
+      let res = await db.from("report_class_overrides").select("nickname_norm, source").eq("clan_id", profile.clan_id).eq("period_key", period);
+      if(res.error){
+        hasSource = false; // колонки source ещё нет (supabase/schema_report_class_source.sql) — любые существующие считаем ручными
+        res = await db.from("report_class_overrides").select("nickname_norm").eq("clan_id", profile.clan_id).eq("period_key", period);
+      }
+      const existing = new Map((res.data || []).map(r => [r.nickname_norm, hasSource ? r.source : "manual"]));
+      const byKey = new Map();
+      items.forEach(([n, cls]) => {
+        const k = classKey(n);
+        const e = existing.get(k);
+        if(e && e !== "auto") return;
+        const row = { clan_id: profile.clan_id, nickname_norm: k, period_key: period, class_name: cls.className, updated_at: new Date().toISOString() };
+        if(hasSource) row.source = "auto";
+        byKey.set(k, row);
+      });
+      if(!byKey.size) return "";
+      const { error } = await db.from("report_class_overrides").upsert([...byKey.values()], { onConflict: "clan_id,nickname_norm,period_key" });
+      return error ? error.message : "";
+    }
   }
 
   load();

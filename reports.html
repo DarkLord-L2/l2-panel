@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Отчёты по мероприятиям — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=26" />
+<link rel="stylesheet" href="js/theme.css?v=27" />
 <style>
   .rep-wrap{ padding:0 0 32px; }
 
@@ -487,7 +487,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=74"></script>
+<script src="js/i18n.js?v=76"></script>
 <script src="js/nick-match.js?v=2"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
@@ -625,7 +625,8 @@
     const c1 = info.class_name || "";
 
     const forced = forcedClassFor(nickname);
-    if(forced && all.includes(forced)) return { name: forced, swapped: forced !== c1, forced: true };
+    // выбранная вручную или распознанная по иконке на скрине профессия показывается, даже если её нет среди профессий человека в «Группах»
+    if(forced && (all.includes(forced) || (window.L2_CLASSES || []).some(x => x.name === forced))) return { name: forced, swapped: forced !== c1, forced: true, auto: forcedAuto.has(normalizeNick(nickname)) };
 
     return { name: c1, swapped: false, forced: false };
   }
@@ -639,10 +640,12 @@
   // то, что вручную проставлено.
   let weekEventOverridesByNorm = new Map(); // normalizeNick(ник) -> [{event_id, class_name}, ...]
 
-  async function loadWeekEventOverrides(weekStart){
+  // правки по отдельным мероприятиям (ручные и распознанные по иконкам) для всех мероприятий выбранного периода:
+  // неделя, несколько недель или всё время — по ним считается «какой профессией человек ходил»
+  async function loadWeekEventOverrides(weekStarts){
     weekEventOverridesByNorm = new Map();
-    if(!weekStart) return;
-    const weekEventIds = events.filter(e => e.week_start === weekStart).map(e => e.id);
+    const weeks = Array.isArray(weekStarts) ? weekStarts : (weekStarts ? [weekStarts] : null); // null — всё время
+    const weekEventIds = events.filter(e => !weeks || weeks.includes(e.week_start)).map(e => e.id);
     if(!weekEventIds.length) return;
     const { data, error } = await db
       .from("report_class_overrides")
@@ -676,12 +679,13 @@
     const manualList = weekEventOverridesByNorm.get(normalizeNick(nickname));
     if(!manualList || !manualList.length || !entries || !entries.length) return null;
     const c1 = info.class_name || "";
-    if(!c1) return null;
     const manualByEvent = new Map(manualList.map(e => [e.event_id, e.class_name]));
+    // мероприятие без правки — «был на основной»; если основной в «Группах» нет — такое мероприятие в подсчёт не идёт
     const picks = entries.map(e => ({
       event_id: e.event_id,
       class_name: manualByEvent.get(e.event_id) || c1,
-    }));
+    })).filter(e => e.class_name);
+    if(!picks.length) return null;
     const ordered = picks.slice().sort((a, b) => eventDateOf(a.event_id).localeCompare(eventDateOf(b.event_id)));
     const freq = new Map();
     ordered.forEach(e => freq.set(e.class_name, (freq.get(e.class_name) || 0) + 1));
@@ -701,13 +705,17 @@
   // делаются только по конкретным мероприятиям — см. weekClassSummary выше.
   // entries — сырые (nickname, event_id) этого человека за выбранный период.
   function pickDisplayClassForPeriod(info, kills, nickname, entries){
-    if(periodValue.startsWith("week:")){
-      const c1 = info.class_name || "";
-      const summary = weekClassSummary(info, nickname, entries);
-      if(!summary) return { name: c1, swapped: false, forced: false, badges: [] };
-      return { name: summary.primary, swapped: summary.primary !== c1, forced: false, badges: summary.others };
+    const c1 = info.class_name || "";
+    if(periodValue.startsWith("event:")) return { ...pickDisplayClass(info, kills, nickname), badges: [] };
+    // правка на весь период (только «Всё время»/несколько недель; на недельном виде её нет) главнее подсчёта
+    if(!periodValue.startsWith("week:")){
+      const f = pickDisplayClass(info, kills, nickname);
+      if(f.forced) return { ...f, badges: [] };
     }
-    return { ...pickDisplayClass(info, kills, nickname), badges: [] };
+    // неделя, несколько недель, всё время: профессия складывается из мероприятий периода (ручные правки и распознанные по иконкам)
+    const summary = weekClassSummary(info, nickname, entries);
+    if(!summary) return { name: c1, swapped: false, forced: false, badges: [] };
+    return { name: summary.primary, swapped: summary.primary !== c1, forced: false, fromEvents: true, badges: summary.others };
   }
 
   // ---- принудительная смена профессии: попап по клику на иконку класса ----
@@ -730,13 +738,15 @@
     return L2I18n.t("reports.allTimeFallback", "всего времени");
   }
 
+  let forcedAuto = new Set(); // ключи ников, у кого правка текущего периода — распознанная по иконке (source = auto), а не ручная
   async function loadForcedClasses(){
-    const { data, error } = await db
-      .from("report_class_overrides")
-      .select("nickname_norm, class_name")
-      .eq("period_key", periodKey());
-    if(error){ console.error(error); forcedClasses = new Map(); return; }
+    // source — supabase/schema_report_class_source.sql; без него все правки считаются ручными
+    let res = await db.from("report_class_overrides").select("nickname_norm, class_name, source").eq("period_key", periodKey());
+    if(res.error) res = await db.from("report_class_overrides").select("nickname_norm, class_name").eq("period_key", periodKey());
+    const { data, error } = res;
+    if(error){ console.error(error); forcedClasses = new Map(); forcedAuto = new Set(); return; }
     forcedClasses = new Map((data || []).map(r => [r.nickname_norm, r.class_name]));
+    forcedAuto = new Set((data || []).filter(r => r.source === "auto").map(r => r.nickname_norm));
   }
 
   function forcedClassFor(nickname){ return forcedClasses.get(normalizeNick(nickname)) || ""; }
@@ -1385,9 +1395,13 @@
 
     const tdNick = document.createElement("td");
     tdNick.className = "rep-col-nick";
-    const dotTitle = picked.forced
-      ? L2I18n.t("reports.manualClassTitle", "Профессия выбрана вручную — только для этого периода")
-      : L2I18n.t("reports.defaultClassTitle", "Профессия по умолчанию");
+    const dotTitle = picked.auto
+      ? L2I18n.t("reports.autoClassTitle", "Профессия распознана по иконке на скрине мероприятия")
+      : picked.forced
+        ? L2I18n.t("reports.manualClassTitle", "Профессия выбрана вручную — только для этого периода")
+        : picked.fromEvents
+          ? L2I18n.t("reports.eventsClassTitle", "Профессия за период — по мероприятиям (иконка на скрине или правка вручную)")
+          : L2I18n.t("reports.defaultClassTitle", "Профессия по умолчанию");
     tdNick.innerHTML = `<div class="rep-nick"><span class="avatar-wrap"><img class="avatar${editable ? " rep-avatar-btn" : ""}" src="${avatarSrc}" alt=""` +
       `${editable ? ' title="' + escapeHtml(L2I18n.t("reports.changeClassTitle", "Сменить профессию")) + '"' : ""} />` +
       (subAvatars ? `<span class="sub-avatar-row">${subAvatars}</span>` : "") +
@@ -1998,6 +2012,9 @@
     // правки профессий свои у каждого периода — перечитываем на каждую перерисовку
     await loadForcedClasses();
     if(periodValue.startsWith("week:")) await loadWeekEventOverrides(periodValue.slice(5));
+    else if(periodValue.startsWith("weeks:")) await loadWeekEventOverrides(periodValue.slice(6).split(","));
+    else if(!periodValue.startsWith("event:")) await loadWeekEventOverrides(null);
+    else weekEventOverridesByNorm = new Map();
     const grouped = filteredStats();
     const periodRows = statsForPeriod(periodValue, grouped);
 

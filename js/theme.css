@@ -578,3 +578,19 @@ table.data-table tr:hover td{ background: rgba(255,255,255,.02); }
 .help-section .help-body ul:first-child{ margin-top:0; }
 .matrix-table th, .matrix-table td{ padding:6px 10px; border:1px solid var(--border); text-align:center; }
 .matrix-table th:first-child, .matrix-table td:first-child{ text-align:left; }
+
+/* профессии по иконкам скрина (Журнал посещаемости, js/event-roster.js + class-icon-match.js) */
+.er-classes{ margin-top:10px; }
+.er-classes-title{ margin:0 0 6px; font-size:12px; font-weight:600; color: var(--text-dim); }
+.er-classes-note{ margin:0 0 6px; font-size:12px; color: var(--danger-lit); }
+.er-class-q{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:8px 10px; margin-bottom:6px; border:1px solid #d9a300; background:rgba(217,163,0,.10); border-radius:8px; }
+.er-class-q .er-crop{ width:48px; height:48px; image-rendering:pixelated; border-radius:6px; border:1px solid var(--border); flex:none; }
+.er-class-q .er-ref{ width:48px; height:48px; object-fit:cover; border-radius:6px; border:1px solid var(--border); flex:none; }
+.er-class-q .er-arrow{ color: var(--text-dim); }
+.er-class-q .er-q-text{ flex:1 1 180px; min-width:0; font-size:13px; color: var(--text); }
+.er-class-q .er-q-text small{ display:block; font-size:11px; color: var(--text-dim); margin-top:2px; }
+.er-class-q .er-q-btns{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.er-class-q .er-q-btns select{ max-width:130px; }
+.er-class-chip{ display:inline-flex; align-items:center; gap:6px; }
+.er-class-chip img{ width:18px; height:18px; border-radius:4px; object-fit:cover; }
+.er-class-chip.er-skipped{ opacity:.55; }
