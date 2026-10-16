@@ -99,6 +99,14 @@
   table.lp-archive-table td{ padding:5px 10px; border-bottom:1px solid var(--border); }
   table.lp-archive-table td.lp-num{ text-align:right; white-space:nowrap; font-variant-numeric: tabular-nums; }
   tr.lp-archive-leader-row td{ font-weight:600; }
+  .lp-nick-edit{ background:none; border:1px solid var(--border); color: var(--text-dim); border-radius:5px; width:20px; height:20px; padding:0; font-size:11px; cursor:pointer; vertical-align:middle; }
+  .lp-nick-edit:hover{ color: var(--gold); border-color: var(--gold-dim); }
+  .lp-alias-pop{ position:fixed; z-index:70; width:300px; max-width:calc(100vw - 16px); background: var(--panel); border:1px solid var(--border-lit); border-radius:10px;
+    padding:12px; box-shadow:0 10px 30px rgba(0,0,0,.55); display:flex; flex-direction:column; gap:6px; }
+  .lp-alias-pop .lp-ap-title{ margin:0 0 2px; font-size:13px; color: var(--text); }
+  .lp-alias-pop .lp-ap-pick{ text-align:left; }
+  .lp-alias-pop .lp-ap-row{ display:flex; gap:6px; margin-top:4px; }
+  .lp-alias-pop .lp-ap-row input{ flex:1; min-width:0; }
 </style>
 </head>
 <body>
@@ -172,8 +180,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=77"></script>
-<script src="js/nick-match.js?v=2"></script>
+<script src="js/i18n.js?v=78"></script>
+<script src="js/nick-match.js?v=4"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -672,6 +680,8 @@
     const body = document.getElementById("lpBody");
     body.innerHTML = currentRows.map(r => {
       const cross = r.left ? ` <span class="lp-left-cross" title="${escapeHtml(leftClanTitleOf(r.nickname))}">✗</span>` : "";
+      // ник не нашёлся в переписи — админ может сразу указать, какой это игрок (ник на скрине распознан неверно)
+      const editBtn = (isAdmin && r.left && nickResolver) ? ` <button type="button" class="lp-nick-edit" data-nick="${escapeHtml(r.nickname)}" title="${escapeHtml(L2I18n.t("payout.aliasEditTitle", "Это не тот ник? Привязать к игроку из переписи"))}">✎</button>` : "";
       const tag = tagBadgeOf(r.nickname);
       const badge = tag ? ` <span class="lp-tag-badge">${escapeHtml(tag)}</span>` : "";
       const leaderBadge = r.isLeader ? ` <span class="lp-tag-badge lp-leader-badge">${escapeHtml(L2I18n.t("payout.leaderBadge", "пати-лидер"))}${coefLbl ? " ×" + coefLbl : ""}</span>` : "";
@@ -688,7 +698,7 @@
       const bonusTitle = titleParts.length ? ` title="${escapeHtml(titleParts.join(" · "))}"` : "";
       const unitInfo = (!r.isLeader && r.unit && modalUnit && Math.abs(r.unit / modalUnit - 1) > 0.005)
         ? `<span class="lp-else">${escapeHtml(L2I18n.t("payout.priceDiff", "цена КМ"))} ×${(r.unit / modalUnit).toFixed(2).replace(/\.?0+$/, "")} ${escapeHtml(L2I18n.t("payout.priceDiffOf", "от обычной"))} (${fmtGold(r.unit)})</span>` : "";
-      return `<tr class="${r.isLeader ? "lp-leader-row" : ""}"><td>${escapeHtml(r.nickname)}${leaderBadge}${cross}${badge}${elseInfo}${unitInfo}</td>` +
+      return `<tr class="${r.isLeader ? "lp-leader-row" : ""}"><td>${escapeHtml(r.nickname)}${leaderBadge}${cross}${editBtn}${badge}${elseInfo}${unitInfo}</td>` +
         `<td class="lp-num lp-cnt">${countText}</td>` +
         `<td class="lp-num lp-gold"${bonusTitle}>${fmtGold(r.gold)}</td></tr>`;
     }).join("") + (total !== null
@@ -774,6 +784,46 @@
       L2Nick.invalidate(profile.clan_id);
       await loadNickAliases(); prepareNicks(); await reload();
     }
+  });
+
+  // ---- ✎ у строки с крестиком: всплывающее окно «какой это игрок» (подсказки + выбор из переписи) ----
+  let aliasPop = null;
+  function closeAliasPop(){ if(aliasPop){ aliasPop.remove(); aliasPop = null; } }
+  document.addEventListener("click", (e) => { if(aliasPop && !aliasPop.contains(e.target) && !e.target.closest(".lp-nick-edit")) closeAliasPop(); });
+  document.getElementById("lpBody").addEventListener("click", (e) => {
+    const btn = e.target.closest(".lp-nick-edit");
+    if(!btn || !isAdmin || !nickResolver) return;
+    e.stopPropagation();
+    const nick = btn.dataset.nick;
+    const wasOpen = aliasPop && aliasPop.dataset.nick === nick;
+    closeAliasPop();
+    if(wasOpen) return;
+    document.getElementById("lpCensusList").innerHTML = latestCensusNicks.map(n => `<option value="${escapeHtml(n)}"></option>`).join("");
+    const sugg = nickResolver.suggest(nick, latestCensusNicks, 4);
+    aliasPop = document.createElement("div");
+    aliasPop.className = "lp-alias-pop";
+    aliasPop.dataset.nick = nick;
+    aliasPop.innerHTML =
+      `<p class="lp-ap-title">${escapeHtml(L2I18n.t("payout.aliasPopTitle", "«{nick}» — какой это игрок из переписи?").replace("{nick}", nick))}</p>` +
+      sugg.map(sg => `<button type="button" class="btn lp-ap-pick" data-canon="${escapeHtml(sg.nick)}">${escapeHtml(sg.nick)}</button>`).join("") +
+      `<div class="lp-ap-row"><input type="text" list="lpCensusList" placeholder="${escapeHtml(L2I18n.t("payout.aliasPlaceholder", "ник из переписи"))}" />` +
+      `<button type="button" class="btn btn-primary lp-ap-bind">${escapeHtml(L2I18n.t("payout.aliasBind", "Привязать"))}</button></div>` +
+      `<p class="error-msg lp-ap-err"></p>`;
+    document.body.appendChild(aliasPop);
+    const r = btn.getBoundingClientRect();
+    aliasPop.style.top = Math.min(window.innerHeight - aliasPop.offsetHeight - 8, r.bottom + 6) + "px";
+    aliasPop.style.left = Math.max(8, Math.min(window.innerWidth - aliasPop.offsetWidth - 8, r.left)) + "px";
+    aliasPop.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      const pick = ev.target.closest(".lp-ap-pick");
+      if(pick){ closeAliasPop(); await saveAlias(nick, pick.dataset.canon); return; }
+      if(ev.target.closest(".lp-ap-bind")){
+        const val = aliasPop.querySelector("input").value.trim();
+        if(!latestCensusNicks.includes(val)){ aliasPop.querySelector(".lp-ap-err").textContent = L2I18n.t("payout.aliasNotInCensus", "Выбери ник из списка переписи."); return; }
+        closeAliasPop(); await saveAlias(nick, val);
+      }
+    });
+    aliasPop.querySelector("input").focus();
   });
 
   // отдельное окошко «Доли ушедших» (режим box, только клан-лидер): кому из ушедших сколько причиталось

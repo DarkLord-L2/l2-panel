@@ -972,6 +972,8 @@
     "eventRoster.classMismatch": ["Скрин {i}: иконок {a}, ников {b} — профессии не определены (выберите вручную в «Отчётах»).", "Скрін {i}: іконок {a}, ніків {b} — професії не визначені (оберіть вручну у «Звітах»).", "Screenshot {i}: {a} icons, {b} nicknames — classes not detected (pick them manually in Reports)."],
     "eventRoster.classNoTable": ["Скрин {i}: таблица с иконками не найдена — профессии не определены.", "Скрін {i}: таблицю з іконками не знайдено — професії не визначені.", "Screenshot {i}: icon table not found — classes not detected."],
     "eventRoster.classSaveFailed": ["Явка сохранена, но профессии — нет: ", "Явку збережено, але професії — ні: ", "Attendance saved, but classes were not: "],
+    "payout.aliasEditTitle": ["Это не тот ник? Привязать к игроку из переписи", "Це не той нік? Прив'язати до гравця з перепису", "Wrong nickname? Link to a player from the census"],
+    "payout.aliasPopTitle": ["«{nick}» — какой это игрок из переписи?", "«{nick}» — який це гравець із перепису?", "«{nick}» — which census player is this?"],
     "payout.leaderLeftTotal": ["Лидер ушёл из клана — отправить участникам напрямую: ", "Лідер пішов із клану — надіслати учасникам напряму: ", "The leader left the clan — send to the members directly: "],
     "groups.aliasOption": ["Привязать ник к игроку…", "Прив'язати нік до гравця…", "Link nickname to a player…"],
     "groups.aliasHint": ["Это тот же игрок, что…", "Це той самий гравець, що…", "This is the same player as…"],

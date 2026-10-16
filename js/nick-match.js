@@ -45,7 +45,7 @@
   // ступень 3 — с учётом типичной путаницы при распознавании
   function ocrKey(s){
     let k = String(s == null ? "" : s).toLowerCase();
-    k = k.replace(/rn/g, "m").replace(/vv/g, "w").replace(/cl/g, "d"); // до замены l→i
+    k = k.replace(/rn/g, "m").replace(/vv/g, "w").replace(/cl/g, "d").replace(/ks/g, "x"); // до замены l→i; «ks» ≈ «x» (friksa ≈ frixa)
     k = k.replace(/[!|¡]/g, "i");
     k = k.split("").map(ch => LOOSE[ch] || ch).join("");
     k = k.replace(/1/g, "i").replace(/5/g, "s").replace(/8/g, "b").replace(/2/g, "z").replace(/6/g, "g");
