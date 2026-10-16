@@ -960,7 +960,7 @@
     "groups.classNotSet": ["профессия не указана", "професія не вказана", "class not set"],
     "groups.levelShortTip": ["{n} ур.", "{n} рів.", "lv. {n}"],
     "reports.autoClassTitle": ["Профессия распознана по иконке на скрине мероприятия", "Професію розпізнано за іконкою на скріні заходу", "Class recognized from the icon on the event screenshot"],
-    "reports.eventsClassTitle": ["Профессия за период — по мероприятиям (иконка на скрине или правка вручную)", "Професія за період — за заходами (іконка на скріні або ручна правка)", "Class for the period — from events (screenshot icon or manual edit)"],
+    "reports.eventsClassTitle": ["Профессия за период — по последнему мероприятию (иконка на скрине или правка вручную)", "Професія за період — за останнім заходом (іконка на скріні або ручна правка)", "Class for the period — from the latest event (screenshot icon or manual edit)"],
     "eventRoster.classesTitle": ["Профессии по иконкам скрина", "Професії за іконками скріна", "Classes from the screenshot icons"],
     "eventRoster.classCropTitle": ["Иконка на скрине", "Іконка на скріні", "Icon on the screenshot"],
     "eventRoster.classQuestion": ["реально {c}?", "справді {c}?", "really {c}?"],

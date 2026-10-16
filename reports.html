@@ -487,7 +487,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=21"></script>
-<script src="js/i18n.js?v=76"></script>
+<script src="js/i18n.js?v=77"></script>
 <script src="js/nick-match.js?v=2"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
@@ -671,10 +671,10 @@
   // берём ручной override, если он стоит именно на этом мероприятии, иначе —
   // основную профессию (c1) — «не трогали» здесь означает «был на основной»,
   // а не «неизвестно», поэтому такое мероприятие тоже участвует в подсчёте.
-  // Самая частая получившаяся профессия — основная, остальные уникальные —
-  // в бейджи. При равенстве частот побеждает та, что встретилась раньше по
-  // датам мероприятий недели. Если ни одной ручной правки за неделю нет —
-  // возвращаем null, дальше сработает обычный показ (без агрегации).
+  // Основная — профессия на ПОСЛЕДНЕМ по дате мероприятии периода (сменил — отчёт
+  // сразу показывает новую), остальные уникальные — в бейджи. Если ни одной
+  // правки/распознавания за период нет — возвращаем null, дальше сработает
+  // обычный показ (без агрегации).
   function weekClassSummary(info, nickname, entries){
     const manualList = weekEventOverridesByNorm.get(normalizeNick(nickname));
     if(!manualList || !manualList.length || !entries || !entries.length) return null;
@@ -687,13 +687,11 @@
     })).filter(e => e.class_name);
     if(!picks.length) return null;
     const ordered = picks.slice().sort((a, b) => eventDateOf(a.event_id).localeCompare(eventDateOf(b.event_id)));
+    // профессия за период — та, на которой человек был на ПОСЛЕДНЕМ мероприятии периода: сменил профессию — отчёт сразу
+    // показывает новую, а не ту, что чаще встречалась раньше. Остальные, на которых он бывал в периоде, — кружками
+    const primary = ordered[ordered.length - 1].class_name;
     const freq = new Map();
     ordered.forEach(e => freq.set(e.class_name, (freq.get(e.class_name) || 0) + 1));
-    let primary = null, primaryCount = 0;
-    ordered.forEach(e => {
-      const c = freq.get(e.class_name);
-      if(c > primaryCount){ primaryCount = c; primary = e.class_name; }
-    });
     const others = [...freq.keys()].filter(c => c !== primary);
     return { primary, others };
   }
