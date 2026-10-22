@@ -103,6 +103,19 @@
   .users-group-toolbar{ display:flex; align-items:center; gap:10px; margin:0 0 12px; }
   .users-group-label{ font-size:12.5px; color: var(--text-dim); }
   .users-group-tabs{ display:flex; gap:6px; }
+  .sec-last{ margin:8px 0; font-size:13px; color: var(--text-dim); }
+  .sec-last.warn{ color: var(--danger-lit); font-weight:600; }
+  .sec-check{ display:flex; gap:8px; align-items:flex-start; margin:8px 0; font-size:13px; color: var(--text); cursor:pointer; }
+  .sec-actions{ margin:10px 0 4px; }
+  .sec-file{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:6px; }
+  .sec-file-name{ font-size:13px; color: var(--text-dim); }
+  .sec-progress{ margin:6px 0 0; font-size:13px; color: var(--text-dim); }
+  .sec-list{ margin:6px 0 0; padding-left:20px; font-size:13px; line-height:1.55; color: var(--text); }
+  .sec-list li{ margin:4px 0; }
+  .sec-table{ width:100%; border-collapse:collapse; margin-top:10px; font-size:13px; }
+  .sec-table th, .sec-table td{ text-align:left; padding:5px 10px; border-bottom:1px solid var(--border); }
+  .sec-table td.num, .sec-table th.num{ text-align:right; font-variant-numeric: tabular-nums; }
+  .admin-nav-item.sec-warn::after{ content:""; display:inline-block; width:8px; height:8px; border-radius:50%; background: var(--danger-lit); margin-left:8px; vertical-align:middle; }
   .users-group-tab{
     font-family:inherit; font-size:12.5px; padding:6px 14px;
     border-radius:6px; border:1px solid var(--border);
@@ -151,6 +164,7 @@
       <button type="button" class="admin-nav-item" data-tab="branding" data-i18n="admin.tabBranding">Оформление</button>
       <button type="button" class="admin-nav-item" data-tab="shares" data-i18n="admin.tabShares">Ссылки</button>
       <button type="button" class="admin-nav-item" data-tab="misc" data-i18n="admin.tabMisc">Разное</button>
+      <button type="button" class="admin-nav-item" data-tab="security" id="navSecurity" data-i18n="admin.tabSecurity">Безопасность</button>
       <button type="button" class="admin-nav-item" data-tab="auditlog" data-i18n="admin.tabAuditLog">Лог действий</button>
     </nav>
 
@@ -449,6 +463,38 @@
   </section>
     </div>
 
+    <div class="admin-tab-panel" data-panel="security">
+  <section class="card">
+    <h2 data-i18n="admin.secBackupTitle">Резервная копия данных</h2>
+    <p class="hint" data-i18n="admin.secBackupHint">Одним нажатием сохраняет на твой компьютер все данные клана одним файлом: перепись, явку, статистику, налоги, группы, буст, ДКП, привязки ников, настройки. Если что-то случайно удалят или сломают, данные можно будет вернуть.</p>
+    <p class="sec-last" id="secLast"></p>
+    <label class="sec-check"><input type="checkbox" id="secCompress" checked /> <span data-i18n="admin.secCompress">Сжать файл (.gz) — в несколько раз меньше, откроется только нашей проверкой</span></label>
+    <div class="sec-actions">
+      <button type="button" class="btn btn-primary" id="secBackupBtn" data-i18n="admin.secDownload">⬇ Скачать резервную копию</button>
+    </div>
+    <p class="sec-progress" id="secProgress"></p>
+    <p class="error-msg" id="secError"></p>
+  </section>
+  <section class="card" style="margin-top:16px;">
+    <h2 data-i18n="admin.secVerifyTitle">Проверить файл копии</h2>
+    <p class="hint" data-i18n="admin.secVerifyHint">Выбери сохранённый файл — покажем, когда он сделан и сколько в нём строк по каждой таблице. Так можно убедиться, что копия целая и читается.</p>
+    <div class="sec-file">
+      <input type="file" id="secVerifyFile" accept=".json,.gz,application/json,application/gzip" style="display:none;" />
+      <button type="button" class="btn" id="secVerifyPick" data-i18n="admin.secPickFile">Выбрать файл…</button>
+      <span class="sec-file-name" id="secVerifyName" data-i18n="admin.secNoFile">Файл не выбран</span>
+    </div>
+    <div id="secVerifyResult"></div>
+  </section>
+  <section class="card" style="margin-top:16px;">
+    <h2 data-i18n="admin.secAboutTitle">Что в копии, а что нет</h2>
+    <ul class="sec-list">
+      <li data-i18n="admin.secAbout1">Входит: данные только вашего клана и профили его людей (ник, роль, пати) — без паролей. Данные других кланов в копию не попадают.</li>
+      <li data-i18n="admin.secAbout2">Не входит: логины и пароли (хранятся в закрытой части Supabase — после полного сбоя пароли придётся выдать заново), схема базы и правила доступа (они лежат в папке supabase/ в репозитории сайта).</li>
+      <li data-i18n="admin.secAbout4">Храните файл не только на этом компьютере: облако, флешка или другой диск. Файл содержит ники и данные клана — не выкладывайте его публично.</li>
+    </ul>
+  </section>
+    </div>
+
     <div class="admin-tab-panel" data-panel="auditlog">
   <section class="card">
     <h2 data-i18n="admin.auditLogTitle">Лог действий администраторов</h2>
@@ -474,7 +520,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=22"></script>
-<script src="js/i18n.js?v=81"></script>
+<script src="js/i18n.js?v=83"></script>
+<script src="js/backup.js?v=3"></script>
 <script src="js/num-format.js?v=1"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
@@ -508,6 +555,79 @@
 
   const db = L2Cabinet.client;
   let roles = [], parties = [], sections = [];
+
+  // ---------- «Безопасность»: резервная копия данных клана ----------
+  const BACKUP_KEY = "l2LastBackup:" + profile.clan_id;
+  const BACKUP_WARN_DAYS = 7;
+  const fmtSize = (b) => b >= 1048576 ? (b / 1048576).toFixed(1) + " " + L2I18n.t("admin.secMb", "МБ") : Math.max(1, Math.round(b / 1024)) + " " + L2I18n.t("admin.secKb", "КБ");
+  function paintBackupStatus(){
+    const el = document.getElementById("secLast"), nav = document.getElementById("navSecurity");
+    let last = null;
+    try { last = JSON.parse(localStorage.getItem(BACKUP_KEY) || "null"); } catch(e){}
+    const days = last ? Math.floor((Date.now() - new Date(last.t).getTime()) / 86400000) : null;
+    const overdue = days === null || days >= BACKUP_WARN_DAYS;
+    el.classList.toggle("warn", overdue);
+    nav.classList.toggle("sec-warn", overdue);
+    if(!last){ el.textContent = L2I18n.t("admin.secNever", "Копия в этом браузере ещё не делалась. Рекомендуем сделать сейчас."); return; }
+    const when = new Date(last.t).toLocaleString(L2I18n.locale());
+    el.textContent = L2I18n.t("admin.secLast", "Последняя копия: {when} ({ago}); {rows} строк, {size}.")
+      .replace("{when}", when)
+      .replace("{ago}", days === 0 ? L2I18n.t("admin.secToday", "сегодня") : L2I18n.t("admin.secDaysAgo", "{n} дн. назад").replace("{n}", days))
+      .replace("{rows}", last.rows).replace("{size}", fmtSize(last.size));
+  }
+  paintBackupStatus();
+  document.getElementById("secBackupBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("secBackupBtn"), prog = document.getElementById("secProgress"), errEl = document.getElementById("secError");
+    errEl.textContent = ""; prog.textContent = "";
+    btn.disabled = true;
+    try{
+      const r = await L2Backup.create(db, {
+        clanName: profile.clans?.display_name || profile.clans?.name || "", clanId: profile.clan_id,
+        compress: document.getElementById("secCompress").checked,
+        onProgress: (name, i, n) => { prog.textContent = L2I18n.t("admin.secProgress", "Выгружаю: {t} ({i} из {n})…").replace("{t}", name).replace("{i}", i).replace("{n}", n); },
+      });
+      L2Backup.download(r.blob, r.filename);
+      try { localStorage.setItem(BACKUP_KEY, JSON.stringify({ t: r.meta.created_at, rows: r.rows, tables: r.tables, size: r.size })); } catch(e){}
+      prog.textContent = L2I18n.t("admin.secDone", "Готово: {tables} таблиц, {rows} строк, {size}. Файл «{file}» сохранён в загрузки браузера.")
+        .replace("{tables}", r.tables).replace("{rows}", r.rows).replace("{size}", fmtSize(r.size)).replace("{file}", r.filename);
+      const sk = Object.keys(r.skipped);
+      if(sk.length) errEl.textContent = L2I18n.t("admin.secSkipped", "Не удалось выгрузить таблицы: {list} (скорее всего, миграция для них не выполнена — это не страшно, данных в них нет).").replace("{list}", sk.join(", "));
+      paintBackupStatus();
+      logAdminAction("Скачана резервная копия данных (" + r.tables + " таблиц, " + r.rows + " строк)");
+    }catch(e){
+      prog.textContent = "";
+      errEl.textContent = L2I18n.t("admin.secFailed", "Не удалось сделать копию: ") + (e.message || e);
+    }
+    btn.disabled = false;
+  });
+  document.getElementById("secVerifyPick").addEventListener("click", () => document.getElementById("secVerifyFile").click());
+  document.getElementById("secVerifyFile").addEventListener("change", async (e) => {
+    const out = document.getElementById("secVerifyResult");
+    const f = e.target.files[0];
+    out.innerHTML = "";
+    const nameEl = document.getElementById("secVerifyName");
+    if(f){ nameEl.removeAttribute("data-i18n"); nameEl.textContent = f.name; }
+    else { nameEl.setAttribute("data-i18n", "admin.secNoFile"); nameEl.textContent = L2I18n.t("admin.secNoFile", "Файл не выбран"); }
+    if(!f) return;
+    try{
+      const v = await L2Backup.verify(f);
+      const total = v.counts.reduce((s2, x) => s2 + x.rows, 0);
+      const esc = (t) => String(t).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+      out.innerHTML = '<p class="sec-last">' + esc(L2I18n.t("admin.secVerifyOk", "✓ Файл целый. Сделан {when}, клан «{clan}», таблиц {tables}, строк {rows}.")
+        .replace("{when}", new Date(v.meta.created_at).toLocaleString(L2I18n.locale())).replace("{clan}", v.meta.clan_name || "—").replace("{tables}", v.counts.length).replace("{rows}", total)) + '</p>' +
+        '<table class="sec-table"><thead><tr><th>' + esc(L2I18n.t("admin.secColTable", "Таблица")) + '</th><th class="num">' + esc(L2I18n.t("admin.secColRows", "Строк")) + '</th></tr></thead><tbody>' +
+        v.counts.map(x => '<tr><td>' + esc(x.name) + '</td><td class="num">' + x.rows + '</td></tr>').join("") + '</tbody></table>';
+      if(v.meta.clan_id && v.meta.clan_id !== profile.clan_id){
+        out.insertAdjacentHTML("afterbegin", '<p class="error-msg">' + esc(L2I18n.t("admin.secVerifyOtherClan", "⚠ Эта копия сделана для другого клана — восстанавливать её в этот клан нельзя.")) + '</p>');
+      }
+    }catch(err){
+      const code = err.message;
+      out.innerHTML = '<p class="error-msg">' + (code === "no_gzip" ? L2I18n.t("admin.secVerifyNoGzip", "Этот браузер не умеет открывать сжатые файлы — откройте проверку в Chrome, Edge или Firefox.")
+        : code === "not_backup" ? L2I18n.t("admin.secVerifyNot", "Это не файл резервной копии сайта.")
+        : L2I18n.t("admin.secVerifyBad", "Файл повреждён или не читается.")) + '</p>';
+    }
+  });
+  window.addEventListener("storage", (ev) => { if(ev.key === "l2Lang") paintBackupStatus(); });
 
   // ---------- лог действий администраторов ----------
   // не должна ронять основное действие, если запись лога не удалась (например,
