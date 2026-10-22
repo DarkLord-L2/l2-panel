@@ -71,8 +71,8 @@
   const slug = (s) => String(s || "clan").toLowerCase().replace(/[^a-z0-9а-яёіїє]+/gi, "-").replace(/^-+|-+$/g, "") || "clan";
   const pad = (n) => String(n).padStart(2, "0");
 
-  async function create(db, opts){
-    opts = opts || {};
+  // выгрузка всех таблиц клана в память: { tables, skipped, rows, foreign } — общая часть копии и сравнения перед восстановлением
+  async function collect(db, opts){
     if(!opts.clanId) throw new Error("no_clan");
     const tables = {}, skipped = {}, parents = {};
     let rows = 0, foreign = 0, done = 0;
@@ -97,10 +97,15 @@
     const rest = TABLES.filter(t => !first.includes(t));
     let next = 0;
     await Promise.all(Array.from({ length: CONCURRENCY }, async () => { while(next < rest.length) await one(rest[next++]); }));
-    // порядок таблиц в файле — как в списке, а не в порядке завершения
+    // порядок таблиц — как в списке, а не в порядке завершения
     const ordered = {};
     TABLES.forEach(([name]) => { if(name in tables) ordered[name] = tables[name]; });
-    Object.keys(tables).forEach(k => delete tables[k]); Object.assign(tables, ordered);
+    return { tables: ordered, skipped, rows, foreign };
+  }
+
+  async function create(db, opts){
+    opts = opts || {};
+    const { tables, skipped, rows, foreign } = await collect(db, opts);
     const now = new Date();
     const meta = { app: "l2-panel", format: FORMAT, created_at: now.toISOString(), clan_name: opts.clanName || "", clan_id: opts.clanId || null,
       tables: Object.keys(tables).length, rows, scope: "clan", excluded_foreign_rows: foreign };
@@ -112,7 +117,7 @@
       ext = ".json.gz";
     }
     const stamp = now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) + "-" + pad(now.getHours()) + pad(now.getMinutes());
-    return { blob, filename: "l2-backup-" + slug(opts.clanName) + "-" + stamp + ext, meta, skipped, size: blob.size, tables: meta.tables, rows };
+    return { blob, filename: "l2-backup" + (opts.tag ? "-" + opts.tag : "") + "-" + slug(opts.clanName) + "-" + stamp + ext, meta, skipped, size: blob.size, tables: meta.tables, rows };
   }
 
   function download(blob, filename){
@@ -124,8 +129,8 @@
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
   }
 
-  // проверка файла копии: читается ли он и сколько строк в каждой таблице (само восстановление — отдельным шагом)
-  async function verify(file){
+  // чтение файла копии (обычный или .gz) и проверка, что это наша копия
+  async function parse(file){
     const buf = await file.arrayBuffer();
     const u8 = new Uint8Array(buf);
     let text;
@@ -136,9 +141,128 @@
     let data;
     try { data = JSON.parse(text); } catch(e){ throw new Error("bad_json"); }
     if(!data || !data.meta || data.meta.app !== "l2-panel" || typeof data.tables !== "object") throw new Error("not_backup");
+    return data;
+  }
+
+  // проверка файла копии: читается ли он и сколько строк в каждой таблице
+  async function verify(file){
+    const data = await parse(file);
     const counts = Object.entries(data.tables).map(([name, list]) => ({ name, rows: Array.isArray(list) ? list.length : 0 }));
     return { meta: data.meta, counts, skipped: data.skipped || {} };
   }
 
-  global.L2Backup = { create, download, verify, TABLES };
+  // ================= восстановление из копии =================
+  // Ничего не удаляет. Два режима: "add" — вернуть только пропавшие строки (существующие не трогает), "overwrite" — ещё и привести
+  // изменившиеся строки к виду из копии. Строки, которых в копии нет (появились позже), остаются как есть.
+  // В восстановление не входят: clans и profiles (связаны с учётными записями), skill_panels (личные настройки окошка), admin_audit_log.
+  const NO_RESTORE = new Set(["clans", "profiles", "skill_panels", "admin_audit_log"]);
+  // родители раньше детей, иначе внешние ключи не пустят строки
+  const RESTORE_ORDER = [
+    "clan_section_order", "clan_section_toggles", "clan_role_labels",
+    "clan_groups", "clan_group_sections", "clan_group_members", "clan_group_notes", "group_label_settings",
+    "member_classes", "nick_aliases", "roster_tag_settings", "roster_tagged_members",
+    "census_entries",
+    "attendance_events", "event_screenshot_batches", "attendance_entries", "event_stats", "report_class_overrides",
+    "attendance_day_visibility", "attendance_report_filters", "attendance_report_style",
+    "boost_sections", "boost_items", "boost_member_values", "boost_class_values", "boost_section_class_images",
+    "tax_payments", "tax_donations", "tax_settings", "tax_archived_weeks",
+    "loot_split_settings", "loot_class_coefficients", "loot_party_coefficients", "loot_leader_coefficients", "payout_batches", "payout_archive",
+    "cd_skills", "cd_skill_off", "cd_skill_copies", "cd_marks", "cd_settings",
+  ];
+  const USER_COLS = ["created_by", "updated_by", "archived_by", "actor_id"]; // ссылки на учётные записи: человека могли удалить
+
+  const keyColsOf = (name, sample) => {
+    const t = TABLES.find(x => x[0] === name);
+    const order = t ? t[1] : ["id"];
+    const cols = sample ? order.filter(k => k in sample) : order;
+    return cols.length ? cols : order;
+  };
+  const keyOf = (cols, row) => cols.map(k => String(row[k])).join("\u0001");
+  const stable = (row) => JSON.stringify(Object.keys(row).sort().map(k => [k, row[k]]));
+
+  // сравнение копии с тем, что в базе сейчас: по каждой таблице — сколько пропало, сколько изменилось, сколько лишнего
+  async function plan(db, data, opts){
+    if(!data.meta.clan_id || data.meta.clan_id !== opts.clanId) throw new Error("other_clan");
+    const cur = await collect(db, { clanId: opts.clanId, onProgress: opts.onProgress });
+    const items = [];
+    RESTORE_ORDER.forEach(name => {
+      const fileRows = data.tables[name];
+      if(!Array.isArray(fileRows)) return;
+      const nowRows = cur.tables[name];
+      const unavailable = !nowRows; // таблицы в базе нет — восстановить в неё нельзя
+      const cols = keyColsOf(name, fileRows[0] || (nowRows && nowRows[0]));
+      const curMap = new Map((nowRows || []).map(r => [keyOf(cols, r), stable(r)]));
+      const fileKeys = new Set();
+      const missing = [], differ = [];
+      let same = 0;
+      fileRows.forEach(r => {
+        const k = keyOf(cols, r); fileKeys.add(k);
+        if(!curMap.has(k)) missing.push(r);
+        else if(curMap.get(k) !== stable(r)) differ.push(r);
+        else same++;
+      });
+      let extra = 0; curMap.forEach((v, k) => { if(!fileKeys.has(k)) extra++; });
+      items.push({ name, cols, file: fileRows.length, current: (nowRows || []).length, missing, differ, same, extra, unavailable });
+    });
+    return { items, skipped: cur.skipped };
+  }
+
+  // кусками примерно по 1.5 МБ (в части таблиц лежат картинки) и не больше 200 строк
+  function chunks(rows){
+    const out = []; let cur = [], size = 0;
+    rows.forEach(r => {
+      const n = JSON.stringify(r).length;
+      if(cur.length && (size + n > 1500000 || cur.length >= 200)){ out.push(cur); cur = []; size = 0; }
+      cur.push(r); size += n;
+    });
+    if(cur.length) out.push(cur);
+    return out;
+  }
+
+  async function writeChunk(db, item, rows, mode){
+    const q = () => mode === "overwrite" ? db.from(item.name).upsert(rows, { onConflict: item.cols.join(",") }) : db.from(item.name).insert(rows);
+    const res = await q();
+    return res.error ? res.error : null;
+  }
+  async function writeOne(db, item, row, mode){
+    const attempt = async (r) => {
+      const res = await (mode === "overwrite" ? db.from(item.name).upsert([r], { onConflict: item.cols.join(",") }) : db.from(item.name).insert([r]));
+      return res.error ? res.error : null;
+    };
+    let err = await attempt(row);
+    if(err && USER_COLS.some(k => row[k])){
+      // автора строки (учётной записи) уже нет — строку возвращаем без привязки к автору, чем потерять её
+      const copy = Object.assign({}, row); USER_COLS.forEach(k => { if(k in copy) copy[k] = null; });
+      const err2 = await attempt(copy);
+      if(!err2) return null;
+    }
+    return err;
+  }
+
+  // selection — Set имён таблиц; mode: "add" | "overwrite"
+  async function restore(db, pl, selection, mode, onProgress){
+    const results = [];
+    const todo = pl.items.filter(it => selection.has(it.name) && !it.unavailable);
+    for(let i = 0; i < todo.length; i++){
+      const item = todo[i];
+      const rows = mode === "overwrite" ? item.missing.concat(item.differ) : item.missing.slice();
+      const res = { name: item.name, added: 0, updated: 0, failed: 0, errors: [] };
+      if(onProgress) onProgress(item.name, i + 1, todo.length);
+      const isNew = new Set(item.missing);
+      for(const part of chunks(rows)){
+        const err = await writeChunk(db, item, part, mode);
+        if(!err){ part.forEach(r => { if(isNew.has(r)) res.added++; else res.updated++; }); continue; }
+        // кусок не прошёл — пробуем по одной строке, чтобы одна плохая не тянула за собой остальные
+        for(const row of part){
+          const e = await writeOne(db, item, row, mode);
+          if(!e){ if(isNew.has(row)) res.added++; else res.updated++; }
+          else { res.failed++; if(res.errors.length < 3) res.errors.push(e.message || String(e)); }
+        }
+      }
+      results.push(res);
+    }
+    return results;
+  }
+
+  global.L2Backup = { create, collect, download, parse, verify, plan, restore, TABLES, RESTORE_ORDER, NO_RESTORE };
 })(window);

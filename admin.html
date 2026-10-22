@@ -109,6 +109,12 @@
   .sec-actions{ margin:10px 0 4px; }
   .sec-file{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:6px; }
   .sec-file-name{ font-size:13px; color: var(--text-dim); }
+  .sec-mode{ display:flex; flex-direction:column; gap:6px; margin:12px 0 4px; font-size:13px; }
+  .sec-mode label{ display:flex; gap:8px; align-items:flex-start; cursor:pointer; }
+  .sec-table tr.dim td{ color: var(--text-dim); }
+  .sec-table tr.todo td{ color: var(--text); }
+  .sec-table td.todo-n{ color: var(--gold); font-weight:600; }
+  .sec-ok{ color: var(--ok); }
   .sec-progress{ margin:6px 0 0; font-size:13px; color: var(--text-dim); }
   .sec-list{ margin:6px 0 0; padding-left:20px; font-size:13px; line-height:1.55; color: var(--text); }
   .sec-list li{ margin:4px 0; }
@@ -485,6 +491,31 @@
     </div>
     <div id="secVerifyResult"></div>
   </section>
+  <section class="card" style="margin-top:16px;" id="secRestoreCard">
+    <h2 data-i18n="admin.resTitle">Восстановить из копии</h2>
+    <p class="hint" data-i18n="admin.resHint">Выбери файл копии — сайт сравнит его с тем, что в базе сейчас, и покажет, чего не хватает. Ничего не удаляется: возвращаются только пропавшие строки (а при желании — и изменённые приводятся к виду из копии). Логины, пароли и профили людей не восстанавливаются.</p>
+    <div class="sec-file">
+      <input type="file" id="secRestoreFile" accept=".json,.gz,application/json,application/gzip" style="display:none;" />
+      <button type="button" class="btn" id="secRestorePick" data-i18n="admin.secPickFile">Выбрать файл…</button>
+      <span class="sec-file-name" id="secRestoreName" data-i18n="admin.secNoFile">Файл не выбран</span>
+    </div>
+    <p class="sec-progress" id="secRestoreProg"></p>
+    <div id="secRestoreStep" style="display:none;">
+      <p class="sec-last" id="secRestoreFileInfo"></p>
+      <button type="button" class="btn btn-primary" id="secRestoreConfirm" data-i18n="admin.resConfirmFile">Да, восстанавливаю из этого файла</button>
+    </div>
+    <div id="secRestorePlan" style="display:none;">
+      <table class="sec-table" id="secRestoreTable"></table>
+      <div class="sec-mode">
+        <label><input type="radio" name="secRestoreMode" value="add" checked /> <span data-i18n="admin.resModeAdd">Только добавить пропавшее (безопасно, существующие строки не трогаем)</span></label>
+        <label><input type="radio" name="secRestoreMode" value="overwrite" /> <span data-i18n="admin.resModeOver">Добавить пропавшее и вернуть изменённое к виду из копии</span></label>
+      </div>
+      <p class="sec-last" id="secRestoreSummary"></p>
+      <button type="button" class="btn btn-primary" id="secRestoreRun" data-i18n="admin.resRun">⟲ Восстановить выбранное</button>
+    </div>
+    <div id="secRestoreResult"></div>
+    <p class="error-msg" id="secRestoreErr"></p>
+  </section>
   <section class="card" style="margin-top:16px;">
     <h2 data-i18n="admin.secAboutTitle">Что в копии, а что нет</h2>
     <ul class="sec-list">
@@ -520,8 +551,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=24"></script>
-<script src="js/i18n.js?v=83"></script>
-<script src="js/backup.js?v=6"></script>
+<script src="js/i18n.js?v=86"></script>
+<script src="js/backup.js?v=7"></script>
 <script src="js/num-format.js?v=1"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
@@ -627,7 +658,123 @@
         : L2I18n.t("admin.secVerifyBad", "Файл повреждён или не читается.")) + '</p>';
     }
   });
-  window.addEventListener("storage", (ev) => { if(ev.key === "l2Lang") paintBackupStatus(); });
+  // ---------- восстановление из копии ----------
+  const resEsc = (t) => String(t).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+  let resPlan = null, resFile = null;
+  const resMode = () => document.querySelector('input[name="secRestoreMode"]:checked').value;
+  const resTodo = (it) => resMode() === "overwrite" ? it.missing.length + it.differ.length : it.missing.length;
+  function paintResSummary(){
+    if(!resPlan) return;
+    const sel = [...document.querySelectorAll("#secRestoreTable input[data-t]:checked")].map(i => i.dataset.t);
+    const rows = resPlan.items.filter(it => sel.includes(it.name)).reduce((a, it) => a + resTodo(it), 0);
+    document.getElementById("secRestoreSummary").textContent = rows
+      ? L2I18n.t("admin.resSummary", "К восстановлению: {rows} строк в {tables} таблицах.").replace("{rows}", rows).replace("{tables}", sel.length)
+      : L2I18n.t("admin.resNothing", "Нечего восстанавливать: всё из копии уже есть в базе.");
+    document.getElementById("secRestoreRun").disabled = !rows;
+  }
+  function paintResTable(keepChecks){
+    const prev = new Set([...document.querySelectorAll("#secRestoreTable input[data-t]:checked")].map(i => i.dataset.t));
+    const T = (k, f) => resEsc(L2I18n.t(k, f));
+    let html = "<thead><tr><th></th><th>" + T("admin.secColTable", "Таблица") + '</th><th class="num">' + T("admin.resColFile", "В копии") + '</th><th class="num">' + T("admin.resColNow", "Сейчас") +
+      '</th><th class="num">' + T("admin.resColMissing", "Пропало") + '</th><th class="num">' + T("admin.resColChanged", "Изменилось") + '</th><th class="num">' + T("admin.resColExtra", "Новее копии") + "</th></tr></thead><tbody>";
+    resPlan.items.forEach(it => {
+      const n = resTodo(it), can = n > 0 && !it.unavailable;
+      const checked = keepChecks ? prev.has(it.name) : can;
+      html += '<tr class="' + (can ? "todo" : "dim") + '"><td><input type="checkbox" data-t="' + resEsc(it.name) + '"' + (checked && can ? " checked" : "") + (can ? "" : " disabled") + ' /></td><td>' + resEsc(it.name) +
+        (it.unavailable ? ' <small>(' + T("admin.resNoTable", "таблицы нет в базе") + ")</small>" : "") + '</td><td class="num">' + it.file + '</td><td class="num">' + it.current +
+        '</td><td class="num' + (it.missing.length ? " todo-n" : "") + '">' + it.missing.length + '</td><td class="num' + (it.differ.length && resMode() === "overwrite" ? " todo-n" : "") + '">' + it.differ.length +
+        '</td><td class="num">' + it.extra + "</td></tr>";
+    });
+    document.getElementById("secRestoreTable").innerHTML = html + "</tbody>";
+    paintResSummary();
+  }
+  document.getElementById("secRestorePick").addEventListener("click", () => document.getElementById("secRestoreFile").click());
+  document.getElementById("secRestoreTable").addEventListener("change", paintResSummary);
+  document.querySelectorAll('input[name="secRestoreMode"]').forEach(r => r.addEventListener("change", () => { if(resPlan) paintResTable(false); }));
+  async function buildResPlan(){
+    const prog = document.getElementById("secRestoreProg"), errEl = document.getElementById("secRestoreErr");
+    errEl.textContent = ""; prog.textContent = L2I18n.t("admin.resComparing", "Сравниваю копию с базой…");
+    try{
+      const data = await L2Backup.parse(resFile);
+      resPlan = await L2Backup.plan(db, data, { clanId: profile.clan_id, onProgress: (n, i, t) => { prog.textContent = L2I18n.t("admin.resComparingN", "Сравниваю с базой: {i} из {n}…").replace("{i}", i).replace("{n}", t); } });
+      prog.textContent = L2I18n.t("admin.resCopyInfo", "Копия от {when}, клан «{clan}».").replace("{when}", new Date(data.meta.created_at).toLocaleString(L2I18n.locale())).replace("{clan}", data.meta.clan_name || "—");
+      document.getElementById("secRestorePlan").style.display = "";
+      paintResTable(false);
+    }catch(e){
+      resPlan = null; document.getElementById("secRestorePlan").style.display = "none"; prog.textContent = "";
+      errEl.textContent = e.message === "other_clan" ? L2I18n.t("admin.resOtherClan", "Эта копия сделана для другого клана — восстанавливать её в этот клан нельзя.")
+        : e.message === "no_gzip" ? L2I18n.t("admin.secVerifyNoGzip", "Этот браузер не умеет открывать сжатые файлы — откройте проверку в Chrome, Edge или Firefox.")
+        : e.message === "not_backup" ? L2I18n.t("admin.secVerifyNot", "Это не файл резервной копии сайта.")
+        : L2I18n.t("admin.secVerifyBad", "Файл повреждён или не читается.");
+    }
+  }
+  document.getElementById("secRestoreFile").addEventListener("change", async (e) => {
+    resFile = e.target.files[0] || null;
+    const nameEl = document.getElementById("secRestoreName");
+    document.getElementById("secRestoreResult").innerHTML = "";
+    resPlan = null;
+    document.getElementById("secRestorePlan").style.display = "none"; document.getElementById("secRestoreStep").style.display = "none";
+    document.getElementById("secRestoreProg").textContent = ""; document.getElementById("secRestoreErr").textContent = "";
+    if(resFile){
+      nameEl.removeAttribute("data-i18n"); nameEl.textContent = resFile.name;
+      try{
+        const v = await L2Backup.verify(resFile);
+        if(v.meta.clan_id && v.meta.clan_id !== profile.clan_id) throw new Error("other_clan");
+        document.getElementById("secRestoreFileInfo").textContent = L2I18n.t("admin.resFileInfo", "Файл загружен: копия от {when}, клан «{clan}», таблиц {tables}, строк {rows}. Это та копия, из которой нужно восстанавливать?")
+          .replace("{when}", new Date(v.meta.created_at).toLocaleString(L2I18n.locale())).replace("{clan}", v.meta.clan_name || "—").replace("{tables}", v.counts.length).replace("{rows}", v.counts.reduce((a, x) => a + x.rows, 0));
+        document.getElementById("secRestoreStep").style.display = "";
+      }catch(err){
+        document.getElementById("secRestoreErr").textContent = err.message === "other_clan" ? L2I18n.t("admin.resOtherClan", "Эта копия сделана для другого клана — восстанавливать её в этот клан нельзя.")
+          : err.message === "no_gzip" ? L2I18n.t("admin.secVerifyNoGzip", "Этот браузер не умеет открывать сжатые файлы — откройте проверку в Chrome, Edge или Firefox.")
+          : err.message === "not_backup" ? L2I18n.t("admin.secVerifyNot", "Это не файл резервной копии сайта.")
+          : L2I18n.t("admin.secVerifyBad", "Файл повреждён или не читается.");
+      }
+    } else { nameEl.setAttribute("data-i18n", "admin.secNoFile"); nameEl.textContent = L2I18n.t("admin.secNoFile", "Файл не выбран"); }
+  });
+  document.getElementById("secRestoreConfirm").addEventListener("click", async () => {
+    if(!resFile) return;
+    const b = document.getElementById("secRestoreConfirm"); b.disabled = true;
+    await buildResPlan(); // только теперь сравниваем копию с базой и показываем, что можно вернуть
+    document.getElementById("secRestoreStep").style.display = "none";
+    b.disabled = false;
+  });
+  document.getElementById("secRestoreRun").addEventListener("click", async () => {
+    if(!resPlan) return;
+    const btn = document.getElementById("secRestoreRun"), prog = document.getElementById("secRestoreProg"), errEl = document.getElementById("secRestoreErr"), out = document.getElementById("secRestoreResult");
+    const names = [...document.querySelectorAll("#secRestoreTable input[data-t]:checked")].map(i => i.dataset.t);
+    const mode = resMode();
+    const rows = resPlan.items.filter(it => names.includes(it.name)).reduce((a, it) => a + resTodo(it), 0);
+    if(!names.length || !rows) return;
+    errEl.textContent = ""; out.innerHTML = "";
+    if(mode === "overwrite"){
+      const word = L2I18n.t("admin.resTypeWord", "ВОССТАНОВИТЬ");
+      const typed = prompt(L2I18n.t("admin.resConfirmOver", "Режим «вернуть изменённое» ЗАМЕНИТ текущие значения в {tables} таблицах значениями из копии ({rows} строк). Новые строки не удаляются, но изменения, сделанные после копии, в этих строках пропадут. Перед этим автоматически скачается копия текущего состояния.\n\nДля подтверждения введите слово {word}:").replace("{tables}", names.length).replace("{rows}", rows).replace("{word}", word), "");
+      if(!typed || typed.trim().toUpperCase() !== word.toUpperCase()) return;
+    } else if(!confirm(L2I18n.t("admin.resConfirmAdd", "Будет добавлено {rows} пропавших строк в {tables} таблицах. Существующие строки не меняются. Перед этим автоматически скачается копия текущего состояния. Продолжить?").replace("{rows}", rows).replace("{tables}", names.length))) return;
+    btn.disabled = true;
+    try{
+      // страховка: копия текущего состояния ДО восстановления
+      prog.textContent = L2I18n.t("admin.resSafety", "Сохраняю копию текущего состояния перед восстановлением…");
+      const safety = await L2Backup.create(db, { clanName: profile.clans?.display_name || profile.clans?.name || "", clanId: profile.clan_id, compress: true, tag: "before-restore" });
+      L2Backup.download(safety.blob, safety.filename);
+      const res = await L2Backup.restore(db, resPlan, new Set(names), mode, (n, i, t) => { prog.textContent = L2I18n.t("admin.resProgress", "Восстанавливаю: {t} ({i} из {n})…").replace("{t}", n).replace("{i}", i).replace("{n}", t); });
+      const add = res.reduce((a, r) => a + r.added, 0), upd = res.reduce((a, r) => a + r.updated, 0), bad = res.reduce((a, r) => a + r.failed, 0);
+      const doneMsg = L2I18n.t("admin.resDone", "Готово: добавлено {a}, обновлено {u}, не удалось {f}.").replace("{a}", add).replace("{u}", upd).replace("{f}", bad);
+      prog.textContent = doneMsg;
+      out.innerHTML = '<table class="sec-table"><thead><tr><th>' + resEsc(L2I18n.t("admin.secColTable", "Таблица")) + '</th><th class="num">' + resEsc(L2I18n.t("admin.resColAdded", "Добавлено")) + '</th><th class="num">' + resEsc(L2I18n.t("admin.resColUpdated", "Обновлено")) +
+        '</th><th class="num">' + resEsc(L2I18n.t("admin.resColFailed", "Ошибок")) + '</th></tr></thead><tbody>' +
+        res.map(r => '<tr><td>' + resEsc(r.name) + '</td><td class="num">' + r.added + '</td><td class="num">' + r.updated + '</td><td class="num">' + r.failed + "</td></tr>" + (r.errors.length ? '<tr class="dim"><td colspan="4"><small>' + resEsc(r.errors[0]) + "</small></td></tr>" : "")).join("") + "</tbody></table>";
+      if(bad) errEl.textContent = L2I18n.t("admin.resSomeFailed", "Часть строк не вернулась (чаще всего потому, что связанных данных уже нет — например, группы). Выбери в списке и родительские таблицы и повтори.");
+      logAdminAction("Восстановление из копии: добавлено " + add + ", обновлено " + upd + ", ошибок " + bad + " (режим " + mode + ")");
+      await buildResPlan(); // заново сравнить и показать, что осталось
+      prog.textContent = doneMsg;
+    }catch(e){
+      prog.textContent = "";
+      errEl.textContent = L2I18n.t("admin.resFailed", "Восстановление не удалось: ") + (e.message || e);
+    }
+    btn.disabled = false;
+  });
+  window.addEventListener("storage", (ev) => { if(ev.key === "l2Lang"){ paintBackupStatus(); if(resPlan) paintResTable(true); } });
 
   // ---------- лог действий администраторов ----------
   // не должна ронять основное действие, если запись лога не удалась (например,
