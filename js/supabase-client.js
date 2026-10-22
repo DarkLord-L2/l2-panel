@@ -387,9 +387,25 @@ async function selectAll(make, pageSize = 1000){
   const out = [];
   for(let from = 0; from < 500000; from += pageSize){
     const { data, error } = await make().range(from, from + pageSize - 1);
-    if(error) return { data: out.length ? out : null, error };
+    // ошибка посреди выгрузки — отдаём data: null, как обычный запрос. Половина таблицы, выданная за целую, опаснее ошибки
+    // (деньги, явка, налоги посчитались бы по неполным данным молча)
+    if(error) return { data: null, error };
     if(data && data.length) out.push(...data);
     if(!data || data.length < pageSize) break;
+  }
+  return { data: out, error: null };
+}
+
+// То же для запросов вида `.in("event_id", ids)` с длинным списком: адрес запроса с сотнями uuid получается слишком длинным
+// (сервер отвечает ошибкой), поэтому список режем на части и склеиваем результат. make(часть) строит запрос по этой части.
+async function selectAllIn(make, ids, chunkSize = 100){
+  const out = [];
+  const list = Array.from(ids || []);
+  for(let i = 0; i < list.length; i += chunkSize){
+    const part = list.slice(i, i + chunkSize);
+    const { data, error } = await selectAll(() => make(part));
+    if(error) return { data: null, error };
+    out.push(...data);
   }
   return { data: out, error: null };
 }
@@ -414,6 +430,7 @@ async function censusWeeks(count = 1){
 window.L2Cabinet = {
   client,
   selectAll,
+  selectAllIn,
   censusWeeks,
   login,
   signOut,

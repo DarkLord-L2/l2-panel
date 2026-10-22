@@ -14,6 +14,7 @@
 (function(global){
   "use strict";
   const FORMAT = 1;
+  const CONCURRENCY = 4; // сколько таблиц выгружается одновременно (быстрее при медленной сети, нагрузка на базу всё равно небольшая)
   // [таблица, колонки для сортировки, область]:
   //  "clan"  — у строк есть clan_id: берём только строки этого клана (фильтр в запросе + повторная проверка здесь);
   //  "id"    — таблица clans: только строка своего клана;
@@ -53,7 +54,7 @@
     const ordered = () => { let q = base(); order.forEach(k => { q = q.order(k); }); return q; };
     let res = await L2Cabinet.selectAll(ordered);
     // колонки сортировки может не быть — тогда без сортировки (область «только свой клан» остаётся)
-    if(res.error && /column [^ ]+ does not exist/i.test(res.error.message || "") && !/clan_id|group_id|profile_id|id/.test(res.error.message || "")) res = await L2Cabinet.selectAll(base);
+    if(res.error && /column [^ ]+ does not exist/i.test(res.error.message || "") && !/clan_id|group_id|profile_id|\bid\b/.test(res.error.message || "")) res = await L2Cabinet.selectAll(base);
     if(res.error) return res;
     // повторная проверка: строки с чужим clan_id в копию не попадают
     let foreign = 0;
@@ -74,19 +75,32 @@
     opts = opts || {};
     if(!opts.clanId) throw new Error("no_clan");
     const tables = {}, skipped = {}, parents = {};
-    let rows = 0, foreign = 0;
-    for(let i = 0; i < TABLES.length; i++){
-      const [name, order, scope] = TABLES[i];
-      if(opts.onProgress) opts.onProgress(name, i + 1, TABLES.length);
+    let rows = 0, foreign = 0, done = 0;
+    const total = TABLES.length;
+    const one = async ([name, order, scope]) => {
       try{
         const res = await dumpTable(db, name, order, scope, opts.clanId, parents);
-        if(res.error){ skipped[name] = res.error.message || String(res.error); continue; } // таблицы нет (миграция не выполнена) или нет доступа
-        tables[name] = res.data || [];
-        foreign += res.foreign || 0;
-        rows += tables[name].length;
-        if(name === "clan_groups" || name === "profiles") parents[name] = tables[name].map(r => r.id); // для таблиц без своего clan_id
+        if(res.error){ skipped[name] = res.error.message || String(res.error); }  // таблицы нет (миграция не выполнена) или нет доступа
+        else {
+          tables[name] = res.data || [];
+          foreign += res.foreign || 0;
+          rows += tables[name].length;
+          if(name === "clan_groups" || name === "profiles") parents[name] = tables[name].map(r => r.id); // для таблиц без своего clan_id
+        }
       }catch(e){ skipped[name] = e.message || String(e); }
-    }
+      done++;
+      if(opts.onProgress) opts.onProgress(name, done, total);
+    };
+    // сначала «родители» (профили, группы) — по ним определяется принадлежность таблиц без своего clan_id; остальные — по нескольку таблиц сразу
+    const first = TABLES.filter(t => t[0] === "profiles" || t[0] === "clan_groups");
+    for(const t of first) await one(t);
+    const rest = TABLES.filter(t => !first.includes(t));
+    let next = 0;
+    await Promise.all(Array.from({ length: CONCURRENCY }, async () => { while(next < rest.length) await one(rest[next++]); }));
+    // порядок таблиц в файле — как в списке, а не в порядке завершения
+    const ordered = {};
+    TABLES.forEach(([name]) => { if(name in tables) ordered[name] = tables[name]; });
+    Object.keys(tables).forEach(k => delete tables[k]); Object.assign(tables, ordered);
     const now = new Date();
     const meta = { app: "l2-panel", format: FORMAT, created_at: now.toISOString(), clan_name: opts.clanName || "", clan_id: opts.clanId || null,
       tables: Object.keys(tables).length, rows, scope: "clan", excluded_foreign_rows: foreign };

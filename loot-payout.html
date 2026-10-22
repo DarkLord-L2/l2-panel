@@ -179,7 +179,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=22"></script>
+<script src="js/supabase-client.js?v=24"></script>
 <script src="js/i18n.js?v=83"></script>
 <script src="js/nick-match.js?v=4"></script>
 <script>
@@ -413,11 +413,12 @@
     // при известном списке мероприятий берём только их строки (раньше качалась вся статистика клана и фильтровалась тут)
     const ids = eventIdFilter ? [...eventIdFilter] : null;
     if(ids && !ids.length){ leaderStats = new Map(); visitsByNorm = new Map(); leaderOrder = []; rawUnresolved = new Map(); return; }
-    const { data, error } = await L2Cabinet.selectAll(() => {
+    const base = (list) => {
       let q = db.from("event_stats").select("nickname, batch_id, is_party_leader, removed, event_id").not("batch_id", "is", null);
-      if(ids) q = q.in("event_id", ids);
+      if(list) q = q.in("event_id", list);
       return q.order("id");
-    });
+    };
+    const { data, error } = ids ? await L2Cabinet.selectAllIn(base, ids) : await L2Cabinet.selectAll(() => base(null));
     if(error){ errEl.textContent = L2I18n.t("payout.loadDataFailed", "Не удалось загрузить данные: ") + error.message; return; }
 
     const byBatch = new Map();

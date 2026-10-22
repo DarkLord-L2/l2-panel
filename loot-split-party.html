@@ -190,7 +190,7 @@
 <input type="file" id="dayIconPicker" accept="image/*" style="display:none;" />
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=22"></script>
+<script src="js/supabase-client.js?v=24"></script>
 <script src="js/classes.js?v=1"></script>
 <script src="js/i18n.js?v=83"></script>
 <script src="js/num-format.js?v=1"></script>
@@ -557,7 +557,7 @@
     const eventIds = events.map(e => e.id);
     if(!eventIds.length) return;
 
-    const { data: entries, error: entErr } = await L2Cabinet.selectAll(() => db.from("attendance_entries").select("nickname, event_id").in("event_id", eventIds).order("id"));
+    const { data: entries, error: entErr } = await L2Cabinet.selectAllIn((part) => db.from("attendance_entries").select("nickname, event_id").in("event_id", part).order("id"), eventIds);
     if(entErr){ console.error(entErr); return; }
     // ник из журнала явки → ник пати из «Групп» (запасной вариант — перепись)
     await loadNickAliases();
