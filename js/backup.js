@@ -36,7 +36,7 @@
     ["tax_payments", ["id"], "clan"], ["tax_donations", ["id"], "clan"], ["tax_settings", ["clan_id"], "clan"], ["tax_archived_weeks", ["clan_id", "week_start"], "clan"],
     ["loot_split_settings", ["clan_id"], "clan"], ["loot_class_coefficients", ["clan_id", "class_name"], "clan"], ["loot_party_coefficients", ["clan_id", "group_id"], "clan"],
     ["loot_leader_coefficients", ["clan_id", "nickname"], "clan"], ["payout_batches", ["clan_id"], "clan"], ["payout_archive", ["id"], "clan"],
-    ["cd_skills", ["id"], "clan"], ["cd_marks", ["id"], "clan"], ["cd_settings", ["clan_id"], "clan"], ["cd_skill_off", ["group_id", "skill_id"], "clan"], ["cd_skill_copies", ["group_id", "skill_id"], "clan"],
+    ["cd_skills", ["id"], "clan"], ["cd_marks", ["group_id", "skill_id", "slot"], "clan"], ["cd_settings", ["clan_id"], "clan"], ["cd_skill_off", ["group_id", "skill_id"], "clan"], ["cd_skill_copies", ["group_id", "skill_id"], "clan"],
     ["skill_panels", ["profile_id"], { parent: "profiles", col: "profile_id" }], ["admin_audit_log", ["id"], "clan"],
   ];
 
@@ -54,7 +54,7 @@
     const ordered = () => { let q = base(); order.forEach(k => { q = q.order(k); }); return q; };
     let res = await L2Cabinet.selectAll(ordered);
     // колонки сортировки может не быть — тогда без сортировки (область «только свой клан» остаётся)
-    if(res.error && /column [^ ]+ does not exist/i.test(res.error.message || "") && !/clan_id|group_id|profile_id|\bid\b/.test(res.error.message || "")) res = await L2Cabinet.selectAll(base);
+    if(res.error && /column [^ ]+ does not exist/i.test(res.error.message || "") && !/clan_id|group_id|profile_id/.test(res.error.message || "")) res = await L2Cabinet.selectAll(base);
     if(res.error) return res;
     // повторная проверка: строки с чужим clan_id в копию не попадают
     let foreign = 0;
