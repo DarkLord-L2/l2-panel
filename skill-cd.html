@@ -545,7 +545,21 @@
     tickHost = floatWin || window;
     tickHandle = tickHost.setInterval(tickTimers, 1000);
   }
-  document.addEventListener("visibilitychange", tickTimers);
+  // вкладку не видно (свернули/переключились) и доски в окошке поверх игры нет — секундный таймер и перезагрузки данных
+  // ставим на паузу; при возвращении один раз догружаем, что изменилось за это время
+  let staleWhileHidden = false;
+  const idleTab = () => { try { return document.hidden && !floatWin; } catch(e){ return false; } }; // floatWin объявлен ниже
+  function onVisibility(){
+    if(idleTab()){
+      try { if(tickHandle != null) tickHost.clearInterval(tickHandle); } catch(e){}
+      tickHandle = null;
+      return;
+    }
+    if(tickHandle == null) startTick();
+    tickTimers();
+    if(staleWhileHidden){ staleWhileHidden = false; scheduleSkills(); }
+  }
+  document.addEventListener("visibilitychange", onVisibility);
 
   // ---------- realtime ----------
   let liveOk = false;
@@ -558,10 +572,12 @@
   }
   let marksTimer = null, skillsTimer = null;
   function scheduleMarks(){
+    if(idleTab()){ staleWhileHidden = true; return; } // не видно — обновим при возвращении
     clearTimeout(marksTimer);
     marksTimer = setTimeout(async () => { try { await loadMarks(); renderBoard(); } catch(e){ console.error(e); } }, 150);
   }
   function scheduleSkills(){
+    if(idleTab()){ staleWhileHidden = true; return; }
     clearTimeout(skillsTimer);
     skillsTimer = setTimeout(async () => {
       try { await Promise.all([loadGroups(), loadSkills(), loadMarks(), loadSettings(), loadOff(), loadCopies()]); renderBoard(); if($("offOverlay").classList.contains("show")) renderOffMatrix(); if($("skillsOverlay").classList.contains("show")) renderSkillList(); }
@@ -579,7 +595,7 @@
     if(copiesOk) ch = ch.on("postgres_changes", { event: "*", schema: "public", table: "cd_skill_copies" }, scheduleSkills);
     channel = ch.subscribe((status) => setLive(status === "SUBSCRIBED"));
   }
-  setInterval(() => { if(!liveOk) scheduleMarks(); }, 20000);
+  setInterval(() => { if(!liveOk && !idleTab()) scheduleMarks(); }, 20000);
   window.addEventListener("pagehide", () => { try { if(channel) db.removeChannel(channel); } catch(e){} closeFloating(); });
 
   // ---------- плавающее окошко поверх игры ----------

@@ -569,10 +569,14 @@
 
   // ---------- вкладки Админ-панели (вместо одной длинной страницы) ----------
   const ADMIN_TAB_KEY = "l2AdminActiveTab";
+  let adminReady = false; // справочники загружены — вкладки могут подгружать свои данные
+  let currentTab = "users";
   function setAdminTab(tab){
+    currentTab = tab;
     document.querySelectorAll(".admin-nav-item").forEach(btn => btn.classList.toggle("active", btn.dataset.tab === tab));
     document.querySelectorAll(".admin-tab-panel").forEach(p => p.classList.toggle("active", p.dataset.panel === tab));
     localStorage.setItem(ADMIN_TAB_KEY, tab);
+    if(adminReady) ensureTab(tab); // данные вкладки грузятся при первом открытии, а не все сразу
   }
   document.querySelectorAll(".admin-nav-item").forEach(btn => {
     btn.addEventListener("click", () => setAdminTab(btn.dataset.tab));
@@ -1998,27 +2002,40 @@
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(roleDisplayLabel(r)), false);
   fillSelect(document.getElementById("newParty"), parties, p => escapeHtml(p.name), true);
   renderRoleLabelsList();
-  await Promise.all([loadUsers(), loadMatrix(), loadSectionOrder(), loadSectionToggles(), loadBranding(), loadShares(), loadLootCoefficients(), loadLootPartyCoefficients(), loadLootLeaderCoefficients(), loadWeeklyTaxAmount(), loadTaxesEnabled(), loadTaxReportTemplate(), loadLootHideZero(), loadLootLeaderSolo(), loadMinBoostPercent(), loadPayoutShowLeft(), loadClosePayoutState()]);
-  renderSectionOrder();
-  renderSectionToggleList();
-  renderDkpSectionToggleList();
-  renderLootCoefList();
-  renderLootPartyCoefList();
-  renderLootLeaderCoefList();
-  renderPresetGrid();
+  // Каждая вкладка грузит свои данные при ПЕРВОМ открытии (раньше все вкладки качали всё сразу при заходе в Админ-панель).
+  // Неоткрытые вкладки ничего не запрашивают и не рисуют.
+  let togglesP = null;
+  const ensureToggles = () => togglesP || (togglesP = loadSectionToggles());
+  const TAB_LOADERS = {
+    users: async () => { await loadUsers(); },
+    sections: async () => { await Promise.all([loadMatrix(), loadSectionOrder(), ensureToggles()]); renderSectionOrder(); renderSectionToggleList(); },
+    rules: async () => { await Promise.all([loadWeeklyTaxAmount(), loadTaxesEnabled(), loadTaxReportTemplate()]); },
+    dkp: async () => {
+      await Promise.all([ensureToggles(), loadLootCoefficients(), loadLootPartyCoefficients(), loadLootLeaderCoefficients(), loadLootHideZero(), loadLootLeaderSolo(),
+        loadMinBoostPercent(), loadPayoutShowLeft(), loadClosePayoutState()]);
+      renderDkpSectionToggleList(); renderLootCoefList(); renderLootPartyCoefList(); renderLootLeaderCoefList();
+    },
+    branding: async () => { await loadBranding(); renderPresetGrid(); },
+    shares: async () => { await loadShares(); },
+  };
+  const tabLoaded = new Map();
+  function ensureTab(tab){
+    const fn = TAB_LOADERS[tab];
+    if(!fn) return Promise.resolve();
+    if(!tabLoaded.has(tab)) tabLoaded.set(tab, fn().catch(e => { tabLoaded.delete(tab); console.error(e); })); // не вышло — попробуем снова при следующем открытии
+    return tabLoaded.get(tab);
+  }
+  adminReady = true;
+  await ensureTab(currentTab);
 
   window.addEventListener("storage", (e) => {
     if(e.key !== "l2Lang") return;
-    renderUsersGrouped();
-    renderSectionOrder();
-    renderSectionToggleList();
-    renderDkpSectionToggleList();
-    renderLootCoefList();
-    renderLootPartyCoefList();
-    renderLootLeaderCoefList();
+    // перерисовываем только то, что уже загружено (остальное нарисуется на нужном языке при открытии вкладки)
+    if(tabLoaded.has("users")) renderUsersGrouped();
+    if(tabLoaded.has("sections")){ renderSectionOrder(); renderSectionToggleList(); loadMatrix(); }
+    if(tabLoaded.has("dkp")){ renderDkpSectionToggleList(); renderLootCoefList(); renderLootPartyCoefList(); renderLootLeaderCoefList(); }
     renderRoleLabelsList();
-    renderPresetGrid();
-    loadMatrix();
+    if(tabLoaded.has("branding")) renderPresetGrid();
   });
 })();
 </script>
