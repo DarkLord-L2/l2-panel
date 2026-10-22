@@ -563,7 +563,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=22"></script>
-<script src="js/i18n.js?v=80"></script>
+<script src="js/i18n.js?v=81"></script>
 <script src="js/tax-flag.js?v=1"></script>
 <script src="js/layout-board.js?v=9"></script>
 <script src="js/nick-match.js?v=4"></script>
@@ -937,34 +937,71 @@
   // «Применить ко всем группам»: расположение этой группы (карточки участников + большие ячейки) копируется во все остальные.
   // Положения привязаны к никам, а у каждой группы они свои, поэтому вручную расставленные места переносятся по порядку участников
   // (1-й → 1-е место…); шаблон («Столбик» и т. п.) переносится как правило, лидер в нём идёт первым в каждой группе.
-  function applyLayoutToAllGroups(){
+  async function applyLayoutToAllGroups(){
     endMemberEdits(); blocksBoard.endEdit(true);
     const others = groups.filter(g => g.id !== currentGroupId);
     if(!others.length) return;
-    if(!confirm(L2I18n.t("layout.applyAllConfirm", "Применить расположение этой группы ко всем остальным группам? Их собственные настройки расположения будут заменены.") + " (" + others.length + ")")) return;
+    const norm = (t) => String(t || "").trim().toLowerCase();
+    const srcSecs = groupSections(currentGroupId).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    // каких блоков (по названию) не хватает в других группах — их создаём (только админ: состав блоков общий для всех)
+    const missing = isAdmin ? srcSecs.filter(sec => others.some(g => !groupSections(g.id).some(x => norm(x.title) === norm(sec.title)))) : [];
+    let question = L2I18n.t("layout.applyAllConfirm", "Применить расположение этой группы ко всем остальным группам? Их собственные настройки расположения будут заменены.") + " (" + others.length + ")";
+    if(missing.length) question += "\n\n" + L2I18n.t("layout.applyAllSections", "В группах, где их нет, будут созданы блоки: {list}.").replace("{list}", missing.map(x => "«" + x.title + "»").join(", "));
+    if(!confirm(question)) return;
+    const btn = document.getElementById("applyAllBtn");
+    btn.disabled = true;
     const read = (key) => { try { return JSON.parse(localStorage.getItem(key) || "null"); } catch(e){ return null; } };
-    const orderedNicks = (gid) => {
-      const om = memberOrderMap.get(gid) || new Map();
-      return (membersByGroup.get(gid) || []).slice().sort((a, b) => ((om.get(a) ?? 0) - (om.get(b) ?? 0)) || a.localeCompare(b));
-    };
-    const srcMembers = read("l2LayoutMembers:" + profile.id + ":" + currentGroupId);
-    const srcBlocks = read("l2LayoutBlocks:" + profile.id + ":" + currentGroupId);
-    const srcNicks = orderedNicks(currentGroupId);
     const put = (key, val) => { try { if(val) localStorage.setItem(key, JSON.stringify(val)); else localStorage.removeItem(key); } catch(e){} };
-    others.forEach(g => {
-      let m = null;
-      if(srcMembers && srcMembers.mode === "custom"){
-        if(srcMembers.preset) m = { mode: "custom", items: {}, preset: srcMembers.preset, order: null };
-        else {
-          const nicks = orderedNicks(g.id), items = {};
-          srcNicks.forEach((nick, i) => { if(srcMembers.items[nick] && nicks[i] != null) items[nicks[i]] = srcMembers.items[nick]; });
-          m = { mode: "custom", items, preset: null, order: null };
+    const orderedNicks = (gid, sid) => {
+      const om = memberOrderMap.get(gid) || new Map();
+      return (membersByGroup.get(gid) || []).filter(n => (sectionIdOf(gid, n) || null) === (sid || null))
+        .sort((a, b) => ((om.get(a) ?? 0) - (om.get(b) ?? 0)) || a.localeCompare(b));
+    };
+    // раскладка карточек одного блока → такая же у блока другой группы: шаблон — как правило (лидер сверху),
+    // ручная расстановка — по порядку участников (1-й на место 1-го…)
+    const convertMembers = (src, srcNicks, dstNicks) => {
+      if(!src) return null;
+      if(src.mode !== "custom") return { mode: src.mode, items: {}, preset: null, order: null };
+      if(src.preset) return { mode: "custom", items: {}, preset: src.preset, order: null };
+      const items = {};
+      srcNicks.forEach((nick, k) => { if(src.items[nick] && dstNicks[k] != null) items[dstNicks[k]] = src.items[nick]; });
+      return { mode: "custom", items, preset: null, order: null };
+    };
+    const memKey = (gid, sid) => "l2LayoutMembers:" + profile.id + ":" + gid + (sid ? ":s:" + sid : "");
+    const srcBlocks = read("l2LayoutBlocks:" + profile.id + ":" + currentGroupId);
+    const srcMain = read(memKey(currentGroupId, null));
+    let failed = "";
+    for(const g of others){
+      // блоки: тот же набор по названию; чего нет — создаём (админ), лишние свои у группы не трогаем
+      const secMap = new Map(); // id блока этой группы → id блока группы g
+      for(const sec of srcSecs){
+        let t = groupSections(g.id).find(x => norm(x.title) === norm(sec.title));
+        if(!t && isAdmin){
+          const { data, error } = await db.from("clan_group_sections").insert({ group_id: g.id, title: sec.title, sort_order: sec.sort_order || 0 })
+            .select("id, group_id, title, sort_order").single();
+          if(error || !data){ failed = (error && error.message) || "insert"; continue; }
+          sections.push(data); t = data;
         }
-      } else if(srcMembers) m = { mode: srcMembers.mode, items: {}, preset: null, order: null };
-      put("l2LayoutMembers:" + profile.id + ":" + g.id, m);
-      put("l2LayoutBlocks:" + profile.id + ":" + g.id, srcBlocks);
-    });
-    const btn = document.getElementById("applyAllBtn"), old = btn.innerHTML;
+        if(t) secMap.set(sec.id, t.id);
+      }
+      // большие ячейки: «Участники», «Проверка пати» и блоки — по соответствию блоков
+      let blocks = null;
+      if(srcBlocks){
+        const items = {};
+        Object.entries(srcBlocks.items || {}).forEach(([k, v]) => {
+          if(k.startsWith("sec:")){ const to = secMap.get(k.slice(4)); if(to) items["sec:" + to] = v; }
+          else items[k] = v;
+        });
+        blocks = Object.assign({}, srcBlocks, { items, order: null });
+      }
+      put("l2LayoutBlocks:" + profile.id + ":" + g.id, blocks);
+      // карточки участников: основной блок и каждый блок по соответствию
+      put(memKey(g.id, null), convertMembers(srcMain, orderedNicks(currentGroupId, null), orderedNicks(g.id, null)));
+      secMap.forEach((to, from) => put(memKey(g.id, to), convertMembers(read(memKey(currentGroupId, from)), orderedNicks(currentGroupId, from), orderedNicks(g.id, to))));
+    }
+    btn.disabled = false;
+    if(failed){ alert(L2I18n.t("sections.createFailed", "Не удалось создать блок (выполнена ли миграция schema_group_sections.sql?): ") + failed); return; }
+    const old = btn.innerHTML;
     btn.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3.2L13 4.6"/></svg>';
     btn.classList.add("active");
     setTimeout(() => { btn.innerHTML = old; btn.classList.remove("active"); }, 1600);

@@ -1129,6 +1129,7 @@
     "sections.empty": ["В блоке пока никого нет.", "У блоці поки нікого немає.", "Nobody in this block yet."],
     "sections.moveOption": ["Переместить в блок…", "Перемістити в блок…", "Move to block…"],
     "sections.createFailed": ["Не удалось создать блок (выполнена ли миграция schema_group_sections.sql?): ", "Не вдалося створити блок (чи виконано міграцію schema_group_sections.sql?): ", "Could not create the block (was schema_group_sections.sql run?): "],
+    "layout.applyAllSections": ["В группах, где их нет, будут созданы блоки: {list}.", "У групах, де їх немає, буде створено блоки: {list}.", "Blocks will be created in groups that don't have them: {list}."],
     "layout.presets": ["Шаблоны", "Шаблони", "Presets"],
     "layout.preset.compact": ["Компактные плитки", "Компактні плитки", "Compact tiles"],
     "layout.preset.list": ["Список", "Список", "List"],
