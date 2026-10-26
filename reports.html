@@ -191,6 +191,7 @@
   /* радары тянутся вместе с панелью (потолок — чтобы на широкой не распухали) */
   .rep-radar-svg{ width:100%; max-width:min(100%, 380px); display:block; margin:0 auto; overflow:visible; }
   .rep-radar-grid{ fill:none; stroke: var(--border); stroke-width:1; }
+  .rep-radar-scale{ font-size:10.5px; color: var(--text-dim); text-align:center; margin:6px 0 0; line-height:1.4; }
   .rep-radar-cur{ fill: rgba(139,92,246,.28); stroke:#8b5cf6; stroke-width:2; }
   .rep-radar-avg{ fill:none; stroke:#8b5cf6; stroke-width:1.5; stroke-dasharray:4 3; opacity:.9; }
   .rep-radar-label{ font-size:9px; fill: var(--text-dim); }
@@ -310,6 +311,7 @@
       <!-- рядом с заголовком, а не в правом углу шапки — там её перекрывает
            виджет профиля (.who-widget, плавает поверх контента в углу) -->
       <button class="settings-btn" id="groupLabelSettingsBtn" data-i18n-attr="title:reports.groupLabelSettingsBtnTitle" title="Настройки меток пати" style="display:none;" data-i18n="reports.groupLabelSettingsBtn">⚙ Метки пати</button>
+      <button class="settings-btn" id="backfillClassesBtn" data-i18n-attr="title:reports.backfillBtnTitle" title="Записать профессии, распознанные по иконкам, тем, у кого в «Участниках клана» профессии ещё нет" style="display:none;" data-i18n="reports.backfillBtn">⟳ Профессии в состав</button>
     </div>
   </div>
 
@@ -392,6 +394,7 @@
 
         <div id="cmpBody" style="display:none;">
           <div id="cmpRadarWrap"></div>
+          <div class="rep-cls-tabs" id="cmpModeTabs" style="margin-top:10px;"></div>
           <div class="rep-table-scroll">
             <table class="cmp-table">
               <thead>
@@ -400,6 +403,7 @@
               <tbody id="cmpTableBody"></tbody>
             </table>
           </div>
+          <p class="hint" id="cmpModeHint" style="font-size:11px;"></p>
         </div>
         <p class="hint" id="cmpEmpty" data-i18n="reports.cmpPartiesEmpty">Отметьте хотя бы 2 пати, чтобы увидеть сравнение.</p>
       </div>
@@ -487,7 +491,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=24"></script>
-<script src="js/i18n.js?v=87"></script>
+<script src="js/i18n.js?v=89"></script>
 <script src="js/nick-match.js?v=4"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
@@ -511,6 +515,7 @@
   // не-админ с назначенной пати видит только свою группу во всех фильтрах по группе
   const isPartyRestricted = !isAdmin && !!profile.party_id;
   document.getElementById("groupLabelSettingsBtn").style.display = isAdmin ? "" : "none";
+  document.getElementById("backfillClassesBtn").style.display = isAdmin ? "" : "none";
 
   // статистика (килы/смерти/PvP/PvE) заносится в event_stats автоматически при
   // загрузке скринов в «Посещаемости» (js/event-roster.js) — здесь только просмотр.
@@ -1583,6 +1588,53 @@
     document.getElementById("sumActive").textContent = String(t.active);
   }
 
+  // ---------- «⟳ Профессии в состав»: распознанные по иконкам профессии (report_class_overrides,
+  // source = auto) записываются в «Участники клана» (member_classes) тем, у кого там
+  // профессий ещё нет вообще; у кого они есть — не трогаем. Профессия — самая частая из
+  // распознанных за всё время. Перед записью — подтверждение со списком.
+  async function backfillMemberClasses(){
+    const btn = document.getElementById("backfillClassesBtn");
+    btn.disabled = true;
+    try{
+      const ovRes = await db.from("report_class_overrides").select("nickname_norm, class_name, source").eq("clan_id", profile.clan_id);
+      if(ovRes.error){ alert(L2I18n.t("reports.saveFailed", "Не удалось сохранить: ") + ovRes.error.message); return; }
+      const votes = new Map(); // ключ ника -> Map(профессия -> сколько раз)
+      (ovRes.data || []).filter(r => r.source === "auto" && r.class_name).forEach(r => {
+        if(!votes.has(r.nickname_norm)) votes.set(r.nickname_norm, new Map());
+        const m = votes.get(r.nickname_norm);
+        m.set(r.class_name, (m.get(r.class_name) || 0) + 1);
+      });
+      const mcRes = await db.from("member_classes").select("nickname, class_name, class_name_2, class_name_3, class_name_4").eq("clan_id", profile.clan_id);
+      if(mcRes.error){ alert(L2I18n.t("reports.saveFailed", "Не удалось сохранить: ") + mcRes.error.message); return; }
+      const hasClass = new Set((mcRes.data || []).filter(r => memberClasses(r).length).map(r => normalizeNick(r.nickname)));
+      const emptyRowNick = new Map((mcRes.data || []).filter(r => !memberClasses(r).length).map(r => [normalizeNick(r.nickname), r.nickname]));
+      const nickByKey = new Map(); // как этот человек записан в статистике
+      allRawStats.forEach(r => { const k = normalizeNick(r.nickname); if(!nickByKey.has(k)) nickByKey.set(k, r.nickname); });
+
+      const rows = [];
+      votes.forEach((m, key) => {
+        if(hasClass.has(key)) return;
+        const nick = emptyRowNick.get(key) || nickByKey.get(key);
+        if(!nick) return;
+        const best = [...m.entries()].sort((a, b) => b[1] - a[1])[0][0];
+        rows.push({ clan_id: profile.clan_id, nickname: nick, class_name: best });
+      });
+      if(!rows.length){ alert(L2I18n.t("reports.backfillNone", "Некому записывать: у всех распознанных уже есть профессии в составе.")); return; }
+
+      const preview = rows.slice(0, 15).map(r => r.nickname + " — " + r.class_name).join("\n") + (rows.length > 15 ? "\n…" : "");
+      if(!confirm(L2I18n.t("reports.backfillConfirm", "Записать распознанные профессии в «Участники клана» ({n} чел.)?").replace("{n}", rows.length) + "\n\n" + preview)) return;
+
+      const { error } = await db.from("member_classes").upsert(rows, { onConflict: "clan_id,nickname" });
+      if(error){ alert(L2I18n.t("reports.saveFailed", "Не удалось сохранить: ") + error.message); return; }
+      await loadMemberInfo();
+      await refreshReport();
+      alert(L2I18n.t("reports.backfillDone", "Готово: профессии записаны ({n} чел.).").replace("{n}", rows.length));
+    } finally {
+      btn.disabled = false;
+    }
+  }
+  document.getElementById("backfillClassesBtn").addEventListener("click", backfillMemberClasses);
+
   // ---------- «Лучшие за период» и «По профессиям» — под плитками общей статистики ----------
   // Считаются по тем же строкам, что и таблица слева (период + фильтр по пати), без
   // удалённых. Профессия/картинка — те же, что в таблице: аватарка человека, иначе
@@ -1701,9 +1753,13 @@
       return RADAR_ANGLES.map((a, i) => toPoint(a, fracs[i]))
         .map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
     }
-    const grid = [0.25, 0.5, 0.75, 1].map(lvl =>
+    // 5 колец по 20% — шкала-линейка; внешнее кольцо у радаров сравнения = лучший
+    // показатель по всем пати/людям (см. подсказку под ними)
+    const RINGS = [0.2, 0.4, 0.6, 0.8, 1];
+    const grid = RINGS.map(lvl =>
       `<polygon class="rep-radar-grid" points="${polyStr(RADAR_ANGLES.map(() => lvl))}"/>`
     ).join("");
+
     const axes = RADAR_ANGLES.map(a => {
       const p = toPoint(a, 1);
       return `<line x1="${cx}" y1="${cx}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="var(--border-lit)" stroke-width="1"/>`;
@@ -1716,6 +1772,14 @@
       return `<text x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle" class="rep-radar-label">${RADAR_LABELS_()[i]}</text>`;
     }).join("");
     return { polyStr, grid, axes, labels };
+  }
+
+  // подпись «чему равно 100%» под радаром: максимум по каждой оси
+  function radarScaleHint(maxPerAxis, key, fallback){
+    const loc = L2I18n.locale();
+    const fmt = (v, i) => i === 3 ? v.toFixed(2) : (i === 1 || i === 2 ? v.toFixed(1) : Math.round(v).toLocaleString(loc));
+    const vals = RADAR_LABELS_().map((l, i) => l + " " + fmt(maxPerAxis[i], i)).join(" · ");
+    return `<p class="rep-radar-scale">${escapeHtml(L2I18n.t(key, fallback).replace("{vals}", vals))}</p>`;
   }
 
   function renderRadar(current, avg){
@@ -1818,6 +1882,21 @@
     return { kills: sumKills / n, deaths: sumDeaths / n, kd: sumKd / n, pvp: sumPvp / n, pve: sumPve / n };
   }
 
+  // суммы по составу пати (кто из состава не ходил — просто не прибавляет); active —
+  // сколько из состава вообще есть в статистике за период
+  function computeGroupTotals(groupId, normStatsMap){
+    const roster = groupMembersMap.get(groupId) || [];
+    const t = { kills: 0, deaths: 0, pvp: 0, pve: 0, active: 0, roster: roster.length };
+    roster.forEach(nick => {
+      const st = normStatsMap.get(normalizeNick(nick));
+      if(!st) return;
+      t.kills += st.kills; t.deaths += st.deaths; t.pvp += st.pvp; t.pve += st.pve; t.active += 1;
+    });
+    t.kd = t.deaths > 0 ? t.kills / t.deaths : t.kills;
+    return t;
+  }
+  let cmpTableMode = "avg"; // "avg" — на человека (как радар), "sum" — всего (как «Итоги по пати»)
+
   function renderComparisonRadar(selectedGroupIds, normStatsMap){
     const wrap = document.getElementById("cmpRadarWrap");
     const series = selectedGroupIds.map(id => {
@@ -1829,9 +1908,12 @@
         vals: [avg.pvp, avg.kills, avg.deaths, avg.kd, avg.pve],
       };
     });
-    // нормализация каждой оси на максимум среди сравниваемых пати — иначе разные по
-    // масштабу метрики (урон в миллионах vs K:D в единицах) сплющили бы мелкие оси
-    const maxPerAxis = RADAR_LABELS_().map((_, i) => Math.max(...series.map(s => s.vals[i]), 1e-9));
+    // 100% каждой оси = лучший показатель среди ВСЕХ пати клана за период (а не только
+    // выбранных) — тогда фигура показывает реальную долю, а не «лучший из выбранных
+    // всегда упирается в край». Оси нормируются по отдельности: урон в тысячах и K:D в
+    // единицах иначе не сложить на одной шкале
+    const allVals = groups.map(g => { const a = computeGroupAverages(g.id, normStatsMap); return [a.pvp, a.kills, a.deaths, a.kd, a.pve]; });
+    const maxPerAxis = RADAR_LABELS_().map((_, i) => Math.max(...allVals.map(v => v[i]), ...series.map(s => s.vals[i]), 1e-9));
 
     const geo = radarGeometry(100, 68);
 
@@ -1850,7 +1932,8 @@
       `<svg viewBox="0 0 200 200" class="cmp-radar-svg">` +
         geo.grid + geo.axes + seriesPolys + geo.labels +
       `</svg>` +
-      `<div class="rep-radar-legend">${legend}</div>`;
+      `<div class="rep-radar-legend">${legend}</div>` +
+      radarScaleHint(maxPerAxis, "reports.radarScaleParties", "Внешнее кольцо — лучший среди всех пати клана за период (на человека): {vals}");
   }
 
   function renderComparisonTable(selectedGroupIds, normStatsMap){
@@ -1861,15 +1944,18 @@
       const avg = computeGroupAverages(id, normStatsMap);
       const color = groupColorMap.get(id);
       const roster = groupMembersMap.get(id) || [];
+      const tot = computeGroupTotals(id, normStatsMap);
+      const loc = L2I18n.locale();
+      const sum = cmpTableMode === "sum";
       const tr = document.createElement("tr");
       tr.innerHTML =
         `<td><span class="cmp-swatch" style="background:${color}"></span>${escapeHtml(g?.name || "?")}</td>` +
-        `<td>${avg.kills.toFixed(1)}</td>` +
-        `<td>${avg.deaths.toFixed(1)}</td>` +
-        `<td>${avg.kd.toFixed(2)}</td>` +
-        `<td>${Math.round(avg.pvp).toLocaleString(L2I18n.locale())}</td>` +
-        `<td>${Math.round(avg.pve).toLocaleString(L2I18n.locale())}</td>` +
-        `<td>${roster.length}</td>`;
+        `<td>${sum ? tot.kills.toLocaleString(loc) : avg.kills.toFixed(1)}</td>` +
+        `<td>${sum ? tot.deaths.toLocaleString(loc) : avg.deaths.toFixed(1)}</td>` +
+        `<td>${(sum ? tot.kd : avg.kd).toFixed(2)}</td>` +
+        `<td>${(sum ? tot.pvp : Math.round(avg.pvp)).toLocaleString(loc)}</td>` +
+        `<td>${(sum ? tot.pve : Math.round(avg.pve)).toLocaleString(loc)}</td>` +
+        `<td title="${escapeHtml(L2I18n.t("reports.cmpPeopleTitle", "Были на мероприятии / в составе пати"))}">${tot.active}/${roster.length}</td>`;
       body.appendChild(tr);
     });
   }
@@ -1888,7 +1974,19 @@
     const normStatsMap = statsByNormNick(comparisonPeriodRows());
     renderComparisonRadar(ids, normStatsMap);
     renderComparisonTable(ids, normStatsMap);
+    document.getElementById("cmpModeTabs").innerHTML = ["avg", "sum"].map(k =>
+      `<button type="button" class="rep-cls-tab${k === cmpTableMode ? " active" : ""}" data-cmp-mode="${k}">${escapeHtml(k === "avg" ? L2I18n.t("reports.cmpModeAvg", "На человека") : L2I18n.t("reports.cmpModeSum", "Всего"))}</button>`
+    ).join("");
+    document.getElementById("cmpModeHint").textContent = cmpTableMode === "avg"
+      ? L2I18n.t("reports.cmpModeHintAvg", "Среднее на каждого в составе пати из «Групп» (кто не ходил — считается как 0). «Чел.» — сколько из состава были на мероприятии.")
+      : L2I18n.t("reports.cmpModeHintSum", "Сумма по составу пати из «Групп». В «Итогах по пати» пати — это скрин мероприятия, поэтому цифры могут немного отличаться.");
   }
+  document.getElementById("cmpModeTabs").addEventListener("click", (e) => {
+    const k = e.target.closest("[data-cmp-mode]")?.dataset.cmpMode;
+    if(!k || k === cmpTableMode) return;
+    cmpTableMode = k;
+    renderComparison();
+  });
 
   // ---------- сравнение людей между собой (радар на N человек + таблица с точными цифрами) ----------
   // отмечаются кнопкой «весы» ⚖ прямо в строке таблицы (не поиском) — навёл на человека,
@@ -1937,9 +2035,10 @@
   // тот же пятиугольник-радар, что и у «Сравнение пати» (radarGeometry, общие оси
   // RADAR_LABELS/RADAR_ANGLES) — просто по людям вместо пати, до CMP_MAX_SELECTED
   // человек одновременно; точные цифры отдельно в таблице под радаром
-  function renderPeopleRadar(stats){
+  function renderPeopleRadar(stats, allVals){
     const wrap = document.getElementById("pplRadarWrap");
-    const maxPerAxis = RADAR_LABELS_().map((_, i) => Math.max(...stats.map(s => s.vals[i]), 1e-9));
+    // 100% = лучший среди ВСЕХ участников за период, а не только выбранных
+    const maxPerAxis = RADAR_LABELS_().map((_, i) => Math.max(...allVals.map(v => v[i]), ...stats.map(s => s.vals[i]), 1e-9));
     const geo = radarGeometry(100, 68);
 
     const seriesPolys = stats.map(s => {
@@ -1955,7 +2054,8 @@
       `<svg viewBox="0 0 200 200" class="cmp-radar-svg">` +
         geo.grid + geo.axes + seriesPolys + geo.labels +
       `</svg>` +
-      `<div class="rep-radar-legend">${legend}</div>`;
+      `<div class="rep-radar-legend">${legend}</div>` +
+      radarScaleHint(maxPerAxis, "reports.radarScalePeople", "Внешнее кольцо — лучший среди всех участников за период: {vals}");
   }
 
   function renderPeopleTable(stats){
@@ -1982,7 +2082,8 @@
       return { ...p, kills: s.kills, deaths: s.deaths, pvp: s.pvp, pve: s.pve, kd, vals: [s.pvp, s.kills, s.deaths, kd, s.pve] };
     });
 
-    renderPeopleRadar(stats);
+    const allVals = [...normStatsMap.values()].map(st => [st.pvp, st.kills, st.deaths, st.deaths > 0 ? st.kills / st.deaths : st.kills, st.pve]);
+    renderPeopleRadar(stats, allVals);
     renderPeopleTable(stats);
   }
 
@@ -2138,9 +2239,17 @@
   // картинки: аватарка человека (своя или иконка его профессии из «Групп»), иконка
   // пати — класс группы клана с таким же названием (как на карточках в «Группах»),
   // а если пати «Соло»/без группы — аватарка её лидера
+  // у тех, кому профессия ещё не записана в «Участники клана», берём ту, что стоит на
+  // самом мероприятии (распознана по иконке или выбрана вручную) — иначе была пустая рамка
+  let ptEventClass = new Map(); // normalizeNick(ник) -> профессия на выбранном мероприятии
+  async function ptLoadEventClasses(eventId){
+    const { data, error } = await db.from("report_class_overrides").select("nickname_norm, class_name").eq("period_key", "event:" + eventId);
+    ptEventClass = error ? new Map() : new Map((data || []).map(r => [r.nickname_norm, r.class_name]));
+  }
   function ptAvatar(nickname){
     const info = lookupMemberInfo(nickname);
-    return info.icon || classIcon(info.class_name) || BLANK_IMG;
+    const cls = (ptMode === "event" && ptEventClass.get(normalizeNick(nickname))) || info.class_name;
+    return info.icon || classIcon(cls) || BLANK_IMG;
   }
   function ptPartyIcon(p){
     const g = groups.find(x => x.name === p.label);
@@ -2208,7 +2317,10 @@
   async function ptLoadEvent(eventId){
     const token = ++ptLoadToken;
     const rows = allRawStats.filter(r => r.event_id === eventId && !r.removed);
-    const { data: lead, error } = await db.from("event_stats").select("nickname, batch_id").eq("event_id", eventId).eq("is_party_leader", true);
+    const [{ data: lead, error }] = await Promise.all([
+      db.from("event_stats").select("nickname, batch_id").eq("event_id", eventId).eq("is_party_leader", true),
+      ptLoadEventClasses(eventId),
+    ]);
     if(error) console.error(error);
     // пока ждали лидеров, могли выбрать другое мероприятие — старый ответ не рисуем
     if(token !== ptLoadToken) return;

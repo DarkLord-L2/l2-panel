@@ -546,17 +546,42 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
       }
       const existing = new Map((res.data || []).map(r => [r.nickname_norm, hasSource ? r.source : "manual"]));
       const byKey = new Map();
+      const accepted = []; // кого реально записали — им же запоминаем профессию в «Участниках клана»
       items.forEach(([n, cls]) => {
         const k = classKey(n);
         const e = existing.get(k);
         if(e && e !== "auto") return;
+        accepted.push([n, cls]);
         const row = { clan_id: profile.clan_id, nickname_norm: k, period_key: period, class_name: cls.className, updated_at: new Date().toISOString() };
         if(hasSource) row.source = "auto";
         byKey.set(k, row);
       });
       if(!byKey.size) return "";
       const { error } = await db.from("report_class_overrides").upsert([...byKey.values()], { onConflict: "clan_id,nickname_norm,period_key" });
-      return error ? error.message : "";
+      if(error) return error.message;
+      return await rememberMemberClasses(accepted);
+    }
+
+    // человеку, у которого в «Участниках клана» (member_classes) профессий ещё нет вообще,
+    // распознанная записывается как основная — чтобы не добавлять вручную «+ профессию».
+    // У кого профессии уже есть — не трогаем (там может быть вторая профессия/ручной выбор)
+    async function rememberMemberClasses(accepted){
+      if(!accepted.length) return "";
+      const { data, error } = await db.from("member_classes")
+        .select("nickname, class_name, class_name_2, class_name_3, class_name_4").eq("clan_id", profile.clan_id);
+      if(error) return error.message;
+      const rowsData = data || [];
+      const hasClass = new Set(rowsData.filter(r => r.class_name || r.class_name_2 || r.class_name_3 || r.class_name_4).map(r => classKey(r.nickname)));
+      const emptyRowNick = new Map(rowsData.filter(r => !(r.class_name || r.class_name_2 || r.class_name_3 || r.class_name_4)).map(r => [classKey(r.nickname), r.nickname]));
+      const rows = new Map();
+      accepted.forEach(([n, cls]) => {
+        const k = classKey(n);
+        if(hasClass.has(k) || rows.has(k)) return;
+        rows.set(k, { clan_id: profile.clan_id, nickname: emptyRowNick.get(k) || n, class_name: cls.className });
+      });
+      if(!rows.size) return "";
+      const { error: upErr } = await db.from("member_classes").upsert([...rows.values()], { onConflict: "clan_id,nickname" });
+      return upErr ? upErr.message : "";
     }
   }
 
