@@ -142,6 +142,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
     <div data-role="upload" style="display:none; margin-top:10px;">
       <input type="file" data-role="file-input" accept="image/*" multiple style="display:none;" />
       <button class="btn" data-role="file-btn">${L2I18n.t("eventRoster.pickFilesBtn", "Выбрать файлы…")}</button>
+      <button class="btn" data-role="review-btn" style="display:none; margin-left:8px;"></button>
       <p class="upload-status" data-role="status"></p>
       <div class="chip-row" data-role="chips"></div>
       <div data-role="classes" class="er-classes"></div>
@@ -199,6 +200,9 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
   let batchLeaderOf = new Map();
   let pendingClass = new Map(); // ник -> { className, score, margin, needsCheck, top, crop, confirmed, skipped } — профессия по иконке скрина
   let classNotes = [];          // пояснения, почему профессии на скрине не определены
+  // копии строк каждого скрина для окна «Проверить распознанное» (js/screenshot-review.js):
+  // [{ idx, image, rows: [{ nick, orig, kills, deaths, pvp, pve, cls, leader }] }]
+  let reviewScreens = [];
 
   async function load(){
     const { data, error } = await db
@@ -330,10 +334,63 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
       pendingCollided = new Set();
       batchCount = 0;
       batchLeaderOf = new Map();
+      reviewScreens = [];
       q("file-input").value = "";
       q("status").textContent = "";
       q("error").textContent = "";
       renderChips();
+      updateReviewBtn();
+    }
+
+    // кнопка «Проверить распознанное» — только если загрузился js/screenshot-review.js и есть скрины;
+    // в подписи — число предупреждений. Любая ошибка здесь не мешает обычной загрузке скринов
+    async function updateReviewBtn(){
+      const btn = q("review-btn");
+      if(!btn) return;
+      if(!window.L2Review || !reviewScreens.length){ btn.style.display = "none"; return; }
+      btn.style.display = "";
+      let w = 0;
+      try{
+        const known = await loadKnownNicks(db);
+        w = L2Review.summarize(L2Review.analyze(reviewScreens, known, pendingCollided)).warn;
+      }catch(e){ console.error(e); }
+      btn.textContent = w
+        ? L2I18n.t("review.btnWarn", "🔍 Проверить распознанное ({w} ⚠)").replace("{w}", w)
+        : L2I18n.t("review.btn", "🔍 Проверить распознанное");
+    }
+
+    // результат окна проверки → обратно в pending/pendingStats/…: пересобираем из строк скринов,
+    // ники, добавленные вручную (не со скринов), остаются как были
+    function applyReview(edited){
+      try{
+        const manual = pending.filter(n => !pendingBatchOf.has(n));
+        const newClass = new Map();
+        const keptCollided = new Set();
+        pending = []; pendingStats = new Map(); pendingBatchOf = new Map();
+        edited.forEach(sc => {
+          let leaderNick = "";
+          sc.rows.forEach(r => {
+            if(!r.nick) return;
+            if(!pending.includes(r.nick)) pending.push(r.nick);
+            pendingStats.set(r.nick, { kills: r.kills, deaths: r.deaths, pvp_damage: r.pvp, pve_damage: r.pve });
+            pendingBatchOf.set(r.nick, sc.idx);
+            if(r.cls) newClass.set(r.nick, r.cls);
+            if(r.leader && !leaderNick) leaderNick = r.nick;
+            if(r.nick === r.orig && pendingCollided.has(r.nick)) keptCollided.add(r.nick);
+          });
+          const first = sc.rows.find(r => r.nick);
+          if(first) batchLeaderOf.set(sc.idx, leaderNick || first.nick); else batchLeaderOf.delete(sc.idx);
+        });
+        manual.forEach(n => { if(!pending.includes(n)) pending.push(n); });
+        pendingClass = newClass;
+        pendingCollided = keptCollided;
+        reviewScreens = edited.map(sc => ({ idx: sc.idx, image: sc.image, rows: sc.rows.map(r => Object.assign({}, r, { orig: r.nick })) }));
+        renderChips();
+        updateReviewBtn();
+      }catch(err){
+        console.error(err);
+        q("error").textContent = L2I18n.t("review.applyFailed", "Не удалось применить правки: ") + err.message;
+      }
     }
 
     q("add-btn").addEventListener("click", () => {
@@ -439,12 +496,41 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
             );
             batchLeaderOf.set(bIdx, (leaderMatch || rows[0]).nickname);
           }
+          // копия строк скрина для окна проверки
+          try{
+            if(bIdx != null){
+              const leaderNick = batchLeaderOf.get(bIdx);
+              let leaderMarked = false;
+              reviewScreens.push({
+                idx: bIdx, image: rawDataUrl,
+                rows: rows.map(r => {
+                  const isLeader = !leaderMarked && r.nickname === leaderNick;
+                  if(isLeader) leaderMarked = true;
+                  return { nick: r.nickname, orig: r.nickname, kills: r.kills, deaths: r.deaths, pvp: r.pvp_damage, pve: r.pve_damage,
+                    cls: pendingClass.get(r.nickname) || null, leader: isLeader };
+                }),
+              });
+            }
+          }catch(revErr){ console.error(revErr); }
           renderChips();
         }catch(err){
           errEl.textContent = L2I18n.t("eventRoster.screenError", "Скрин {i}: {msg}").replace("{i}", i + 1).replace("{msg}", err.message);
         }
       }
       statusEl.textContent = L2I18n.t("eventRoster.doneRecognized", "Готово, распознано {n} ник(ов) со статистикой — проверьте перед сохранением.").replace("{n}", pending.length);
+      updateReviewBtn();
+    });
+
+    q("review-btn").addEventListener("click", async () => {
+      if(!window.L2Review || !reviewScreens.length) return;
+      try{
+        let known = [];
+        try{ known = await loadKnownNicks(db); }catch(e){ console.error(e); }
+        L2Review.open({ screens: reviewScreens, known, collided: pendingCollided, classIcon: classIconOf, onApply: applyReview });
+      }catch(err){
+        console.error(err);
+        q("error").textContent = L2I18n.t("review.openFailed", "Не удалось открыть проверку: ") + err.message;
+      }
     });
 
     q("manual-btn").addEventListener("click", () => {
