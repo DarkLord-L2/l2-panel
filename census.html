@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Перепись клана — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=27" />
+<link rel="stylesheet" href="js/theme.css?v=36" />
 <style>
   /* «Перепись клана» больше не привязана к календарной неделе — вкладки на
      произвольные даты (когда вздумается), а не ◀/▶ по 7 дней. Общий
@@ -17,6 +17,10 @@
   /* новый (по сравнению с предыдущей по времени переписью) ник — зелёная полоска
      слева на чипе, тот же приём, что у активного пункта в сайдбаре */
   .roster-chip.cw-new{ box-shadow: inset 3px 0 0 var(--ok); }
+  .roster-chip{ gap:9px; padding-left:8px; }
+  .roster-chip .cw-ico{ width:22px; height:22px; border-radius:50%; object-fit:cover; flex:none; display:block; box-shadow: 0 0 0 1px var(--border-lit); }
+  .roster-chip .cw-ico-none{ background: var(--panel-3); box-shadow: inset 0 0 0 1px var(--border-lit); }
+  .roster-chip input[type="checkbox"] + .cw-ico{ margin-left:-2px; }
 </style>
 </head>
 <body>
@@ -138,8 +142,11 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=24"></script>
-<script src="js/i18n.js?v=87"></script>
+<script src="js/page-keys.js?v=2"></script>
+<script src="js/supabase-client.js?v=25"></script>
+<script src="js/classes.js?v=1"></script>
+<script src="js/i18n.js?v=96"></script>
+<script src="js/paste-drop.js?v=1"></script>
 <script src="js/nick-match.js?v=4"></script>
 <script>
 (async function(){
@@ -191,6 +198,15 @@
     renderList();
     if(historyMode) renderHistory();
   }
+
+  // ← / → на клавиатуре — более ранняя/более поздняя перепись (вкладки идут от новой к старой)
+  window.L2PageKeys = (key) => {
+    const tabs = [...document.querySelectorAll("#cwTabs .cw-tab")];
+    const i = tabs.findIndex(b => b.classList.contains("btn-primary"));
+    const next = tabs[key === "ArrowLeft" ? i + 1 : i - 1];
+    if(i < 0 || !next) return false;
+    next.click(); return true;
+  };
 
   function renderTabs(){
     const wrap = document.getElementById("cwTabs");
@@ -348,11 +364,29 @@
           chip.appendChild(cb);
         }
 
+        const iconSrc = classIconByNick.get(entry.nickname);
+        const ico = document.createElement(iconSrc ? "img" : "span");
+        ico.className = "cw-ico" + (iconSrc ? "" : " cw-ico-none");
+        if(iconSrc){ ico.src = iconSrc; ico.alt = ""; }
+        chip.appendChild(ico);
+
         const span = document.createElement("span");
         span.textContent = entry.nickname;
         chip.appendChild(span);
         col.appendChild(chip);
       });
+  }
+
+  // иконка профессии у ника — только для вида; точное совпадение ника (Олежа ≠ ОлЕжА)
+  const classIconByNick = new Map();
+  async function loadClassIcons(){
+    try{
+      const { data } = await db.from("member_classes").select("nickname, class_name, icon");
+      (data || []).forEach(r => {
+        const src = r.icon || (window.L2_CLASS_ICON && r.class_name ? window.L2_CLASS_ICON(r.class_name) : null);
+        if(src) classIconByNick.set(r.nickname, src);
+      });
+    }catch(e){ console.error(e); } // без иконок перепись всё равно работает
   }
 
   function updateDeleteSelectedLabel(){
@@ -396,6 +430,8 @@
   document.getElementById("filePickBtn").addEventListener("click", () => {
     document.getElementById("fileInput").click();
   });
+  // Ctrl+V скрина из буфера и перетаскивание файлов (js/paste-drop.js)
+  if(window.L2PasteDrop) L2PasteDrop.attach(document.getElementById("fileInput"), document.getElementById("uploadCard"), { hintAfter: document.getElementById("filePickBtn") });
 
   document.getElementById("fileInput").addEventListener("change", async () => {
     let files = Array.from(document.getElementById("fileInput").files);
@@ -533,6 +569,7 @@
   });
 
   updateDeleteSelectedLabel();
+  await loadClassIcons();
   await loadAll();
 })();
 </script>

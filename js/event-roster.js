@@ -159,6 +159,8 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
   `;
 
   const q = (role) => root.querySelector(`[data-role="${role}"]`);
+  // Ctrl+V скрина из буфера и перетаскивание файлов — в тот же file-input (js/paste-drop.js)
+  if(isAdmin && window.L2PasteDrop) L2PasteDrop.attach(q("file-input"), q("upload"), { hintAfter: q("file-btn") });
 
   // язык может смениться, пока этот блок явки уже отрисован (переключатель живёт
   // в родительском окне) — точечно обновляем статичные подписи, не перестраивая

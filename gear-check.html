@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Проверка буста — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=27" />
+<link rel="stylesheet" href="js/theme.css?v=36" />
 <style>
   .gc-wrap{ padding:0 0 32px; }
   .gc-avg{ display:inline-flex; align-items:center; gap:8px; font-size:13px; color: var(--text-dim); margin:0; }
@@ -292,16 +292,22 @@
   /* экран выбора группы перед таблицей — та же карточная вёрстка, что в group-grid (groups.html) */
   .gc-group-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px; margin-bottom:16px; }
   .gc-group-card{
-    background: var(--panel);
+    background: linear-gradient(180deg, rgba(255,255,255,.02), transparent 90px), var(--panel);
     border:1px solid var(--border);
-    border-radius:8px;
+    border-radius:12px;
     padding:16px 18px;
     cursor:pointer;
-    transition: border-color .12s;
+    box-shadow: var(--shadow-1);
+    transition: border-color .15s var(--ease), box-shadow .15s var(--ease), background .15s var(--ease);
     display:flex; flex-direction:column; gap:10px;
   }
-  .gc-group-card:hover{ border-color: var(--border-lit); }
-  .gc-group-card-name{ font-size:14px; font-weight:500; color: var(--text); }
+  .gc-group-card:hover{
+    border-color: var(--accent-line);
+    background: linear-gradient(180deg, var(--accent-soft), transparent 110px), var(--panel);
+    box-shadow: 0 10px 28px rgba(0,0,0,.35);
+  }
+  .gc-group-card-name{ display:flex; align-items:center; gap:10px; font-size:14.5px; font-weight:600; color: var(--text); }
+  .gc-group-card-icon{ width:30px; height:30px; border-radius:8px; object-fit:cover; flex:none; box-shadow: 0 0 0 1px var(--border-lit); }
   .gc-group-card-members{ font-size:12px; color: var(--text-dim); line-height:1.5; min-height:2.2em; }
   .gc-group-card-foot{ display:flex; align-items:center; justify-content:space-between; }
   /* стрелка назад стоит прямо перед заголовком страницы («Проверка буста»), а не
@@ -601,8 +607,9 @@
 <input type="file" id="iconPicker" accept="image/*" style="display:none;" />
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=24"></script>
-<script src="js/i18n.js?v=87"></script>
+<script src="js/page-keys.js?v=2"></script>
+<script src="js/supabase-client.js?v=25"></script>
+<script src="js/i18n.js?v=96"></script>
 <script src="js/nick-match.js?v=4"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
@@ -781,7 +788,7 @@
     // порядок участников — тот же, что в разделе «Группы» (ручная перестановка иконок
     // пишется в clan_group_members.sort_order), при равенстве — по алфавиту
     const [{ data: g }, { data: m }] = await Promise.all([
-      db.from("clan_groups").select("id, name, sort_order, leader_nickname").eq("hidden", false).order("sort_order").order("name"),
+      db.from("clan_groups").select("id, name, sort_order, leader_nickname, class_name").eq("hidden", false).order("sort_order").order("name"),
       db.from("clan_group_members").select("group_id, nickname, sort_order").order("sort_order").order("nickname"),
     ]);
     groups = g || [];
@@ -845,7 +852,9 @@
       const card = document.createElement("div");
       card.className = "gc-group-card";
       card.innerHTML =
-        `<div class="gc-group-card-name">${escapeHtml(g.name)}</div>` +
+        `<div class="gc-group-card-name">` +
+          (classIcon(g.class_name) ? `<img class="gc-group-card-icon" src="${classIcon(g.class_name)}" alt="" />` : "") +
+          `<span>${escapeHtml(g.name)}</span></div>` +
         `<div class="gc-group-card-members">${members.length ? escapeHtml(preview) : L2I18n.t("gearCheck.noMembersYet", "Пока никого нет")}</div>` +
         `<div class="gc-group-card-foot"><span class="badge">${members.length}${L2I18n.t("gearCheck.membersCountSuffix", " участников")}</span></div>`;
       card.addEventListener("click", () => { selectedGroupId = g.id; showTableView(g.name); pushGcHistory(); });

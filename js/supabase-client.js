@@ -270,6 +270,22 @@ async function adminCreateUser({ username, password, nickname, role_key, party_i
   return body;
 }
 
+// Новый пароль пользователю своего клана — для ссылки-приглашения (🔗 в «Пользователях»).
+// Только главный админ, через Edge Function set-user-password; phrase — только для
+// защищённых от удаления аккаунтов (пароль защиты или мастер-сид-фраза)
+async function adminSetUserPassword(userId, password, phrase){
+  const { data: { session } } = await client.auth.getSession();
+  if(!session) throw new Error("no_session");
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/set-user-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+    body: JSON.stringify({ user_id: userId, password, phrase: phrase || undefined }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if(!res.ok) throw new Error(body.error || (res.status === 404 ? "function_not_deployed" : "request_failed"));
+  return body;
+}
+
 // Удаление пользователя — тоже только для главного админа, тоже через Edge Function
 // (нужен service-role, чтобы удалить саму учётку в auth.users, не только строку в profiles).
 // phrase нужен, только если аккаунт защищён (delete_protected) — пароль защиты
@@ -438,6 +454,7 @@ window.L2Cabinet = {
   getProfile,
   getVisibleSections,
   adminCreateUser,
+  adminSetUserPassword,
   adminDeleteUser,
   adminSetDeleteProtection,
   adminRemoveDeleteProtection,

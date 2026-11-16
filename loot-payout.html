@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Раздача — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=27" />
+<link rel="stylesheet" href="js/theme.css?v=36" />
 <style>
   .lp-wrap{ padding:0 0 24px; }
   .lp-wrap .page-head{ margin-bottom:0; }
@@ -46,6 +46,15 @@
   .lp-else{ display:block; color: var(--text-dim); font-size:11px; font-weight:400; margin-top:1px; }
   .lp-of{ color: var(--text-dim); font-weight:400; font-size:11px; margin-left:3px; }
 
+  /* широкий экран: таблица раздачи слева, итоги/неопознанные ники справа (раньше всё
+     шло одной колонкой ~520px, правая половина экрана пустовала); узкий — как было */
+  .lp-layout{ display:grid; grid-template-columns:minmax(0,560px) minmax(0,1fr); column-gap:28px; align-items:start; }
+  .lp-layout > #lpContent{ grid-column:1; grid-row:1 / span 3; }
+  .lp-layout > .lp-ov{ grid-column:2; background: var(--panel-2); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+  @media (max-width:1150px){
+    .lp-layout{ grid-template-columns:minmax(0,1fr); }
+    .lp-layout > #lpContent, .lp-layout > .lp-ov{ grid-column:1; grid-row:auto; }
+  }
   /* итоги по всем лидерам (только клан-лидер): сколько кому отправить */
   .lp-ov{ margin:0 0 16px; }
   .lp-ov h3{ margin:0 0 6px; font-size:13px; color: var(--gold); }
@@ -80,7 +89,7 @@
     border:1px solid var(--border); background: var(--panel-2); color: var(--text-dim); cursor:pointer;
   }
   .lp-tab:hover{ border-color: var(--border-lit); color: var(--text); }
-  .lp-tab.active{ border-color: var(--border-lit); background: var(--panel); color: var(--gold); }
+  .lp-tab.active{ border-color: var(--accent-line); background: var(--accent-soft); color: var(--gold); }
 
   /* архив — карточка на каждую раздачу, свёрнута по умолчанию (только шапка) */
   .lp-archive-entry{
@@ -151,10 +160,11 @@
     <p class="error-msg" id="lpError"></p>
     <p class="hint" id="lpEventsHint" style="margin:-4px 0 12px; display:none;"></p>
     <p class="hint" id="lpManualHint" style="margin:-4px 0 12px; display:none; color: var(--ok);"></p>
+    <datalist id="lpCensusList"></datalist>
+    <div class="lp-layout">
     <div class="lp-ov" id="lpOverview" style="display:none;"></div>
     <div class="lp-ov" id="lpLeftBox" style="display:none;"></div>
     <div class="lp-ov" id="lpUnresolved" style="display:none;"></div>
-    <datalist id="lpCensusList"></datalist>
 
     <div id="lpContent">
       <div class="lp-summary" id="lpSummary"></div>
@@ -169,6 +179,7 @@
         <button class="btn" id="lpCopyBtn" data-i18n="payout.copyBtn" data-i18n-attr="title:payout.copyBtnTitle" title="Скопировать список ников (в порядке таблицы)">📋 Скопировать ники</button>
       </div>
     </div>
+    </div>
     <p class="empty-hint" id="lpEmpty" style="display:none;"></p>
   </section>
 
@@ -179,8 +190,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=24"></script>
-<script src="js/i18n.js?v=87"></script>
+<script src="js/page-keys.js?v=2"></script>
+<script src="js/supabase-client.js?v=25"></script>
+<script src="js/i18n.js?v=96"></script>
+<script src="js/datepicker.js?v=2"></script>
 <script src="js/nick-match.js?v=4"></script>
 <script>
 (async function(){

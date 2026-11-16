@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>ДКП Соло — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=27" />
+<link rel="stylesheet" href="js/theme.css?v=36" />
 <style>
   .ls-wrap{ padding:0 0 24px; }
   .ls-wrap .page-head{ margin-bottom:0; }
@@ -14,7 +14,7 @@
   .ls-filters input[type="number"]{ width:140px; }
   .ls-filters input[data-money]{ width:210px; }
   /* ручная цена за 1 КМ — компактный блок справа в строке управления: название, ползунок, поле */
-  .ls-manual{ display:flex; align-items:center; gap:10px; margin-left:auto; align-self:flex-end; padding:6px 12px; border:1px solid var(--border); border-radius:10px; background: var(--panel-2); }
+  .ls-manual{ display:flex; flex-wrap:wrap; max-width:100%; align-items:center; gap:10px; margin-left:auto; align-self:flex-end; padding:6px 12px; border:1px solid var(--border); border-radius:10px; background: var(--panel-2); }
   .ls-manual.active{ border-color: var(--ok); }
   .ls-manual.error{ border-color: var(--danger); }
   .ls-manual-title{ font-size:12.5px; color: var(--text-dim); white-space:nowrap; }
@@ -144,7 +144,7 @@
     <p class="error-msg" id="lsError"></p>
 
     <div class="ls-table-scroll">
-      <table class="ls-table">
+      <table class="ls-table" data-cards>
         <thead id="lsHead"></thead>
         <tbody id="lsBody"></tbody>
       </table>
@@ -156,9 +156,12 @@
 <input type="file" id="dayIconPicker" accept="image/*" style="display:none;" />
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=24"></script>
+<script src="js/page-keys.js?v=2"></script>
+<script src="js/supabase-client.js?v=25"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=87"></script>
+<script src="js/i18n.js?v=96"></script>
+<script src="js/datepicker.js?v=2"></script>
+<script src="js/table-cards.js?v=2"></script>
 <script src="js/num-format.js?v=1"></script>
 <script src="js/nick-match.js?v=4"></script>
 <script>

@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Динамика — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=27" />
+<link rel="stylesheet" href="js/theme.css?v=36" />
 <style>
   /* «Динамика» — переработка сути (не просто цвета): столбики → сглаженная
      линия с заливкой-градиентом под ней (собственно «динамика», а не статичные
@@ -13,40 +13,42 @@
      явной связи с ним. Раскладка — два равных блока рядом (не друг под другом
      на всю ширину), на узком экране сами складываются в столбец. Только эта
      страница, остального сайта не касается. */
-  html, body{ background: #07080d; }
-
-  .tr-wrap{ padding:4px 0 40px; }
-  .tr-wrap .page-head h1{ color: #f5f7fc; letter-spacing:.01em; font-weight:700; }
+  /* палитра — общая с остальным сайтом (раньше своя синеватая, страница выбивалась) */
+  .tr-wrap{ padding:0 0 40px; }
 
   .tr-panels{ display:flex; flex-wrap:wrap; gap:16px; }
   .tr-panel{
     position:relative; flex:1 1 380px; min-width:0;
     padding:18px 20px 20px;
-    background: #181c29;
-    border:1px solid rgba(150,170,210,.16);
-    border-radius:8px;
-    box-shadow: 0 4px 14px rgba(0,0,0,.45);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--tr-accent) 6%, transparent), transparent 140px), var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow: var(--shadow-1);
+    overflow:hidden;
+    --tr-accent: var(--gold);
   }
   .tr-panel::before{
-    content:""; position:absolute; top:0; left:0; right:0; height:3px;
-    background: var(--tr-accent, #4f8fd1); border-radius:8px 8px 0 0;
+    content:""; position:absolute; top:0; left:0; right:0; height:2px;
+    background: linear-gradient(90deg, var(--tr-accent), transparent);
   }
-  .tr-panel.tr-panel-tax{ --tr-accent: #cf9a4a; }
+  .tr-panel.tr-panel-tax{ --tr-accent: #d9a441; }
+  .tr-panel.tr-panel-off{ flex:0 0 240px; align-self:flex-start; opacity:.75; }
+  @media (max-width:720px){ .tr-panel.tr-panel-off{ flex-basis:100%; } }
 
   .tr-panel-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
   .tr-panel-title{ display:flex; align-items:center; gap:8px; min-width:0; }
-  .tr-dot{ width:7px; height:7px; border-radius:50%; flex:none; background: var(--tr-accent, #4f8fd1); }
-  .tr-panel-title h2{ margin:0; font-size:14.5px; font-weight:700; color:#f5f7fc; }
+  .tr-dot{ width:7px; height:7px; border-radius:50%; flex:none; background: var(--tr-accent); box-shadow: 0 0 8px var(--tr-accent); }
+  .tr-panel-title h2{ margin:0; font-size:14.5px; font-weight:600; color: var(--text); }
 
   .tr-panel-stat{ flex:none; text-align:right; }
-  .tr-panel-stat-value{ display:block; font-size:23px; font-weight:700; color:#f5f7fc; line-height:1.15; }
+  .tr-panel-stat-value{ display:block; font-size:26px; font-weight:700; color: var(--text); line-height:1.1; letter-spacing:-.02em; font-variant-numeric: tabular-nums; }
   .tr-panel-stat-delta{ display:inline-block; font-size:12px; font-weight:700; margin-top:2px; }
   .tr-panel-stat-delta.up{ color: var(--ok); }
   .tr-panel-stat-delta.down{ color: var(--danger-lit); }
-  .tr-panel-stat-delta.flat{ color:#9aa5c4; }
-  .tr-panel-stat-caption{ display:block; font-size:11px; color:#9aa5c4; margin-top:2px; }
+  .tr-panel-stat-delta.flat{ color: var(--text-dim); }
+  .tr-panel-stat-caption{ display:block; font-size:11px; color: var(--text-dim); margin-top:2px; }
 
-  .tr-panel .hint{ color:#9aa5c4; margin-top:4px; }
+  .tr-panel .hint{ margin-top:4px; }
 
   /* переключатель масштаба — колесо мыши над графиком листает по дням/неделям
      (у налогов — по неделям/месяцам), бейдж кликабелен же для тач-экранов и
@@ -55,23 +57,23 @@
   .tr-gran-row{ margin-top:8px; }
   .tr-gran-badge{
     font-family:inherit; font-size:10.5px; font-weight:700; line-height:1;
-    color: var(--tr-accent, #4f8fd1); background: rgba(150,170,210,.12);
-    border:1px solid rgba(150,170,210,.22); border-radius:10px;
+    color: var(--tr-accent); background: color-mix(in srgb, var(--tr-accent) 12%, transparent);
+    border:1px solid color-mix(in srgb, var(--tr-accent) 28%, transparent); border-radius:10px;
     padding:3px 9px; cursor:pointer;
   }
-  .tr-gran-badge:hover{ background: rgba(150,170,210,.2); }
+  .tr-gran-badge:hover{ background: color-mix(in srgb, var(--tr-accent) 20%, transparent); }
 
   .tr-chart{ width:100%; height:190px; display:block; margin-top:10px; overflow:visible; cursor:ns-resize; }
-  .tr-gridline{ stroke: rgba(150,170,210,.12); stroke-width:1; }
-  .tr-axis{ stroke: rgba(150,170,210,.35); stroke-width:1; }
+  .tr-gridline{ stroke: rgba(255,255,255,.05); stroke-width:1; }
+  .tr-axis{ stroke: var(--border-lit); stroke-width:1; }
   .tr-line{ fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
   .tr-area{ opacity:0; transition: opacity .5s ease .3s; }
   .tr-area.in{ opacity:1; }
   .tr-pt{ opacity:0; transition: opacity .3s ease; }
   .tr-pt.in{ opacity:1; }
-  .tr-value{ fill:#f5f7fc; font-size:11px; font-weight:700; font-family:inherit; }
-  .tr-label{ fill:#8791ab; font-size:9.5px; font-family:inherit; font-weight:500; }
-  .tr-empty{ margin:10px 0 0; color:#9aa5c4; }
+  .tr-value{ fill: var(--text); font-size:11px; font-weight:700; font-family:inherit; }
+  .tr-label{ fill: var(--text-dim); font-size:9.5px; font-family:inherit; font-weight:500; }
+  .tr-empty{ margin:10px 0 0; }
 
   @media (max-width:720px){
     .tr-panel{ flex-basis:100%; }
@@ -95,6 +97,7 @@
         <div class="tr-panel-stat">
           <span class="tr-panel-stat-value" id="statAttWeekValue">—</span>
           <span class="tr-panel-stat-delta" id="statAttDeltaValue"></span>
+          <span class="tr-panel-stat-caption" id="statAttWeekCaption"></span>
         </div>
       </div>
       <p class="hint" data-i18n="trends.attendanceHint">Сколько разных ников отметилось хотя бы на одном мероприятии за неделю — за последние 12 недель.</p>
@@ -129,8 +132,9 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=24"></script>
-<script src="js/i18n.js?v=87"></script>
+<script src="js/page-keys.js?v=2"></script>
+<script src="js/supabase-client.js?v=25"></script>
+<script src="js/i18n.js?v=96"></script>
 <script src="js/tax-flag.js?v=1"></script>
 <script src="js/nick-match.js?v=4"></script>
 <script>
@@ -207,9 +211,16 @@
   // а не как набор отдельных несвязанных колонок. Сглаживание — простой приём
   // «квадратичные кривые через середины отрезков», без библиотек
   let chartSeq = 0;
+  // цвет из CSS-переменной (акцент клана: amber/azure/emerald) — в атрибуты SVG
+  // нужен готовый цвет, var() туда не подставляется
+  function cssVar(name, fallback){
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }
   function renderTrendChart(container, points, opts){
     opts = opts || {};
-    const color = opts.color || "#4f8fd1";
+    const color = opts.color || cssVar("--gold", "#e0a52a");
+    const dotStroke = cssVar("--panel", "#15161a");
     const format = opts.format || (v => String(Math.round(v)));
     const gradId = "trArea" + (chartSeq++);
 
@@ -254,7 +265,7 @@
     pts.forEach((p, i) => {
       const display = format(p.value);
       const showLabel = i % labelStep === 0 || i === pts.length - 1;
-      svg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.2" fill="${color}" stroke="#181c29" stroke-width="1.5" ` +
+      svg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.2" fill="${color}" stroke="${dotStroke}" stroke-width="1.5" ` +
              `class="tr-pt" style="transition-delay:${(i * 40) + 400}ms"><title>${escapeHtml(p.label)}: ${escapeHtml(display)}</title></circle>`;
       if(p.value > 0 && showLabel){
         svg += `<text x="${p.x.toFixed(1)}" y="${(p.y - 9).toFixed(1)}" class="tr-value" data-target="${p.value}" text-anchor="middle">0</text>`;
@@ -361,18 +372,25 @@
       return days.map(d => ({ label: shortLabel(d), value: attendeesByDay.get(d).size }));
     }
 
-    // шапка (число + дельта) всегда по неделям — не скачет при переключении масштаба графика
-    const weekPoints = pointsByWeek();
+    // шапка (число + дельта) всегда по неделям — не скачет при переключении масштаба графика.
+    // Текущая неделя, пока на ней никого нет (только началась), — не итог: показываем
+    // последнюю полную неделю и сравниваем с предыдущей, иначе висело «0 ▼ −50»
+    const allWeekPoints = pointsByWeek();
+    const curEmpty = allWeekPoints[allWeekPoints.length - 1].value === 0;
+    const weekPoints = curEmpty ? allWeekPoints.slice(0, -1) : allWeekPoints;
     const lastWeek = weekPoints[weekPoints.length - 1].value;
-    const prevWeek = weekPoints[weekPoints.length - 2].value;
+    const prevWeek = weekPoints.length > 1 ? weekPoints[weekPoints.length - 2].value : 0;
     animateNumber(document.getElementById("statAttWeekValue"), lastWeek, v => String(Math.round(v)));
     renderDelta(document.getElementById("statAttDeltaValue"), lastWeek - prevWeek);
+    const capEl = document.getElementById("statAttWeekCaption");
+    if(capEl) capEl.textContent = (curEmpty ? L2I18n.t("trends.lastFullWeek", "прошлая неделя") : L2I18n.t("trends.thisWeek", "эта неделя")) +
+      " · " + weekPoints[weekPoints.length - 1].label;
 
     const apply = makeGranularityControl(["week", "day"], chartEl, document.getElementById("attGranBadge"), (level) => {
       const points = level === "day" ? pointsByDay() : weekPoints;
       const hasAny = points.length > 0 && points.some(p => p.value > 0);
       emptyEl.style.display = hasAny ? "none" : "";
-      if(points.length) renderTrendChart(chartEl, points, { color: "#4f8fd1" });
+      if(points.length) renderTrendChart(chartEl, points, {});
       else chartEl.innerHTML = "";
     });
     apply();
@@ -387,6 +405,7 @@
       document.getElementById("taxPanel").innerHTML =
         '<div class="tr-panel-head"><div class="tr-panel-title"><span class="tr-dot"></span><h2>' + L2I18n.t("trends.taxTitle", "Сбор налогов по месяцам") + '</h2></div></div>' +
         '<p class="hint">' + L2I18n.t("taxes.disabled", "Налоги выключены") + '</p>';
+      document.getElementById("taxPanel").classList.add("tr-panel-off"); // узкая плашка, график посещаемости — на всю ширину
       return;
     }
 
@@ -445,7 +464,7 @@
       const points = level === "week" ? pointsByWeek() : monthPoints;
       const hasAny = points.some(p => p.value > 0);
       emptyEl.style.display = hasAny ? "none" : "";
-      renderTrendChart(chartEl, points, { color: "#cf9a4a", format: fmtGold });
+      renderTrendChart(chartEl, points, { color: "#d9a441", format: fmtGold });
     });
     apply();
   }

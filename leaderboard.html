@@ -1,0 +1,1029 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Лидерборд — Кабинет клана</title>
+<link rel="stylesheet" href="js/theme.css?v=36" />
+<style>
+  /* «Лидерборд» — дашборд топов: MVP периода, общая статистика клана с изменением к
+     прошлому периоду, по карточке «Топ по …» на каждую метрику (отдельно пати и игроки),
+     клик по карточке раскрывает её на всю ширину с графиком по ивентам. Стрелки ▲▼ —
+     смена места к прошлому периоду той же длины. Только чтение, в базу ничего не пишет. */
+  .lb-wrap{ padding:0 0 40px; display:flex; flex-direction:column; gap:18px; }
+
+  /* ---- шапка и фильтры ---- */
+  /* фильтры — отдельной строкой под заголовком: справа сверху висит виджет профиля из шапки */
+  .lb-top{ display:flex; flex-direction:column; align-items:flex-start; gap:14px; }
+  .lb-title{ display:flex; align-items:center; gap:12px; }
+  .lb-title .ic{ width:40px; height:40px; border-radius:12px; display:grid; place-items:center; color: var(--gold);
+    background: var(--accent-soft); border:1px solid var(--accent-line); }
+  .lb-title .ic svg{ width:22px; height:22px; }
+  .lb-title h1{ margin:0; }
+  .lb-title p{ margin:2px 0 0; }
+  .lb-filters{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .lb-filters .field{ margin:0; min-width:120px; }
+  .lb-filters select, .lb-filters input{ padding:7px 10px; font-size:13px; }
+
+  .lb-share-btn{ display:inline-flex; align-items:center; gap:8px; align-self:flex-end; padding:7px 14px;
+    background: linear-gradient(180deg, #2fa3dd, #2187c0); border-color:#2187c0; color:#fff; box-shadow: 0 1px 0 rgba(255,255,255,.2) inset, 0 4px 14px rgba(42,158,217,.25); }
+  .lb-share-btn:hover{ background: linear-gradient(180deg, #3ab0ea, #2593cf); border-color:#2593cf; }
+  .lb-share-btn svg{ width:16px; height:16px; }
+  .lb-share-modal{ width:min(560px, 100%); max-width:560px; }
+  .lb-share-modal .lb-share-img{ width:100%; height:auto; max-height:62vh; object-fit:contain; border-radius:12px; margin:4px 0 12px; background:#0d0e11; }
+  .lb-share-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .lb-share-msg{ margin:10px 0 0; }
+
+  /* ---- MVP + сводка ---- */
+  .lb-hero{ display:grid; grid-template-columns:minmax(300px, 380px) minmax(0,1fr); gap:16px; }
+  @media (max-width:1000px){ .lb-hero{ grid-template-columns:minmax(0,1fr); } }
+  .lb-mvp{
+    position:relative; overflow:hidden; display:flex; flex-direction:column; gap:14px; padding:20px 22px;
+    background:
+      radial-gradient(420px 220px at 100% 0%, rgba(242,193,78,.20), transparent 70%),
+      radial-gradient(300px 200px at 0% 100%, color-mix(in srgb, var(--gold) 8%, transparent), transparent 70%),
+      var(--panel);
+    border-color: rgba(242,193,78,.35);
+  }
+  .lb-mvp .lbl{ display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#f2c14e; }
+  .lb-mvp .lbl svg{ width:16px; height:16px; }
+  .lb-mvp .who{ display:flex; align-items:center; gap:14px; }
+  .lb-mvp .ava{ position:relative; flex:none; }
+  .lb-mvp .ava img{ width:68px; height:68px; border-radius:50%; object-fit:cover; display:block; background: var(--panel-3);
+    box-shadow: 0 0 0 3px #f2c14e, 0 0 26px rgba(242,193,78,.45); }
+  .lb-mvp .ava .crown{ position:absolute; top:-14px; left:50%; transform:translateX(-50%) rotate(-8deg); width:28px; height:20px; color:#f2c14e; filter: drop-shadow(0 2px 6px rgba(242,193,78,.6)); }
+  .lb-mvp .nm{ font-size:22px; font-weight:800; color:#fff; letter-spacing:-.02em; line-height:1.15; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lb-mvp .sub{ font-size:12.5px; color: var(--text-dim); }
+  .lb-mvp .score{ margin-left:auto; text-align:right; flex:none; }
+  .lb-mvp .score b{ display:block; font-size:30px; font-weight:800; color:#f2c14e; line-height:1; font-variant-numeric: tabular-nums; }
+  .lb-mvp .score small{ font-size:10.5px; color: var(--text-dim); }
+  .lb-mvp .chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .lb-mvp .chip-m{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600;
+    background: color-mix(in srgb, var(--mc) 14%, transparent); border:1px solid color-mix(in srgb, var(--mc) 35%, transparent); color: color-mix(in srgb, var(--mc) 75%, #fff); }
+  .lb-mvp .hint{ margin:0; }
+  .lb-mvp-empty{ color: var(--text-dim); font-size:13px; }
+
+  .lb-sum{ display:flex; flex-direction:column; gap:12px; }
+  .lb-sum-h{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+  .lb-sum-h h2{ margin:0; }
+  .lb-tiles{ display:grid; grid-template-columns:repeat(auto-fill, minmax(142px,1fr)); gap:10px; }
+  .lb-tile{ display:flex; align-items:center; gap:11px; padding:11px 13px; border-radius:11px; background: var(--panel-2); border:1px solid var(--border); min-width:0; }
+  .lb-tile .ti{ flex:none; width:36px; height:36px; border-radius:10px; display:grid; place-items:center; color: var(--mc);
+    background: color-mix(in srgb, var(--mc) 13%, transparent); }
+  .lb-tile .ti svg{ width:19px; height:19px; }
+  .lb-tile b{ display:block; font-size:19px; font-weight:800; color: var(--text); letter-spacing:-.02em; line-height:1.15; font-variant-numeric: tabular-nums; white-space:nowrap; }
+  .lb-tile small{ display:block; font-size:11px; color: var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lb-delta{ font-size:10.5px; font-weight:700; margin-left:4px; }
+  .lb-delta.up{ color:#6fcf8a; } .lb-delta.down{ color:#e57d7d; } .lb-delta.flat{ color: var(--text-dim); }
+
+  /* ---- секции и карточки «Топ по …» ---- */
+  .lb-sec-h{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+  .lb-sec-h .ic{ width:34px; height:34px; border-radius:10px; display:grid; place-items:center; background: var(--panel-2); border:1px solid var(--border-lit); color: var(--text); }
+  .lb-sec-h .ic svg{ width:18px; height:18px; }
+  .lb-sec-h h2{ margin:0; font-size:16px; }
+  .lb-sec-h p{ margin:1px 0 0; }
+  .lb-sec-h .tools{ margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+  .lb-sec-h .tools select{ padding:6px 10px; font-size:12.5px; }
+  /* 6 метрик — ровными рядами: 6 в ряд на широком мониторе, 3+3 на обычном, 2 и 1 на узком */
+  .lb-cards{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px; }
+  @media (min-width:1560px){ .lb-cards{ grid-template-columns:repeat(6, minmax(0,1fr)); } }
+  @media (max-width:1050px){ .lb-cards{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
+  @media (max-width:640px){ .lb-cards{ grid-template-columns:minmax(0,1fr); } }
+  .lb-card{
+    --mc:#e0a52a; position:relative; display:flex; flex-direction:column; gap:2px; padding:13px 14px 12px; border-radius:13px; min-width:0;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--mc) 7%, transparent), transparent 70px), var(--panel);
+    border:1px solid var(--border); cursor:pointer; box-shadow: var(--shadow-1);
+    transition: border-color .15s var(--ease), box-shadow .15s var(--ease);
+    animation: l2Rise .4s var(--ease) both;
+  }
+  .lb-card::before{ content:""; position:absolute; left:14px; right:14px; top:0; height:2px; border-radius:0 0 2px 2px; background: var(--mc); opacity:.8; }
+  .lb-card:hover{ border-color: color-mix(in srgb, var(--mc) 45%, var(--border)); box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+  .lb-card.open{ border-color: color-mix(in srgb, var(--mc) 70%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--mc) 40%, transparent); }
+  .lb-card-h{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .lb-card-h .mi{ width:26px; height:26px; border-radius:8px; display:grid; place-items:center; color: var(--mc); background: color-mix(in srgb, var(--mc) 14%, transparent); flex:none; }
+  .lb-card-h .mi svg{ width:15px; height:15px; }
+  .lb-card-h b{ font-size:13px; font-weight:700; color: var(--text); flex:1; min-width:0; }
+  .lb-card-h b span{ color: var(--text-dim); font-weight:500; }
+  .lb-card-h .go{ color: var(--text-dim); font-size:16px; line-height:1; transition: transform .2s var(--ease), color .15s; }
+  .lb-card:hover .go{ color: var(--mc); transform: translateX(2px); }
+  .lb-card.open .go{ transform: rotate(90deg); color: var(--mc); }
+
+  .lb-row{ display:grid; grid-template-columns:22px 30px minmax(0,1fr) auto; align-items:center; gap:9px; padding:6px 2px 7px; position:relative; }
+  .lb-row + .lb-row{ border-top:1px solid rgba(255,255,255,.035); }
+  .lb-num{ width:22px; height:22px; border-radius:50%; display:grid; place-items:center; font-size:11px; font-weight:800; color: var(--text-dim); background: var(--panel-3); }
+  .lb-num.m1{ background: linear-gradient(180deg, #ffd66b, #e0a52a); color:#2a1d02; box-shadow: 0 0 10px rgba(242,193,78,.45); }
+  .lb-num.m2{ background: linear-gradient(180deg, #e4e9ef, #aab3bf); color:#1d2229; }
+  .lb-num.m3{ background: linear-gradient(180deg, #e7a679, #b9713f); color:#2a1508; }
+  .lb-row img{ width:30px; height:30px; border-radius:8px; object-fit:cover; display:block; background: var(--panel-3); box-shadow: 0 0 0 1px var(--border-lit); }
+  .lb-row .who{ min-width:0; }
+  .lb-row .nm{ font-size:13px; font-weight:600; color: var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:flex; align-items:center; gap:5px; }
+  .lb-row .cl{ font-size:10.5px; color: var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lb-row .bar{ height:3px; border-radius:3px; background: rgba(255,255,255,.05); margin-top:4px; overflow:hidden; }
+  .lb-row .bar i{ display:block; height:100%; border-radius:3px; background: linear-gradient(90deg, color-mix(in srgb, var(--mc) 40%, transparent), var(--mc)); transform-origin:left; animation: lbGrow .7s var(--ease) both; }
+  @keyframes lbGrow{ from{ transform: scaleX(0); } to{ transform: scaleX(1); } }
+  .lb-row .v{ text-align:right; font-size:13.5px; font-weight:700; color: var(--text); font-variant-numeric: tabular-nums; white-space:nowrap; }
+  .lb-row .v small{ display:block; font-size:10px; font-weight:600; }
+  [data-cab]{ cursor:pointer; }
+  [data-cab]:hover{ color: var(--gold); text-decoration:underline; text-underline-offset:2px; }
+  .lb-row .nm > span{ overflow:hidden; text-overflow:ellipsis; }
+  .lb-row.me{ background: linear-gradient(90deg, var(--accent-soft), transparent); border-radius:8px; }
+  .lb-row.me .nm::after{ content:attr(data-me); font-size:9.5px; font-weight:700; padding:0 5px; border-radius:6px; background: var(--gold); color:#111; }
+  .lb-row.lb-gap{ border-top:1px dashed var(--border-lit) !important; margin-top:2px; }
+  .lb-new{ color:#5aa9e6; }
+  .lb-card-empty{ font-size:12px; color: var(--text-dim); padding:14px 0; text-align:center; }
+
+  /* ---- раскрытая карточка: список + график ---- */
+  .lb-expand{ grid-column:1 / -1; display:grid; grid-template-columns:minmax(260px, 340px) minmax(0,1fr); gap:18px; padding:16px 18px; cursor:default;
+    animation: l2Pop .3s var(--ease) both; }
+  .lb-expand:hover{ box-shadow: var(--shadow-1); }
+  @media (max-width:900px){ .lb-expand{ grid-template-columns:minmax(0,1fr); } }
+  .lb-expand .list{ min-width:0; }
+  .lb-expand .chart{ min-width:0; display:flex; flex-direction:column; }
+  .lb-expand .chart > [data-role="chart"]{ flex:1; display:flex; flex-direction:column; }
+  .lb-expand .lb-chart-box{ flex:1; height:auto; min-height:260px; }
+  .lb-ch-tools{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+  .lb-seg{ display:inline-flex; flex-wrap:wrap; max-width:100%; padding:3px; gap:2px; border-radius:9px; background:#111215; border:1px solid var(--border-lit); }
+  .lb-seg button{ font-family:inherit; font-size:12px; font-weight:600; padding:5px 11px; border-radius:6px; border:none; background:none; color: var(--text-dim); cursor:pointer; }
+  .lb-seg button:hover{ color: var(--text); }
+  .lb-seg button.active{ background: var(--panel-3); color: var(--text); box-shadow: inset 0 -2px 0 var(--mc, var(--gold)); }
+  .lb-ch-tools .hint{ margin:0 0 0 auto; font-size:11px; }
+  .lb-chart-box{ position:relative; height:250px; padding-left:44px; }
+  .lb-chart-box svg{ width:100%; height:100%; display:block; }
+  .lb-chart-box .grid{ stroke: rgba(255,255,255,.055); stroke-width:1; }
+  .lb-chart-box .ln{ fill:none; stroke-width:2.2; stroke-linejoin:round; stroke-linecap:round; transition: opacity .15s, stroke-width .15s; }
+  .lb-chart-box svg.focus .ln{ opacity:.15; }
+  .lb-chart-box svg.focus .ln.on{ opacity:1; stroke-width:3.4; }
+  .lb-ylab{ position:absolute; left:0; width:38px; text-align:right; font-size:10px; color: var(--text-dim); transform:translateY(-50%); font-variant-numeric: tabular-nums; }
+  .lb-xlabs{ position:relative; height:30px; margin-left:44px; }
+  .lb-xlabs span{ position:absolute; top:4px; transform:translateX(-50%); font-size:10px; color: var(--text-dim); white-space:nowrap; text-align:center; line-height:1.25; }
+  .lb-xlabs span small{ display:block; opacity:.7; }
+  .lb-cross{ position:absolute; top:0; bottom:0; width:1px; background: rgba(255,255,255,.22); pointer-events:none; display:none; }
+  .lb-dot{ position:absolute; width:9px; height:9px; border-radius:50%; transform:translate(-50%,-50%); pointer-events:none; box-shadow: 0 0 0 2px var(--panel); display:none; }
+  .lb-tip{
+    position:absolute; top:4px; z-index:3; pointer-events:none; display:none; min-width:180px;
+    background: rgba(16,17,20,.97); border:1px solid var(--border-lit); border-radius:10px; padding:8px 10px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.5); font-size:12px;
+  }
+  .lb-tip .h{ color: var(--text); font-weight:600; font-size:11.5px; margin-bottom:5px; }
+  .lb-tip .h small{ color: var(--text-dim); font-weight:400; }
+  .lb-tip .r{ display:flex; align-items:center; gap:7px; padding:1px 0; }
+  .lb-tip .r i{ width:8px; height:8px; border-radius:50%; flex:none; }
+  .lb-tip .r span{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color: var(--text-dim); }
+  .lb-tip .r b{ font-variant-numeric: tabular-nums; color: var(--text); }
+  .lb-legend{ display:flex; flex-wrap:wrap; justify-content:center; gap:6px 8px; margin-top:6px; }
+  .lb-legend button{ display:inline-flex; align-items:center; gap:6px; font-family:inherit; font-size:11.5px; padding:3px 9px; border-radius:20px;
+    border:1px solid var(--border-lit); background: var(--panel-2); color: var(--text); cursor:pointer; }
+  .lb-legend button i{ width:9px; height:9px; border-radius:50%; border:2px solid; }
+  .lb-legend button.off{ opacity:.4; }
+  .lb-legend button.off i{ background:none !important; }
+
+  /* ---- рекорды и взлёты ---- */
+  .lb-feats{ display:grid; grid-template-columns:repeat(auto-fill, minmax(250px,1fr)); gap:12px; }
+  .lb-feat{ position:relative; overflow:hidden; display:grid; grid-template-columns:42px minmax(0,1fr) auto; grid-template-areas:"k k k" "img t val";
+    align-items:center; column-gap:12px; row-gap:9px; padding:13px 14px; border-radius:13px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--mc) 12%, transparent), transparent 60%), var(--panel); border:1px solid var(--border); }
+  .lb-feat > .k{ grid-area:k; } .lb-feat img{ grid-area:img; } .lb-feat .t{ grid-area:t; } .lb-feat .val{ grid-area:val; }
+  .lb-feat img{ width:42px; height:42px; border-radius:50%; object-fit:cover; flex:none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--mc) 70%, transparent); background: var(--panel-3); }
+  .lb-feat .t{ min-width:0; flex:1; }
+  .lb-feat .k{ font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color: color-mix(in srgb, var(--mc) 80%, #fff); }
+  .lb-feat .n{ font-size:14px; font-weight:700; color: var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lb-feat .s{ font-size:11.5px; color: var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lb-feat .val{ font-size:20px; font-weight:800; color: var(--text); font-variant-numeric: tabular-nums; flex:none; }
+  .lb-feat .big-ic{ position:absolute; right:-10px; bottom:-14px; width:70px; height:70px; color: var(--mc); opacity:.07; pointer-events:none; }
+
+  @media (max-width:600px){
+    .lb-filters .field{ min-width:calc(50% - 5px); flex:1; }
+    .lb-mvp .nm{ font-size:18px; }
+    .lb-chart-box{ height:200px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="lb-wrap" id="wrap" style="display:none;">
+  <div class="lb-top">
+    <div class="lb-title">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.5h8v5.2a4 4 0 01-8 0V3.5z"/><path d="M8 5.5H5.2a2.6 2.6 0 002.9 3.8M16 5.5h2.8a2.6 2.6 0 01-2.9 3.8"/><path d="M12 12.7v3.6M8.6 20.5h6.8M9.6 20.5l.6-4.2h3.6l.6 4.2"/></svg></span>
+      <div>
+        <h1 data-i18n="section.leaderboard">Лидерборд</h1>
+        <p class="hint" id="lbSub"></p>
+      </div>
+    </div>
+    <div class="lb-filters">
+      <div class="field">
+        <label for="lbPeriod" data-i18n="lb.period">Период</label>
+        <select id="lbPeriod">
+          <option value="7" data-i18n="lb.p7">7 дней</option>
+          <option value="30" data-i18n="lb.p30">30 дней</option>
+          <option value="90" data-i18n="lb.p90">90 дней</option>
+          <option value="all" data-i18n="lb.pAll">Всё время</option>
+          <option value="custom" data-i18n="lb.pCustom">Свой период</option>
+        </select>
+      </div>
+      <div class="field" id="lbFromWrap" style="display:none;"><label for="lbFrom" data-i18n="lb.from">С</label><input type="date" id="lbFrom" /></div>
+      <div class="field" id="lbToWrap" style="display:none;"><label for="lbTo" data-i18n="lb.to">По</label><input type="date" id="lbTo" /></div>
+      <div class="field"><label for="lbType" data-i18n="lb.eventType">Тип ивента</label><select id="lbType"></select></div>
+      <div class="field" style="min-width:90px;">
+        <label for="lbTop" data-i18n="lb.top">Топ</label>
+        <select id="lbTop"><option value="3">3</option><option value="5">5</option><option value="10">10</option></select>
+      </div>
+      <button type="button" class="btn lb-share-btn" id="lbShareBtn">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.4 4.3L18.3 19c-.2 1-.9 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.8 8.8-7.9c.4-.3-.1-.5-.6-.2L6.2 12.9 1.5 11.4c-1-.3-1-1 .2-1.5L20.1 3c.8-.3 1.6.2 1.3 1.3z"/></svg>
+        <span data-i18n="lb.shareBtn">Картинка для Telegram</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="lb-hero">
+    <section class="card lb-mvp" id="lbMvp"></section>
+    <section class="card lb-sum">
+      <div class="lb-sum-h"><h2 data-i18n="lb.sumTitle">Общая статистика клана</h2><span class="hint" id="lbSumHint"></span></div>
+      <div class="lb-tiles" id="lbTiles"></div>
+    </section>
+  </div>
+
+  <section id="lbGroupsSec">
+    <div class="lb-sec-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="8.8" cy="8.3" r="3"/><path d="M3.2 19.2c0-3 2.5-5.3 5.6-5.3s5.6 2.3 5.6 5.3"/><circle cx="16.8" cy="9.1" r="2.3"/><path d="M14.9 13.7c2.5.3 4.2 2.3 4.2 5"/></svg></span>
+      <div><h2 data-i18n="lb.secParties">Пати</h2><p class="hint" data-i18n="lb.secPartiesHint">Лучшие пати за период — откройте карточку, чтобы сравнить их по ивентам.</p></div>
+    </div>
+    <div class="lb-cards" id="lbGroupCards"></div>
+  </section>
+
+  <section>
+    <div class="lb-sec-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="8.2" r="3.4"/><path d="M5.3 20c0-3.6 3-6.3 6.7-6.3s6.7 2.7 6.7 6.3"/></svg></span>
+      <div><h2 data-i18n="lb.secPlayers">Игроки</h2><p class="hint" id="lbPlayersHint"></p></div>
+      <div class="tools">
+        <select id="lbGroup"></select>
+        <select id="lbClass"></select>
+        <select id="lbMin">
+          <option value="auto" data-i18n="lb.minAuto">K:D от 3 ивентов (авто)</option>
+          <option value="1" data-i18n="lb.min1">Все, от 1 ивента</option>
+          <option value="3" data-i18n="lb.min3">От 3 ивентов</option>
+          <option value="5" data-i18n="lb.min5">От 5 ивентов</option>
+          <option value="10" data-i18n="lb.min10">От 10 ивентов</option>
+        </select>
+      </div>
+    </div>
+    <div class="lb-cards" id="lbPlayerCards"></div>
+  </section>
+
+  <section>
+    <div class="lb-sec-h">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.4 6.8 19.2l1-5.9L3.5 9.2l5.9-.8L12 3z"/></svg></span>
+      <div><h2 data-i18n="lb.secFeats">Рекорды и взлёты</h2><p class="hint" data-i18n="lb.secFeatsHint">Лучшие выходы за один ивент, серии без пропусков и кто вырос сильнее всех.</p></div>
+    </div>
+    <div class="lb-feats" id="lbFeats"></div>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/page-keys.js?v=2"></script>
+<script src="js/supabase-client.js?v=25"></script>
+<script src="js/classes.js?v=1"></script>
+<script src="js/i18n.js?v=96"></script>
+<script src="js/datepicker.js?v=2"></script>
+<script src="js/nick-match.js?v=4"></script>
+<script>
+(async function(){
+  const session = await L2Cabinet.requireSession();
+  if(!session) return;
+
+  const profile = await L2Cabinet.getProfile();
+  if(!profile){
+    document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
+      '<h1>' + L2I18n.t("shell.profileNotFoundTitle", "⚠ Профиль не найден") + '</h1>' +
+      '<p class="hint">' + L2I18n.t("common.contactLeader", "Обратитесь к клан-лидеру.") + '</p></div></div>';
+    return;
+  }
+  try { await L2Nick.init(L2Cabinet.client, profile.clan_id); } catch(e){ console.error(e); } // все написания ника — один человек
+
+  const db = L2Cabinet.client;
+  const t = (k, f) => L2I18n.t(k, f);
+  const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
+  // то же правило, что в «Отчётах»: не-админ с назначенной пати видит только свою пати
+  const restrictedParty = (!isAdmin && profile.party_id) ? profile.party_id : null;
+  const $ = (id) => document.getElementById(id);
+
+  function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c])); }
+  function pad2(n){ return String(n).padStart(2, "0"); }
+  function isoDate(d){ return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
+  function shortDate(iso){ const d = new Date(iso + "T00:00:00"); return pad2(d.getDate()) + "." + pad2(d.getMonth() + 1); }
+  function addDays(iso, n){ const d = new Date(iso + "T00:00:00"); d.setDate(d.getDate() + n); return isoDate(d); }
+  const keyOf = (n) => (window.L2Nick ? L2Nick.key(n) : String(n || "").trim());
+  const classIcon = (c) => (window.L2_CLASS_ICON && c) ? window.L2_CLASS_ICON(c) : null;
+  const BLANK = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' fill='%2322242a'/></svg>";
+
+  const ICON = {
+    kills:  '<path d="M5 3l11 11M19 3L8 14"/><path d="M6 16l2 2M18 16l-2 2"/><path d="M4 20l3-3M20 20l-3-3"/>',
+    deaths: '<path d="M12 3a7 7 0 00-7 7v3l2 2v3h10v-3l2-2v-3a7 7 0 00-7-7z"/><circle cx="9.5" cy="11" r="1.3"/><circle cx="14.5" cy="11" r="1.3"/><path d="M10.5 18v2M13.5 18v2"/>',
+    kd:     '<path d="M4 16a8 8 0 1116 0"/><path d="M12 16l4-5"/><path d="M7 16h.01M17 16h.01"/>',
+    pvp:    '<path d="M12 3c1 4 5 5 5 10a5 5 0 01-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z"/>',
+    pve:    '<path d="M13 2L5 14h6l-1 8 8-12h-6l1-8z"/>',
+    attend: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/><path d="m9 15 2 2 4-4"/>',
+    events: '<path d="M4 7h16M4 12h16M4 17h10"/>',
+    people: '<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19c0-3 2.5-5.3 5.5-5.3S14.5 16 14.5 19"/><path d="M16 5.5a3 3 0 010 6M18 13.8c1.8.6 3 2.6 3 5.2"/>',
+    trophy: '<path d="M8 3.5h8v5.2a4 4 0 01-8 0V3.5z"/><path d="M8 5.5H5.2a2.6 2.6 0 002.9 3.8M16 5.5h2.8a2.6 2.6 0 01-2.9 3.8"/><path d="M12 12.7v3.6M8.6 20.5h6.8M9.6 20.5l.6-4.2h3.6l.6 4.2"/>',
+    rocket: '<path d="M5 19c1-3 2-4 4-5M14 4c3 0 6 3 6 6l-6 6-6-6c0-3 3-6 6-6z"/><circle cx="14" cy="10" r="1.6"/><path d="M8 16l-3 3"/>',
+    fire:   '<path d="M12 3c1 4 5 5 5 10a5 5 0 01-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z"/>',
+  };
+  const svgI = (k, sw) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw || 1.8}" stroke-linecap="round" stroke-linejoin="round">${ICON[k] || ""}</svg>`;
+  const CROWN = '<svg class="crown" viewBox="0 0 30 22" fill="currentColor"><path d="M2 7l7 6 6-11 6 11 7-6-3 14H5z"/></svg>';
+
+  const METRICS = [
+    { id: "kills",  label: () => t("lb.mKills", "Килы"),     color: "#f2c14e" },
+    { id: "deaths", label: () => t("lb.mDeaths", "Смерти"),  color: "#e86b6b" },
+    { id: "kd",     label: () => "K:D",                       color: "#5fcf8a" },
+    { id: "pvp",    label: () => t("lb.mPvp", "PvP урон"),   color: "#ff9548" },
+    { id: "pve",    label: () => t("lb.mPve", "PvE урон"),   color: "#a586ef" },
+    { id: "attend", label: () => t("lb.mAttend", "Посещения"), color: "#4fb6e0" },
+  ];
+  const MDEF = Object.fromEntries(METRICS.map(m => [m.id, m]));
+  const SERIES = ["#f2c14e", "#5aa9e6", "#b48cf2", "#5fcf8a", "#ff8a65", "#e86ba8", "#4fd1c5", "#c9d16b", "#e0e0e0", "#7f9cf5"];
+
+  // ---------- загрузка (один раз; дальше всё считается в браузере) ----------
+  const [evRes, grRes, gmRes, mcRes, stRes] = await Promise.all([
+    db.from("attendance_events").select("id, event_date, event_name").order("event_date"),
+    db.from("clan_groups").select("id, name, class_name, leader_nickname, deputy_nickname").eq("hidden", false).order("sort_order").order("name"),
+    db.from("clan_group_members").select("group_id, nickname"),
+    db.from("member_classes").select("nickname, class_name, icon"),
+    L2Cabinet.selectAll(() => db.from("event_stats").select("nickname, kills, deaths, pvp_damage, pve_damage, event_id, removed").order("id")),
+  ]);
+  [evRes, grRes, gmRes, mcRes, stRes].forEach(r => { if(r && r.error) console.error(r.error); });
+  const events = (evRes.data || []).slice().sort((a, b) => (a.event_date || "").localeCompare(b.event_date || "") || String(a.id).localeCompare(String(b.id)));
+  const eventById = new Map(events.map(e => [e.id, e]));
+  const groups = grRes.data || [];
+  const groupById = new Map(groups.map(g => [g.id, g]));
+  const stats = (stRes.data || []).filter(r => !r.removed && eventById.has(r.event_id));
+
+  const infoByKey = new Map();
+  (mcRes.data || []).forEach(r => { const k = keyOf(r.nickname); if(k && !infoByKey.has(k)) infoByKey.set(k, r); });
+  const groupsByKey = new Map();
+  (gmRes.data || []).forEach(r => {
+    const k = keyOf(r.nickname); if(!k || !groupById.has(r.group_id)) return;
+    if(!groupsByKey.has(k)) groupsByKey.set(k, []);
+    if(!groupsByKey.get(k).includes(r.group_id)) groupsByKey.get(k).push(r.group_id);
+  });
+  const myKey = profile.nickname ? keyOf(profile.nickname) : null;
+  const myGroupKey = profile.party_id ? "g:" + profile.party_id : null;
+
+  // клик по нику — кабинет игрока. Те же права, что проверяет сам «Мой кабинет»:
+  // свой — всегда, клан-лидер/админ — любой, лидер/зам пати — только своих
+  const myParty = profile.party_id ? groupById.get(profile.party_id) : null;
+  const iLeadMyParty = !!(myParty && profile.nickname &&
+    ((myParty.leader_nickname && keyOf(myParty.leader_nickname) === myKey) || (myParty.deputy_nickname && keyOf(myParty.deputy_nickname) === myKey)));
+  function canOpenKey(key){
+    if(!key || key.startsWith("g:")) return false;
+    if(key === myKey || isAdmin) return true;
+    return iLeadMyParty && (groupsByKey.get(key) || []).includes(profile.party_id);
+  }
+  const cabAttr = (r) => canOpenKey(r.key) ? ` data-cab="${esc(r.nick)}" data-cab-own="${r.key === myKey ? 1 : 0}"` : "";
+  // в захвате — раньше, чем клик дойдёт до карточки (та бы раскрылась/закрылась)
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest("[data-cab]"); if(!el) return;
+    e.stopPropagation(); e.preventDefault();
+    const nav = window.top && window.top.L2Nav; if(!nav) return;
+    if(el.dataset.cabOwn === "1") nav.openSection("my_cabinet");
+    else nav.openMyCabinet(el.dataset.cab, "leaderboard");
+  }, true);
+
+  document.getElementById("wrap").style.display = "";
+
+  // ---------- состояние (запоминается на этом устройстве) ----------
+  const STORE = "l2Leaderboard2:" + profile.id;
+  const state = { period: "30", from: "", to: "", type: "", top: "5", group: "", cls: "", min: "auto",
+    open: null /* {sec:"groups"|"players", m} */, chMetric: null, chMode: "event" };
+  try { Object.assign(state, JSON.parse(localStorage.getItem(STORE) || "{}")); } catch(e){}
+  function save(){ try { localStorage.setItem(STORE, JSON.stringify(state)); } catch(e){} }
+  const hidden = new Set(); // выключенные в легенде графика линии
+
+  // ---------- фильтры ----------
+  function fillSelects(){
+    const counts = new Map();
+    events.forEach(e => counts.set(e.event_name, (counts.get(e.event_name) || 0) + 1));
+    $("lbType").innerHTML = `<option value="">${esc(t("lb.allTypes", "Все ивенты"))}</option>` +
+      [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([n, c]) => `<option value="${esc(n)}">${esc(n)} (${c})</option>`).join("");
+    $("lbType").value = counts.has(state.type) ? state.type : "";
+
+    $("lbGroup").innerHTML = `<option value="">${esc(t("lb.allParties", "Все пати"))}</option>` +
+      groups.map(g => `<option value="${esc(g.id)}">${esc(g.name)}</option>`).join("");
+    $("lbGroup").value = groupById.has(state.group) ? state.group : "";
+    $("lbGroup").style.display = restrictedParty ? "none" : "";
+
+    const classes = [...new Set([...infoByKey.values()].map(r => r.class_name).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    $("lbClass").innerHTML = `<option value="">${esc(t("lb.allClasses", "Все профессии"))}</option>` +
+      classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+    $("lbClass").value = classes.includes(state.cls) ? state.cls : "";
+
+    $("lbPeriod").value = state.period; $("lbFrom").value = state.from; $("lbTo").value = state.to;
+    $("lbMin").value = state.min; $("lbTop").value = state.top;
+    if(!$("lbTop").value){ state.top = "5"; $("lbTop").value = "5"; }
+    $("lbGroupsSec").style.display = restrictedParty ? "none" : "";
+  }
+
+  // ---------- расчёт ----------
+  // текущий период и предыдущий той же длины (для стрелок ▲▼ и «взлёта»)
+  function ranges(){
+    const today = isoDate(new Date());
+    if(state.period === "all") return { cur: {}, prev: null };
+    if(state.period === "custom"){
+      const from = state.from || null, to = state.to || null;
+      if(from && to && from <= to){
+        const len = Math.round((new Date(to) - new Date(from)) / 864e5) + 1;
+        return { cur: { from, to }, prev: { from: addDays(from, -len), to: addDays(from, -1) } };
+      }
+      return { cur: { from, to }, prev: null };
+    }
+    const n = Number(state.period);
+    const from = addDays(today, -n + 1);
+    return { cur: { from }, prev: { from: addDays(from, -n), to: addDays(from, -1) } };
+  }
+  function eventsIn(r){
+    if(!r) return [];
+    return events.filter(e => (!r.from || e.event_date >= r.from) && (!r.to || e.event_date <= r.to) && (!state.type || e.event_name === state.type));
+  }
+  function buildPeople(evIds){
+    const map = new Map();
+    stats.forEach(r => {
+      if(!evIds.has(r.event_id)) return;
+      const k = keyOf(r.nickname); if(!k) return;
+      let p = map.get(k);
+      if(!p){ p = { key: k, names: new Map(), kills: 0, deaths: 0, pvp: 0, pve: 0, per: new Map() }; map.set(k, p); }
+      p.names.set(r.nickname, (p.names.get(r.nickname) || 0) + 1);
+      const k1 = Number(r.kills) || 0, d1 = Number(r.deaths) || 0, pv = Number(r.pvp_damage) || 0, pe = Number(r.pve_damage) || 0;
+      p.kills += k1; p.deaths += d1; p.pvp += pv; p.pve += pe;
+      const cur = p.per.get(r.event_id) || { kills: 0, deaths: 0, pvp: 0, pve: 0, n: 1 };
+      cur.kills += k1; cur.deaths += d1; cur.pvp += pv; cur.pve += pe;
+      p.per.set(r.event_id, cur);
+    });
+    return [...map.values()].map(p => {
+      const info = infoByKey.get(p.key);
+      const mostUsed = [...p.names.entries()].sort((a, b) => b[1] - a[1])[0][0];
+      p.nick = info?.nickname || (window.L2Nick && L2Nick.ready() ? L2Nick.resolve(mostUsed).canon : mostUsed);
+      p.cls = info?.class_name || "";
+      p.icon = info?.icon || classIcon(p.cls) || BLANK;
+      p.groups = groupsByKey.get(p.key) || [];
+      p.attend = p.per.size;
+      p.kd = p.deaths > 0 ? p.kills / p.deaths : p.kills;
+      return p;
+    }).filter(p => !restrictedParty || p.groups.includes(restrictedParty));
+  }
+  function filterPlayers(people){
+    return people.filter(p => (!state.group || p.groups.includes(state.group)) && (!state.cls || p.cls === state.cls));
+  }
+  function buildGroups(people){
+    return groups.map(g => {
+      const mem = people.filter(p => p.groups.includes(g.id));
+      if(!mem.length) return null;
+      const row = { key: "g:" + g.id, nick: g.name, cls: "", icon: classIcon(g.class_name) || BLANK, members: mem.length,
+        kills: 0, deaths: 0, pvp: 0, pve: 0, attend: 0, per: new Map() };
+      mem.forEach(p => {
+        row.kills += p.kills; row.deaths += p.deaths; row.pvp += p.pvp; row.pve += p.pve; row.attend += p.attend;
+        p.per.forEach((v, id) => {
+          const cur = row.per.get(id) || { kills: 0, deaths: 0, pvp: 0, pve: 0, n: 0 };
+          cur.kills += v.kills; cur.deaths += v.deaths; cur.pvp += v.pvp; cur.pve += v.pve; cur.n += 1;
+          row.per.set(id, cur);
+        });
+      });
+      row.kd = row.deaths > 0 ? row.kills / row.deaths : row.kills;
+      row.sub = `${mem.length} ${t("lb.membersShort", "уч.")}`;
+      return row;
+    }).filter(Boolean);
+  }
+  const val = (r, m) => r[m] || 0;
+  function minEventsFor(sec, m){
+    if(sec !== "players") return 1;
+    if(state.min === "auto") return m === "kd" ? 3 : 1;
+    return Number(state.min) || 1;
+  }
+  function rank(rows, m, minEv){
+    return rows.filter(r => r.attend >= minEv && (m !== "kd" || r.kills + r.deaths > 0) && (m === "attend" || val(r, m) > 0 || m === "kd"))
+      .sort((a, b) => val(b, m) - val(a, m) || b.attend - a.attend || a.nick.localeCompare(b.nick));
+  }
+  function fmt(v, m){
+    if(m === "kd") return (v || 0).toFixed(2);
+    return Math.round(v || 0).toLocaleString(L2I18n.locale());
+  }
+  function short(v, m){
+    if(m === "kd") return (v || 0).toFixed(2);
+    const a = Math.abs(v || 0);
+    if(a >= 1e6) return (v / 1e6).toFixed(a >= 1e8 ? 0 : 1) + "M";
+    if(a >= 1e4) return (v / 1e3).toFixed(a >= 1e5 ? 0 : 1) + "K";
+    return Math.round(v || 0).toLocaleString(L2I18n.locale());
+  }
+  function playerSub(p){
+    const g = p.groups.map(id => groupById.get(id)?.name).filter(Boolean).join(", ");
+    return [p.cls, g].filter(Boolean).join(" · ") || t("lb.noParty", "без пати");
+  }
+
+  // ---------- общий расчёт страницы ----------
+  let ctx = null;
+  function compute(){
+    const { cur, prev } = ranges();
+    const evList = eventsIn(cur);
+    const prevList = eventsIn(prev);
+    const peopleAll = buildPeople(new Set(evList.map(e => e.id)));
+    const prevAll = prev ? buildPeople(new Set(prevList.map(e => e.id))) : [];
+    const players = filterPlayers(peopleAll);
+    const prevPlayers = filterPlayers(prevAll);
+    const groupRows = buildGroups(peopleAll);
+    const prevGroupRows = buildGroups(prevAll);
+    const sec = {
+      players: { rows: players, prevRows: prevPlayers },
+      groups:  { rows: groupRows, prevRows: prevGroupRows },
+    };
+    // места по каждой метрике сейчас и в прошлом периоде
+    Object.entries(sec).forEach(([name, s]) => {
+      s.ranked = {}; s.prevPlace = {};
+      METRICS.forEach(m => {
+        const minEv = minEventsFor(name, m.id);
+        s.ranked[m.id] = rank(s.rows, m.id, minEv);
+        const pr = new Map();
+        if(prev) rank(s.prevRows, m.id, minEv).forEach((r, i) => pr.set(r.key, i + 1));
+        s.prevPlace[m.id] = pr;
+      });
+    });
+    ctx = { evList, prevList, hasPrev: !!prev, peopleAll, prevAll, sec };
+  }
+
+  // ---------- шапка + MVP + сводка ----------
+  function renderHeader(){
+    const periodLabel = $("lbPeriod").selectedOptions[0]?.textContent || "";
+    $("lbSub").textContent = t("lb.subtitle", "Лучшие на ивентах клана — по килам, смертям, K:D, урону и посещениям") +
+      ` · ${periodLabel}`;
+    $("lbFromWrap").style.display = $("lbToWrap").style.display = state.period === "custom" ? "" : "none";
+    const minTxt = state.min === "auto" ? t("lb.playersHintAuto", "в K:D — только те, кто был хотя бы на 3 ивентах") :
+      t("lb.playersHintMin", "в рейтинге — только от {n} ивентов").replace("{n}", state.min);
+    $("lbPlayersHint").textContent = t("lb.secPlayersHint", "Лучшие игроки за период — откройте карточку, чтобы увидеть график по ивентам") + "; " + minTxt + ".";
+  }
+
+  function renderMvp(){
+    const el = $("lbMvp");
+    const players = ctx.sec.players.rows;
+    const minEv = ctx.evList.length >= 6 ? 3 : 1;
+    const pool = players.filter(p => p.attend >= minEv);
+    if(!pool.length){
+      el.innerHTML = `<div class="lbl">${svgI("trophy", 2)}MVP ${esc(t("lb.ofPeriod", "периода"))}</div><div class="lb-mvp-empty">${esc(t("lb.empty", "За выбранный период и фильтры данных нет — попробуйте период побольше."))}</div>`;
+      return;
+    }
+    // общий рейтинг: средний перцентиль по метрикам (смерти не учитываем — это не заслуга)
+    const W = { kills: 1, kd: 1, pvp: 1, attend: .6, pve: .4 };
+    const place = {};
+    Object.keys(W).forEach(m => {
+      const sorted = pool.slice().sort((a, b) => val(b, m) - val(a, m));
+      place[m] = new Map(sorted.map((p, i) => [p.key, i]));
+    });
+    const n = pool.length, wSum = Object.values(W).reduce((a, b) => a + b, 0);
+    pool.forEach(p => {
+      p.mvp = Object.entries(W).reduce((s, [m, w]) => s + w * (n > 1 ? 1 - place[m].get(p.key) / (n - 1) : 1), 0) / wSum * 100;
+    });
+    const best = pool.slice().sort((a, b) => b.mvp - a.mvp)[0];
+    ctx.mvp = { best, place, n }; // для картинки в Telegram
+    const chips = Object.keys(W).map(m => ({ m, pl: place[m].get(best.key) + 1 })).sort((a, b) => a.pl - b.pl).slice(0, 4)
+      .map(({ m, pl }) => `<span class="chip-m" style="--mc:${MDEF[m].color}">#${pl} ${esc(MDEF[m].label())} · ${short(val(best, m), m)}</span>`).join("");
+    el.innerHTML =
+      `<div class="lbl">${svgI("trophy", 2)}MVP ${esc(t("lb.ofPeriod", "периода"))}</div>` +
+      `<div class="who"><div class="ava">${CROWN}<img src="${esc(best.icon)}" alt="" /></div>` +
+      `<div style="min-width:0;"><div class="nm"><span${cabAttr(best)}>${esc(best.nick)}</span></div><div class="sub">${esc(playerSub(best))}</div></div>` +
+      `<div class="score"><b>${Math.round(best.mvp)}</b><small>${esc(t("lb.mvpScore", "рейтинг из 100"))}</small></div></div>` +
+      `<div class="chips">${chips}</div>` +
+      `<p class="hint">${esc(t("lb.mvpHint", "Рейтинг — место среди {n} игроков по килам, K:D, PvP, посещениям и PvE сразу.").replace("{n}", n))}</p>`;
+  }
+
+  function renderSummary(){
+    const sum = (list, k) => list.reduce((a, p) => a + (p[k] || 0), 0);
+    const cur = ctx.peopleAll, prev = ctx.prevAll;
+    const c = { events: ctx.evList.length, people: cur.length, kills: sum(cur, "kills"), deaths: sum(cur, "deaths"), pvp: sum(cur, "pvp"), pve: sum(cur, "pve") };
+    c.kd = c.deaths > 0 ? c.kills / c.deaths : c.kills;
+    const p = { events: ctx.prevList.length, people: prev.length, kills: sum(prev, "kills"), deaths: sum(prev, "deaths"), pvp: sum(prev, "pvp"), pve: sum(prev, "pve") };
+    p.kd = p.deaths > 0 ? p.kills / p.deaths : p.kills;
+    const delta = (k) => {
+      if(!ctx.hasPrev || !p[k]) return "";
+      const d = (c[k] - p[k]) / p[k] * 100;
+      const cls = Math.abs(d) < 1 ? "flat" : (d > 0) === (k !== "deaths") ? "up" : "down";
+      return `<span class="lb-delta ${cls}">${d > 0 ? "▲" : d < 0 ? "▼" : ""}${Math.abs(d).toFixed(0)}%</span>`;
+    };
+    const tiles = [
+      ["events", t("lb.tEvents", "Ивентов"), "#9aa4b2", "events"],
+      ["people", t("lb.tPeople", "Участников"), "#4fb6e0", "people"],
+      ["kills", t("lb.mKills", "Килы"), MDEF.kills.color, "kills"],
+      ["deaths", t("lb.mDeaths", "Смерти"), MDEF.deaths.color, "deaths"],
+      ["kd", t("lb.tKd", "Ср. K:D"), MDEF.kd.color, "kd"],
+      ["pvp", t("lb.mPvp", "PvP урон"), MDEF.pvp.color, "pvp"],
+      ["pve", t("lb.mPve", "PvE урон"), MDEF.pve.color, "pve"],
+    ];
+    $("lbTiles").innerHTML = tiles.map(([k, label, color, ic]) =>
+      `<div class="lb-tile" style="--mc:${color}" title="${esc(fmt(c[k], k === "kd" ? "kd" : "x"))}"><span class="ti">${svgI(ic)}</span>` +
+      `<div style="min-width:0;"><b>${short(c[k], k === "kd" ? "kd" : "x")}${delta(k)}</b><small>${esc(label)}</small></div></div>`).join("");
+    $("lbSumHint").textContent = ctx.hasPrev ? t("lb.vsPrev", "▲▼ — к прошлому такому же периоду") : "";
+  }
+
+  // ---------- карточки «Топ по …» ----------
+  function placeDelta(secName, m, key, place){
+    if(!ctx.hasPrev) return "";
+    const was = ctx.sec[secName].prevPlace[m].get(key);
+    if(!was) return `<small class="lb-new">${esc(t("lb.new", "новый"))}</small>`;
+    const d = was - place;
+    if(!d) return `<small class="lb-delta flat" style="margin:0;">=</small>`;
+    return `<small class="lb-delta ${d > 0 ? "up" : "down"}" style="margin:0;">${d > 0 ? "▲" : "▼"}${Math.abs(d)}</small>`;
+  }
+  function rowHtml(secName, m, r, i, max, extraCls){
+    const place = i + 1;
+    const mine = secName === "players" ? (myKey && r.key === myKey) : (myGroupKey && r.key === myGroupKey);
+    const sub = secName === "players" ? playerSub(r) : (r.sub || "");
+    return `<div class="lb-row${mine ? " me" : ""}${extraCls || ""}" data-key="${esc(r.key)}">` +
+      `<span class="lb-num${place <= 3 ? " m" + place : ""}">${place}</span>` +
+      `<img src="${esc(r.icon)}" alt="" />` +
+      `<div class="who"><div class="nm" title="${esc(r.nick)}" data-me="${esc(t("lb.you", "вы"))}"><span${cabAttr(r)}>${esc(r.nick)}</span></div><div class="cl">${esc(sub)}</div>` +
+      `<div class="bar"><i style="width:${max > 0 ? (val(r, m) / max * 100).toFixed(1) : 0}%"></i></div></div>` +
+      `<div class="v" title="${esc(fmt(val(r, m), m))}">${short(val(r, m), m)}${placeDelta(secName, m, r.key, place)}</div></div>`;
+  }
+  function listHtml(secName, m, limit){
+    const ranked = ctx.sec[secName].ranked[m];
+    if(!ranked.length) return `<div class="lb-card-empty">${esc(t("lb.cardEmpty", "Нет данных"))}</div>`;
+    const top = ranked.slice(0, limit);
+    const max = val(ranked[0], m);
+    let html = top.map((r, i) => rowHtml(secName, m, r, i, max)).join("");
+    // своя строка (или своя пати) — даже если не попали в топ
+    const mineKey = secName === "players" ? myKey : myGroupKey;
+    const myIdx = mineKey ? ranked.findIndex(r => r.key === mineKey) : -1;
+    if(myIdx >= limit) html += rowHtml(secName, m, ranked[myIdx], myIdx, max, " lb-gap");
+    return html;
+  }
+  function cardHtml(secName, m){
+    const def = MDEF[m];
+    const open = state.open && state.open.sec === secName && state.open.m === m;
+    return `<div class="lb-card${open ? " open" : ""}" data-sec="${secName}" data-m="${m}" style="--mc:${def.color}">` +
+      `<div class="lb-card-h"><span class="mi">${svgI(m, 2)}</span><b><span>${esc(t("lb.topBy", "Топ по:"))}</span> ${esc(def.label())}</b><span class="go">›</span></div>` +
+      listHtml(secName, m, Number(state.top) || 5) + `</div>`;
+  }
+  function renderSection(secName, boxId){
+    const box = $(boxId);
+    let html = METRICS.map(m => cardHtml(secName, m.id)).join("");
+    box.innerHTML = html;
+    if(state.open && state.open.sec === secName){
+      // раскрытая карточка — во всю ширину сразу под рядом, в котором стоит её карточка
+      const cards = [...box.querySelectorAll(".lb-card")];
+      const openCard = cards.find(c => c.dataset.m === state.open.m);
+      if(openCard){
+        const top = openCard.offsetTop;
+        const rowEnd = cards.filter(c => c.offsetTop === top).pop();
+        const exp = document.createElement("div");
+        exp.className = "lb-card lb-expand";
+        exp.style.setProperty("--mc", MDEF[state.open.m].color);
+        rowEnd.insertAdjacentElement("afterend", exp);
+        renderExpand(exp, secName);
+      }
+    }
+    box.querySelectorAll(".lb-card:not(.lb-expand)").forEach((c, i) => c.style.animationDelay = (i * 40) + "ms");
+  }
+
+  // ---------- раскрытая карточка: топ-10 + график по ивентам ----------
+  function renderExpand(el, secName){
+    const m = state.open.m;
+    const cm = state.chMetric && MDEF[state.chMetric] ? state.chMetric : m;
+    const def = MDEF[m];
+    el.innerHTML =
+      `<div class="list"><div class="lb-card-h"><span class="mi">${svgI(m, 2)}</span><b><span>${esc(t("lb.topBy", "Топ по:"))}</span> ${esc(def.label())}</b>` +
+      `<span class="go" data-close="1" title="${esc(t("common.close", "Закрыть"))}" style="cursor:pointer;">×</span></div>${listHtml(secName, m, 10)}</div>` +
+      `<div class="chart"><div class="lb-ch-tools">` +
+        `<div class="lb-seg" data-role="metric">${METRICS.map(x => `<button type="button" data-cm="${x.id}" class="${x.id === cm ? "active" : ""}" style="--mc:${x.color}">${esc(x.label())}</button>`).join("")}</div>` +
+        `<div class="lb-seg" data-role="mode"><button type="button" data-mode="event" class="${state.chMode === "event" ? "active" : ""}">${esc(t("lb.byEvent", "По ивентам"))}</button>` +
+        `<button type="button" data-mode="cum" class="${state.chMode === "cum" ? "active" : ""}">${esc(t("lb.cumulative", "Нарастающим"))}</button></div>` +
+        `<span class="hint">${esc(t("lb.legendHint", "Клик по имени внизу — скрыть/показать линию"))}</span>` +
+      `</div><div data-role="chart"></div></div>`;
+    const ranked = ctx.sec[secName].ranked[m];
+    const lines = ranked.slice(0, Math.min(10, Math.max(5, Number(state.top) || 5)));
+    drawChart(el.querySelector('[data-role="chart"]'), lines, cm);
+  }
+
+  function drawChart(box, rows, m){
+    const evList = ctx.evList.filter(e => rows.some(r => r.per.has(e.id)));
+    if(evList.length < 2 || !rows.length){
+      box.innerHTML = `<p class="hint" style="margin:30px 0; text-align:center;">${esc(t("lb.raceNeedMore", "Нужно хотя бы 2 ивента в периоде."))}</p>`;
+      return;
+    }
+    const series = rows.map((r, i) => {
+      let k = 0, d = 0, pv = 0, pe = 0, at = 0;
+      const pts = evList.map(e => {
+        const v = r.per.get(e.id);
+        if(state.chMode === "cum"){
+          if(v){ k += v.kills; d += v.deaths; pv += v.pvp; pe += v.pve; at += v.n || 1; }
+          return m === "kd" ? (d > 0 ? k / d : k) : m === "kills" ? k : m === "deaths" ? d : m === "pvp" ? pv : m === "pve" ? pe : at;
+        }
+        if(!v) return null; // не был на этом ивенте — разрыв линии
+        return m === "kd" ? (v.deaths > 0 ? v.kills / v.deaths : v.kills) : m === "attend" ? (v.n || 1) : v[m];
+      });
+      return { key: r.key, nick: r.nick, color: SERIES[i % SERIES.length], pts };
+    });
+    const visible = series.filter(s => !hidden.has(s.key));
+    const maxV = Math.max(0.0001, ...visible.flatMap(s => s.pts.filter(v => v != null)));
+    const W = 1000, H = 250, PT = 10, PB = 6;
+    const x = (i) => i * W / (evList.length - 1);
+    const y = (v) => H - PB - (v / maxV) * (H - PT - PB);
+    let svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">`;
+    const ticks = [0, .25, .5, .75, 1];
+    ticks.forEach(f => { const gy = y(maxV * f).toFixed(1); svg += `<line class="grid" x1="0" x2="${W}" y1="${gy}" y2="${gy}" vector-effect="non-scaling-stroke"/>`; });
+    visible.slice().reverse().forEach(s => {
+      let d = "", pen = false;
+      s.pts.forEach((v, i) => {
+        if(v == null){ pen = false; return; }
+        d += (pen ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1) + " "; pen = true;
+      });
+      // одиночные точки (окружены пропусками) — короткий штрих, иначе их не видно
+      s.pts.forEach((v, i) => { if(v != null && s.pts[i - 1] == null && s.pts[i + 1] == null) d += `M${(x(i) - 3).toFixed(1)} ${y(v).toFixed(1)} L${(x(i) + 3).toFixed(1)} ${y(v).toFixed(1)} `; });
+      svg += `<path class="ln" data-key="${esc(s.key)}" d="${d}" stroke="${s.color}" vector-effect="non-scaling-stroke"/>`;
+    });
+    svg += `</svg>`;
+    const ylabs = ticks.map(f => `<span class="lb-ylab" style="top:${(y(maxV * f) / H * 100).toFixed(2)}%">${short(maxV * f, m)}</span>`).join("");
+    const step = Math.max(1, Math.ceil(evList.length / 9));
+    const xlabs = evList.map((e, i) => (i % step === 0 || i === evList.length - 1) && !(i !== evList.length - 1 && evList.length - 1 - i < step / 2)
+      ? `<span style="left:${(x(i) / W * 100).toFixed(2)}%">${esc(e.event_name || "")}<small>${esc(shortDate(e.event_date))}</small></span>` : "").join("");
+    box.innerHTML = `<div class="lb-chart-box">${svg}${ylabs}<div class="lb-cross"></div><div class="lb-tip"></div>` +
+      visible.map(s => `<span class="lb-dot" data-key="${esc(s.key)}" style="background:${s.color}"></span>`).join("") + `</div>` +
+      `<div class="lb-xlabs">${xlabs}</div>` +
+      `<div class="lb-legend">${series.map(s => `<button type="button" data-key="${esc(s.key)}" class="${hidden.has(s.key) ? "off" : ""}"><i style="border-color:${s.color};background:${s.color}"></i>${esc(s.nick)}</button>`).join("")}</div>`;
+
+    const cb = box.querySelector(".lb-chart-box"), svgEl = cb.querySelector("svg"), cross = cb.querySelector(".lb-cross"), tip = cb.querySelector(".lb-tip");
+    const dots = [...cb.querySelectorAll(".lb-dot")];
+    svgEl.addEventListener("mousemove", (e) => {
+      const rect = svgEl.getBoundingClientRect(), base = cb.getBoundingClientRect();
+      const fx = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+      const i = Math.round(fx * (evList.length - 1));
+      const px = rect.left - base.left + (x(i) / W) * rect.width;
+      cross.style.display = "block"; cross.style.left = px + "px";
+      dots.forEach(dEl => {
+        const s = visible.find(q => q.key === dEl.dataset.key); const v = s && s.pts[i];
+        if(v == null){ dEl.style.display = "none"; return; }
+        dEl.style.display = "block"; dEl.style.left = px + "px"; dEl.style.top = (rect.top - base.top + y(v) / H * rect.height) + "px";
+      });
+      const ev = evList[i];
+      tip.innerHTML = `<div class="h">${esc(ev.event_name || "")} <small>· ${esc(shortDate(ev.event_date))}</small></div>` +
+        visible.filter(s => s.pts[i] != null).sort((a, b) => b.pts[i] - a.pts[i]).map(s =>
+          `<div class="r"><i style="background:${s.color}"></i><span>${esc(s.nick)}</span><b>${fmt(s.pts[i], m)}</b></div>`).join("") +
+        (visible.some(s => s.pts[i] == null) ? `<div class="r" style="opacity:.6;"><span>${esc(t("lb.notThere", "остальных не было"))}</span></div>` : "");
+      tip.style.display = "block";
+      const tw = tip.offsetWidth;
+      tip.style.left = Math.max(0, px + 14 + tw > base.width ? px - tw - 14 : px + 14) + "px";
+    });
+    svgEl.addEventListener("mouseleave", () => { cross.style.display = "none"; tip.style.display = "none"; dots.forEach(d => d.style.display = "none"); });
+    box.querySelector(".lb-legend").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-key]"); if(!b) return;
+      if(hidden.has(b.dataset.key)) hidden.delete(b.dataset.key); else hidden.add(b.dataset.key);
+      drawChart(box, rows, m);
+    });
+    box.querySelector(".lb-legend").addEventListener("mouseover", (e) => {
+      const b = e.target.closest("button[data-key]");
+      svgEl.classList.toggle("focus", !!b && !hidden.has(b?.dataset.key));
+      svgEl.querySelectorAll(".ln").forEach(p => p.classList.toggle("on", !!b && p.dataset.key === b.dataset.key));
+    });
+    box.querySelector(".lb-legend").addEventListener("mouseleave", () => svgEl.classList.remove("focus"));
+  }
+
+  // ---------- рекорды и взлёты ----------
+  function renderFeats(){
+    const people = ctx.sec.players.rows, evList = ctx.evList;
+    const cards = [];
+    const feat = (color, icon, k, r, sub, value) =>
+      `<div class="lb-feat" style="--mc:${color}"><svg class="big-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">${ICON[icon]}</svg>` +
+      `<div class="k">${esc(k)}</div>` +
+      `<img src="${esc(r.icon)}" alt="" /><div class="t"><div class="n" title="${esc(r.nick)}"><span${cabAttr(r)}>${esc(r.nick)}</span></div><div class="s" title="${esc(sub)}">${esc(sub)}</div></div>` +
+      `<div class="val">${value}</div></div>`;
+    [["kills", t("lb.recKills", "Больше всех килов за ивент")], ["pvp", t("lb.recPvp", "PvP урон за ивент")], ["pve", t("lb.recPve", "PvE урон за ивент")]].forEach(([m, label]) => {
+      let best = null;
+      people.forEach(p => p.per.forEach((v, id) => { if(!best || v[m] > best.v) best = { v: v[m], p, ev: eventById.get(id) }; }));
+      if(best && best.v) cards.push(feat(MDEF[m].color, m, label, best.p, `${best.ev.event_name || ""} · ${shortDate(best.ev.event_date)}`, short(best.v, m)));
+    });
+    // лучший K:D за один ивент (от 5 килов, чтобы 1/0 не выигрывал)
+    let kdBest = null;
+    people.forEach(p => p.per.forEach((v, id) => {
+      if(v.kills < 5) return;
+      const kd = v.deaths > 0 ? v.kills / v.deaths : v.kills;
+      if(!kdBest || kd > kdBest.v) kdBest = { v: kd, p, ev: eventById.get(id), raw: v };
+    }));
+    if(kdBest) cards.push(feat(MDEF.kd.color, "kd", t("lb.recKd", "Лучший K:D за ивент"), kdBest.p, `${kdBest.raw.kills}/${kdBest.raw.deaths} · ${kdBest.ev.event_name || ""} ${shortDate(kdBest.ev.event_date)}`, kdBest.v.toFixed(2)));
+    // самая длинная серия ивентов подряд без пропуска
+    let streak = null;
+    people.forEach(p => {
+      let cur = 0, mx = 0;
+      evList.forEach(e => { if(p.per.has(e.id)){ cur++; if(cur > mx) mx = cur; } else cur = 0; });
+      if(!streak || mx > streak.v) streak = { v: mx, p };
+    });
+    if(streak && streak.v > 1) cards.push(feat("#4fb6e0", "fire", t("lb.recStreak", "Серия без пропусков"), streak.p, t("lb.recStreakSub", "ивентов подряд"), streak.v));
+    // взлёт периода — больше всех прибавил килов к прошлому такому же периоду
+    if(ctx.hasPrev){
+      const prevBy = new Map(filterPlayers(ctx.prevAll).map(p => [p.key, p]));
+      let up = null;
+      people.forEach(p => {
+        const was = prevBy.get(p.key); if(!was) return;
+        const d = p.kills - was.kills;
+        if(d > 0 && (!up || d > up.d)) up = { d, p, was };
+      });
+      if(up) cards.push(feat("#5fcf8a", "rocket", t("lb.recRise", "Взлёт периода"), up.p, t("lb.recRiseSub", "килов: {a} → {b}").replace("{a}", up.was.kills).replace("{b}", up.p.kills), "+" + short(up.d, "kills")));
+      // новички — впервые на ивентах в этом периоде
+      const firstSeen = new Map();
+      stats.forEach(r => { const k = keyOf(r.nickname); const d = eventById.get(r.event_id)?.event_date; if(k && d && (!firstSeen.has(k) || d < firstSeen.get(k))) firstSeen.set(k, d); });
+      const from = ranges().cur.from;
+      const rookies = from ? people.filter(p => (firstSeen.get(p.key) || "") >= from).sort((a, b) => b.kills - a.kills) : [];
+      if(rookies.length) cards.push(feat("#5aa9e6", "people", t("lb.recRookie", "Лучший новичок"), rookies[0], t("lb.recRookieSub", "новичков за период: {n}").replace("{n}", rookies.length), short(rookies[0].kills, "kills")));
+    }
+    $("lbFeats").innerHTML = cards.join("") || `<p class="hint">${esc(t("lb.recNone", "Рекордов пока нет."))}</p>`;
+  }
+
+  // ---------- картинка топа для Telegram (PNG 1080×1350, рисуется в браузере) ----------
+  function loadImg(src){
+    return new Promise(res => {
+      if(!src || src === BLANK) return res(null);
+      const im = new Image(); im.crossOrigin = "anonymous";
+      im.onload = () => res(im); im.onerror = () => res(null); im.src = src;
+    });
+  }
+  function rr(c, x, y, w, h, r){
+    c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+  }
+  function fitText(c, s, maxW){
+    s = String(s || "");
+    if(c.measureText(s).width <= maxW) return s;
+    while(s.length > 1 && c.measureText(s + "…").width > maxW) s = s.slice(0, -1);
+    return s + "…";
+  }
+  function drawAva(c, img, x, y, size, ring, lw){
+    c.save(); c.beginPath(); c.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2); c.closePath();
+    c.fillStyle = "#22242a"; c.fill();
+    if(img){ c.clip(); try{ c.drawImage(img, x, y, size, size); }catch(e){} }
+    c.restore();
+    if(ring){ c.beginPath(); c.arc(x + size / 2, y + size / 2, size / 2 + (lw || 3) / 2, 0, Math.PI * 2); c.lineWidth = lw || 3; c.strokeStyle = ring; c.stroke(); }
+  }
+  async function buildShareCanvas(){
+    try{ await document.fonts.ready; }catch(e){}
+    const W = 1080, H = 1350, P = 64;
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const c = cv.getContext("2d");
+    const F = (w, s) => `${w} ${s}px Inter, "Segoe UI", system-ui, sans-serif`;
+    c.fillStyle = "#0d0e11"; c.fillRect(0, 0, W, H);
+    let g = c.createRadialGradient(W * .85, 0, 0, W * .85, 0, 760); g.addColorStop(0, "rgba(242,193,78,.24)"); g.addColorStop(1, "rgba(242,193,78,0)"); c.fillStyle = g; c.fillRect(0, 0, W, H);
+    g = c.createRadialGradient(0, H, 0, 0, H, 760); g.addColorStop(0, "rgba(90,123,217,.16)"); g.addColorStop(1, "rgba(90,123,217,0)"); c.fillStyle = g; c.fillRect(0, 0, W, H);
+
+    // шапка: клан, период
+    let clan = "";
+    try{ clan = (window.top.document.getElementById("brandName")?.textContent || "").trim(); }catch(e){}
+    const periodLabel = $("lbPeriod").selectedOptions[0]?.textContent || "";
+    c.textBaseline = "alphabetic";
+    c.fillStyle = "#f2c14e"; c.font = F(800, 22); c.fillText(t("lb.shareKicker", "ЛИДЕРБОРД КЛАНА"), P, 96);
+    c.fillStyle = "#ffffff"; c.font = F(800, 56); c.fillText(fitText(c, clan || t("section.leaderboard", "Лидерборд"), W - 2 * P), P, 160);
+    c.fillStyle = "#8b8d96"; c.font = F(500, 24);
+    c.fillText(`${periodLabel} · ${t("lb.tEvents", "Ивентов")}: ${ctx.evList.length} · ${t("lb.tPeople", "Участников")}: ${ctx.peopleAll.length}` + (state.type ? ` · ${state.type}` : ""), P, 202);
+
+    // MVP
+    const my = 236, mh = 210;
+    rr(c, P, my, W - 2 * P, mh, 26);
+    g = c.createLinearGradient(P, my, W - P, my + mh); g.addColorStop(0, "rgba(242,193,78,.16)"); g.addColorStop(1, "rgba(28,29,34,.9)");
+    c.fillStyle = g; c.fill(); c.lineWidth = 2; c.strokeStyle = "rgba(242,193,78,.45)"; c.stroke();
+    const mvp = ctx.mvp;
+    if(mvp){
+      const b = mvp.best;
+      drawAva(c, await loadImg(b.icon), P + 34, my + 40, 130, "#f2c14e", 5);
+      c.fillStyle = "#f2c14e"; c.beginPath(); // корона
+      const cx = P + 99, cy = my + 22;
+      c.moveTo(cx - 26, cy + 18); c.lineTo(cx - 26, cy - 4); c.lineTo(cx - 13, cy + 8); c.lineTo(cx, cy - 12); c.lineTo(cx + 13, cy + 8); c.lineTo(cx + 26, cy - 4); c.lineTo(cx + 26, cy + 18); c.closePath(); c.fill();
+      c.fillStyle = "#f2c14e"; c.font = F(800, 20); c.fillText("MVP " + t("lb.ofPeriod", "периода").toUpperCase(), P + 196, my + 66);
+      c.fillStyle = "#ffffff"; c.font = F(800, 46); c.fillText(fitText(c, b.nick, 520), P + 196, my + 120);
+      c.fillStyle = "#8b8d96"; c.font = F(500, 22); c.fillText(fitText(c, playerSub(b), 520), P + 196, my + 156);
+      c.textAlign = "right";
+      c.fillStyle = "#f2c14e"; c.font = F(800, 84); c.fillText(String(Math.round(b.mvp)), W - P - 36, my + 128);
+      c.fillStyle = "#8b8d96"; c.font = F(500, 18); c.fillText(t("lb.mvpScore", "рейтинг из 100"), W - P - 36, my + 158);
+      c.textAlign = "left";
+    }
+
+    // четыре топа 2×2
+    const boxes = ["kills", "kd", "pvp", "attend"];
+    const bw = (W - 2 * P - 24) / 2, bh = 372;
+    const imgs = new Map();
+    const need = new Set(); boxes.forEach(m => ctx.sec.players.ranked[m].slice(0, 5).forEach(r => need.add(r.icon)));
+    await Promise.all([...need].map(async src => imgs.set(src, await loadImg(src))));
+    boxes.forEach((m, bi) => {
+      const def = MDEF[m];
+      const bx = P + (bi % 2) * (bw + 24), by = 476 + Math.floor(bi / 2) * (bh + 24);
+      rr(c, bx, by, bw, bh, 22); c.fillStyle = "rgba(21,22,26,.92)"; c.fill(); c.lineWidth = 1.5; c.strokeStyle = "rgba(255,255,255,.08)"; c.stroke();
+      c.fillStyle = def.color; rr(c, bx + 24, by, bw - 48, 4, 2); c.fill();
+      c.beginPath(); c.arc(bx + 34, by + 44, 7, 0, Math.PI * 2); c.fill();
+      c.fillStyle = "#e3e4e8"; c.font = F(700, 24); c.fillText(t("lb.topBy", "Топ по:") + " " + def.label(), bx + 52, by + 52);
+      const rows = ctx.sec.players.ranked[m].slice(0, 5);
+      const max = rows.length ? val(rows[0], m) : 1;
+      const medal = ["#f2c14e", "#c3cad4", "#d08b5b"];
+      rows.forEach((r, i) => {
+        const ry = by + 84 + i * 56;
+        c.fillStyle = medal[i] || "#2a2c33"; c.beginPath(); c.arc(bx + 38, ry + 20, 14, 0, Math.PI * 2); c.fill();
+        c.fillStyle = i < 3 ? "#1a1408" : "#9aa0aa"; c.font = F(800, 15); c.textAlign = "center"; c.fillText(String(i + 1), bx + 38, ry + 25); c.textAlign = "left";
+        drawAva(c, imgs.get(r.icon), bx + 64, ry + 2, 38, null);
+        c.fillStyle = "#ffffff"; c.font = F(600, 21); c.fillText(fitText(c, r.nick, bw - 250), bx + 116, ry + 22);
+        c.fillStyle = "rgba(255,255,255,.06)"; rr(c, bx + 116, ry + 32, bw - 250, 5, 3); c.fill();
+        c.fillStyle = def.color; rr(c, bx + 116, ry + 32, Math.max(6, (bw - 250) * (max > 0 ? val(r, m) / max : 0)), 5, 3); c.fill();
+        c.textAlign = "right"; c.fillStyle = "#ffffff"; c.font = F(800, 23); c.fillText(short(val(r, m), m), bx + bw - 24, ry + 27); c.textAlign = "left";
+      });
+      if(!rows.length){ c.fillStyle = "#8b8d96"; c.font = F(500, 20); c.fillText(t("lb.cardEmpty", "Нет данных"), bx + 24, by + 120); }
+    });
+
+    // подвал
+    const d = new Date();
+    c.fillStyle = "#5d6068"; c.font = F(500, 20);
+    c.fillText(`${t("lb.shareFooter", "Кабинет клана")} · ${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`, P, H - 44);
+    return cv;
+  }
+
+  // окно предпросмотра: скопировать (и вставить в Telegram через Ctrl+V) / скачать / поделиться
+  let shareOverlay = null;
+  async function openShare(){
+    const btn = $("lbShareBtn"); btn.disabled = true;
+    let cv;
+    try{ cv = await buildShareCanvas(); } finally { btn.disabled = false; }
+    let blobP = new Promise(res => cv.toBlob(res, "image/png"));
+    if(!shareOverlay){
+      shareOverlay = document.createElement("div");
+      shareOverlay.className = "modal-overlay";
+      shareOverlay.innerHTML = `<div class="modal lb-share-modal"><button class="modal-close" data-x="1" title="${esc(t("common.close", "Закрыть"))}">×</button>` +
+        `<h2>${esc(t("lb.shareTitle", "Картинка для Telegram"))}</h2>` +
+        `<img class="lb-share-img" alt="" />` +
+        `<div class="lb-share-actions"><button class="btn btn-primary" data-act="copy">${esc(t("lb.shareCopy", "Скопировать"))}</button>` +
+        `<button class="btn" data-act="dl">${esc(t("lb.shareDownload", "Скачать PNG"))}</button>` +
+        `<button class="btn" data-act="share" style="display:none;">${esc(t("lb.shareShare", "Поделиться…"))}</button></div>` +
+        `<p class="hint lb-share-msg">${esc(t("lb.shareHint", "Скопируйте и вставьте в чат Telegram через Ctrl+V — или скачайте файл."))}</p></div>`;
+      document.body.appendChild(shareOverlay);
+      shareOverlay.addEventListener("click", (e) => { if(e.target === shareOverlay || e.target.closest("[data-x]")) shareOverlay.classList.remove("show"); });
+      document.addEventListener("keydown", (e) => { if(e.key === "Escape") shareOverlay.classList.remove("show"); });
+    }
+    const img = shareOverlay.querySelector(".lb-share-img");
+    img.src = cv.toDataURL("image/png");
+    const msg = shareOverlay.querySelector(".lb-share-msg");
+    msg.textContent = t("lb.shareHint", "Скопируйте и вставьте в чат Telegram через Ctrl+V — или скачайте файл.");
+    const fileName = "leaderboard-" + isoDate(new Date()) + ".png";
+    const shareBtn = shareOverlay.querySelector('[data-act="share"]');
+    blobP.then(b => {
+      const f = b && new File([b], fileName, { type: "image/png" });
+      shareBtn.style.display = (f && navigator.canShare && navigator.canShare({ files: [f] })) ? "" : "none";
+    });
+    shareOverlay.querySelectorAll("[data-act]").forEach(b => b.onclick = async () => {
+      const act = b.dataset.act;
+      if(act === "copy"){
+        try{
+          // ClipboardItem с обещанием — write() вызывается сразу в клике, иначе браузер не даст
+          await navigator.clipboard.write([new ClipboardItem({ "image/png": blobP })]);
+          msg.textContent = t("lb.shareCopied", "Скопировано ✓ Откройте чат в Telegram и нажмите Ctrl+V.");
+        }catch(e){ console.error(e); msg.textContent = t("lb.shareCopyFail", "Браузер не дал скопировать картинку — нажмите «Скачать PNG»."); }
+      } else if(act === "dl"){
+        const a = document.createElement("a"); a.href = img.src; a.download = fileName; document.body.appendChild(a); a.click(); a.remove();
+      } else if(act === "share"){
+        try{ const bl = await blobP; await navigator.share({ files: [new File([bl], fileName, { type: "image/png" })] }); }catch(e){}
+      }
+    });
+    shareOverlay.classList.add("show");
+  }
+  $("lbShareBtn").addEventListener("click", openShare);
+
+  function render(){
+    save();
+    compute();
+    renderHeader();
+    renderMvp();
+    renderSummary();
+    if(!restrictedParty) renderSection("groups", "lbGroupCards");
+    renderSection("players", "lbPlayerCards");
+    renderFeats();
+  }
+
+  // ---------- события ----------
+  function onCardsClick(e){
+    const card = e.target.closest(".lb-card"); if(!card) return;
+    if(card.classList.contains("lb-expand")){
+      if(e.target.closest("[data-close]")){ state.open = null; render(); return; }
+      const cm = e.target.closest("[data-cm]");
+      if(cm){ state.chMetric = cm.dataset.cm; save(); renderExpand(card, state.open.sec); return; }
+      const md = e.target.closest("[data-mode]");
+      if(md){ state.chMode = md.dataset.mode; save(); renderExpand(card, state.open.sec); }
+      return;
+    }
+    const sec = card.dataset.sec, m = card.dataset.m;
+    const same = state.open && state.open.sec === sec && state.open.m === m;
+    state.open = same ? null : { sec, m };
+    state.chMetric = m; hidden.clear();
+    render();
+    // карточки после render() уже новые — раскрытую ищем в самом контейнере секции
+    if(!same){ const exp = e.currentTarget.querySelector(".lb-expand"); exp && exp.scrollIntoView({ behavior: "smooth", block: "nearest" }); }
+  }
+  $("lbGroupCards").addEventListener("click", onCardsClick);
+  $("lbPlayerCards").addEventListener("click", onCardsClick);
+  [["lbPeriod", "period"], ["lbFrom", "from"], ["lbTo", "to"], ["lbType", "type"], ["lbGroup", "group"], ["lbClass", "cls"], ["lbMin", "min"], ["lbTop", "top"]]
+    .forEach(([id, k]) => $(id).addEventListener("change", (e) => { state[k] = e.target.value; hidden.clear(); render(); }));
+  // раскрытая карточка встаёт под «свой» ряд — при смене ширины ряды другие, перерисовываем
+  let rzT = null;
+  window.addEventListener("resize", () => { clearTimeout(rzT); rzT = setTimeout(() => { if(state.open) render(); }, 200); });
+  window.addEventListener("storage", (e) => { if(e.key === "l2Lang"){ fillSelects(); render(); } });
+
+  fillSelects();
+  render();
+})();
+</script>
+</body>
+</html>

@@ -4,22 +4,30 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Журнал посещаемости — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=27" />
+<link rel="stylesheet" href="js/theme.css?v=36" />
 <style>
   #daysContainer{
     display:grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap:12px;
   }
-  .day-card{ padding:12px 14px; cursor:pointer; }
-  .day-card:hover{ border-color: var(--border-lit); }
-  .day-card h2{ font-size:12.5px; margin:0 0 8px; color: var(--gold-dim); }
-  .day-event-preview-list{ display:flex; flex-direction:column; gap:4px; margin:0 0 6px; }
+  .day-card{ padding:13px 14px; cursor:pointer; min-height:132px; display:flex; flex-direction:column;
+    transition: border-color .15s var(--ease), box-shadow .15s var(--ease); }
+  .day-card:hover{ border-color: var(--accent-line); box-shadow: 0 10px 26px rgba(0,0,0,.3); }
+  .day-card h2{ font-size:13px; margin:0 0 10px; color: var(--text); font-weight:600; }
+  /* сегодняшний день — акцентная рамка и метка «сегодня» */
+  .day-card.today{ border-color: var(--accent-line); background: linear-gradient(180deg, var(--accent-soft), transparent 90px), var(--panel); }
+  .day-card.today h2{ color: var(--gold); }
+  .day-today-tag{ font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; margin-left:6px;
+    padding:1px 6px; border-radius:20px; background: var(--gold); color:#111; vertical-align:1px; }
+  .day-event-preview-list{ display:flex; flex-direction:column; gap:5px; margin:0 0 8px; }
   .day-event-preview{
-    font-size:12px;
-    padding:5px 8px;
-    border-radius:4px;
+    font-size:12.5px; font-weight:500;
+    padding:6px 9px;
+    border-radius:7px;
     background: var(--panel-2);
+    border:1px solid var(--border);
+    box-shadow: inset 3px 0 0 var(--accent-line);
     color: var(--text);
   }
   .event-block{
@@ -32,21 +40,22 @@
   .event-block-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
   .event-block-head h3{ margin:0; font-size:12.5px; color: var(--gold); font-weight:600; }
   .event-block-head .btn-danger{ padding:1px 6px; font-size:11px; line-height:1.6; }
-  .day-empty{ font-size:11.5px; color: var(--text-dim); margin:0 0 6px; }
+  .day-empty{ font-size:12px; color:#62656d; margin:0 0 8px; flex:1; }
   .remember-status{ font-size:12px; color: var(--text-dim); }
 
   .day-add-toggle{
-    width:22px; height:22px;
-    border-radius:5px;
-    border:1px solid var(--border);
-    background: var(--panel-2);
-    color: var(--gold-dim);
-    font-size:14px;
+    width:100%; height:28px; margin-top:auto;
+    border-radius:7px;
+    border:1px dashed var(--border-lit);
+    background: transparent;
+    color: var(--text-dim);
+    font-family:inherit; font-size:12px; font-weight:500;
     line-height:1;
     padding:0;
     cursor:pointer;
+    transition: color .15s, border-color .15s, background .15s;
   }
-  .day-add-toggle:hover{ color: var(--gold); border-color: var(--border-lit); }
+  .day-add-toggle:hover{ color: var(--gold); border-color: var(--accent-line); background: var(--accent-soft); }
 
   /* маленькая зелёная кнопка рядом с «Посещаемость» — открывает отчёт сразу
      за ту неделю, что сейчас показана в редакторе (Пн–Вс), без лишних кликов */
@@ -436,14 +445,17 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=24"></script>
-<script src="js/i18n.js?v=88"></script>
+<script src="js/page-keys.js?v=2"></script>
+<script src="js/supabase-client.js?v=25"></script>
+<script src="js/i18n.js?v=96"></script>
+<script src="js/datepicker.js?v=2"></script>
+<script src="js/paste-drop.js?v=1"></script>
 <script src="js/tax-flag.js?v=1"></script>
 <script src="js/nick-match.js?v=4"></script>
 <script src="js/classes.js?v=1"></script>
 <script src="js/class-icon-match.js?v=1"></script>
-<script src="js/screenshot-review.js?v=1"></script>
-<script src="js/event-roster.js?v=31"></script>
+<script src="js/screenshot-review.js?v=2"></script>
+<script src="js/event-roster.js?v=32"></script>
 <script src="js/share-report.js?v=2"></script>
 <script>
 (async function(){
@@ -764,11 +776,18 @@
       const dayLabel = `${DAY_NAMES()[i]}, ${pad2(d.getDate())}.${pad2(d.getMonth()+1)}`;
 
       const dayCard = document.createElement("section");
-      dayCard.className = "card day-card";
+      const isToday = dateStr === isoDate(new Date());
+      dayCard.className = "card day-card" + (isToday ? " today" : "");
       dayCard.addEventListener("click", () => openDayModal(dayLabel, dateStr));
 
       const heading = document.createElement("h2");
       heading.textContent = dayLabel;
+      if(isToday){
+        const tag = document.createElement("span");
+        tag.className = "day-today-tag";
+        tag.textContent = L2I18n.t("attendance.todayTag", "сегодня");
+        heading.appendChild(tag);
+      }
       dayCard.appendChild(heading);
 
       if(!dayEvents.length){
@@ -792,7 +811,7 @@
         const toggle = document.createElement("button");
         toggle.className = "day-add-toggle";
         toggle.title = L2I18n.t("attendance.addEventTitle", "Добавить мероприятие");
-        toggle.textContent = "+";
+        toggle.textContent = "+ " + L2I18n.t("attendance.addBtn", "Добавить");
         toggle.addEventListener("click", (e) => e.stopPropagation());
 
         const addRow = document.createElement("div");
@@ -910,6 +929,13 @@
     document.getElementById("rememberStatus").textContent = "";
     await loadWeek();
   }
+
+  // ← / → на клавиатуре — прошлая/следующая неделя (js/page-keys.js), если кнопки сейчас видны
+  window.L2PageKeys = (key) => {
+    const b = document.getElementById(key === "ArrowLeft" ? "prevWeekBtn" : "nextWeekBtn");
+    if(!b || b.disabled || !b.offsetParent) return false;
+    b.click(); return true;
+  };
 
   document.getElementById("prevWeekBtn").addEventListener("click", () => {
     const d = new Date(currentWeek); d.setDate(d.getDate() - 7); goToWeek(d);

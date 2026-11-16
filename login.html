@@ -4,45 +4,174 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Вход — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=27" />
+<link rel="stylesheet" href="js/theme.css?v=36" />
+<!-- приложение на телефоне/компьютере: иконка, название, тёмная шапка -->
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" type="image/png" sizes="32x32" href="assets/app/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="64x64" href="assets/app/favicon-64.png" />
+<link rel="apple-touch-icon" href="assets/app/apple-touch-icon.png" />
+<meta name="theme-color" content="#0d0e11" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Кабинет клана" />
+<style>
+  /* вход — свой тёплый акцент (клан ещё неизвестен, пресета нет) и «витрина» слева */
+  :root{ --login-accent:#e0a52a; }
+  body{ overflow-x:hidden; }
+  .lg-bg{ position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+  .lg-bg::before{
+    content:""; position:absolute; inset:0;
+    background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size:44px 44px;
+    -webkit-mask-image: radial-gradient(ellipse at 50% 40%, #000 20%, transparent 75%); mask-image: radial-gradient(ellipse at 50% 40%, #000 20%, transparent 75%);
+  }
+  .lg-blob{ position:absolute; width:520px; height:520px; border-radius:50%; filter: blur(90px); opacity:.16; animation: lgFloat 18s ease-in-out infinite alternate; }
+  .lg-blob.a{ background: var(--login-accent); top:-160px; left:-120px; }
+  .lg-blob.b{ background:#5a7bd9; bottom:-200px; right:-140px; animation-delay:-9s; opacity:.12; }
+  @keyframes lgFloat{ from{ transform: translate(0,0) scale(1); } to{ transform: translate(80px,60px) scale(1.12); } }
+
+  .lg-wrap{ position:relative; z-index:1; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:32px 20px; }
+  .lg-shell{
+    width:100%; max-width:920px; display:grid; grid-template-columns: 1.05fr 1fr; overflow:hidden;
+    border-radius:18px; border:1px solid var(--border-lit); background: rgba(21,22,26,.82);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    box-shadow: 0 30px 80px rgba(0,0,0,.55); animation: l2Rise .5s var(--ease) both;
+  }
+  .lg-show{
+    position:relative; padding:40px 36px; display:flex; flex-direction:column; gap:22px;
+    background:
+      radial-gradient(500px 260px at 0% 0%, color-mix(in srgb, var(--login-accent) 20%, transparent), transparent 70%),
+      linear-gradient(160deg, #1a1712, #121316 60%);
+    border-right:1px solid var(--border);
+  }
+  .lg-emblem{ width:64px; height:64px; color: var(--login-accent); filter: drop-shadow(0 6px 18px color-mix(in srgb, var(--login-accent) 45%, transparent)); }
+  .lg-show h1{ font-size:30px; color:#fff; margin:0; letter-spacing:-.03em; line-height:1.1; }
+  .lg-show .tag{ font-size:14px; color: var(--text-dim); line-height:1.55; margin:0; max-width:340px; }
+  .lg-feats{ display:flex; flex-direction:column; gap:12px; margin-top:auto; }
+  .lg-feat{ display:flex; align-items:center; gap:12px; font-size:13.5px; color: var(--text); }
+  .lg-feat i{
+    flex:none; width:34px; height:34px; border-radius:10px; display:grid; place-items:center;
+    background: color-mix(in srgb, var(--login-accent) 12%, transparent); border:1px solid color-mix(in srgb, var(--login-accent) 28%, transparent);
+    color: var(--login-accent);
+  }
+  .lg-feat svg{ width:18px; height:18px; }
+
+  .lg-form{ padding:40px 36px 30px; display:flex; flex-direction:column; justify-content:center; }
+  .lg-form h2{ font-size:20px; margin:0 0 4px; }
+  .lg-form .hint{ margin:0 0 14px; }
+  .lg-form input[type="text"], .lg-form input[type="password"]{ width:100%; padding:11px 12px; font-size:14px; }
+  .lg-form input:focus-visible{ border-color: color-mix(in srgb, var(--login-accent) 55%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--login-accent) 18%, transparent); }
+  .lg-pass{ position:relative; }
+  .lg-pass input{ padding-right:42px !important; }
+  .lg-eye{
+    position:absolute; right:6px; top:50%; transform:translateY(-50%); width:32px; height:32px; border-radius:7px;
+    border:none; background:none; color: var(--text-dim); cursor:pointer; display:grid; place-items:center;
+  }
+  .lg-eye:hover{ color: var(--text); background: rgba(255,255,255,.05); }
+  .lg-eye svg{ width:18px; height:18px; }
+  .lg-form .btn-primary{
+    width:100%; padding:12px 14px; font-size:14.5px; font-weight:700; margin-top:4px;
+    background: linear-gradient(180deg, #f0b73a, #d1951c); border-color:#d1951c; color:#1a1408;
+    box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 8px 22px rgba(224,165,42,.28);
+  }
+  .lg-form .btn-primary:hover{ background: linear-gradient(180deg, #f6c14c, #dca026); border-color:#dca026; }
+  .lg-form input[type="checkbox"]{ accent-color: var(--login-accent); }
+  .lg-invite{ display:flex; align-items:flex-start; gap:10px; margin:0 0 12px; padding:10px 12px; border-radius:10px; font-size:13px; line-height:1.45;
+    background: color-mix(in srgb, var(--login-accent) 12%, transparent); border:1px solid color-mix(in srgb, var(--login-accent) 35%, transparent); color: var(--text); }
+  .lg-invite svg{ width:18px; height:18px; flex:none; color: var(--login-accent); margin-top:1px; }
+  .lg-shake{ animation: lgShake .4s ease; }
+  @keyframes lgShake{ 20%,60%{ transform: translateX(-6px); } 40%,80%{ transform: translateX(6px); } }
+  .lg-foot{ position:relative; z-index:1; }
+  #langSwitch{ z-index:5; }
+
+  @media (max-width:760px){
+    .lg-shell{ grid-template-columns:1fr; max-width:420px; }
+    .lg-show{ padding:26px 24px 20px; border-right:none; border-bottom:1px solid var(--border); gap:12px; }
+    .lg-show h1{ font-size:24px; }
+    .lg-feats{ display:none; }
+    .lg-emblem{ width:46px; height:46px; }
+    .lg-form{ padding:24px; }
+  }
+</style>
 </head>
 <body>
 
+<div class="lg-bg"><div class="lg-blob a"></div><div class="lg-blob b"></div></div>
 <div class="lang-switch" id="langSwitch" style="position:fixed; top:16px; right:16px;"></div>
 
-<div class="login-wrap">
-  <form class="card login-card" id="loginForm" autocomplete="on">
-    <h1 data-i18n="login.title">Кабинет клана</h1>
-    <p class="hint" data-i18n="login.hint">Войдите под логином и паролем, которые вам выдал клан-лидер.</p>
-
-    <div class="field">
-      <label for="username" data-i18n="login.usernameLabel">Логин</label>
-      <input type="text" id="username" name="username" autocomplete="username" required autofocus />
+<div class="lg-wrap">
+  <div class="lg-shell">
+    <div class="lg-show">
+      <svg class="lg-emblem" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M32 5l21 8v15c0 14-9 24-21 29C20 52 11 42 11 28V13l21-8z" fill="currentColor" fill-opacity=".1"/>
+        <path d="M22 41l20-20M42 41L22 21"/>
+        <path d="M19 38l7 7M45 38l-7 7"/>
+        <circle cx="32" cy="31" r="2.4" fill="currentColor"/>
+      </svg>
+      <h1 data-i18n="login.title">Кабинет клана</h1>
+      <p class="tag" data-i18n="login.tagline">Посещаемость, статистика ивентов, ДКП и раздача — всё о клане в одном месте.</p>
+      <div class="lg-feats">
+        <div class="lg-feat"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 17l5-5 4 4 7-8"/><path d="M15 8h5v5"/></svg></i><span data-i18n="login.feat1">Статистика ивентов прямо со скринов</span></div>
+        <div class="lg-feat"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.5h8v5.2a4 4 0 01-8 0V3.5z"/><path d="M12 12.7v3.6M8.6 20.5h6.8"/></svg></i><span data-i18n="login.feat2">Лидерборд и гонка лидеров</span></div>
+        <div class="lg-feat"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.2h12l3.6 5.3L12 21 2.4 8.5 6 3.2z"/><path d="M2.4 8.5h19.2"/></svg></i><span data-i18n="login.feat3">ДКП и честная раздача голды</span></div>
+      </div>
     </div>
-    <div class="field">
-      <label for="password" data-i18n="login.passwordLabel">Пароль</label>
-      <input type="password" id="password" name="password" autocomplete="current-password" required />
-    </div>
 
-    <label class="checkbox-row">
-      <input type="checkbox" id="remember" checked />
-      <span data-i18n="login.rememberMe">Запомнить меня на этом устройстве</span>
-    </label>
+    <form class="lg-form" id="loginForm" autocomplete="on">
+      <h2 data-i18n="login.formTitle">Вход</h2>
+      <p class="hint" data-i18n="login.hint">Войдите под логином и паролем, которые вам выдал клан-лидер.</p>
+      <div class="lg-invite" id="inviteNote" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.7-1.7"/></svg>
+        <span data-i18n="login.inviteNote">Это ваша ссылка для входа — логин и пароль уже введены. Нажмите «Войти».</span>
+      </div>
 
-    <p class="error-msg" id="loginError"></p>
+      <div class="field">
+        <label for="username" data-i18n="login.usernameLabel">Логин</label>
+        <input type="text" id="username" name="username" autocomplete="username" required autofocus />
+      </div>
+      <div class="field">
+        <label for="password" data-i18n="login.passwordLabel">Пароль</label>
+        <div class="lg-pass">
+          <input type="password" id="password" name="password" autocomplete="current-password" required />
+          <button type="button" class="lg-eye" id="pwToggle" data-i18n-attr="title:login.showPassword" title="Показать пароль" aria-label="Показать пароль">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
 
-    <button type="submit" class="btn btn-primary" id="loginSubmit" style="width:100%;" data-i18n="login.submit">Войти</button>
-  </form>
+      <label class="checkbox-row">
+        <input type="checkbox" id="remember" checked />
+        <span data-i18n="login.rememberMe">Запомнить меня на этом устройстве</span>
+      </label>
 
-  <p class="login-footnote" data-i18n="login.footnote">Нет логина и пароля? Обратитесь к клан-лидеру.</p>
+      <p class="error-msg" id="loginError"></p>
+
+      <button type="submit" class="btn btn-primary" id="loginSubmit" data-i18n="login.submit">Войти</button>
+      <p class="login-footnote" style="max-width:none; margin:16px 0 0;" data-i18n="login.footnote">Нет логина и пароля? Обратитесь к клан-лидеру.</p>
+    </form>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=24"></script>
-<script src="js/i18n.js?v=87"></script>
+<script src="js/supabase-client.js?v=25"></script>
+<script src="js/i18n.js?v=96"></script>
+<script src="js/invite.js?v=1"></script>
 <script>
 (async function(){
   L2I18n.renderSwitcher(document.getElementById("langSwitch"));
+
+  // ссылка-приглашение (#invite=…): сразу убираем её из адресной строки и истории,
+  // чтобы шифротекст не висел на виду; дальше расшифровываем, если ссылка ещё жива
+  const invite = L2Invite.parseHash(location.hash);
+  if(invite) history.replaceState(null, "", location.pathname + location.search);
+
+  // показать/скрыть пароль — только меняет тип поля, значение никуда не уходит
+  const pw = document.getElementById("password");
+  document.getElementById("pwToggle").addEventListener("click", () => {
+    pw.type = pw.type === "password" ? "text" : "password";
+    pw.focus();
+  });
 
   // уже вошли — сразу в кабинет
   const { data: { session } } = await L2Cabinet.client.auth.getSession();
@@ -51,6 +180,20 @@
   const form = document.getElementById("loginForm");
   const errorEl = document.getElementById("loginError");
   const submitBtn = document.getElementById("loginSubmit");
+
+  // живая ссылка — подставляем логин/пароль, «Запомнить меня» включено, фокус на «Войти».
+  // Уже использованная/устаревшая — молча обычный вход, как будто ссылки и не было
+  let inviteCred = null;
+  if(invite){
+    try{ inviteCred = await L2Invite.openLink(L2Cabinet.client, invite); }catch(e){ console.error(e); }
+    if(inviteCred){
+      document.getElementById("username").value = inviteCred.u;
+      document.getElementById("password").value = inviteCred.p;
+      document.getElementById("remember").checked = true;
+      document.getElementById("inviteNote").style.display = "";
+      submitBtn.focus();
+    }
+  }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -65,11 +208,18 @@
     try{
       const { error } = await L2Cabinet.login(username, password, remember);
       if(error) throw error;
+      // вошли по ссылке — гасим её (больше не подставит данные ни на одном устройстве)
+      // и один раз покажем в кабинете окно «сохраните логин и пароль»
+      if(inviteCred && username === inviteCred.u && password === inviteCred.p){
+        try{ await L2Cabinet.client.rpc("invite_consume", { p_id: invite.id }); }catch(e){ console.error(e); }
+        try{ sessionStorage.setItem("l2WelcomeCreds", JSON.stringify({ u: inviteCred.u, p: inviteCred.p })); }catch(e){}
+      }
       location.href = "index.html";
     }catch(err){
       errorEl.textContent = L2I18n.t("login.error", "Неверный логин или пароль");
       submitBtn.disabled = false;
       submitBtn.textContent = L2I18n.t("login.submit", "Войти");
+      form.classList.remove("lg-shake"); void form.offsetWidth; form.classList.add("lg-shake");
     }
   });
 })();

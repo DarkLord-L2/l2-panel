@@ -200,6 +200,13 @@ function initWeekRoster(config){
     await loadWeek();
   }
 
+  // ← / → на клавиатуре — прошлая/следующая неделя (js/page-keys.js), если кнопки сейчас видны
+  window.L2PageKeys = (key) => {
+    const b = document.getElementById(key === "ArrowLeft" ? "prevWeekBtn" : "nextWeekBtn");
+    if(!b || b.disabled || !b.offsetParent) return false;
+    b.click(); return true;
+  };
+
   document.getElementById("prevWeekBtn").addEventListener("click", () => {
     const d = new Date(currentWeek); d.setDate(d.getDate() - 7); goToWeek(d);
   });
@@ -255,6 +262,8 @@ function initWeekRoster(config){
   document.getElementById("filePickBtn").addEventListener("click", () => {
     document.getElementById("fileInput").click();
   });
+  // Ctrl+V скрина из буфера и перетаскивание файлов (js/paste-drop.js, если подключён)
+  if(window.L2PasteDrop) L2PasteDrop.attach(document.getElementById("fileInput"), document.getElementById("uploadCard"), { hintAfter: document.getElementById("filePickBtn") });
 
   document.getElementById("fileInput").addEventListener("change", async () => {
     let files = Array.from(document.getElementById("fileInput").files);

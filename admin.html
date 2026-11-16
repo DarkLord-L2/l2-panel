@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Админ-панель — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=27" />
+<link rel="stylesheet" href="js/theme.css?v=36" />
 <style>
   .admin-wrap{ display:flex; flex-direction:column; gap:14px; padding:0 0 32px; }
   .admin-head{ display:flex; align-items:center; justify-content:space-between; }
@@ -20,19 +20,40 @@
     transition: background .12s, color .12s;
   }
   .admin-nav-item:hover{ background: var(--panel-2); color: var(--text); }
-  .admin-nav-item.active{ background: var(--panel-2); border-color: var(--border); color: var(--gold); font-weight:600; }
+  .admin-nav-item.active{ background: var(--accent-soft); border-color: color-mix(in srgb, var(--gold) 16%, transparent); color: var(--gold); font-weight:600; }
   .admin-content{ flex:1; min-width:0; display:flex; flex-direction:column; gap:14px; }
   .admin-tab-panel{ display:none; flex-direction:column; gap:14px; }
   .admin-tab-panel.active{ display:flex; }
 
   @media (max-width:760px){
-    .admin-shell{ flex-direction:column; }
+    /* stretch — иначе в колонке (align-items:flex-start сверху) содержимое бралось
+       шириной по самой широкой таблице и растягивало всю страницу вбок */
+    .admin-shell{ flex-direction:column; align-items:stretch; }
     .admin-nav{ position:static; width:100%; flex-direction:row; flex-wrap:wrap; }
   }
 
   .form-row{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
   .form-row .field{ margin:0; min-width:160px; flex:1; }
   select{ width:100%; }
+  /* роль/пати в таблице пользователей обрезались («Пати Ли…», «Соклан…») — даём им места */
+  /* ширина — по самому длинному варианту (роль/пати целиком), а не обрезанная фиксированная */
+  #usersTable td select{ width:auto; min-width:0; max-width:190px; }
+  #usersTable th, #usersTable td{ padding-left:8px; padding-right:8px; }
+  #usersTable td input[type="text"]{ min-width:110px; width:100%; }
+  /* на узком экране таблица прокручивается сама, а не растягивает всю страницу вбок */
+  .users-table-scroll{ overflow-x:auto; }
+  /* 🔗 ссылка для входа */
+  .inv-btn{ width:38px; height:34px; padding:0; display:grid; place-items:center; border-radius:9px; }
+  .inv-btn svg{ width:17px; height:17px; }
+  .inv-btn:hover{ color: var(--gold); border-color: var(--accent-line); }
+  .inv-status{ font-size:10.5px; margin-top:3px; white-space:nowrap; }
+  .inv-status.live{ color:#e8b44a; } .inv-status.used{ color: var(--ok); } .inv-status.expired{ color: var(--text-dim); }
+  .inv-modal{ width:min(520px, 100%); }
+  .inv-pass-row{ display:flex; gap:8px; }
+  .inv-pass-row input{ flex:1; font-family: ui-monospace, Consolas, monospace; font-size:15px; letter-spacing:.03em; }
+  .inv-result{ margin-top:14px; padding:12px; border-radius:10px; background: color-mix(in srgb, var(--ok) 8%, var(--panel-2)); border:1px solid color-mix(in srgb, var(--ok) 35%, transparent); }
+  .inv-link-row{ display:flex; gap:8px; margin-top:6px; }
+  .inv-link-row input{ flex:1; min-width:0; font-size:12px; color: var(--text-dim); }
 
   /* полное вкл/выкл раздела на клан — отдельно от per-роль матрицы ниже */
   .section-toggle-list{ display:flex; flex-direction:column; gap:6px; margin:10px 0; max-width:420px; }
@@ -204,6 +225,8 @@
       </div>
       <p class="error-msg" id="createUserError"></p>
       <p class="ok-msg" id="createUserOk"></p>
+      <!-- ссылка для входа только что созданного пользователя (пароль ещё известен) -->
+      <div class="inv-result" id="createUserInvite" style="display:none;"></div>
     </form>
   </section>
 
@@ -216,12 +239,14 @@
         <button type="button" class="users-group-tab" data-group="role" data-i18n="admin.groupByRole">Роль</button>
       </div>
     </div>
+    <div class="users-table-scroll">
     <table class="data-table" id="usersTable">
       <thead>
-        <tr><th data-i18n="admin.colLogin">Логин</th><th data-i18n="admin.colNickname">Ник в игре</th><th data-i18n="admin.colRole">Роль</th><th data-i18n="admin.colParty">Пати</th><th data-i18n="admin.colProtection">Защита</th><th data-i18n="admin.colCreated">Создан</th><th></th></tr>
+        <tr><th data-i18n="admin.colLogin">Логин</th><th data-i18n="admin.colNickname">Ник в игре</th><th data-i18n="admin.colRole">Роль</th><th data-i18n="admin.colParty">Пати</th><th data-i18n="admin.colProtection">Защита</th><th data-i18n="admin.colInvite">Вход</th><th data-i18n="admin.colCreated">Создан</th><th></th></tr>
       </thead>
       <tbody id="usersBody"></tbody>
     </table>
+    </div>
     <p class="error-msg" id="usersError"></p>
   </section>
     </div>
@@ -550,8 +575,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=24"></script>
-<script src="js/i18n.js?v=87"></script>
+<script src="js/page-keys.js?v=2"></script>
+<script src="js/supabase-client.js?v=25"></script>
+<script src="js/i18n.js?v=96"></script>
+<script src="js/invite.js?v=1"></script>
 <script src="js/backup.js?v=7"></script>
 <script src="js/num-format.js?v=1"></script>
 <script src="js/classes.js?v=1"></script>
@@ -1607,6 +1634,29 @@
         tdProtect.textContent = "—";
       }
 
+      // 🔗 одноразовая ссылка для входа (js/invite.js) + её состояние под кнопкой
+      const tdInvite = document.createElement("td");
+      if(!isSelf){
+        const invBtn = document.createElement("button");
+        invBtn.type = "button";
+        invBtn.className = "btn inv-btn";
+        invBtn.title = L2I18n.t("admin.inviteBtnTitle", "Ссылка для входа — человек откроет её, и логин с паролем будут уже введены");
+        invBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.7-1.7"/></svg>';
+        invBtn.addEventListener("click", () => openInviteDialog(u));
+        tdInvite.appendChild(invBtn);
+        const st = inviteStatus.get(u.id);
+        if(st){
+          const s = document.createElement("div");
+          s.className = "inv-status" + (st.used_at ? " used" : (st.expired ? " expired" : " live"));
+          s.textContent = st.used_at
+            ? L2I18n.t("admin.inviteUsed", "вошёл {date}").replace("{date}", new Date(st.used_at).toLocaleDateString(L2I18n.locale()))
+            : st.expired ? L2I18n.t("admin.inviteExpired", "ссылка истекла") : L2I18n.t("admin.inviteLive", "ссылка ждёт");
+          tdInvite.appendChild(s);
+        }
+      } else {
+        tdInvite.textContent = "—";
+      }
+
       const tdCreated = document.createElement("td");
       tdCreated.textContent = new Date(u.created_at).toLocaleDateString(L2I18n.locale());
 
@@ -1637,7 +1687,7 @@
         tdActions.appendChild(delBtn);
       }
 
-      tr.append(tdUsername, tdNickname, tdRole, tdParty, tdProtect, tdCreated, tdActions);
+      tr.append(tdUsername, tdNickname, tdRole, tdParty, tdProtect, tdInvite, tdCreated, tdActions);
       return tr;
   }
 
@@ -1675,7 +1725,7 @@
       const headerTr = document.createElement("tr");
       headerTr.className = "users-group-row";
       const th = document.createElement("td");
-      th.colSpan = 7;
+      th.colSpan = 8;
       th.innerHTML = `${escapeHtml(name)}<span class="count"> · ${members.length}</span>`;
       headerTr.appendChild(th);
       body.appendChild(headerTr);
@@ -1710,12 +1760,99 @@
   });
   updateUsersGroupTabs();
 
+  // ---------- одноразовые ссылки для входа (js/invite.js, supabase/schema_invite_links.sql) ----------
+  let inviteStatus = new Map();   // user_id -> последняя ссылка { created_at, used_at, expired }
+  let invitesAvailable = true;    // false — таблица ещё не создана (SQL не выполнен)
+  async function loadInviteStatus(){
+    const { data, error } = await db.from("invite_links").select("user_id, created_at, used_at")
+      .eq("clan_id", profile.clan_id).order("created_at", { ascending: false });
+    invitesAvailable = !error;
+    inviteStatus = new Map();
+    (data || []).forEach(r => {
+      if(inviteStatus.has(r.user_id)) return;
+      inviteStatus.set(r.user_id, { ...r, expired: !r.used_at && Date.now() - new Date(r.created_at).getTime() > 30 * 864e5 });
+    });
+  }
+  function inviteErrorText(err){
+    const m = String(err && err.message || err || "");
+    if(m === "function_not_deployed") return L2I18n.t("admin.inviteNoFunction", "На сервере ещё нет функции смены пароля (supabase functions deploy set-user-password). Пока можно отметить «Не менять пароль» и ввести текущий.");
+    if(m === "protected") return L2I18n.t("admin.inviteProtected", "Аккаунт защищён от удаления — введите пароль защиты или сид-фразу.");
+    if(m === "weak_password") return L2I18n.t("admin.inviteWeak", "Пароль — минимум 6 символов.");
+    if(/invite_links|relation|schema cache/i.test(m)) return L2I18n.t("admin.inviteNeedSql", "Сначала выполните в Supabase файл supabase/schema_invite_links.sql.");
+    return m;
+  }
+  function inviteResultHtml(link){
+    return `<div class="inv-link-row"><input type="text" readonly value="${escapeHtml(link)}" /><button type="button" class="btn btn-primary" data-inv-copy="1">${escapeHtml(L2I18n.t("admin.inviteCopy", "Скопировать"))}</button></div>` +
+      `<p class="hint" style="margin:6px 0 0;">${escapeHtml(L2I18n.t("admin.inviteResultHint", "Ссылка одноразовая и действует 30 дней — отправьте её человеку в личку Telegram. После первого входа она перестанет подставлять данные; прежние ссылки этого человека уже не работают."))}</p>`;
+  }
+  function wireInviteCopy(root){
+    root.querySelectorAll("[data-inv-copy]").forEach(b => b.onclick = () => {
+      const inp = b.parentElement.querySelector("input");
+      inp.select();
+      const done = () => { b.textContent = "✓ " + L2I18n.t("admin.inviteCopied", "Скопировано"); setTimeout(() => { b.textContent = L2I18n.t("admin.inviteCopy", "Скопировать"); }, 1500); };
+      if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(inp.value).then(done).catch(() => { document.execCommand("copy"); done(); });
+      else { document.execCommand("copy"); done(); }
+    });
+  }
+
+  let invOverlay = null;
+  function openInviteDialog(u){
+    if(!invOverlay){
+      invOverlay = document.createElement("div");
+      invOverlay.className = "modal-overlay";
+      document.body.appendChild(invOverlay);
+      invOverlay.addEventListener("click", (e) => { if(e.target === invOverlay || e.target.closest("[data-inv-close]")) invOverlay.classList.remove("show"); });
+    }
+    invOverlay.innerHTML = `<div class="modal inv-modal">
+      <button class="modal-close" data-inv-close="1">×</button>
+      <h2>${escapeHtml(L2I18n.t("admin.inviteTitle", "Ссылка для входа: {name}").replace("{name}", u.username))}</h2>
+      <p class="hint">${escapeHtml(L2I18n.t("admin.inviteHint", "Человек откроет ссылку — логин и пароль будут уже введены, останется нажать «Войти». Пароль нигде не хранится в открытом виде, поэтому ссылка делается с новым паролем (старый перестанет работать)."))}</p>
+      <div class="field"><label>${escapeHtml(L2I18n.t("admin.inviteNewPassword", "Новый пароль"))}</label>
+        <div class="inv-pass-row"><input type="text" id="invPass" autocomplete="off" spellcheck="false" value="${escapeHtml(L2Invite.generatePassword())}" />
+        <button type="button" class="btn" id="invGen" title="${escapeHtml(L2I18n.t("admin.inviteGenerate", "Другой пароль"))}">🎲</button></div></div>
+      <label class="checkbox-row"><input type="checkbox" id="invKeep" /><span>${escapeHtml(L2I18n.t("admin.inviteKeep", "Не менять пароль — я знаю текущий и ввёл его выше"))}</span></label>
+      ${u.delete_protected ? `<div class="field"><label>${escapeHtml(L2I18n.t("admin.invitePhrase", "Пароль защиты аккаунта (или сид-фраза)"))}</label><input type="password" id="invPhrase" autocomplete="off" /></div>` : ""}
+      <p class="error-msg" id="invErr"></p>
+      <button type="button" class="btn btn-primary" id="invMake">${escapeHtml(L2I18n.t("admin.inviteMake", "Создать ссылку"))}</button>
+      <div class="inv-result" id="invResult" style="display:none;"></div>
+    </div>`;
+    const $i = (id) => invOverlay.querySelector("#" + id);
+    $i("invGen").onclick = () => { $i("invPass").value = L2Invite.generatePassword(); $i("invKeep").checked = false; };
+    $i("invKeep").onchange = () => { if($i("invKeep").checked) { $i("invPass").value = ""; $i("invPass").focus(); } };
+    $i("invMake").onclick = async () => {
+      const err = $i("invErr"); err.textContent = "";
+      const pw = $i("invPass").value.trim();
+      if(pw.length < 6){ err.textContent = inviteErrorText("weak_password"); return; }
+      const btn = $i("invMake"); btn.disabled = true;
+      try{
+        if(!$i("invKeep").checked){
+          await L2Cabinet.adminSetUserPassword(u.id, pw, $i("invPhrase") ? $i("invPhrase").value : undefined);
+          logAdminAction(L2I18n.t("admin.auditInvitePassword", "Задал новый пароль «{name}» для ссылки входа").replace("{name}", u.username));
+        }
+        const link = await L2Invite.makeLink({ db, clanId: profile.clan_id, userId: u.id, createdBy: profile.id, username: u.username, password: pw });
+        logAdminAction(L2I18n.t("admin.auditInviteCreated", "Создал ссылку для входа «{name}»").replace("{name}", u.username));
+        const res = $i("invResult");
+        res.innerHTML = inviteResultHtml(link); res.style.display = "";
+        wireInviteCopy(res);
+        btn.style.display = "none";
+        loadInviteStatus().then(renderUsersGrouped);
+      }catch(e){
+        console.error(e);
+        err.textContent = inviteErrorText(e);
+        btn.disabled = false;
+      }
+    };
+    invOverlay.classList.add("show");
+  }
+
   async function loadUsers(){
-    const { data, error } = await db
-      .from("profiles")
-      .select("id, username, nickname, role_id, party_id, delete_protected, created_at, roles(key, label), clan_groups(name)")
-      .eq("clan_id", profile.clan_id)
-      .order("created_at", { ascending: false });
+    const [{ data, error }] = await Promise.all([
+      db.from("profiles")
+        .select("id, username, nickname, role_id, party_id, delete_protected, created_at, roles(key, label), clan_groups(name)")
+        .eq("clan_id", profile.clan_id)
+        .order("created_at", { ascending: false }),
+      loadInviteStatus(),
+    ]);
     if(error){ console.error(error); return; }
     lastUsersData = data;
     renderUsersGrouped();
@@ -1776,11 +1913,26 @@
     const partyId = document.getElementById("newParty").value;
     const role = roles.find(r => r.id === roleId);
 
+    const invBox = document.getElementById("createUserInvite");
+    invBox.style.display = "none"; invBox.innerHTML = "";
     try{
-      await L2Cabinet.adminCreateUser({ username, password, nickname: nickname || null, role_key: role?.key, party_id: partyId || null });
+      const created = await L2Cabinet.adminCreateUser({ username, password, nickname: nickname || null, role_key: role?.key, party_id: partyId || null });
       logAdminAction(L2I18n.t("admin.auditUserCreated", "Создал пользователя «{name}» ({role})").replace("{name}", username).replace("{role}", role ? roleDisplayLabel(role) : "—"));
       okEl.textContent = L2I18n.t("admin.userCreated", "Пользователь «{name}» создан.").replace("{name}", username);
       document.getElementById("createUserForm").reset();
+      // сразу ссылка для входа — пароль сейчас известен, менять его не нужно
+      if(created && created.id){
+        try{
+          const link = await L2Invite.makeLink({ db, clanId: profile.clan_id, userId: created.id, createdBy: profile.id, username, password });
+          logAdminAction(L2I18n.t("admin.auditInviteCreated", "Создал ссылку для входа «{name}»").replace("{name}", username));
+          invBox.innerHTML = `<b>${escapeHtml(L2I18n.t("admin.inviteForNew", "Ссылка для входа:"))}</b>` + inviteResultHtml(link);
+          wireInviteCopy(invBox);
+        }catch(e2){
+          console.error(e2);
+          invBox.innerHTML = `<p class="hint">${escapeHtml(inviteErrorText(e2))}</p>`;
+        }
+        invBox.style.display = "";
+      }
       await loadUsers();
     }catch(err){
       errEl.textContent = L2I18n.t("admin.createUserFailed", "Не удалось создать: ") + err.message;

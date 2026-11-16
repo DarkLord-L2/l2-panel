@@ -4,7 +4,22 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=27" />
+<link rel="stylesheet" href="js/theme.css?v=36" />
+<!-- приложение на телефоне/компьютере: иконка, название, тёмная шапка -->
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" type="image/png" sizes="32x32" href="assets/app/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="64x64" href="assets/app/favicon-64.png" />
+<link rel="apple-touch-icon" href="assets/app/apple-touch-icon.png" />
+<meta name="theme-color" content="#0d0e11" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Кабинет клана" />
+<script>
+  // «Установить приложение»: браузер шлёт это событие один раз и рано — запоминаем сразу
+  window.__l2InstallPrompt = null;
+  window.addEventListener("beforeinstallprompt", function(e){ e.preventDefault(); window.__l2InstallPrompt = e; window.dispatchEvent(new Event("l2-install-ready")); });
+</script>
 </head>
 <body>
 
@@ -37,6 +52,7 @@
       <button type="button" class="who-menu-item" id="whoAddAccountBtn" data-i18n="shell.addAccountBtn">+ Добавить аккаунт</button>
       <div class="who-menu-sep"></div>
       <button type="button" class="who-menu-item" id="whoMenuCabinet" data-i18n="section.my_cabinet">Мой кабинет</button>
+      <button type="button" class="who-menu-item" id="whoInstallBtn" style="display:none;" data-i18n="shell.installApp">📲 Установить приложение</button>
       <button type="button" class="who-menu-item who-menu-danger" id="signOutBtn" data-i18n="shell.signOut">Выйти</button>
     </div>
   </div>
@@ -46,6 +62,10 @@
         <img id="brandLogo" alt="" style="display:none;" />
         <span id="brandName" data-i18n="shell.defaultBrandName">Кабинет клана</span>
       </div>
+      <button type="button" class="nav-search-btn" id="navSearchBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+        <span data-i18n="shell.searchBtn">Поиск</span><kbd>Ctrl K</kbd>
+      </button>
     </nav>
     <div class="content" id="content"></div>
   </div>
@@ -80,11 +100,25 @@
 <!-- сообщение «Доступ закрыт» — коротко посреди экрана, без увода со страницы -->
 <div class="who-toast" id="accessDeniedToast" style="display:none;" data-i18n="shell.accessDeniedToast">Доступ закрыт</div>
 
+<!-- быстрый поиск (Ctrl+K): разделы и игроки -->
+<div class="cmdk-overlay" id="cmdkOverlay">
+  <div class="cmdk" role="dialog" aria-modal="true">
+    <div class="cmdk-input">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+      <input type="text" id="cmdkInput" autocomplete="off" spellcheck="false" data-i18n-attr="placeholder:shell.searchPlaceholder" placeholder="Ник игрока или раздел…" />
+      <kbd>Esc</kbd>
+    </div>
+    <div class="cmdk-list" id="cmdkList"></div>
+    <div class="cmdk-foot" data-i18n="shell.searchFoot">↑↓ — выбрать · Enter — открыть · Esc — закрыть</div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=24"></script>
+<script src="js/supabase-client.js?v=25"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=87"></script>
+<script src="js/i18n.js?v=96"></script>
 <script src="js/nick-match.js?v=4"></script>
+<script src="js/tax-flag.js?v=1"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -108,6 +142,7 @@
     loot_payout: { type: "iframe", src: "loot-payout.html" },
     trends:      { type: "iframe", src: "trends.html" },
     skill_cd:    { type: "iframe", src: "skill-cd.html" },
+    leaderboard: { type: "iframe", src: "leaderboard.html" },
   };
 
   // Чисто визуальная группировка пунктов меню — на права доступа не влияет,
@@ -135,6 +170,7 @@
     loot_payout: '<circle cx="8" cy="15.3" r="4.2"/><circle cx="16" cy="8.7" r="4.2"/><path d="m10.8 12.5 2.4-2.4"/>',
     trends:      '<path d="M4 17l5-5 4 4 7-8"/><path d="M15 8h5v5"/>',
     skill_cd:    '<circle cx="12" cy="13" r="7.6"/><path d="M12 13V8.6"/><path d="M12 13l3 1.8"/><path d="M9.5 3h5"/>',
+    leaderboard: '<path d="M8 3.5h8v5.2a4 4 0 01-8 0V3.5z"/><path d="M8 5.5H5.2a2.6 2.6 0 002.9 3.8M16 5.5h2.8a2.6 2.6 0 01-2.9 3.8"/><path d="M12 12.7v3.6M8.6 20.5h6.8M9.6 20.5l.6-4.2h3.6l.6 4.2"/>',
     group_uchet: '<path d="M4 7.2a2 2 0 012-2h3.4l1.6 1.8H18a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V7.2z"/>',
     group_dkp:   '<path d="M6 3.2h12l3.6 5.3L12 21 2.4 8.5 6 3.2z"/><path d="M2.4 8.5h19.2M9 3.2l3 5.3 3-5.3"/>',
     default:     '<circle cx="12" cy="12" r="2.2"/>',
@@ -277,6 +313,25 @@
   document.getElementById("sidebarBackdrop").addEventListener("click", () => setMobileNavOpen(false));
 
   const sections = await L2Cabinet.getVisibleSections(roleKey);
+  // «Лидерборд» — пока в базе нет раздела leaderboard (не выполнен
+  // supabase/schema_leaderboard_section.sql), показываем его тем, кому открыты
+  // «Отчёты» (те же данные), сразу после них. Как только раздел появился в
+  // sections — дальше видимость решают обычные права ролей, этот запасной путь молчит.
+  if(!sections.some(s => s.key === "leaderboard") && sections.some(s => s.key === "reports")){
+    try{
+      const { data: lbRow, error: lbErr } = await db.from("sections").select("key").eq("key", "leaderboard").maybeSingle();
+      if(!lbErr && !lbRow){
+        const idx = sections.findIndex(s => s.key === "reports");
+        sections.splice(idx + 1, 0, { key: "leaderboard", label: "Лидерборд", sort: (sections[idx].sort || 0) + 0.5 });
+      }
+    }catch(e){ console.error(e); }
+  }
+  // налоги выключены клан-лидером (Админ-панель → «Налоги») — пункт меню не нужен,
+  // он вёл на пустую страницу «Налоги выключены»; включить обратно можно там же в админке
+  try{
+    await L2Taxes.init(db, profile.clan_id);
+    if(!L2Taxes.enabled()){ const ti = sections.findIndex(s => s.key === "taxes"); if(ti >= 0) sections.splice(ti, 1); }
+  }catch(e){ console.error(e); }
   const nav = document.getElementById("sidebarNav");
   const content = document.getElementById("content");
 
@@ -309,11 +364,16 @@
     if(view.type === "iframe"){
       const loader = document.createElement("div");
       loader.className = "section-loader";
-      loader.innerHTML = '<div class="spin"></div>';
+      // заглушка-скелет вместо крутилки: силуэт заголовка, плиток и таблицы
+      loader.innerHTML = '<div class="sk-page"><div class="sk sk-title"></div><div class="sk sk-sub"></div>' +
+        '<div class="sk-row"><div class="sk sk-tile"></div><div class="sk sk-tile"></div><div class="sk sk-tile"></div><div class="sk sk-tile"></div></div>' +
+        '<div class="sk sk-block"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>';
       content.appendChild(loader);
 
       const frame = document.createElement("iframe");
       frame.className = "content-frame";
+      // буфер обмена изнутри раздела: «Скопировать» картинку топа для Telegram, ⧉ у бафа и т.п.
+      frame.allow = "clipboard-read; clipboard-write";
       // ?v= — не даёт браузеру подсунуть закэшированную старую версию раздела
       let src = view.src + "?v=" + Date.now();
       if(extra) Object.keys(extra).forEach(k => { src += "&" + k + "=" + encodeURIComponent(extra[k]); });
@@ -334,7 +394,11 @@
         try{ doc = frame.contentDocument; }catch(e){ return; }
         if(!doc) return;
         const w = doc.getElementById("wrap") || doc.getElementById("adminWrap");
-        if(w){ if(getComputedStyle(w).display !== "none") reveal(); }
+        // плюс ждём, пока раздел догрузит первые данные (L2PageReady из js/page-keys.js) —
+        // иначе на мгновение видны пустые таблицы и нули; у разделов без page-keys — как раньше
+        let pageReady = true;
+        try{ pageReady = frame.contentWindow.L2PageReady !== false; }catch(e){}
+        if(w){ if(getComputedStyle(w).display !== "none" && pageReady) reveal(); }
         else if(doc.readyState === "complete") reveal();
       }, 60);
       const fallback = setTimeout(reveal, 6000);
@@ -662,7 +726,178 @@
     }
   });
 
+  // ---------- «Установить приложение» (manifest.webmanifest): пункт в меню профиля
+  // появляется, только когда браузер сам готов предложить установку (Chrome/Edge/Android);
+  // на iPhone — через «Поделиться» → «На экран Домой», там этого события нет ----------
+  // само событие ловит ранний скрипт в <head> (window.__l2InstallPrompt) — оно приходит
+  // один раз и раньше, чем этот код дождётся сессии и профиля
+  const installBtn = document.getElementById("whoInstallBtn");
+  const syncInstallBtn = () => { installBtn.style.display = window.__l2InstallPrompt ? "" : "none"; };
+  syncInstallBtn();
+  window.addEventListener("l2-install-ready", syncInstallBtn);
+  window.addEventListener("appinstalled", () => { window.__l2InstallPrompt = null; syncInstallBtn(); });
+  installBtn.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    whoWidget.classList.remove("open");
+    const p = window.__l2InstallPrompt; if(!p) return;
+    p.prompt();
+    try{ await p.userChoice; }catch(err){}
+    window.__l2InstallPrompt = null; syncInstallBtn();
+  });
+
+  // ---------- быстрый поиск (Ctrl+K / кнопка «Поиск» в меню): разделы и игроки ----------
+  // Игрок: кабинет — если можно (свой; админу — любой; лидеру/заму пати — свои), иначе
+  // «Участники клана», отфильтрованные по нику (?q=). Права дублируют проверку самого
+  // «Моего кабинета» — тот всё равно не покажет чужое, это только чтобы не вести в тупик.
+  const isAdminRole = ["glavadmin", "admin"].includes(roleKey);
+  const cmdkOverlay = document.getElementById("cmdkOverlay");
+  const cmdkInput = document.getElementById("cmdkInput");
+  const cmdkList = document.getElementById("cmdkList");
+  let cmdkItems = [], cmdkSel = 0, cmdkPlayers = null, cmdkLoading = null;
+
+  async function loadSearchPlayers(){
+    if(cmdkPlayers) return cmdkPlayers;
+    if(cmdkLoading) return cmdkLoading;
+    cmdkLoading = (async () => {
+      const [mc, gm, gr, lastWeek] = await Promise.all([
+        db.from("member_classes").select("nickname, class_name, icon"),
+        db.from("clan_group_members").select("group_id, nickname"),
+        db.from("clan_groups").select("id, name, leader_nickname, deputy_nickname"),
+        db.from("census_entries").select("week_start").order("week_start", { ascending: false }).limit(1),
+      ]);
+      let census = [];
+      const wk = lastWeek.data?.[0]?.week_start;
+      if(wk){ const r = await L2Cabinet.selectAll(() => db.from("census_entries").select("nickname").eq("week_start", wk).order("id")); census = (r.data || []).map(x => x.nickname); }
+      const groupById = new Map((gr.data || []).map(g => [g.id, g]));
+      const myGroup = profile.party_id ? groupById.get(profile.party_id) : null;
+      const iLead = !!(myGroup && (sameNick(myGroup.leader_nickname, myName) || sameNick(myGroup.deputy_nickname, myName)));
+      const byKey = new Map();
+      const add = (nick, info) => {
+        if(!nick) return;
+        const k = normalizeNick(nick);
+        const cur = byKey.get(k) || { nick, cls: "", icon: null, groups: [] };
+        if(info){ cur.nick = info.nickname || cur.nick; cur.cls = info.class_name || cur.cls; cur.icon = info.icon || (window.L2_CLASS_ICON && info.class_name ? window.L2_CLASS_ICON(info.class_name) : null) || cur.icon; }
+        byKey.set(k, cur);
+      };
+      census.forEach(n => add(n, null));
+      (mc.data || []).forEach(r => add(r.nickname, r));
+      (gm.data || []).forEach(r => { const p = byKey.get(normalizeNick(r.nickname)); const g = groupById.get(r.group_id); if(p && g && !p.groups.includes(g.name)) p.groups.push(g.name), (p.gids = p.gids || []).push(g.id); });
+      cmdkPlayers = [...byKey.values()].map(p => ({
+        ...p,
+        own: sameNick(p.nick, myName),
+        canCab: isAdminRole || sameNick(p.nick, myName) || (iLead && (p.gids || []).includes(profile.party_id)),
+      })).sort((a, b) => a.nick.localeCompare(b.nick));
+      return cmdkPlayers;
+    })();
+    return cmdkLoading;
+  }
+
+  function cmdkBuild(){
+    const q = cmdkInput.value.trim().toLowerCase();
+    const items = [];
+    const secs = sections.filter(s => SECTION_VIEWS[s.key]).map(s => ({ type: "section", key: s.key, label: L2I18n.t("section." + s.key, s.label) }))
+      .filter(s => !q || s.label.toLowerCase().includes(q));
+    const score = (txt) => txt.startsWith(q) ? 0 : 1;
+    secs.sort((a, b) => score(a.label.toLowerCase()) - score(b.label.toLowerCase()));
+    const players = (cmdkPlayers || []).filter(p => q && (p.nick.toLowerCase().includes(q) || looseNick(p.nick).includes(looseNick(q))))
+      .sort((a, b) => score(a.nick.toLowerCase()) - score(b.nick.toLowerCase()) || a.nick.localeCompare(b.nick)).slice(0, 30);
+    if(players.length) items.push({ head: L2I18n.t("shell.searchPlayers", "Игроки") }, ...players.map(p => ({ type: "player", p })));
+    if(secs.length) items.push({ head: L2I18n.t("shell.searchSections", "Разделы") }, ...secs);
+    cmdkItems = items.filter(x => !x.head);
+    cmdkSel = Math.min(cmdkSel, Math.max(0, cmdkItems.length - 1));
+    let idx = -1;
+    cmdkList.innerHTML = items.map(x => {
+      if(x.head) return `<div class="cmdk-head">${escapeHtml(x.head)}</div>`;
+      idx++;
+      const on = idx === cmdkSel ? " on" : "";
+      if(x.type === "section") return `<div class="cmdk-item${on}" data-i="${idx}"><span class="cmdk-ic">${navIcon(x.key)}</span><span class="cmdk-t">${escapeHtml(x.label)}</span><span class="cmdk-go">${escapeHtml(L2I18n.t("shell.searchGoSection", "раздел"))}</span></div>`;
+      const p = x.p;
+      return `<div class="cmdk-item${on}" data-i="${idx}"><img class="cmdk-ava" src="${escapeHtml(p.icon || BLANK_AVATAR)}" alt="" />` +
+        `<span class="cmdk-t">${escapeHtml(p.nick)}<small>${escapeHtml([p.cls, p.groups.join(", ")].filter(Boolean).join(" · "))}</small></span>` +
+        `<span class="cmdk-go">${escapeHtml(p.canCab ? L2I18n.t("shell.searchGoCabinet", "кабинет") : L2I18n.t("shell.searchGoRoster", "в списке"))}</span></div>`;
+    }).join("") || `<div class="cmdk-empty">${escapeHtml(cmdkPlayers ? L2I18n.t("shell.searchNothing", "Ничего не найдено") : L2I18n.t("shell.searchLoading", "Загружаю игроков…"))}</div>`;
+    cmdkList.querySelector(".cmdk-item.on")?.scrollIntoView({ block: "nearest" });
+  }
+  function cmdkActivate(i){
+    const x = cmdkItems[i]; if(!x) return;
+    closeSearch();
+    if(x.type === "section"){ renderSection(x.key); return; }
+    const p = x.p;
+    if(p.own && sections.some(s => s.key === "my_cabinet")) renderSection("my_cabinet");
+    else if(p.canCab) renderSection("my_cabinet", { nick: p.nick, from: currentSectionKey || "roster" });
+    else if(sections.some(s => s.key === "roster")) renderSection("roster", { q: p.nick });
+  }
+  function openSearch(){
+    if(cmdkOverlay.classList.contains("show")) return;
+    cmdkOverlay.classList.add("show");
+    cmdkInput.value = ""; cmdkSel = 0;
+    cmdkBuild();
+    setTimeout(() => cmdkInput.focus(), 0);
+    loadSearchPlayers().then(cmdkBuild).catch(e => console.error(e));
+  }
+  function closeSearch(){ cmdkOverlay.classList.remove("show"); }
+  window.L2Nav.openSearch = openSearch;
+  document.getElementById("navSearchBtn").addEventListener("click", () => { setMobileNavOpen(false); openSearch(); });
+  cmdkInput.addEventListener("input", () => { cmdkSel = 0; cmdkBuild(); });
+  cmdkInput.addEventListener("keydown", (e) => {
+    if(e.key === "ArrowDown"){ e.preventDefault(); cmdkSel = Math.min(cmdkItems.length - 1, cmdkSel + 1); cmdkBuild(); }
+    else if(e.key === "ArrowUp"){ e.preventDefault(); cmdkSel = Math.max(0, cmdkSel - 1); cmdkBuild(); }
+    else if(e.key === "Enter"){ e.preventDefault(); cmdkActivate(cmdkSel); }
+    else if(e.key === "Escape"){ e.preventDefault(); closeSearch(); }
+  });
+  cmdkList.addEventListener("click", (e) => { const it = e.target.closest(".cmdk-item"); if(it) cmdkActivate(Number(it.dataset.i)); });
+  cmdkList.addEventListener("mousemove", (e) => {
+    const it = e.target.closest(".cmdk-item"); if(!it) return;
+    const i = Number(it.dataset.i); if(i === cmdkSel) return;
+    cmdkSel = i; cmdkList.querySelectorAll(".cmdk-item").forEach(el => el.classList.toggle("on", Number(el.dataset.i) === i));
+  });
+  cmdkOverlay.addEventListener("click", (e) => { if(e.target === cmdkOverlay) closeSearch(); });
+
+  // клавиши, пока фокус в самой оболочке (меню и т.п.): Ctrl+K — поиск, ← / → — в раздел
+  // (внутри раздела те же клавиши ловит js/page-keys.js)
+  document.addEventListener("keydown", (e) => {
+    if((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.code === "KeyK"){ e.preventDefault(); openSearch(); return; }
+    if(e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    if(e.target.closest && e.target.closest("input, select, textarea")) return;
+    if(document.querySelector(".modal-overlay.show, .cmdk-overlay.show")) return;
+    if(e.key === "ArrowLeft" || e.key === "ArrowRight"){
+      const f = content.querySelector("iframe");
+      try{ if(f && f.contentWindow.L2PageKeys && !f.contentDocument.querySelector(".modal-overlay.show") && f.contentWindow.L2PageKeys(e.key)) e.preventDefault(); }catch(err){}
+    }
+  });
+
   appShell.style.display = "";
+
+  // ---------- первый вход по ссылке-приглашению (login.html → sessionStorage):
+  // один раз показываем логин и пароль — «сохраните, чтобы войти с другого устройства».
+  // Ключ стираем сразу при показе — окно больше никогда не появится ----------
+  let welcome = null;
+  try{ welcome = JSON.parse(sessionStorage.getItem("l2WelcomeCreds") || "null"); sessionStorage.removeItem("l2WelcomeCreds"); }catch(e){}
+  if(welcome && welcome.u && welcome.p){
+    const ov = document.createElement("div");
+    ov.className = "modal-overlay show";
+    ov.innerHTML = `<div class="modal welcome-modal">
+      <div class="welcome-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3M16 7l3 3M14 9l2 2"/></svg></div>
+      <h2>${escapeHtml(L2I18n.t("shell.welcomeTitle", "Добро пожаловать в кабинет клана!"))}</h2>
+      <p class="hint">${escapeHtml(L2I18n.t("shell.welcomeHint", "Сохраните логин и пароль — они понадобятся, чтобы войти с другого браузера или устройства. Ссылка, по которой вы вошли, больше не сработает, а это окно больше не появится."))}</p>
+      <div class="welcome-row"><span>${escapeHtml(L2I18n.t("login.usernameLabel", "Логин"))}</span><code>${escapeHtml(welcome.u)}</code><button type="button" class="btn" data-copy="${escapeHtml(welcome.u)}">⧉</button></div>
+      <div class="welcome-row"><span>${escapeHtml(L2I18n.t("login.passwordLabel", "Пароль"))}</span><code>${escapeHtml(welcome.p)}</code><button type="button" class="btn" data-copy="${escapeHtml(welcome.p)}">⧉</button></div>
+      <div class="welcome-actions">
+        <button type="button" class="btn" data-copy-both="1">${escapeHtml(L2I18n.t("shell.welcomeCopyBoth", "Скопировать оба"))}</button>
+        <button type="button" class="btn btn-primary" data-close="1">${escapeHtml(L2I18n.t("shell.welcomeDone", "Сохранил, закрыть"))}</button>
+      </div></div>`;
+    document.body.appendChild(ov);
+    const copy = (txt, btn) => {
+      const done = () => { const o = btn.textContent; btn.textContent = "✓"; setTimeout(() => { btn.textContent = o; }, 1200); };
+      if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done).catch(() => {});
+    };
+    ov.addEventListener("click", (e) => {
+      const c = e.target.closest("[data-copy]"); if(c){ copy(c.dataset.copy, c); return; }
+      const b = e.target.closest("[data-copy-both]");
+      if(b){ copy(L2I18n.t("login.usernameLabel", "Логин") + ": " + welcome.u + "\n" + L2I18n.t("login.passwordLabel", "Пароль") + ": " + welcome.p, b); return; }
+      if(e.target.closest("[data-close]")) ov.remove();
+    });
+  }
 })();
 </script>
 </body>
