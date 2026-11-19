@@ -505,7 +505,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=27"></script>
-<script src="js/i18n.js?v=106"></script>
+<script src="js/i18n.js?v=107"></script>
 <script src="js/paste-drop.js?v=1"></script>
 <script src="js/nick-match.js?v=5"></script>
 <script src="js/classes.js?v=1"></script>
@@ -2152,9 +2152,26 @@
       sub.textContent = L2I18n.t("reports.eventEffSub", "Мероприятие vs среднее по всем мероприятиям");
     } else {
       title.textContent = L2I18n.t("reports.overallTitle", "Общая статистика");
-      sub.textContent = L2I18n.t("reports.overallSub", "За всё время");
+      sub.textContent = currentOnlyActive() ? L2I18n.t("reports.overallSubCurrent", "За всё время · только те, кто сейчас в клане") : L2I18n.t("reports.overallSub", "За всё время");
     }
   }
+
+  // ---------- «Общая статистика» за всё время: только те, кто сейчас в клане ----------
+  // Админ-панель → «Отчёты по мероприятиям» → «Учитывать вышедших из клана» (по умолчанию выключено).
+  // Затрагивает только правую панель (плитки, «Лучшие за период», «По профессиям») при периоде «Всё время»;
+  // таблица слева, неделя и мероприятие считаются как обычно. «Сейчас в клане» = в самой свежей переписи.
+  let includeLeftAllTime = false;
+  let currentClanSet = null; // normalizeNick участников последней переписи; null — переписи нет, не фильтруем
+  async function loadReportSettings(){
+    const { data, error } = await db.from("report_settings").select("include_left_all_time").eq("clan_id", profile.clan_id).maybeSingle();
+    includeLeftAllTime = error ? false : !!data?.include_left_all_time;
+  }
+  async function loadCurrentClanSet(){
+    const { rows, error } = await L2Cabinet.censusWeeks(1);
+    currentClanSet = (!error && rows.length) ? new Set(rows.map(r => normalizeNick(r.nickname))) : null;
+  }
+  const currentOnlyActive = () => periodValue === "" && !includeLeftAllTime && !!currentClanSet;
+  const summaryRowsFor = (rows) => currentOnlyActive() ? rows.filter(r => currentClanSet.has(normalizeNick(r.nickname))) : rows;
 
   async function refreshReport(){
     // таблица сейчас перерисуется — иконка, к которой привязан попап, исчезнет
@@ -2171,8 +2188,9 @@
     renderReportTable(periodRows);
 
     renderSummaryHeader();
-    renderTiles(totals(periodRows));
-    renderPeriodHighlights(periodRows);
+    const summaryRows = summaryRowsFor(periodRows);
+    renderTiles(totals(summaryRows));
+    renderPeriodHighlights(summaryRows);
 
     let avg = null;
     if(periodValue.startsWith("week:") || periodValue.startsWith("weeks:")) avg = averageOfBuckets(bucketsFor(grouped, "week_start"));
@@ -2493,7 +2511,7 @@
     pickBtn.disabled = false;
   });
 
-  await Promise.all([loadMemberInfo(), loadGroups(), loadEvents(), loadAllStats(), loadGroupLabelSettings()]);
+  await Promise.all([loadMemberInfo(), loadGroups(), loadEvents(), loadAllStats(), loadGroupLabelSettings(), loadReportSettings(), loadCurrentClanSet()]);
   renderGroupFilterOptions();
   renderWeekOptions();
 
