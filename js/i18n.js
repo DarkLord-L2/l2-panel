@@ -717,6 +717,13 @@
     "roster.fadingBadge": ["не был {d} дн.", "не був {d} дн.", "absent {d} d"],
     "roster.fadingTitle": ["Последний раз: {date}. Всего посещений: {n}. Пропустил ивентов: {m}.", "Останній раз: {date}. Усього відвідувань: {n}. Пропустив івентів: {m}.", "Last seen: {date}. Total attendance: {n}. Events missed: {m}."],
     "roster.fadingHead": ["Ходили раньше, но не были {d}+ дней", "Ходили раніше, але не були {d}+ днів", "Attended before, absent for {d}+ days"],
+    "roster.joinedSince": ["в клане с {date} · {d} дн.", "у клані з {date} · {d} дн.", "in clan since {date} · {d} d"],
+    "roster.joinedFirst": ["в клане с {date} или раньше", "у клані з {date} або раніше", "in clan since {date} or earlier"],
+    "roster.joinedTitle": [
+      "Без перерыва в переписи с {date} ({d} дн.). Если человек пропадал из переписи и вернулся — считается с возвращения.",
+      "Без перерви в переписі з {date} ({d} дн.). Якщо людина зникала з перепису й повернулася — рахується з повернення.",
+      "Continuously in the census since {date} ({d} d). If the person left the census and came back, it counts from the return.",
+    ],
     "roster.fadingEmpty": ["Никто не пропадает — все, кто ходил, были на ивентах за последние 2 недели.", "Ніхто не зникає — усі, хто ходив, були на івентах за останні 2 тижні.", "Nobody is fading — everyone who attended was seen in the last 2 weeks."],
     "roster.settingsTitle": ["Настройки", "Налаштування", "Settings"],
     "roster.noParty": ["Без пати", "Без паті", "No party"],

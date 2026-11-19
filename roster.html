@@ -83,6 +83,12 @@
     flex:none; font-size:11px; padding:3px 9px; border-radius:999px; cursor:help;
     border:1px solid rgba(232,180,74,.4); color:#e8b44a; background: rgba(232,180,74,.1);
   }
+  /* «в клане с …» во вкладке «Не посещали»; новички (≤7 дней) — зелёным: им ещё рано */
+  .rw-joined{
+    flex:none; font-size:11px; padding:3px 9px; border-radius:999px; cursor:help;
+    border:1px solid var(--border-lit); color: var(--text-dim); background: rgba(255,255,255,.03);
+  }
+  .rw-joined.fresh{ color:#6fcf8a; border-color: rgba(111,207,138,.35); background: rgba(111,207,138,.08); }
   .rw-row.rw-row-fading{ box-shadow: inset 3px 0 0 #e8b44a; }
   .rw-no-attendance{
     flex:none; font-size:11px; padding:3px 9px; border-radius:999px;
@@ -256,7 +262,7 @@
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=25"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=97"></script>
+<script src="js/i18n.js?v=98"></script>
 <script src="js/nick-match.js?v=4"></script>
 <script>
 (async function(){
@@ -339,6 +345,52 @@
     const latest = censusW[0] || null;
     nicks = [...new Set((data || []).filter(r => r.week_start === latest).map(r => r.nickname))]
       .sort((a,b)=>a.localeCompare(b));
+  }
+
+  // «В клане с …» для вкладки «Не посещали»: с какой переписи человек в клане БЕЗ перерыва —
+  // идём от последней переписи назад, пока он есть в каждой подряд; если пропадал и вернулся —
+  // считаем с возвращения. Вся история переписи нужна только тут — грузим при первом открытии
+  // вкладки, а не при каждом заходе в раздел
+  let joinInfo = null, joinLoading = null; // normalizeNick -> { since, fromFirst }
+  function loadJoinInfo(){
+    if(joinInfo) return Promise.resolve(joinInfo);
+    if(joinLoading) return joinLoading;
+    joinLoading = (async () => {
+      const { data, error } = await L2Cabinet.selectAll(() => db.from("census_entries").select("nickname, week_start").order("id"));
+      if(error) console.error(error);
+      const dates = [...new Set((data || []).map(r => r.week_start))].sort();
+      const byNick = new Map();
+      (data || []).forEach(r => {
+        const k = normalizeNick(r.nickname);
+        if(!byNick.has(k)) byNick.set(k, new Set());
+        byNick.get(k).add(r.week_start);
+      });
+      const out = new Map();
+      byNick.forEach((set, k) => {
+        let i = dates.length - 1;
+        while(i >= 0 && !set.has(dates[i])) i--;          // последняя перепись, где он есть
+        if(i < 0) return;
+        let start = i;
+        while(start > 0 && set.has(dates[start - 1])) start--; // назад, пока без пропусков
+        out.set(k, { since: dates[start], fromFirst: start === 0 });
+      });
+      joinInfo = out;
+      return out;
+    })();
+    return joinLoading;
+  }
+  function joinBadge(nick){
+    const j = joinInfo && joinInfo.get(normalizeNick(nick));
+    if(!j) return "";
+    const days = Math.max(0, Math.floor((Date.now() - new Date(j.since + "T00:00:00").getTime()) / 864e5));
+    const date = fmtShortDate(j.since);
+    // с самой первой переписи клана — раньше просто не записывали, поэтому «с … и раньше»
+    const text = j.fromFirst
+      ? L2I18n.t("roster.joinedFirst", "в клане с {date} или раньше").replace("{date}", date)
+      : L2I18n.t("roster.joinedSince", "в клане с {date} · {d} дн.").replace("{date}", date).replace("{d}", days);
+    const title = L2I18n.t("roster.joinedTitle", "Без перерыва в переписи с {date} ({d} дн.). Если человек пропадал из переписи и вернулся — считается с возвращения.")
+      .replace("{date}", fmtShortDate(j.since)).replace("{d}", days);
+    return `<span class="rw-joined${days <= 7 && !j.fromFirst ? " fresh" : ""}" title="${escapeHtml(title)}">${escapeHtml(text)}</span>`;
   }
 
   async function loadMemberInfo(){
@@ -506,7 +558,8 @@
       `</button>` +
       `<div class="rw-who">${nameHtml}` +
       `<span class="rw-cls${clsText ? "" : " rw-cls-empty"}" title="${escapeHtml(clsText || "")}">${escapeHtml(clsText || L2I18n.t("cab.classNotSet", "Класс не указан"))}</span></div>` +
-      ((badge || noAttendanceBadge || fadingBadge || tagBadge) ? `<div class="rw-badges">${badge}${fadingBadge}${noAttendanceBadge}${tagBadge}</div>` : "") +
+      ((badge || noAttendanceBadge || fadingBadge || tagBadge || viewMode === "noattend")
+        ? `<div class="rw-badges">${badge}${fadingBadge}${noAttendanceBadge}${viewMode === "noattend" ? joinBadge(nick) : ""}${tagBadge}</div>` : "") +
       `</div>`;
   }
 
@@ -568,6 +621,8 @@
       html = `<div class="rw-party-title">${escapeHtml(L2I18n.t("roster.fadingHead", "Ходили раньше, но не были {d}+ дней").replace("{d}", FADING_DAYS))}<span class="rw-party-count">${list.length}</span></div>` +
         list.map(renderRow).join("");
     } else if(viewMode === "noattend"){
+      // история переписи для «в клане с …» — подгружаем при первом открытии вкладки и перерисовываем
+      if(!joinInfo) loadJoinInfo().then(() => { if(viewMode === "noattend") renderList(); });
       const list = sortTaggedLast(filterNicks(nicks.filter(n => neverAttended(n))));
       html = list.map(renderRow).join("");
       if(!list.length){
