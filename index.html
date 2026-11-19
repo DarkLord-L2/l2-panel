@@ -123,7 +123,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=27"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=107"></script>
+<script src="js/i18n.js?v=110"></script>
 <script src="js/nick-match.js?v=5"></script>
 <script src="js/tax-flag.js?v=1"></script>
 <script>
@@ -150,6 +150,7 @@
     trends:      { type: "iframe", src: "trends.html" },
     skill_cd:    { type: "iframe", src: "skill-cd.html" },
     leaderboard: { type: "iframe", src: "leaderboard.html" },
+    abilities:   { type: "iframe", src: "abilities.html" },
   };
 
   // Чисто визуальная группировка пунктов меню — на права доступа не влияет,
@@ -178,6 +179,7 @@
     trends:      '<path d="M4 17l5-5 4 4 7-8"/><path d="M15 8h5v5"/>',
     skill_cd:    '<circle cx="12" cy="13" r="7.6"/><path d="M12 13V8.6"/><path d="M12 13l3 1.8"/><path d="M9.5 3h5"/>',
     leaderboard: '<path d="M8 3.5h8v5.2a4 4 0 01-8 0V3.5z"/><path d="M8 5.5H5.2a2.6 2.6 0 002.9 3.8M16 5.5h2.8a2.6 2.6 0 01-2.9 3.8"/><path d="M12 12.7v3.6M8.6 20.5h6.8M9.6 20.5l.6-4.2h3.6l.6 4.2"/>',
+    abilities:   '<circle cx="12" cy="5.4" r="2.3"/><circle cx="5.8" cy="18" r="2.3"/><circle cx="18.2" cy="18" r="2.3"/><path d="M12 7.7v4.3M12 12l-5 4M12 12l5 4"/>',
     group_uchet: '<path d="M4 7.2a2 2 0 012-2h3.4l1.6 1.8H18a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V7.2z"/>',
     group_dkp:   '<path d="M6 3.2h12l3.6 5.3L12 21 2.4 8.5 6 3.2z"/><path d="M2.4 8.5h19.2M9 3.2l3 5.3 3-5.3"/>',
     default:     '<circle cx="12" cy="12" r="2.2"/>',
@@ -343,6 +345,19 @@
       if(!lbErr && !lbRow){
         const idx = sections.findIndex(s => s.key === "reports");
         sections.splice(idx + 1, 0, { key: "leaderboard", label: "Лидерборд", sort: (sections[idx].sort || 0) + 0.5 });
+      }
+    }catch(e){ console.error(e); }
+  }
+  // «Таланты» — калькулятор дерева способностей. Пока в базе нет раздела abilities (не выполнен
+  // supabase/schema_abilities_section.sql), показываем его всем, перед «Админ-панелью»; как только раздел
+  // появился в sections — видимость решают обычные права ролей, этот запасной путь молчит.
+  if(!sections.some(s => s.key === "abilities")){
+    try{
+      const { data: abRow, error: abErr } = await db.from("sections").select("key").eq("key", "abilities").maybeSingle();
+      if(!abErr && !abRow){
+        const ai = sections.findIndex(s => s.key === "admin");
+        const entry = { key: "abilities", label: "Таланты", sort: 900 };
+        if(ai >= 0) sections.splice(ai, 0, entry); else sections.push(entry);
       }
     }catch(e){ console.error(e); }
   }

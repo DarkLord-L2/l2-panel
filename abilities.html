@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Таланты — Кабинет клана</title>
+<link rel="stylesheet" href="js/theme.css?v=38" />
+<style>
+  /* «Таланты» — калькулятор дерева способностей (Scryde X2): выбрать класс, вложить очки в три ветки, поделиться ссылкой на билд.
+     Ничего не пишет в базу и не требует входа: данные лежат в js/abilities-data.js, билд живёт в ссылке (?c=класс&b=код). */
+  .ab-wrap{ padding:0 0 40px; display:flex; flex-direction:column; gap:14px; max-width:1180px; margin:0 auto; }
+  .ab-wrap .page-head{ margin-bottom:0; }
+  .ab-wrap .page-head{ display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 18px; }
+  .ab-wrap .page-head p{ margin:4px 0 0; flex:1 1 100%; order:3; }
+  .ab-wrap .page-head .ab-open-site{ margin-left:auto; order:2; }
+  body.standalone{ padding:18px 22px 40px; }
+  body.standalone .ab-wrap{ margin:0 auto; }
+  .ab-open-site{ display:none; font-size:13px; }
+  body.standalone .ab-open-site{ display:inline-block; }
+
+  /* расы и классы */
+  .ab-races{ display:flex; flex-wrap:wrap; gap:4px; padding:4px; border:1px solid var(--border); border-radius:var(--radius); background: var(--panel); }
+  .ab-races button{ flex:1 1 auto; font-family:inherit; font-size:13px; font-weight:600; padding:8px 14px; border:none; border-radius:var(--radius-sm);
+    background:none; color: var(--text-dim); cursor:pointer; transition: background .15s var(--ease), color .15s var(--ease); }
+  .ab-races button:hover{ color: var(--text); }
+  .ab-races button.active{ background: var(--accent-soft); color: var(--gold); box-shadow: inset 0 0 0 1px var(--accent-line); }
+  .ab-classes{ display:flex; flex-wrap:wrap; gap:8px; }
+  .ab-class{ display:inline-flex; align-items:center; gap:9px; padding:6px 14px 6px 7px; font-family:inherit; font-size:13px; font-weight:600;
+    border:1px solid var(--border); border-radius:var(--radius-sm); background: var(--panel-2); color: var(--text-dim); cursor:pointer; transition: border-color .15s var(--ease), color .15s var(--ease); }
+  .ab-class img{ width:30px; height:30px; border-radius:6px; object-fit:cover; background: var(--panel); }
+  .ab-class:hover{ color: var(--text); border-color: var(--border-lit); }
+  .ab-class.active{ color: var(--text); border-color: var(--gold-dim); background: var(--accent-soft); }
+
+  /* сводка */
+  .ab-summary{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 16px; padding:2px 2px; }
+  .ab-points{ display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 16px; font-size:14px; }
+  .ab-points b{ font-size:18px; font-variant-numeric: tabular-nums; }
+  .ab-points .muted{ color: var(--text-dim); font-size:13px; }
+  .ab-actions{ display:flex; flex-wrap:wrap; gap:8px; }
+  .ab-link-box{ display:none; gap:8px; align-items:center; flex-wrap:wrap; }
+  .ab-link-box.show{ display:flex; }
+  .ab-link-box input{ flex:1 1 280px; min-width:0; font-size:12.5px; }
+
+  /* вкладки веток (узкие экраны); на широких три ветки видны сразу */
+  .ab-tabs{ display:flex; gap:4px; padding:4px; border:1px solid var(--border); border-radius:var(--radius); background: var(--panel); }
+  .ab-tabs button{ flex:1; font-family:inherit; font-size:13px; font-weight:600; padding:9px 10px; border:none; border-radius:var(--radius-sm); background:none; color: var(--text-dim); cursor:pointer; }
+  .ab-tabs button.active{ background: var(--accent-soft); color: var(--gold); box-shadow: inset 0 0 0 1px var(--accent-line); }
+  .ab-tabs button .n{ margin-left:6px; font-size:11.5px; opacity:.8; font-variant-numeric: tabular-nums; }
+
+  .ab-branches{ display:flex; flex-wrap:wrap; justify-content:center; align-items:flex-start; gap:14px; }
+  .ab-branch{ display:none; width:fit-content; max-width:100%; padding:14px 16px 16px; border:1px solid var(--border-lit); border-radius:var(--radius);
+    background: var(--panel); box-shadow: var(--shadow-1); }
+  .ab-branch.show{ display:block; }
+  /* три ветки сразу — только когда они помещаются в ряд (3 × 344 + зазоры); иначе вкладки и одна ветка по центру */
+  @media (min-width:1080px){
+    .ab-tabs{ display:none; }
+    .ab-branch, .ab-branch.show{ display:block; }
+  }
+  .ab-bhead{ display:flex; align-items:baseline; gap:12px; margin-bottom:12px; }
+  .ab-bhead h2{ margin:0; font-size:13px; letter-spacing:.1em; text-transform:uppercase; color: var(--text); }
+  .ab-bhead .sum{ margin-left:auto; font-size:13px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .ab-bhead .rst{ font-family:inherit; font-size:12px; color: var(--text-dim); background:none; border:none; cursor:pointer; padding:0; }
+  .ab-bhead .rst:hover{ color: var(--text); text-decoration:underline; }
+
+  /* сетка узлов: 6 строк × 4 колонки + счётчик очков строки справа */
+  .ab-row{ display:flex; align-items:center; gap:14px; margin-bottom:12px; }
+  .ab-row:last-child{ margin-bottom:0; }
+  .ab-row .cells{ display:flex; gap:14px; }
+  .ab-row .lim{ min-width:38px; text-align:center; font-size:12px; font-variant-numeric: tabular-nums; color: var(--text-dim);
+    padding:3px 6px; border:1px solid var(--border); border-radius:6px; background: var(--panel-2); }
+  .ab-row .lim.full{ color: var(--gold); border-color: var(--gold-dim); }
+  .ab-node{ position:relative; width:54px; height:54px; padding:0; border:1px solid var(--border-lit); border-radius:9px; background: var(--panel-2); cursor:pointer;
+    font-family:inherit; color: inherit; flex:none; }
+  .ab-node img, .ab-node .fb{ width:100%; height:100%; border-radius:8px; display:block; object-fit:cover; }
+  .ab-node .fb{ display:grid; place-items:center; font-size:13px; font-weight:700; color: var(--text-dim); background: var(--panel-3); }
+  .ab-node img{ transition: filter .15s var(--ease), opacity .15s var(--ease); }
+  .ab-node .lv{ position:absolute; right:-1px; bottom:-1px; min-width:26px; padding:1px 4px; font-size:11px; font-weight:700; line-height:1.35; text-align:center;
+    color:#fff; background: rgba(0,0,0,.78); border-radius:6px 0 8px 0; font-variant-numeric: tabular-nums; pointer-events:none; }
+  .ab-node.locked img, .ab-node.locked .fb{ filter: grayscale(1); opacity:.38; }
+  .ab-node.locked{ cursor:not-allowed; border-color: var(--border); }
+  .ab-node.avail{ border-color: var(--gold-dim); }
+  .ab-node.has{ border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+  .ab-node.max{ border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset, 0 0 12px color-mix(in srgb, var(--gold) 45%, transparent); }
+  .ab-node.max .lv{ color: var(--gold); }
+  .ab-node:focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
+  .ab-node:not(.locked):hover{ border-color: var(--text); }
+  /* линия-условие от узла выше («Требуется: …») */
+  .ab-node.req::before{ content:""; position:absolute; left:50%; width:2px; margin-left:-1px; bottom:100%; height:var(--ab-line, 12px); background: var(--border-lit); }
+  .ab-node.req.met::before{ background: var(--gold); }
+
+  /* стандарты клана */
+  .ab-banner{ display:none; align-items:center; flex-wrap:wrap; gap:8px 14px; padding:9px 14px; border:1px solid var(--accent-line); border-radius:var(--radius-sm);
+    background: var(--accent-soft); font-size:13px; }
+  .ab-banner.show{ display:flex; }
+  .ab-banner .btn{ margin-left:auto; padding:5px 12px; font-size:12.5px; }
+  .ab-std-modal{ max-width:560px; width:100%; }
+  .ab-std-list{ display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+  .ab-std-row{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-sm); background: var(--panel-2); }
+  .ab-std-row.free{ border-style:dashed; background:none; }
+  .ab-std-row .meta{ flex:1 1 160px; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .ab-std-row .meta b{ font-size:14px; overflow-wrap:anywhere; }
+  .ab-std-row .meta span{ font-size:12px; color: var(--text-dim); }
+  .ab-std-row .acts{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .ab-std-row .acts .btn{ padding:5px 11px; font-size:12.5px; }
+  .ab-std-row .acts input{ width:190px; max-width:100%; padding:6px 9px; font-size:13px; }
+  .ab-std-row.pick{ border-color: var(--gold-dim); }
+  .ab-std-err{ margin:10px 0 0; }
+
+
+  /* подсказка к узлу */
+  .ab-tip{ position:fixed; z-index:80; width:min(320px, calc(100vw - 24px)); padding:12px 14px; border:1px solid var(--border-lit); border-radius:var(--radius);
+    background: var(--panel-2); box-shadow: var(--shadow-2); display:none; font-size:13px; }
+  .ab-tip.show{ display:block; }
+  .ab-tip .th{ display:flex; gap:10px; align-items:center; margin-bottom:8px; }
+  .ab-tip .th img, .ab-tip .th .fb{ width:38px; height:38px; border-radius:7px; object-fit:cover; flex:none; background: var(--panel-3); display:grid; place-items:center; font-weight:700; color: var(--text-dim); }
+  .ab-tip .th b{ display:block; font-size:14px; }
+  .ab-tip .th span{ font-size:12px; color: var(--text-dim); }
+  .ab-tip .need{ color: var(--danger-lit); font-size:12.5px; margin:0 0 8px; }
+  .ab-tip .need.soft{ color: var(--text-dim); }
+  .ab-tip ol{ list-style:none; margin:0 0 8px; padding:0; display:flex; flex-direction:column; gap:3px; }
+  .ab-tip li{ display:flex; gap:9px; padding:4px 8px; border-radius:6px; color: var(--text-dim); line-height:1.35; }
+  .ab-tip li i{ font-style:normal; flex:none; width:18px; height:18px; display:grid; place-items:center; font-size:11px; font-weight:700; border:1px solid var(--border-lit); border-radius:5px; }
+  .ab-tip li.done{ color: var(--text); }
+  .ab-tip li.done i{ border-color: var(--gold-dim); color: var(--gold); }
+  .ab-tip li.cur{ background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent-line); }
+  .ab-tip .hint{ margin:0; font-size:11.5px; }
+  .ab-tip .btns{ display:none; gap:8px; margin-top:10px; }
+  .ab-tip.pinned .btns{ display:flex; }
+  .ab-tip .btns .btn{ flex:1; font-size:18px; padding:8px 0; }
+  .ab-toast{ position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(10px); opacity:0; pointer-events:none; z-index:90; padding:9px 16px;
+    border-radius:var(--radius-sm); background: var(--panel-3); border:1px solid var(--accent-line); box-shadow: var(--shadow-2); font-size:13px; transition: opacity .18s var(--ease), transform .18s var(--ease); }
+  .ab-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  @media (max-width:520px){
+    .ab-row, .ab-row .cells{ gap:9px; }
+    .ab-node{ width:48px; height:48px; }
+    .ab-branch{ padding:12px 10px 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="ab-wrap" id="wrap">
+  <div class="page-head">
+    <h1 id="abTitle">Дерево талантов</h1>
+    <p class="hint" id="abDesc"></p>
+    <a class="ab-open-site" id="abOpenSite" href="index.html"></a>
+  </div>
+
+  <div class="ab-races" id="abRaces" role="tablist"></div>
+  <div class="ab-classes" id="abClasses"></div>
+
+  <div class="ab-summary">
+    <div class="ab-points" id="abPoints"></div>
+    <div class="ab-actions">
+      <button type="button" class="btn" id="abStdView" hidden></button>
+      <button type="button" class="btn" id="abStdMake" hidden></button>
+      <button type="button" class="btn" id="abResetAll"></button>
+      <button type="button" class="btn btn-primary" id="abCopy"></button>
+    </div>
+  </div>
+  <div class="ab-link-box" id="abLinkBox">
+    <span class="hint" id="abLinkHint"></span>
+    <input type="text" id="abLinkInput" readonly />
+  </div>
+
+  <div class="ab-banner" id="abBanner"><span id="abBannerText"></span><button type="button" class="btn" id="abBannerBack"></button></div>
+
+  <div class="ab-tabs" id="abTabs" role="tablist"></div>
+  <div class="ab-branches" id="abBranches"></div>
+
+</div>
+
+<div class="modal-overlay" id="abStdOverlay">
+  <div class="modal ab-std-modal">
+    <button class="modal-close" id="abStdClose" type="button">×</button>
+    <h2 id="abStdTitle"></h2>
+    <p class="hint" id="abStdHint"></p>
+    <div class="ab-std-list" id="abStdList"></div>
+    <p class="error-msg ab-std-err" id="abStdErr"></p>
+  </div>
+</div>
+
+<div class="ab-tip" id="abTip" role="tooltip"></div>
+<div class="ab-toast" id="abToast" role="status"></div>
+
+<script src="js/page-keys.js?v=2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-client.js?v=27"></script>
+<script src="js/i18n.js?v=110"></script>
+<script src="js/abilities-data.js?v=1"></script>
+<script>
+(function(){
+  "use strict";
+  const D = window.L2_ABILITIES;
+  const t = (k, fb) => L2I18n.t(k, fb);
+  const fmt = (s, o) => String(s).replace(/\{(\w+)\}/g, (_, k) => o[k] != null ? o[k] : "");
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+
+  const NODES = D.nodes, N = NODES.length, MAXP = D.max, LIMITS = D.rowLimits;
+  const ROWS = LIMITS.length;
+  const BRANCH_LIMIT = LIMITS.reduce((a, b) => a + b, 0);
+  const byBranch = [0, 1, 2].map(b => NODES.map((n, i) => i).filter(i => NODES[i].b === b));
+
+  // не в приложении (ссылкой на билд открыли напрямую) — своя шапка и поля; без входа всё работает так же
+  if(window.top === window.self) document.body.classList.add("standalone");
+
+  // ---------- данные узла для выбранного класса ----------
+  let ci = 0; // индекс класса
+  const nameOf = (i, c = ci) => Array.isArray(NODES[i].n) ? NODES[i].n[c] : NODES[i].n;
+  const iconOf = (i, c = ci) => D.iconBase + (Array.isArray(NODES[i].i) ? NODES[i].i[c] : NODES[i].i);
+  const effectsOf = (i, c = ci) => D.E[c][i].map(si => D.S[si]);
+
+  // билды по классам живут в памяти, пока открыта страница (переключили класс и вернулись — очки на месте)
+  const builds = new Map();
+  const cur = () => { if(!builds.has(ci)) builds.set(ci, new Array(N).fill(0)); return builds.get(ci); };
+
+  // ---------- правила ----------
+  // Очки строки: не больше LIMITS[строка]. Строка открывается, когда в строках ВЫШЕ вложено q очков (0/8/16/24/27/28 —
+  // то есть выше нужно набрать лимиты полностью). У узла может быть условие p — другой узел должен быть выучен.
+  // Всего очков — MAXP. Снять очко можно, только если после этого всё остальное остаётся допустимым.
+  function rowSums(lv, b){
+    const rs = new Array(ROWS).fill(0);
+    byBranch[b].forEach(i => { rs[NODES[i].r] += lv[i]; });
+    return rs;
+  }
+  const aboveOf = (rs, r) => { let s = 0; for(let k = 0; k < r; k++) s += rs[k]; return s; };
+  function valid(lv){
+    for(let b = 0; b < 3; b++){
+      const rs = rowSums(lv, b);
+      for(let r = 0; r < ROWS; r++) if(rs[r] > LIMITS[r]) return false;
+      for(const i of byBranch[b]){
+        if(lv[i] <= 0) continue;
+        const n = NODES[i];
+        if(aboveOf(rs, n.r) < n.q) return false;
+        if(n.p >= 0 && lv[n.p] < 1) return false;
+      }
+    }
+    return lv.reduce((a, b) => a + b, 0) <= MAXP;
+  }
+  const total = (lv) => lv.reduce((a, b) => a + b, 0);
+  function canAdd(lv, i){
+    if(lv[i] >= NODES[i].m || total(lv) >= MAXP) return false;
+    lv[i]++; const ok = valid(lv); lv[i]--; return ok;
+  }
+  function canRemove(lv, i){
+    if(lv[i] <= 0) return false;
+    lv[i]--; const ok = valid(lv); lv[i]++; return ok;
+  }
+  function addPoint(i){ const lv = cur(); if(canAdd(lv, i)){ lv[i]++; leaveViewing(); update(i); } }
+  function removePoint(i){
+    const lv = cur();
+    if(canRemove(lv, i)){ lv[i]--; leaveViewing(); update(i); }
+    else if(lv[i] > 0) toast(t("ab.cantRemove", "Нельзя убрать: на это очко опираются узлы ниже"));
+  }
+  // почему нельзя вложить — для подсказки
+  function reasons(lv, i){
+    const n = NODES[i], rs = rowSums(lv, n.b), out = [];
+    if(aboveOf(rs, n.r) < n.q) out.push({ hard: true, text: fmt(t("ab.needPoints", "Нужно очков в ветке: {n}"), { n: n.q }) });
+    if(n.p >= 0 && lv[n.p] < 1) out.push({ hard: true, text: fmt(t("ab.needAbility", "Требуется: {name}"), { name: nameOf(n.p) }) });
+    if(!out.length && lv[i] < n.m){
+      if(rs[n.r] >= LIMITS[n.r]) out.push({ hard: false, text: fmt(t("ab.rowFull", "В этой строке уже набран лимит очков ({n})"), { n: LIMITS[n.r] }) });
+      else if(total(lv) >= MAXP) out.push({ hard: false, text: t("ab.noPoints", "Свободных очков нет") });
+    }
+    return out;
+  }
+
+  // ---------- код билда в ссылке: 72 узла × 3 бита = 27 байт → 36 символов ----------
+  function encode(lv){
+    const bytes = []; let acc = 0, bits = 0;
+    lv.forEach(v => { acc = (acc << 3) | (v & 7); bits += 3; while(bits >= 8){ bytes.push((acc >> (bits - 8)) & 255); bits -= 8; } acc &= (1 << bits) - 1; });
+    if(bits) bytes.push((acc << (8 - bits)) & 255);
+    return btoa(String.fromCharCode.apply(null, bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function decode(code){
+    try {
+      const bin = atob(String(code).replace(/-/g, "+").replace(/_/g, "/"));
+      const lv = []; let acc = 0, bits = 0;
+      for(let k = 0; k < bin.length; k++){
+        acc = (acc << 8) | bin.charCodeAt(k); bits += 8;
+        while(bits >= 3 && lv.length < N){ lv.push((acc >> (bits - 3)) & 7); bits -= 3; }
+        acc &= (1 << bits) - 1;
+      }
+      return lv.length === N ? lv : null;
+    } catch(e){ return null; }
+  }
+  // из ссылки берём то, что допустимо: очки добавляются по одному в порядке дерева; недопустимое отбрасывается
+  function rebuild(target){
+    const lv = new Array(N).fill(0);
+    for(let round = 0; round < 5; round++){
+      let moved = false;
+      for(let i = 0; i < N; i++){
+        const want = Math.min(target[i] || 0, NODES[i].m);
+        while(lv[i] < want && canAdd(lv, i)){ lv[i]++; moved = true; }
+      }
+      if(!moved) break;
+    }
+    return lv;
+  }
+
+  // ---------- отрисовка ----------
+  const hover = { i: -1, pinned: false };
+  let activeBranch = 0;
+
+  function iconEl(src, name, cls){
+    const img = document.createElement("img");
+    img.alt = ""; img.decoding = "async"; img.loading = "lazy"; img.referrerPolicy = "no-referrer";
+    img.addEventListener("error", () => {
+      const fb = document.createElement("span"); fb.className = "fb" + (cls ? " " + cls : "");
+      fb.textContent = String(name || "?").replace(/[^A-Za-zА-Яа-я0-9 ]/g, "").split(" ").map(w => w[0] || "").join("").slice(0, 2).toUpperCase() || "?";
+      img.replaceWith(fb);
+    }, { once: true });
+    img.src = src;
+    return img;
+  }
+
+  function renderRaces(){
+    $("abRaces").innerHTML = D.races.map((_, r) =>
+      `<button type="button" role="tab" data-race="${r}" class="${r === D.classes[ci].r ? "active" : ""}">${esc(t("ab.race." + r, D.races[r]))}</button>`).join("");
+  }
+  function renderClasses(){
+    const race = D.classes[ci].r, box = $("abClasses");
+    box.innerHTML = "";
+    D.classes.forEach((c, k) => {
+      if(c.r !== race) return;
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "ab-class" + (k === ci ? " active" : ""); b.dataset.cls = k;
+      b.innerHTML = `<img src="assets/classes/${esc(c.i)}" alt="" />${esc(c.t)}`;
+      box.appendChild(b);
+    });
+  }
+  function renderTabs(){
+    $("abTabs").innerHTML = [0, 1, 2].map(b =>
+      `<button type="button" role="tab" data-branch="${b}" class="${b === activeBranch ? "active" : ""}">${esc(t("ab.branch." + b))}<span class="n" data-bn="${b}"></span></button>`).join("");
+  }
+  function renderBranches(){
+    const box = $("abBranches"); box.innerHTML = "";
+    for(let b = 0; b < 3; b++){
+      const sec = document.createElement("section");
+      sec.className = "ab-branch" + (b === activeBranch ? " show" : ""); sec.dataset.b = b;
+      sec.innerHTML = `<div class="ab-bhead"><h2>${esc(t("ab.branch." + b))}</h2><span class="sum" data-bsum="${b}"></span><button type="button" class="rst" data-breset="${b}">${esc(t("ab.reset", "Сбросить"))}</button></div>`;
+      for(let r = 0; r < ROWS; r++){
+        const row = document.createElement("div"); row.className = "ab-row";
+        const cells = document.createElement("div"); cells.className = "cells";
+        byBranch[b].filter(i => NODES[i].r === r).sort((x, y) => NODES[x].c - NODES[y].c).forEach(i => {
+          const n = NODES[i];
+          const btn = document.createElement("button");
+          btn.type = "button"; btn.className = "ab-node"; btn.dataset.i = i;
+          btn.appendChild(iconEl(iconOf(i), nameOf(i)));
+          const lv = document.createElement("span"); lv.className = "lv"; btn.appendChild(lv);
+          if(n.p >= 0 && NODES[n.p].c === n.c){
+            btn.classList.add("req");
+            btn.style.setProperty("--ab-line", ((n.r - NODES[n.p].r) * 66 - 54) + "px");
+          }
+          cells.appendChild(btn);
+        });
+        row.appendChild(cells);
+        const lim = document.createElement("span"); lim.className = "lim"; lim.dataset.lim = b + ":" + r; row.appendChild(lim);
+        sec.appendChild(row);
+      }
+      box.appendChild(sec);
+    }
+    update();
+  }
+
+  // обновляет числа и состояния на месте (без пересоздания узлов — подсказка и фокус не сбиваются)
+  function update(changed){
+    const lv = cur(), spent = total(lv);
+    $("abPoints").innerHTML = `<b>${esc(fmt(t("ab.left", "Осталось очков: {left} / {max}"), { left: MAXP - spent, max: MAXP }))}</b>` +
+      `<span class="muted">${esc(fmt(t("ab.spent", "Вложено: {n}"), { n: spent }))}</span>`;
+    for(let b = 0; b < 3; b++){
+      const rs = rowSums(lv, b), bs = rs.reduce((a, c) => a + c, 0);
+      const sum = document.querySelector(`[data-bsum="${b}"]`); if(sum) sum.textContent = bs + " / " + BRANCH_LIMIT;
+      const bn = document.querySelector(`[data-bn="${b}"]`); if(bn) bn.textContent = bs ? bs : "";
+      for(let r = 0; r < ROWS; r++){
+        const lim = document.querySelector(`[data-lim="${b}:${r}"]`);
+        if(lim){ lim.textContent = rs[r] + "/" + LIMITS[r]; lim.classList.toggle("full", rs[r] >= LIMITS[r]); }
+      }
+    }
+    document.querySelectorAll(".ab-node").forEach(btn => {
+      const i = +btn.dataset.i, n = NODES[i], v = lv[i];
+      const unlocked = reasons(lv, i).every(x => !x.hard);
+      const add = canAdd(lv, i);
+      btn.classList.toggle("locked", !unlocked && v === 0);
+      btn.classList.toggle("avail", unlocked && v === 0 && add);
+      btn.classList.toggle("has", v > 0 && v < n.m);
+      btn.classList.toggle("max", v >= n.m);
+      btn.classList.toggle("met", n.p < 0 || lv[n.p] >= 1);
+      btn.querySelector(".lv").textContent = v + "/" + n.m;
+      btn.setAttribute("aria-label", nameOf(i) + ", " + v + "/" + n.m);
+    });
+    if(hover.i >= 0) showTip(hover.i, true);
+  }
+
+  // ---------- подсказка ----------
+  function tipHtml(i){
+    const lv = cur(), n = NODES[i], v = lv[i], eff = effectsOf(i);
+    const rs = reasons(lv, i);
+    return `<div class="th" data-th></div>` +
+      rs.map(x => `<p class="need${x.hard ? "" : " soft"}">${esc(x.text)}</p>`).join("") +
+      `<ol>${eff.map((e, k) => `<li class="${k + 1 <= v ? "done" : ""}${k + 1 === v ? " cur" : ""}"><i>${k + 1}</i><span>${esc(e)}</span></li>`).join("")}</ol>` +
+      `<p class="hint">${esc(hover.pinned ? t("ab.hintTouch", "Нажмите «+» или «−», чтобы изменить уровень") : t("ab.hint", "ЛКМ — добавить очко, ПКМ — убрать"))}</p>` +
+      `<div class="btns"><button type="button" class="btn" data-tip-minus>−</button><button type="button" class="btn" data-tip-plus>+</button></div>`;
+  }
+  function showTip(i, keepPos){
+    const tip = $("abTip"), btn = document.querySelector(`.ab-node[data-i="${i}"]`); if(!btn) return;
+    hover.i = i;
+    tip.innerHTML = tipHtml(i);
+    const th = tip.querySelector("[data-th]");
+    th.appendChild(iconEl(iconOf(i), nameOf(i)));
+    const wrap = document.createElement("div");
+    wrap.innerHTML = `<b>${esc(nameOf(i))}</b><span>${esc(fmt(t("ab.level", "Уровень {l} / {m}"), { l: cur()[i], m: NODES[i].m }))}</span>`;
+    th.appendChild(wrap);
+    tip.classList.add("show"); tip.classList.toggle("pinned", hover.pinned);
+    if(keepPos && tip.dataset.pos) return;
+    const r = btn.getBoundingClientRect(), tw = tip.offsetWidth, thh = tip.offsetHeight, vw = innerWidth, vh = innerHeight;
+    let x = r.right + 10; if(x + tw > vw - 8) x = Math.max(8, r.left - tw - 10);
+    if(x < 8) x = Math.max(8, Math.min(vw - tw - 8, r.left));
+    let y = r.top - 8; if(y + thh > vh - 8) y = Math.max(8, vh - thh - 8);
+    tip.style.left = x + "px"; tip.style.top = Math.max(8, y) + "px"; tip.dataset.pos = "1";
+  }
+  function hideTip(){ const tip = $("abTip"); tip.classList.remove("show", "pinned"); tip.dataset.pos = ""; hover.i = -1; hover.pinned = false; }
+
+  // ---------- действия ----------
+  let toastTimer = 0;
+  function toast(text){
+    const el = $("abToast"); el.textContent = text; el.classList.add("show");
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
+  }
+  function selectClass(k, silent){
+    ci = k; activeBranch = Math.min(activeBranch, 2); leaveViewing();
+    try { localStorage.setItem("l2AbClass", D.classes[k].s); } catch(e){}
+    hideTip(); renderRaces(); renderClasses(); renderBranches(); refreshStdButtons();
+    if(!silent) $("abLinkBox").classList.remove("show");
+  }
+  function buildUrl(){
+    const u = new URL(location.href);
+    u.search = ""; u.hash = "";
+    u.searchParams.set("c", D.classes[ci].s);
+    u.searchParams.set("b", encode(cur()));
+    return u.toString();
+  }
+  async function copyLink(){
+    const url = buildUrl();
+    try { history.replaceState(null, "", url); } catch(e){}
+    try {
+      await navigator.clipboard.writeText(url);
+      toast(t("ab.copied", "Ссылка скопирована"));
+    } catch(e){
+      // буфер недоступен (например, встроенное окно) — показываем ссылку, её можно скопировать вручную
+      $("abLinkHint").textContent = t("ab.copyManual", "Скопируйте ссылку вручную:");
+      const inp = $("abLinkInput"); inp.value = url;
+      $("abLinkBox").classList.add("show"); inp.focus(); inp.select();
+    }
+  }
+
+  // ---------- стандарты клана ----------
+  // Клан-лидер и админ сохраняют собранный билд как «стандарт» класса (до 3 на класс, у каждого название);
+  // остальные видят кнопку «Посмотреть стандарт». Хранится в таблице ability_standards (supabase/schema_ability_standards.sql).
+  // Без входа (ссылку открыли напрямую) стандартов нет — кнопок не видно.
+  let profile = null;
+  const std = { error: false, rows: [] };
+  const isLeader = () => !!profile && ["glavadmin", "admin"].includes(profile.roles && profile.roles.key);
+  const stdFor = (slug) => std.rows.filter(r => r.class_slug === slug).sort((a, b) => a.slot - b.slot);
+  let viewing = null; // { name, prev } — открыт стандарт: билд пользователя спрятан в prev, можно вернуться
+
+  function refreshStdButtons(){
+    const view = $("abStdView"), make = $("abStdMake");
+    const has = !!profile && !!profile.clan_id;
+    const leader = has && isLeader();
+    view.hidden = !(has && (leader || (!std.error && stdFor(D.classes[ci].s).length)));
+    make.hidden = !leader;
+  }
+  async function loadStandards(){
+    try { profile = await L2Cabinet.getProfile(); } catch(e){ profile = null; }
+    if(!profile || !profile.clan_id) return;
+    const { data, error } = await L2Cabinet.client.from("ability_standards").select("class_slug, slot, name, code").eq("clan_id", profile.clan_id);
+    if(error){ std.error = true; console.error(error); } else std.rows = data || [];
+    refreshStdButtons();
+  }
+  function summarize(code){
+    const lv = decode(code); if(!lv) return null;
+    const bs = [0, 1, 2].map(b => byBranch[b].reduce((s, i) => s + lv[i], 0));
+    return { n: bs[0] + bs[1] + bs[2], a: bs[0], d: bs[1], m: bs[2] };
+  }
+  function renderBanner(){
+    const el = $("abBanner");
+    el.classList.toggle("show", !!viewing);
+    if(viewing){
+      $("abBannerText").textContent = fmt(t("ab.stdViewing", "Показан стандарт «{name}»"), { name: viewing.name });
+      $("abBannerBack").textContent = t("ab.stdBack", "Вернуться к своему билду");
+    }
+  }
+  function leaveViewing(){ if(viewing){ viewing = null; renderBanner(); } }
+
+  let stdSaveMode = false;
+  function renderStd(){
+    const slug = D.classes[ci].s, list = $("abStdList"), rows = stdFor(slug), leader = isLeader();
+    const mine = total(cur());
+    $("abStdTitle").textContent = fmt(t("ab.stdTitle", "Стандарты: {class}"), { class: D.classes[ci].t });
+    $("abStdHint").textContent = !leader ? "" : (stdSaveMode ? fmt(t("ab.stdHintSave", "Выберите слот: туда сохранится билд, который сейчас собран ({n} очков)."), { n: mine })
+                                                             : t("ab.stdHintLeader", "Стандарт — билд клана для этого класса. Можно задать до трёх, каждому дать название: остальные увидят их в списке."));
+    $("abStdErr").textContent = (std.error && leader) ? t("ab.stdNeedSql", "Сначала выполните в Supabase файл supabase/schema_ability_standards.sql.") : "";
+    list.innerHTML = "";
+    if(!leader && !rows.length){ list.innerHTML = `<p class="hint">${esc(t("ab.stdEmpty", "Для этого класса стандарт ещё не задан."))}</p>`; return; }
+    [1, 2, 3].forEach(slot => {
+      const r = rows.find(x => x.slot === slot);
+      if(!r && !leader) return;
+      const row = document.createElement("div");
+      row.dataset.slot = slot;
+      if(r){
+        const sm = summarize(r.code);
+        row.className = "ab-std-row" + (stdSaveMode ? " pick" : "");
+        row.innerHTML = `<div class="meta"><b>${esc(r.name)}</b><span>${esc(sm ? fmt(t("ab.stdPoints", "{n} очков · {a}/{d}/{m}"), sm) : "")}</span></div><div class="acts">` +
+          `<button type="button" class="btn btn-primary" data-act="open">${esc(t("ab.stdOpen", "Открыть"))}</button>` +
+          (leader ? `<button type="button" class="btn" data-act="rename">${esc(t("ab.stdRename", "Переименовать"))}</button>` +
+                    `<button type="button" class="btn" data-act="replace">${esc(t("ab.stdReplace", "Заменить текущим"))}</button>` +
+                    `<button type="button" class="btn btn-danger" data-act="delete">${esc(t("ab.stdDelete", "Удалить"))}</button>` : "") + `</div>`;
+      } else {
+        row.className = "ab-std-row free" + (stdSaveMode ? " pick" : "");
+        row.innerHTML = `<div class="meta"><b>${esc(fmt(t("ab.stdSlot", "Стандарт {n}"), { n: slot }))}</b><span>${esc(t("ab.stdFree", "Свободный слот"))}</span></div><div class="acts">` +
+          `<input type="text" maxlength="40" data-name placeholder="${esc(t("ab.stdNamePh", "Название, например: ПвП"))}" />` +
+          `<button type="button" class="btn btn-primary" data-act="save">${esc(t("ab.stdSave", "Сохранить текущий билд сюда"))}</button></div>`;
+      }
+      list.appendChild(row);
+    });
+  }
+  function openStd(saveMode){
+    stdSaveMode = !!saveMode; renderStd();
+    $("abStdOverlay").classList.add("show");
+  }
+  function closeStd(){ $("abStdOverlay").classList.remove("show"); }
+
+  async function stdSaveRow(slot, name){
+    const slug = D.classes[ci].s, lv = cur();
+    if(total(lv) <= 0){ toast(t("ab.stdNeedPoints", "Сначала вложите очки в билд")); return; }
+    const row = { clan_id: profile.clan_id, class_slug: slug, slot, name, code: encode(lv), updated_by: profile.id, updated_at: new Date().toISOString() };
+    const { error } = await L2Cabinet.client.from("ability_standards").upsert(row, { onConflict: "clan_id,class_slug,slot" });
+    if(error){ $("abStdErr").textContent = t("ab.stdFailed", "Не удалось сохранить: ") + error.message; return; }
+    std.rows = std.rows.filter(r => !(r.class_slug === slug && r.slot === slot)).concat([{ class_slug: slug, slot, name, code: row.code }]);
+    $("abStdErr").textContent = "";
+    toast(t("ab.stdSaved", "Стандарт сохранён")); stdSaveMode = false; renderStd(); refreshStdButtons();
+  }
+  $("abStdList").addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-act]"); if(!btn) return;
+    const rowEl = btn.closest("[data-slot]"), slot = +rowEl.dataset.slot, slug = D.classes[ci].s;
+    const cur0 = stdFor(slug).find(r => r.slot === slot), act = btn.dataset.act;
+    if(act === "open" && cur0){
+      const code = decode(cur0.code); if(!code) return;
+      const prev = viewing ? viewing.prev : cur().slice();
+      builds.set(ci, rebuild(code));
+      viewing = { name: cur0.name, prev };
+      closeStd(); renderBanner(); update();
+    } else if(act === "save"){
+      const name = (rowEl.querySelector("[data-name]").value || "").trim().slice(0, 40) || fmt(t("ab.stdSlot", "Стандарт {n}"), { n: slot });
+      await stdSaveRow(slot, name);
+    } else if(act === "replace" && cur0){
+      if(confirm(fmt(t("ab.stdOverwrite", "Заменить стандарт «{name}» текущим билдом?"), { name: cur0.name }))) await stdSaveRow(slot, cur0.name);
+    } else if(act === "rename" && cur0){
+      const nn = (prompt(t("ab.stdRenamePrompt", "Новое название стандарта:"), cur0.name) || "").trim().slice(0, 40);
+      if(!nn || nn === cur0.name) return;
+      const { error } = await L2Cabinet.client.from("ability_standards").update({ name: nn, updated_by: profile.id, updated_at: new Date().toISOString() })
+        .eq("clan_id", profile.clan_id).eq("class_slug", slug).eq("slot", slot);
+      if(error){ $("abStdErr").textContent = t("ab.stdFailed", "Не удалось сохранить: ") + error.message; return; }
+      cur0.name = nn; renderStd();
+    } else if(act === "delete" && cur0){
+      if(!confirm(fmt(t("ab.stdDeleteConfirm", "Удалить стандарт «{name}»?"), { name: cur0.name }))) return;
+      const { error } = await L2Cabinet.client.from("ability_standards").delete().eq("clan_id", profile.clan_id).eq("class_slug", slug).eq("slot", slot);
+      if(error){ $("abStdErr").textContent = t("ab.stdFailed", "Не удалось сохранить: ") + error.message; return; }
+      std.rows = std.rows.filter(r => !(r.class_slug === slug && r.slot === slot));
+      toast(t("ab.stdDeleted", "Стандарт удалён")); renderStd(); refreshStdButtons();
+    }
+  });
+  $("abStdView").addEventListener("click", () => openStd(false));
+  $("abStdMake").addEventListener("click", () => openStd(true));
+  $("abStdClose").addEventListener("click", closeStd);
+  $("abStdOverlay").addEventListener("click", (e) => { if(e.target === $("abStdOverlay")) closeStd(); });
+  $("abBannerBack").addEventListener("click", () => {
+    if(viewing){ builds.set(ci, viewing.prev); viewing = null; renderBanner(); update(); }
+  });
+
+  // ---------- события ----------
+  const area = $("abBranches");
+  let lastPointer = "mouse";
+  area.addEventListener("pointerdown", (e) => { lastPointer = e.pointerType || "mouse"; });
+  area.addEventListener("click", (e) => {
+    const rst = e.target.closest("[data-breset]");
+    if(rst){ const b = +rst.dataset.breset, lv = cur(); byBranch[b].forEach(i => { lv[i] = 0; }); leaveViewing(); update(); return; }
+    const btn = e.target.closest(".ab-node"); if(!btn) return;
+    const i = +btn.dataset.i;
+    if(lastPointer === "touch" || lastPointer === "pen"){ hover.pinned = true; showTip(i); return; }
+    addPoint(i);
+  });
+  area.addEventListener("contextmenu", (e) => {
+    const btn = e.target.closest(".ab-node"); if(!btn) return;
+    e.preventDefault(); removePoint(+btn.dataset.i);
+  });
+  area.addEventListener("keydown", (e) => {
+    const btn = e.target.closest(".ab-node"); if(!btn) return;
+    if(e.key === "Backspace" || e.key === "Delete"){ e.preventDefault(); removePoint(+btn.dataset.i); }
+  });
+  area.addEventListener("mouseover", (e) => {
+    if(hover.pinned) return;
+    const btn = e.target.closest(".ab-node"); if(!btn || lastPointer === "touch") return;
+    if(hover.i !== +btn.dataset.i){ $("abTip").dataset.pos = ""; showTip(+btn.dataset.i); }
+  });
+  area.addEventListener("mouseout", (e) => {
+    if(hover.pinned) return;
+    const btn = e.target.closest(".ab-node"); if(!btn) return;
+    if(e.relatedTarget && btn.contains(e.relatedTarget)) return;
+    hideTip();
+  });
+  area.addEventListener("focusin", (e) => { const btn = e.target.closest(".ab-node"); if(btn && !hover.pinned){ $("abTip").dataset.pos = ""; showTip(+btn.dataset.i); } });
+  area.addEventListener("focusout", () => { if(!hover.pinned) hideTip(); });
+  $("abTip").addEventListener("click", (e) => {
+    if(e.target.closest("[data-tip-plus]")) addPoint(hover.i);
+    else if(e.target.closest("[data-tip-minus]")) removePoint(hover.i);
+  });
+  document.addEventListener("pointerdown", (e) => {
+    const el = e.target && e.target.closest ? e.target : document.body;
+    if(hover.pinned && !el.closest(".ab-node") && !el.closest("#abTip")) hideTip();
+  });
+  document.addEventListener("keydown", (e) => { if(e.key === "Escape"){ hideTip(); closeStd(); } });
+  addEventListener("scroll", () => { if(!hover.pinned) hideTip(); }, true);
+
+  $("abRaces").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-race]"); if(!b) return;
+    const race = +b.dataset.race, first = D.classes.findIndex(c => c.r === race);
+    if(first >= 0) selectClass(first);
+  });
+  $("abClasses").addEventListener("click", (e) => { const b = e.target.closest("[data-cls]"); if(b) selectClass(+b.dataset.cls); });
+  $("abTabs").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-branch]"); if(!b) return;
+    activeBranch = +b.dataset.branch;
+    document.querySelectorAll("#abTabs button").forEach(x => x.classList.toggle("active", +x.dataset.branch === activeBranch));
+    document.querySelectorAll(".ab-branch").forEach(x => x.classList.toggle("show", +x.dataset.b === activeBranch));
+  });
+  $("abResetAll").addEventListener("click", () => { builds.set(ci, new Array(N).fill(0)); leaveViewing(); update(); });
+  $("abCopy").addEventListener("click", copyLink);
+
+  function texts(){
+    document.title = t("section.abilities", "Таланты") + " — " + t("ab.title", "Дерево талантов");
+    $("abTitle").textContent = t("ab.title", "Дерево талантов");
+    $("abDesc").textContent = t("ab.desc", "");
+    $("abResetAll").textContent = t("ab.resetAll", "Сбросить всё");
+    $("abCopy").textContent = t("ab.copy", "Скопировать ссылку на билд");
+    $("abOpenSite").textContent = t("ab.openSite", "Открыть кабинет клана");
+    $("abStdView").textContent = t("ab.stdView", "Посмотреть стандарт");
+    $("abStdMake").textContent = t("ab.stdMake", "Сделать стандартом");
+    $("abStdClose").title = t("ab.close", "Закрыть");
+    renderBanner();
+  }
+  // язык переключили в шапке сайта — перерисовываем подписи, очки не трогаем
+  addEventListener("storage", (e) => {
+    if(e.key !== "l2Lang") return;
+    texts(); renderRaces(); renderTabs(); renderBranches(); update(); closeStd();
+  });
+
+  // ---------- старт: класс и билд из ссылки, иначе последний выбранный ----------
+  texts();
+  renderTabs();
+  const q = new URLSearchParams(location.search);
+  let start = D.classes.findIndex(c => c.s === q.get("c"));
+  if(start < 0){ try { start = D.classes.findIndex(c => c.s === localStorage.getItem("l2AbClass")); } catch(e){} }
+  if(start < 0) start = 0;
+  const code = q.get("b") ? decode(q.get("b")) : null;
+  if(code && D.classes.findIndex(c => c.s === q.get("c")) === start){ ci = start; builds.set(start, rebuild(code)); }
+  selectClass(start, true);
+  loadStandards();
+})();
+</script>
+</body>
+</html>
