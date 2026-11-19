@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Отчёты по мероприятиям — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=36" />
+<link rel="stylesheet" href="js/theme.css?v=38" />
 <style>
   .rep-wrap{ padding:0 0 32px; }
 
@@ -505,7 +505,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=25"></script>
-<script src="js/i18n.js?v=100"></script>
+<script src="js/i18n.js?v=104"></script>
 <script src="js/paste-drop.js?v=1"></script>
 <script src="js/nick-match.js?v=4"></script>
 <script src="js/classes.js?v=1"></script>
@@ -1792,8 +1792,8 @@
       return RADAR_ANGLES.map((a, i) => toPoint(a, fracs[i]))
         .map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
     }
-    // 5 колец по 20% — шкала-линейка; внешнее кольцо у радаров сравнения = лучший
-    // показатель по всем пати/людям (см. подсказку под ними)
+    // 5 колец по 20% — шкала-линейка от нуля; лучший показатель по оси стоит на 4-м кольце
+    // (см. radarFrac), внешнее кольцо — запас, чтобы фигуры не упирались в край
     const RINGS = [0.2, 0.4, 0.6, 0.8, 1];
     const grid = RINGS.map(lvl =>
       `<polygon class="rep-radar-grid" points="${polyStr(RADAR_ANGLES.map(() => lvl))}"/>`
@@ -1813,7 +1813,12 @@
     return { polyStr, grid, axes, labels };
   }
 
-  // подпись «чему равно 100%» под радаром: максимум по каждой оси
+  // Единое честное правило для всех радаров (и на «Группах» тоже): ось — от нуля, длина пропорциональна
+  // значению (вдвое больше — вдвое дальше от центра), лучший по оси — ровно на 4-м кольце (80% радиуса)
+  const RADAR_HEAD = 1.25;
+  const radarFrac = (v, best) => best > 0 ? Math.min(1, Math.max(0, v) / (best * RADAR_HEAD)) : 0;
+
+  // подпись «чему равно 4-е кольцо» под радаром: лучший по каждой оси
   function radarScaleHint(maxPerAxis, key, fallback){
     const loc = L2I18n.locale();
     const fmt = (v, i) => i === 3 ? v.toFixed(2) : (i === 1 || i === 2 ? v.toFixed(1) : Math.round(v).toLocaleString(loc));
@@ -1830,8 +1835,9 @@
 
     const curVals = [current.pvp, current.kills, current.deaths, current.kd, current.pve];
     const avgVals = [avg.pvp, avg.kills, avg.deaths, avg.kd, avg.pve];
-    const fracCur = curVals.map((v, i) => v / (Math.max(v, avgVals[i]) || 1));
-    const fracAvg = avgVals.map((v, i) => v / (Math.max(v, curVals[i]) || 1));
+    // по каждой оси бо́льшее из двух значений — на 4-м кольце, меньшее — пропорционально от нуля
+    const fracCur = curVals.map((v, i) => radarFrac(v, Math.max(v, avgVals[i])));
+    const fracAvg = avgVals.map((v, i) => radarFrac(v, Math.max(v, curVals[i])));
 
     const geo = radarGeometry(120, 70);
 
@@ -1845,7 +1851,8 @@
       `<div class="rep-radar-legend">` +
         `<span class="rep-legend-item"><i class="dot"></i>${escapeHtml(L2I18n.t("reports.legendCurrentPeriod", "Текущий период"))}</span>` +
         `<span class="rep-legend-item"><i class="dot avg"></i>${escapeHtml(L2I18n.t("reports.legendAverage", "Среднее"))}</span>` +
-      `</div>`;
+      `</div>` +
+      `<p class="rep-radar-scale">${escapeHtml(L2I18n.t("reports.radarScaleWeek", "Шкала от нуля: на 4-м кольце — бо́льшее из двух значений по оси."))}</p>`;
   }
 
   // ---------- сравнение пати между собой (радар на N групп + таблица с точными цифрами) ----------
@@ -1905,20 +1912,20 @@
   }
 
   // среднее на участника ПОЛНОГО состава пати (включая тех, у кого нет статистики
-  // за период, — им просто засчитывается 0), та же логика, что на карточках в «Группах»
+  // за период, — им просто засчитывается 0).
+  // K:D пати — все килы пати / все смерти пати (как в «Итогах по пати» и на радаре «Групп»), а не среднее
+  // из K:D каждого: там не ходившие тянули пати к нулю, а один «3 кила, 0 смертей» — к небу
   function computeGroupAverages(groupId, normStatsMap){
     const roster = groupMembersMap.get(groupId) || [];
     if(!roster.length) return { kills: 0, deaths: 0, kd: 0, pvp: 0, pve: 0 };
-    let sumKills = 0, sumDeaths = 0, sumKd = 0, sumPvp = 0, sumPve = 0;
+    let sumKills = 0, sumDeaths = 0, sumPvp = 0, sumPve = 0;
     roster.forEach(nick => {
       const s = normStatsMap.get(normalizeNick(nick));
-      if(s){
-        sumKills += s.kills; sumDeaths += s.deaths; sumPvp += s.pvp; sumPve += s.pve;
-        sumKd += s.deaths > 0 ? s.kills / s.deaths : s.kills;
-      }
+      if(s){ sumKills += s.kills; sumDeaths += s.deaths; sumPvp += s.pvp; sumPve += s.pve; }
     });
     const n = roster.length;
-    return { kills: sumKills / n, deaths: sumDeaths / n, kd: sumKd / n, pvp: sumPvp / n, pve: sumPve / n };
+    const kd = sumDeaths > 0 ? sumKills / sumDeaths : sumKills;
+    return { kills: sumKills / n, deaths: sumDeaths / n, kd, pvp: sumPvp / n, pve: sumPve / n };
   }
 
   // суммы по составу пати (кто из состава не ходил — просто не прибавляет); active —
@@ -1959,7 +1966,7 @@
     // тонкая обводка (2px) + лёгкая заливка — при 4+ наложенных фигурах сплошная
     // заливка превращается в кашу, обводка остаётся читаемой в любом случае
     const seriesPolys = series.map(s => {
-      const fracs = s.vals.map((v, i) => v / maxPerAxis[i]);
+      const fracs = s.vals.map((v, i) => radarFrac(v, maxPerAxis[i]));
       return `<polygon points="${geo.polyStr(fracs)}" fill="${s.color}1a" stroke="${s.color}" stroke-width="2"/>`;
     }).join("");
 
@@ -2076,12 +2083,12 @@
   // человек одновременно; точные цифры отдельно в таблице под радаром
   function renderPeopleRadar(stats, allVals){
     const wrap = document.getElementById("pplRadarWrap");
-    // 100% = лучший среди ВСЕХ участников за период, а не только выбранных
+    // 4-е кольцо = лучший среди ВСЕХ участников за период, а не только выбранных
     const maxPerAxis = RADAR_LABELS_().map((_, i) => Math.max(...allVals.map(v => v[i]), ...stats.map(s => s.vals[i]), 1e-9));
     const geo = radarGeometry(100, 68);
 
     const seriesPolys = stats.map(s => {
-      const fracs = s.vals.map((v, i) => v / maxPerAxis[i]);
+      const fracs = s.vals.map((v, i) => radarFrac(v, maxPerAxis[i]));
       return `<polygon points="${geo.polyStr(fracs)}" fill="${s.color}1a" stroke="${s.color}" stroke-width="2"/>`;
     }).join("");
 
@@ -2121,7 +2128,11 @@
       return { ...p, kills: s.kills, deaths: s.deaths, pvp: s.pvp, pve: s.pve, kd, vals: [s.pvp, s.kills, s.deaths, kd, s.pve] };
     });
 
-    const allVals = [...normStatsMap.values()].map(st => [st.pvp, st.kills, st.deaths, st.deaths > 0 ? st.kills / st.deaths : st.kills, st.pve]);
+    // для масштаба K:D берём только тех, у кого хватает боёв (≥10 килов+смертей): иначе один заход
+    // «3 кила, 0 смертей» (K:D = 3) задаёт шкалу всем, и у остальных ось K:D сжимается почти в ноль.
+    // Выбранные в сравнение в масштаб входят всегда (их фигура не вылезет за край)
+    const allVals = [...normStatsMap.values()].map(st => [st.pvp, st.kills, st.deaths,
+      (st.kills + st.deaths) >= 10 ? (st.deaths > 0 ? st.kills / st.deaths : st.kills) : 0, st.pve]);
     renderPeopleRadar(stats, allVals);
     renderPeopleTable(stats);
   }

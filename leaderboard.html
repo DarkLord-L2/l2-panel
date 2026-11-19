@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Лидерборд — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=36" />
+<link rel="stylesheet" href="js/theme.css?v=38" />
 <style>
   /* «Лидерборд» — дашборд топов: MVP периода, общая статистика клана с изменением к
      прошлому периоду, по карточке «Топ по …» на каждую метрику (отдельно пати и игроки),
@@ -282,7 +282,7 @@
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=25"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=100"></script>
+<script src="js/i18n.js?v=104"></script>
 <script src="js/datepicker.js?v=2"></script>
 <script src="js/nick-match.js?v=4"></script>
 <script>
@@ -302,8 +302,17 @@
   const db = L2Cabinet.client;
   const t = (k, f) => L2I18n.t(k, f);
   const isAdmin = ["glavadmin", "admin"].includes(profile.roles?.key);
-  // то же правило, что в «Отчётах»: не-админ с назначенной пати видит только свою пати
-  const restrictedParty = (!isAdmin && profile.party_id) ? profile.party_id : null;
+  // то же правило, что в «Отчётах»: не-админ с назначенной пати видит только свою пати —
+  // если клан-лидер не включил «Все роли видят лидерборд целиком» (Админ-панель → «Разделы
+  // и права», таблица leaderboard_settings; нет таблицы/строки — ограничение как раньше)
+  let fullForAll = false;
+  if(!isAdmin && profile.party_id){
+    try{
+      const { data, error } = await db.from("leaderboard_settings").select("full_for_all").eq("clan_id", profile.clan_id).maybeSingle();
+      if(!error) fullForAll = !!data?.full_for_all;
+    }catch(e){ console.error(e); }
+  }
+  const restrictedParty = (!isAdmin && profile.party_id && !fullForAll) ? profile.party_id : null;
   const $ = (id) => document.getElementById(id);
 
   function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c])); }

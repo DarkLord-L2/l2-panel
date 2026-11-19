@@ -291,6 +291,9 @@
       els.forEach(el => {
         const id = el.dataset.lbid;
         if(map[id]) return;
+        // своё место для особой ячейки (например, «Сравнение пати» — справа сверху и своего размера, а не плиткой снизу)
+        const own = opts.place ? opts.place(id, W, map) : null;
+        if(own){ map[id] = own; added = true; return; }
         const w = Math.min(newW, W), h = newH;
         if(cx + w > W + 1){ cx = 0; cy += rowH + gap; rowH = 0; }
         map[id] = { x: cx / W, y: cy, w: w / W, h };
