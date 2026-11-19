@@ -282,7 +282,7 @@
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=25"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=96"></script>
+<script src="js/i18n.js?v=97"></script>
 <script src="js/datepicker.js?v=2"></script>
 <script src="js/nick-match.js?v=4"></script>
 <script>
@@ -501,6 +501,14 @@
     return rows.filter(r => r.attend >= minEv && (m !== "kd" || r.kills + r.deaths > 0) && (m === "attend" || val(r, m) > 0 || m === "kd"))
       .sort((a, b) => val(b, m) - val(a, m) || b.attend - a.attend || a.nick.localeCompare(b.nick));
   }
+  // место в отсортированном списке с учётом равенства: у равных значений одно место
+  // (15, 15, 15, 14 → 1, 1, 1, 4) — раньше было 1, 2, 3 по алфавиту, хотя результат одинаковый
+  function placeIn(ranked, i, m){
+    const v = val(ranked[i], m);
+    let j = i;
+    while(j > 0 && val(ranked[j - 1], m) === v) j--;
+    return j + 1;
+  }
   function fmt(v, m){
     if(m === "kd") return (v || 0).toFixed(2);
     return Math.round(v || 0).toLocaleString(L2I18n.locale());
@@ -540,7 +548,7 @@
         const minEv = minEventsFor(name, m.id);
         s.ranked[m.id] = rank(s.rows, m.id, minEv);
         const pr = new Map();
-        if(prev) rank(s.prevRows, m.id, minEv).forEach((r, i) => pr.set(r.key, i + 1));
+        if(prev){ const pr0 = rank(s.prevRows, m.id, minEv); pr0.forEach((r, i) => pr.set(r.key, placeIn(pr0, i, m.id))); }
         s.prevPlace[m.id] = pr;
       });
     });
@@ -567,18 +575,24 @@
       el.innerHTML = `<div class="lbl">${svgI("trophy", 2)}MVP ${esc(t("lb.ofPeriod", "периода"))}</div><div class="lb-mvp-empty">${esc(t("lb.empty", "За выбранный период и фильтры данных нет — попробуйте период побольше."))}</div>`;
       return;
     }
-    // общий рейтинг: средний перцентиль по метрикам (смерти не учитываем — это не заслуга)
+    // общий рейтинг: по каждой метрике — доля от лучшего результата в клане (лидер = 100%),
+    // взвешенное среднее (смерти не учитываем — это не заслуга). Раньше считалось по МЕСТАМ:
+    // 1-е и 2-е место отличались одинаково при любом отрыве, а равные значения (17 и 17
+    // посещений) получали разные места — из-за этого MVP мог достаться не тому, кто
+    // реально впереди по килам/урону/посещениям
     const W = { kills: 1, kd: 1, pvp: 1, attend: .6, pve: .4 };
-    const place = {};
-    Object.keys(W).forEach(m => {
-      const sorted = pool.slice().sort((a, b) => val(b, m) - val(a, m));
-      place[m] = new Map(sorted.map((p, i) => [p.key, i]));
-    });
     const n = pool.length, wSum = Object.values(W).reduce((a, b) => a + b, 0);
-    pool.forEach(p => {
-      p.mvp = Object.entries(W).reduce((s, [m, w]) => s + w * (n > 1 ? 1 - place[m].get(p.key) / (n - 1) : 1), 0) / wSum * 100;
+    const max = {}, place = {};
+    Object.keys(W).forEach(m => {
+      max[m] = Math.max(0, ...pool.map(p => val(p, m)));
+      // место с учётом равенства: у равных значений — одно и то же место
+      const vals = pool.map(p => val(p, m));
+      place[m] = new Map(pool.map(p => [p.key, vals.filter(v => v > val(p, m)).length]));
     });
-    const best = pool.slice().sort((a, b) => b.mvp - a.mvp)[0];
+    pool.forEach(p => {
+      p.mvp = Object.entries(W).reduce((s, [m, w]) => s + w * (max[m] > 0 ? val(p, m) / max[m] : 0), 0) / wSum * 100;
+    });
+    const best = pool.slice().sort((a, b) => b.mvp - a.mvp || b.kills - a.kills)[0];
     ctx.mvp = { best, place, n }; // для картинки в Telegram
     const chips = Object.keys(W).map(m => ({ m, pl: place[m].get(best.key) + 1 })).sort((a, b) => a.pl - b.pl).slice(0, 4)
       .map(({ m, pl }) => `<span class="chip-m" style="--mc:${MDEF[m].color}">#${pl} ${esc(MDEF[m].label())} · ${short(val(best, m), m)}</span>`).join("");
@@ -588,7 +602,7 @@
       `<div style="min-width:0;"><div class="nm"><span${cabAttr(best)}>${esc(best.nick)}</span></div><div class="sub">${esc(playerSub(best))}</div></div>` +
       `<div class="score"><b>${Math.round(best.mvp)}</b><small>${esc(t("lb.mvpScore", "рейтинг из 100"))}</small></div></div>` +
       `<div class="chips">${chips}</div>` +
-      `<p class="hint">${esc(t("lb.mvpHint", "Рейтинг — место среди {n} игроков по килам, K:D, PvP, посещениям и PvE сразу.").replace("{n}", n))}</p>`;
+      `<p class="hint">${esc(t("lb.mvpHint2", "Рейтинг — насколько игрок близок к лучшему в клане по килам, K:D, PvP, посещениям и PvE сразу (лидер в метрике = 100). Среди {n} игроков.").replace("{n}", n))}</p>`;
   }
 
   function renderSummary(){
@@ -629,7 +643,7 @@
     return `<small class="lb-delta ${d > 0 ? "up" : "down"}" style="margin:0;">${d > 0 ? "▲" : "▼"}${Math.abs(d)}</small>`;
   }
   function rowHtml(secName, m, r, i, max, extraCls){
-    const place = i + 1;
+    const place = placeIn(ctx.sec[secName].ranked[m], i, m);
     const mine = secName === "players" ? (myKey && r.key === myKey) : (myGroupKey && r.key === myGroupKey);
     const sub = secName === "players" ? playerSub(r) : (r.sub || "");
     return `<div class="lb-row${mine ? " me" : ""}${extraCls || ""}" data-key="${esc(r.key)}">` +
@@ -915,8 +929,9 @@
       const medal = ["#f2c14e", "#c3cad4", "#d08b5b"];
       rows.forEach((r, i) => {
         const ry = by + 84 + i * 56;
-        c.fillStyle = medal[i] || "#2a2c33"; c.beginPath(); c.arc(bx + 38, ry + 20, 14, 0, Math.PI * 2); c.fill();
-        c.fillStyle = i < 3 ? "#1a1408" : "#9aa0aa"; c.font = F(800, 15); c.textAlign = "center"; c.fillText(String(i + 1), bx + 38, ry + 25); c.textAlign = "left";
+        const pl = placeIn(ctx.sec.players.ranked[m], i, m); // равным — одно место
+        c.fillStyle = medal[pl - 1] || "#2a2c33"; c.beginPath(); c.arc(bx + 38, ry + 20, 14, 0, Math.PI * 2); c.fill();
+        c.fillStyle = pl <= 3 ? "#1a1408" : "#9aa0aa"; c.font = F(800, 15); c.textAlign = "center"; c.fillText(String(pl), bx + 38, ry + 25); c.textAlign = "left";
         drawAva(c, imgs.get(r.icon), bx + 64, ry + 2, 38, null);
         c.fillStyle = "#ffffff"; c.font = F(600, 21); c.fillText(fitText(c, r.nick, bw - 250), bx + 116, ry + 22);
         c.fillStyle = "rgba(255,255,255,.06)"; rr(c, bx + 116, ry + 32, bw - 250, 5, 3); c.fill();
