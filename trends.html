@@ -6,64 +6,58 @@
 <title>Динамика — Кабинет клана</title>
 <link rel="stylesheet" href="js/theme.css?v=39" />
 <style>
-  /* «Динамика» — переработка сути (не просто цвета): столбики → сглаженная
-     линия с заливкой-градиентом под ней (собственно «динамика», а не статичные
-     колонки), 4 отдельные плитки статистики убраны — ключевая цифра и дельта
-     встроены прямо в шапку своего графика, а не висят отдельным блоком без
-     явной связи с ним. Раскладка — два равных блока рядом (не друг под другом
-     на всю ширину), на узком экране сами складываются в столбец. Только эта
-     страница, остального сайта не касается. */
-  /* палитра — общая с остальным сайтом (раньше своя синеватая, страница выбивалась) */
-  .tr-wrap{ padding:0 0 40px; }
+  /* «Динамика» — дашборд клана за последние 12 недель: плитки с мини-графиками и изменением к прошлой неделе,
+     явка и бои по неделям (график с подсказкой при наведении), карта активности по дням недели, приток и отток людей
+     по переписям, серии посещения («кто в огне», кто растёт, кто просел) и налоги. Только чтение, в базу ничего не пишет. */
+  .tr-wrap{ padding:0 0 40px; display:flex; flex-direction:column; gap:16px; }
+  .tr-wrap .page-head{ margin-bottom:0; }
+  .tr-wrap .page-head p{ margin:4px 0 0; }
 
+  @keyframes trIn{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+  .tr-kpi, .tr-panel{ animation: trIn .45s var(--ease) both; animation-delay: calc(var(--n, 0) * 55ms); }
+
+  /* ---- плитки сверху ---- */
+  .tr-kpis{ display:grid; grid-template-columns:repeat(auto-fit, minmax(176px, 1fr)); gap:12px; }
+  .tr-kpi{
+    position:relative; overflow:hidden; padding:14px 16px 12px; --k: var(--gold);
+    background: linear-gradient(160deg, color-mix(in srgb, var(--k) 9%, transparent), transparent 70%), var(--panel);
+    border:1px solid var(--border); border-radius:var(--radius); box-shadow: var(--shadow-1);
+  }
+  .tr-kpi::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background: var(--k); opacity:.85; }
+  .tr-kpi .lbl{ font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color: var(--text-dim); }
+  .tr-kpi .val{ margin-top:6px; font-size:28px; font-weight:800; letter-spacing:-.02em; line-height:1.05; font-variant-numeric: tabular-nums; }
+  .tr-kpi .dl{ margin-top:4px; font-size:12px; font-weight:700; color: var(--text-dim); display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; }
+  .tr-kpi .dl span{ font-weight:500; font-size:11px; color: var(--text-dim); }
+  .tr-kpi .dl.up{ color: var(--ok); } .tr-kpi .dl.down{ color: var(--danger-lit); }
+  .tr-kpi .cap{ margin-top:2px; font-size:11px; color: var(--text-dim); }
+  .tr-kpi .spark{ margin-top:8px; height:34px; }
+  .tr-kpi .spark svg{ width:100%; height:100%; display:block; overflow:visible; }
+
+  /* ---- панели ---- */
   .tr-panels{ display:flex; flex-wrap:wrap; gap:16px; }
   .tr-panel{
-    position:relative; flex:1 1 380px; min-width:0;
-    padding:18px 20px 20px;
+    position:relative; flex:1 1 420px; min-width:0; padding:18px 20px 20px; --tr-accent: var(--gold);
     background: linear-gradient(180deg, color-mix(in srgb, var(--tr-accent) 6%, transparent), transparent 140px), var(--panel);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    box-shadow: var(--shadow-1);
-    overflow:hidden;
-    --tr-accent: var(--gold);
+    border:1px solid var(--border); border-radius:var(--radius); box-shadow: var(--shadow-1); overflow:hidden;
   }
-  .tr-panel::before{
-    content:""; position:absolute; top:0; left:0; right:0; height:2px;
-    background: linear-gradient(90deg, var(--tr-accent), transparent);
-  }
-  .tr-panel.tr-panel-tax{ --tr-accent: #d9a441; }
-  .tr-panel.tr-panel-off{ flex:0 0 240px; align-self:flex-start; opacity:.75; }
-  @media (max-width:720px){ .tr-panel.tr-panel-off{ flex-basis:100%; } }
-
-  .tr-panel-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  .tr-panel.wide{ flex-basis:100%; }
+  .tr-panel::before{ content:""; position:absolute; top:0; left:0; right:0; height:2px; background: linear-gradient(90deg, var(--tr-accent), transparent); }
+  .tr-panel-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
   .tr-panel-title{ display:flex; align-items:center; gap:8px; min-width:0; }
   .tr-dot{ width:7px; height:7px; border-radius:50%; flex:none; background: var(--tr-accent); box-shadow: 0 0 8px var(--tr-accent); }
-  .tr-panel-title h2{ margin:0; font-size:14.5px; font-weight:600; color: var(--text); }
+  .tr-panel-title h2{ margin:0; font-size:14.5px; font-weight:600; }
+  .tr-panel .hint{ margin:4px 0 0; }
+  .tr-badges{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .tr-badge{ font-family:inherit; font-size:11px; font-weight:700; line-height:1; padding:5px 10px; border-radius:10px; cursor:pointer;
+    color: var(--text-dim); background:none; border:1px solid var(--border-lit); transition: color .15s, border-color .15s, background .15s; }
+  .tr-badge:hover{ color: var(--text); }
+  .tr-badge.active{ color: var(--tr-accent); border-color: color-mix(in srgb, var(--tr-accent) 45%, transparent); background: color-mix(in srgb, var(--tr-accent) 12%, transparent); }
+  .tr-record{ font-size:12px; color: var(--text-dim); margin-top:6px; min-height:1px; }
+  .tr-record b{ color: var(--tr-accent); }
 
-  .tr-panel-stat{ flex:none; text-align:right; }
-  .tr-panel-stat-value{ display:block; font-size:26px; font-weight:700; color: var(--text); line-height:1.1; letter-spacing:-.02em; font-variant-numeric: tabular-nums; }
-  .tr-panel-stat-delta{ display:inline-block; font-size:12px; font-weight:700; margin-top:2px; }
-  .tr-panel-stat-delta.up{ color: var(--ok); }
-  .tr-panel-stat-delta.down{ color: var(--danger-lit); }
-  .tr-panel-stat-delta.flat{ color: var(--text-dim); }
-  .tr-panel-stat-caption{ display:block; font-size:11px; color: var(--text-dim); margin-top:2px; }
-
-  .tr-panel .hint{ margin-top:4px; }
-
-  /* переключатель масштаба — колесо мыши над графиком листает по дням/неделям
-     (у налогов — по неделям/месяцам), бейдж кликабелен же для тач-экранов и
-     просто показывает текущий масштаб. Дальше недели (у посещаемости) и месяца
-     (у налогов) не идём — по годам смысла нет, данных за такой срок не бывает */
-  .tr-gran-row{ margin-top:8px; }
-  .tr-gran-badge{
-    font-family:inherit; font-size:10.5px; font-weight:700; line-height:1;
-    color: var(--tr-accent); background: color-mix(in srgb, var(--tr-accent) 12%, transparent);
-    border:1px solid color-mix(in srgb, var(--tr-accent) 28%, transparent); border-radius:10px;
-    padding:3px 9px; cursor:pointer;
-  }
-  .tr-gran-badge:hover{ background: color-mix(in srgb, var(--tr-accent) 20%, transparent); }
-
-  .tr-chart{ width:100%; height:190px; display:block; margin-top:10px; overflow:visible; cursor:ns-resize; }
+  /* ---- график: линия + подсказка при наведении ---- */
+  .tr-chart-box{ position:relative; margin-top:12px; }
+  .tr-chart{ width:100%; display:block; overflow:visible; touch-action:pan-y; }
   .tr-gridline{ stroke: rgba(255,255,255,.05); stroke-width:1; }
   .tr-axis{ stroke: var(--border-lit); stroke-width:1; }
   .tr-line{ fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
@@ -73,10 +67,69 @@
   .tr-pt.in{ opacity:1; }
   .tr-value{ fill: var(--text); font-size:11px; font-weight:700; font-family:inherit; }
   .tr-label{ fill: var(--text-dim); font-size:9.5px; font-family:inherit; font-weight:500; }
+  .tr-guide{ stroke: var(--text-dim); stroke-width:1; stroke-dasharray:3 3; opacity:0; transition: opacity .12s; pointer-events:none; }
+  .tr-hot{ opacity:0; transition: opacity .12s; pointer-events:none; }
+  .tr-chart-box.hover .tr-guide, .tr-chart-box.hover .tr-hot{ opacity:1; }
+  .tr-tip{ position:absolute; z-index:5; pointer-events:none; opacity:0; transform:translate(-50%, 0); transition: opacity .12s;
+    padding:7px 11px; border-radius:8px; background: var(--panel-3); border:1px solid var(--border-lit); box-shadow: var(--shadow-2);
+    font-size:12px; line-height:1.35; white-space:nowrap; }
+  .tr-chart-box.hover .tr-tip{ opacity:1; }
+  .tr-tip b{ display:block; font-size:15px; font-variant-numeric: tabular-nums; }
+  .tr-tip .d{ font-size:11px; font-weight:700; }
+  .tr-tip .d.up{ color: var(--ok); } .tr-tip .d.down{ color: var(--danger-lit); } .tr-tip .d.flat{ color: var(--text-dim); }
   .tr-empty{ margin:10px 0 0; }
 
+  /* ---- карта активности ---- */
+  .tr-heat{ display:grid; grid-template-columns:30px repeat(12, minmax(0,1fr)); gap:5px; margin-top:14px; align-items:center; }
+  .tr-heat .wd{ font-size:11px; color: var(--text-dim); font-weight:600; }
+  .tr-heat .wk{ font-size:10px; color: var(--text-dim); text-align:center; white-space:nowrap; overflow:hidden; }
+  .tr-cell{ height:30px; border-radius:6px; background: var(--panel-2); border:1px solid var(--border);
+    transition: transform .12s var(--ease), border-color .12s; }
+  .tr-cell:hover{ transform:scale(1.18); border-color: var(--text-dim); z-index:2; position:relative; }
+  .tr-cell.none{ background:none; border-style:dashed; opacity:.45; }
+  .tr-cell.future{ background:none; border-color: transparent; opacity:.25; }
+  .tr-cell.l0{ background: color-mix(in srgb, var(--gold) 6%, var(--panel-2)); }
+  .tr-cell.l1{ background: color-mix(in srgb, var(--gold) 22%, var(--panel-2)); border-color: color-mix(in srgb, var(--gold) 24%, var(--border)); }
+  .tr-cell.l2{ background: color-mix(in srgb, var(--gold) 42%, var(--panel-2)); border-color: color-mix(in srgb, var(--gold) 40%, var(--border)); }
+  .tr-cell.l3{ background: color-mix(in srgb, var(--gold) 62%, var(--panel-2)); border-color: color-mix(in srgb, var(--gold) 58%, var(--border)); }
+  .tr-cell.l4{ background: color-mix(in srgb, var(--gold) 82%, var(--panel-2)); border-color: var(--gold); }
+  .tr-cell.l5{ background: var(--gold); border-color: var(--gold); box-shadow: 0 0 12px color-mix(in srgb, var(--gold) 55%, transparent); }
+  .tr-legend{ display:flex; align-items:center; gap:5px; margin-top:12px; font-size:11px; color: var(--text-dim); justify-content:flex-end; }
+  .tr-legend .tr-cell{ width:14px; height:14px; flex:none; }
+  .tr-legend .tr-cell:hover{ transform:none; }
+
+  /* ---- приток и отток ---- */
+  .tr-flow-sum{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .tr-pill{ padding:6px 12px; border-radius:20px; font-size:12.5px; font-weight:700; border:1px solid var(--border-lit); background: var(--panel-2); }
+  .tr-pill.up{ color: var(--ok); border-color: color-mix(in srgb, var(--ok) 35%, transparent); }
+  .tr-pill.down{ color: var(--danger-lit); border-color: color-mix(in srgb, var(--danger-lit) 35%, transparent); }
+  .tr-flow-svg{ width:100%; display:block; margin-top:6px; overflow:visible; }
+  .tr-flow-svg .cnt{ font-size:10.5px; font-weight:700; fill: var(--text); font-family:inherit; }
+  .tr-flow-svg .lbl{ font-size:9.5px; fill: var(--text-dim); font-family:inherit; }
+  .tr-flow-svg rect.bar{ transition: opacity .15s; }
+  .tr-flow-svg g.col:hover rect.bar{ opacity:.78; }
+
+  /* ---- серии / растут / просели ---- */
+  .tr-rank{ display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+  .tr-rank-row{ display:grid; grid-template-columns:22px minmax(0,1fr) auto; align-items:center; gap:10px; padding:7px 10px; border-radius:8px;
+    background: var(--panel-2); border:1px solid var(--border); animation: trIn .35s var(--ease) both; animation-delay: calc(var(--i, 0) * 40ms); }
+  .tr-rank-row .n{ font-size:12px; font-weight:800; color: var(--text-dim); text-align:center; }
+  .tr-rank-row:nth-child(1) .n{ color: var(--gold); }
+  .tr-rank-row .who{ min-width:0; }
+  .tr-rank-row .nm{ font-weight:600; font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
+  .tr-rank-row .dots{ display:flex; gap:3px; margin-top:4px; }
+  .tr-rank-row .dots i{ width:9px; height:9px; border-radius:3px; background: var(--panel-3); border:1px solid var(--border); flex:none; }
+  .tr-rank-row .dots i.on{ background: var(--gold); border-color: var(--gold); }
+  .tr-rank-row .val{ font-size:14px; font-weight:800; font-variant-numeric: tabular-nums; white-space:nowrap; text-align:right; }
+  .tr-rank-row .val small{ display:block; font-size:10.5px; font-weight:500; color: var(--text-dim); }
+  .tr-rank-row .val.up{ color: var(--ok); } .tr-rank-row .val.down{ color: var(--danger-lit); }
+
   @media (max-width:720px){
-    .tr-panel{ flex-basis:100%; }
+    .tr-panel{ flex-basis:100%; padding:16px 14px 18px; }
+    .tr-kpi .val{ font-size:24px; }
+    .tr-heat{ gap:3px; grid-template-columns:24px repeat(12, minmax(0,1fr)); }
+    .tr-cell{ height:22px; border-radius:4px; }
+    .tr-heat .wk:nth-child(even){ visibility:hidden; }
   }
 </style>
 </head>
@@ -85,44 +138,81 @@
 <div class="tr-wrap" id="wrap" style="display:none;">
   <div class="page-head">
     <h1 data-i18n="section.trends">Динамика</h1>
+    <p class="hint" id="trSub"></p>
   </div>
 
+  <div class="tr-kpis" id="trKpis"></div>
+
   <div class="tr-panels">
-    <section class="tr-panel" id="attPanel">
+    <section class="tr-panel" id="attPanel" style="--n:5">
       <div class="tr-panel-head">
-        <div class="tr-panel-title">
-          <span class="tr-dot"></span>
-          <h2 data-i18n="trends.attendanceTitle">Посещаемость по неделям</h2>
+        <div>
+          <div class="tr-panel-title"><span class="tr-dot"></span><h2 data-i18n="trends.attendanceTitle">Посещаемость по неделям</h2></div>
+          <p class="hint" data-i18n="trends.attendanceHint">Сколько разных ников отметилось хотя бы на одном мероприятии за неделю — за последние 12 недель.</p>
         </div>
-        <div class="tr-panel-stat">
-          <span class="tr-panel-stat-value" id="statAttWeekValue">—</span>
-          <span class="tr-panel-stat-delta" id="statAttDeltaValue"></span>
-          <span class="tr-panel-stat-caption" id="statAttWeekCaption"></span>
-        </div>
+        <div class="tr-badges"><button type="button" class="tr-badge active" id="attGranBadge"></button></div>
       </div>
-      <p class="hint" data-i18n="trends.attendanceHint">Сколько разных ников отметилось хотя бы на одном мероприятии за неделю — за последние 12 недель.</p>
-      <div class="tr-gran-row">
-        <button type="button" class="tr-gran-badge" id="attGranBadge" data-i18n-attr="title:trends.wheelHint" title="Прокрутите колесо мыши над графиком, чтобы сменить масштаб">По неделям ▾</button>
-      </div>
+      <div class="tr-record" id="attRecord"></div>
       <div id="attTrendChart"></div>
       <p class="hint tr-empty" id="attTrendEmpty" style="display:none;" data-i18n="trends.noDataHint">За этот период мероприятий ещё не было.</p>
       <p class="error-msg" id="attTrendError"></p>
     </section>
 
-    <section class="tr-panel tr-panel-tax" id="taxPanel">
+    <section class="tr-panel" id="cmbPanel" style="--n:6; --tr-accent:#6fcf8a;">
       <div class="tr-panel-head">
-        <div class="tr-panel-title">
-          <span class="tr-dot"></span>
-          <h2 data-i18n="trends.taxTitle">Сбор налогов по месяцам</h2>
+        <div>
+          <div class="tr-panel-title"><span class="tr-dot"></span><h2 data-i18n="trends.combatTitle">Бои по неделям</h2></div>
+          <p class="hint" data-i18n="trends.combatHint">Сумма по всем скринам мероприятий за неделю.</p>
         </div>
-        <div class="tr-panel-stat">
-          <span class="tr-panel-stat-value" id="statTaxMonthValue">—</span>
-          <span class="tr-panel-stat-caption" id="statTaxTotalValue"></span>
+        <div class="tr-badges" id="cmbTabs"></div>
+      </div>
+      <div class="tr-record" id="cmbRecord"></div>
+      <div id="cmbChart"></div>
+      <p class="hint tr-empty" id="cmbEmpty" style="display:none;" data-i18n="trends.noStats">Боевой статистики за этот период нет.</p>
+    </section>
+
+    <section class="tr-panel wide" id="heatPanel" style="--n:7">
+      <div class="tr-panel-head">
+        <div>
+          <div class="tr-panel-title"><span class="tr-dot"></span><h2 data-i18n="trends.heatTitle">Карта активности</h2></div>
+          <p class="hint" data-i18n="trends.heatHint">Сколько человек было на мероприятиях в каждый день недели. Чем ярче клетка, тем больше людей.</p>
         </div>
       </div>
-      <p class="hint" data-i18n="trends.taxHint">Сколько всего собрано налога (заплативших × сумма налога) — за последние 6 месяцев.</p>
-      <div class="tr-gran-row">
-        <button type="button" class="tr-gran-badge" id="taxGranBadge" data-i18n-attr="title:trends.wheelHint" title="Прокрутите колесо мыши над графиком, чтобы сменить масштаб">По месяцам ▾</button>
+      <div class="tr-heat" id="trHeat"></div>
+      <div class="tr-legend" id="trHeatLegend"></div>
+    </section>
+
+    <section class="tr-panel" id="flowPanel" style="--n:8; --tr-accent:#6aaeea;">
+      <div class="tr-panel-head">
+        <div>
+          <div class="tr-panel-title"><span class="tr-dot"></span><h2 data-i18n="trends.flowTitle">Приток и отток</h2></div>
+          <p class="hint" data-i18n="trends.flowHint">Кто пришёл в клан и кто ушёл между переписями.</p>
+        </div>
+      </div>
+      <div class="tr-flow-sum" id="flowSum"></div>
+      <div id="flowChart"></div>
+      <p class="hint tr-empty" id="flowEmpty" style="display:none;" data-i18n="trends.flowNone">Для этого нужно хотя бы две переписи за период.</p>
+    </section>
+
+    <section class="tr-panel" id="rankPanel" style="--n:9; --tr-accent:#f08a5d;">
+      <div class="tr-panel-head">
+        <div>
+          <div class="tr-panel-title"><span class="tr-dot"></span><h2 data-i18n="trends.rankTitle">Кто в игре</h2></div>
+          <p class="hint" id="rankHint"></p>
+        </div>
+        <div class="tr-badges" id="rankTabs"></div>
+      </div>
+      <div class="tr-rank" id="rankList"></div>
+      <p class="hint tr-empty" id="rankEmpty" style="display:none;"></p>
+    </section>
+
+    <section class="tr-panel wide" id="taxPanel" style="--n:10; --tr-accent:#d9a441;">
+      <div class="tr-panel-head">
+        <div>
+          <div class="tr-panel-title"><span class="tr-dot"></span><h2 data-i18n="trends.taxTitle">Сбор налогов по месяцам</h2></div>
+          <p class="hint" data-i18n="trends.taxHint">Сколько всего собрано налога (заплативших × сумма налога) — за последние 6 месяцев.</p>
+        </div>
+        <div class="tr-badges"><button type="button" class="tr-badge active" id="taxGranBadge"></button></div>
       </div>
       <div id="taxTrendChart"></div>
       <p class="hint tr-empty" id="taxTrendEmpty" style="display:none;" data-i18n="trends.noPaymentsHint">За этот период оплат ещё не было.</p>
@@ -131,10 +221,10 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/page-keys.js?v=2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=27"></script>
-<script src="js/i18n.js?v=111"></script>
+<script src="js/i18n.js?v=112"></script>
 <script src="js/tax-flag.js?v=1"></script>
 <script src="js/nick-match.js?v=5"></script>
 <script>
@@ -153,22 +243,19 @@
   }
 
   const db = L2Cabinet.client;
+  const t = (k, fb) => L2I18n.t(k, fb);
+  const fmtT = (s, o) => String(s).replace(/\{(\w+)\}/g, (_, k) => o[k] != null ? o[k] : "");
+  const $ = (id) => document.getElementById(id);
   document.getElementById("wrap").style.display = "";
 
   function escapeHtml(s){
     return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
   }
-  // Ключ для сопоставления ника между таблицами. Сливаем только то, что на скрине
-  // действительно неотличимо: кириллицу/латиницу одного регистра (А↔A, о↔o…),
-  // ноль и заглавную O, строчную L / заглавную I / «|». Регистр и «i» с точкой —
-  // реальная разница («Олежа» и «ОлЕжА» — разные игроки). Ники целиком из
-  // путаемых символов (0000000000, 1111111111, iIiIiIiIIiIi) и ники без букв/цифр
-  // сравниваем только точной строкой — иначе все они схлопнулись бы в один ключ.
+  // Ключ для сопоставления ника между таблицами (кириллица/латиница, 0/O, l/I) — через общий справочник ников клана
   const CYR_LOOKALIKES = { "а":"a","в":"b","е":"e","к":"k","м":"m","н":"h","о":"o","р":"p","с":"c","т":"t","у":"y","х":"x","ё":"e",
     "А":"A","В":"B","Е":"E","К":"K","М":"M","Н":"H","О":"O","Р":"P","С":"C","Т":"T","У":"Y","Х":"X","Ё":"E",
     "0":"O","l":"I","|":"I" };
   function normalizeNick(s){
-    // общий справочник ников клана (js/nick-match.js): все написания одного человека — один ключ
     if(window.L2Nick && L2Nick.ready()) return L2Nick.key(s);
     const raw = String(s || "");
     if(/^[0Oo1lIi|!]{3,}$/.test(raw)) return "=" + raw;
@@ -177,299 +264,455 @@
   }
 
   function mondayOf(d){
-    const x = new Date(d);
-    const day = x.getDay(); // 0=вс..6=сб
-    const diff = day === 0 ? -6 : 1 - day;
-    x.setDate(x.getDate() + diff);
-    x.setHours(0,0,0,0);
-    return x;
+    const x = new Date(d); const day = x.getDay();
+    x.setDate(x.getDate() + (day === 0 ? -6 : 1 - day)); x.setHours(0,0,0,0); return x;
   }
-  function pad2(n){ return String(n).padStart(2, "0"); }
-  function isoDate(d){ return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate()); }
-  function addWeeks(d, n){ const x = new Date(d); x.setDate(x.getDate() + n * 7); return x; }
-  function shortLabel(iso){ const d = new Date(iso + "T00:00:00"); return pad2(d.getDate()) + "." + pad2(d.getMonth() + 1); }
-  function firstOfMonth(d){ const x = new Date(d); x.setDate(1); x.setHours(0,0,0,0); return x; }
-  function addMonths(d, n){ const x = new Date(d); x.setMonth(x.getMonth() + n); return x; }
-  function monthKey(d){ return d.getFullYear() + "-" + pad2(d.getMonth() + 1); }
-  function monthLabel(d){ return pad2(d.getMonth() + 1) + "." + String(d.getFullYear()).slice(2); }
-  function fmtGold(n){ return n.toLocaleString(L2I18n.locale()); }
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const isoDate = (d) => d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate());
+  const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  const addWeeks = (d, n) => addDays(d, n * 7);
+  const shortLabel = (iso) => { const d = new Date(iso + "T00:00:00"); return pad2(d.getDate()) + "." + pad2(d.getMonth() + 1); };
+  const firstOfMonth = (d) => { const x = new Date(d); x.setDate(1); x.setHours(0,0,0,0); return x; };
+  const addMonths = (d, n) => { const x = new Date(d); x.setMonth(x.getMonth() + n); return x; };
+  const monthKey = (d) => d.getFullYear() + "-" + pad2(d.getMonth() + 1);
+  const monthLabel = (d) => pad2(d.getMonth() + 1) + "." + String(d.getFullYear()).slice(2);
+  const fmtGold = (n) => Math.round(n).toLocaleString(L2I18n.locale());
+  const fmtInt = (n) => Math.round(n).toLocaleString(L2I18n.locale());
+  const fmtBig = (n) => { n = Number(n) || 0; if(n >= 1e9) return (n/1e9).toFixed(1) + "B"; if(n >= 1e6) return (n/1e6).toFixed(1) + "M"; if(n >= 1e3) return (n/1e3).toFixed(1) + "K"; return String(Math.round(n)); };
+  const fmtKd = (n) => (Number(n) || 0).toFixed(2);
+  const cssVar = (name, fb) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fb;
 
   function animateNumber(el, target, format, duration){
     duration = duration || 600;
     const start = performance.now();
     function tick(now){
-      const t = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - t, 3);
+      const k = Math.min(1, (now - start) / duration), eased = 1 - Math.pow(1 - k, 3);
       el.textContent = format(target * eased);
-      if(t < 1) requestAnimationFrame(tick);
+      if(k < 1) requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
   }
 
-  // сглаженный линейный график с заливкой под линией — не столбики: смысл
-  // страницы именно в динамике/тренде, плавная линия читается как движение,
-  // а не как набор отдельных несвязанных колонок. Сглаживание — простой приём
-  // «квадратичные кривые через середины отрезков», без библиотек
+  // ---------- график: линия с заливкой, ширина по контейнеру, подсказка и «прицел» при наведении ----------
   let chartSeq = 0;
-  // цвет из CSS-переменной (акцент клана: amber/azure/emerald) — в атрибуты SVG
-  // нужен готовый цвет, var() туда не подставляется
-  function cssVar(name, fallback){
-    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-    return v || fallback;
-  }
-  function renderTrendChart(container, points, opts){
+  function renderTrendChart(container, points, opts, instant){
     opts = opts || {};
+    container._tr = { points, opts };
+    if(!points.length){ container.innerHTML = ""; return; }
     const color = opts.color || cssVar("--gold", "#e0a52a");
     const dotStroke = cssVar("--panel", "#15161a");
     const format = opts.format || (v => String(Math.round(v)));
     const gradId = "trArea" + (chartSeq++);
-
-    const w = 720, h = 190, padL = 10, padR = 10, padT = 28, padB = 22;
+    const w = Math.max(300, Math.floor(container.clientWidth || 720)), h = opts.height || 200;
+    const padL = 16, padR = 16, padT = 30, padB = 24;
     const innerW = w - padL - padR, innerH = h - padT - padB;
-    const maxV = Math.max(1, ...points.map(p => p.value));
-    const n = points.length;
-    const stepX = n > 1 ? innerW / (n - 1) : 0;
-
-    const pts = points.map((p, i) => ({
-      x: padL + i * stepX,
-      y: h - padB - (p.value / maxV) * innerH,
-      value: p.value,
-      label: p.label,
-    }));
+    const maxV = Math.max(1e-9, ...points.map(p => p.value));
+    const n = points.length, stepX = n > 1 ? innerW / (n - 1) : 0;
+    const pts = points.map((p, i) => ({ x: n > 1 ? padL + i * stepX : w / 2, y: h - padB - (p.value / maxV) * innerH, value: p.value, label: p.label }));
 
     let linePath = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
     for(let i = 1; i < pts.length; i++){
-      const midX = (pts[i - 1].x + pts[i].x) / 2;
-      const midY = (pts[i - 1].y + pts[i].y) / 2;
-      linePath += ` Q ${pts[i - 1].x.toFixed(1)} ${pts[i - 1].y.toFixed(1)} ${midX.toFixed(1)} ${midY.toFixed(1)}`;
+      const mx = (pts[i-1].x + pts[i].x) / 2, my = (pts[i-1].y + pts[i].y) / 2;
+      linePath += ` Q ${pts[i-1].x.toFixed(1)} ${pts[i-1].y.toFixed(1)} ${mx.toFixed(1)} ${my.toFixed(1)}`;
     }
-    linePath += ` T ${pts[pts.length - 1].x.toFixed(1)} ${pts[pts.length - 1].y.toFixed(1)}`;
-    const baseline = (h - padB).toFixed(1);
-    const areaPath = `${linePath} L ${pts[pts.length - 1].x.toFixed(1)} ${baseline} L ${pts[0].x.toFixed(1)} ${baseline} Z`;
+    linePath += ` T ${pts[n-1].x.toFixed(1)} ${pts[n-1].y.toFixed(1)}`;
+    const base = (h - padB).toFixed(1);
+    const areaPath = `${linePath} L ${pts[n-1].x.toFixed(1)} ${base} L ${pts[0].x.toFixed(1)} ${base} Z`;
 
-    let svg = `<svg viewBox="0 0 ${w} ${h}" class="tr-chart" preserveAspectRatio="none">`;
-    svg += `<defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">` +
-           `<stop offset="0%" stop-color="${color}" stop-opacity=".38"/>` +
-           `<stop offset="100%" stop-color="${color}" stop-opacity="0"/>` +
-           `</linearGradient></defs>`;
-    [0.25, 0.5, 0.75].forEach(f => {
-      const gy = (h - padB - innerH * f).toFixed(1);
-      svg += `<line x1="${padL}" y1="${gy}" x2="${w - padR}" y2="${gy}" class="tr-gridline" />`;
-    });
+    let svg = `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" class="tr-chart">`;
+    svg += `<defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity=".38"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>`;
+    [0.25, 0.5, 0.75].forEach(f => { const gy = (h - padB - innerH * f).toFixed(1); svg += `<line x1="${padL}" y1="${gy}" x2="${w - padR}" y2="${gy}" class="tr-gridline" />`; });
     svg += `<line x1="${padL}" y1="${h - padB}" x2="${w - padR}" y2="${h - padB}" class="tr-axis" />`;
-    svg += `<path d="${areaPath}" fill="url(#${gradId})" class="tr-area" id="${gradId}area" />`;
-    svg += `<path d="${linePath}" class="tr-line" id="${gradId}line" stroke="${color}" />`;
-    // при большом числе точек (например, «по дням» за 12 недель) подписи под
-    // каждой точкой слипались бы — показываем не каждую, а раз в labelStep
-    const labelStep = Math.max(1, Math.ceil(n / 12));
+    svg += `<path d="${areaPath}" fill="url(#${gradId})" class="tr-area" />`;
+    svg += `<path d="${linePath}" class="tr-line" stroke="${color}" />`;
+    const labelStep = Math.max(1, Math.ceil(n / Math.max(4, Math.floor(w / 62))));
     pts.forEach((p, i) => {
-      const display = format(p.value);
-      const showLabel = i % labelStep === 0 || i === pts.length - 1;
-      svg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.2" fill="${color}" stroke="${dotStroke}" stroke-width="1.5" ` +
-             `class="tr-pt" style="transition-delay:${(i * 40) + 400}ms"><title>${escapeHtml(p.label)}: ${escapeHtml(display)}</title></circle>`;
-      if(p.value > 0 && showLabel){
-        svg += `<text x="${p.x.toFixed(1)}" y="${(p.y - 9).toFixed(1)}" class="tr-value" data-target="${p.value}" text-anchor="middle">0</text>`;
-      }
-      if(showLabel){
-        svg += `<text x="${p.x.toFixed(1)}" y="${h - padB + 15}" class="tr-label" text-anchor="middle">${escapeHtml(p.label)}</text>`;
-      }
+      const showLabel = i % labelStep === 0 || i === n - 1;
+      svg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.4" fill="${color}" stroke="${dotStroke}" stroke-width="1.5" class="tr-pt" style="transition-delay:${instant ? 0 : (i * 40) + 400}ms" />`;
+      if(p.value > 0 && showLabel) svg += `<text x="${p.x.toFixed(1)}" y="${(p.y - 10).toFixed(1)}" class="tr-value" data-target="${p.value}" text-anchor="middle">${instant ? escapeHtml(format(p.value)) : "0"}</text>`;
+      if(showLabel) svg += `<text x="${p.x.toFixed(1)}" y="${h - padB + 16}" class="tr-label" text-anchor="middle">${escapeHtml(p.label)}</text>`;
     });
-    svg += `</svg>`;
-    container.innerHTML = svg;
+    svg += `<line class="tr-guide" x1="0" y1="${padT - 6}" x2="0" y2="${h - padB}" />`;
+    svg += `<circle class="tr-hot" r="6" fill="${color}" stroke="${dotStroke}" stroke-width="2.5" cx="0" cy="0" />`;
+    svg += `<rect x="0" y="0" width="${w}" height="${h}" fill="transparent" class="tr-hit" />`;
+    svg += `</svg><div class="tr-tip"></div>`;
+    container.innerHTML = `<div class="tr-chart-box">${svg}</div>`;
 
-    // линия «дорисовывается» слева направо, заливка и точки проявляются следом
-    const lineEl = container.querySelector(".tr-line");
-    const len = lineEl.getTotalLength();
-    lineEl.style.strokeDasharray = len;
-    lineEl.style.strokeDashoffset = len;
-    lineEl.getBoundingClientRect();
-    lineEl.style.transition = "stroke-dashoffset .9s cubic-bezier(.22,.85,.25,1)";
-    requestAnimationFrame(() => { lineEl.style.strokeDashoffset = "0"; });
-    container.querySelector(".tr-area").classList.add("in");
-    container.querySelectorAll(".tr-pt").forEach(el => el.classList.add("in"));
+    const box = container.firstChild, tip = box.querySelector(".tr-tip"), guide = box.querySelector(".tr-guide"), hot = box.querySelector(".tr-hot");
+    const hit = box.querySelector(".tr-hit");
+    function move(clientX){
+      const r = box.getBoundingClientRect();
+      const x = (clientX - r.left) * (w / r.width);
+      const i = n > 1 ? Math.max(0, Math.min(n - 1, Math.round((x - padL) / stepX))) : 0;
+      const p = pts[i], prev = i > 0 ? pts[i - 1] : null;
+      guide.setAttribute("x1", p.x); guide.setAttribute("x2", p.x);
+      hot.setAttribute("cx", p.x); hot.setAttribute("cy", p.y);
+      let d = "";
+      if(prev){
+        const diff = p.value - prev.value;
+        const cls = diff > 0 ? "up" : diff < 0 ? "down" : "flat";
+        d = `<span class="d ${cls}">${diff > 0 ? "▲ +" : diff < 0 ? "▼ −" : "— "}${escapeHtml(format(Math.abs(diff)))}</span>`;
+      }
+      tip.innerHTML = `<div style="color:var(--text-dim);font-size:11px;">${escapeHtml(p.label)}</div><b>${escapeHtml(format(p.value))}</b>${d}`;
+      const tw = tip.offsetWidth;
+      tip.style.left = Math.max(tw / 2, Math.min(r.width - tw / 2, p.x * (r.width / w))) + "px";
+      tip.style.top = Math.max(0, p.y * (r.height / h) - tip.offsetHeight - 14) + "px";
+      box.classList.add("hover");
+    }
+    hit.addEventListener("pointermove", (e) => move(e.clientX));
+    hit.addEventListener("pointerdown", (e) => move(e.clientX));
+    hit.addEventListener("pointerleave", () => box.classList.remove("hover"));
 
-    container.querySelectorAll(".tr-value").forEach(el => {
-      animateNumber(el, Number(el.dataset.target), format, 700);
-    });
+    if(!instant){
+      const lineEl = box.querySelector(".tr-line"), len = lineEl.getTotalLength();
+      lineEl.style.strokeDasharray = len; lineEl.style.strokeDashoffset = len; lineEl.getBoundingClientRect();
+      lineEl.style.transition = "stroke-dashoffset .9s cubic-bezier(.22,.85,.25,1)";
+      requestAnimationFrame(() => { lineEl.style.strokeDashoffset = "0"; });
+      box.querySelectorAll(".tr-value").forEach(el => animateNumber(el, Number(el.dataset.target), format, 700));
+    }
+    box.querySelector(".tr-area").classList.add("in");
+    box.querySelectorAll(".tr-pt").forEach(el => el.classList.add("in"));
+  }
+  // при изменении ширины окна графики перерисовываются под новую ширину (без повторной анимации)
+  const chartHosts = new Set();
+  function trackChart(container){ chartHosts.add(container); }
+  let rzTimer = 0, lastRzW = innerWidth;
+  addEventListener("resize", () => {
+    clearTimeout(rzTimer);
+    rzTimer = setTimeout(() => {
+      if(Math.abs(innerWidth - lastRzW) < 4) return; lastRzW = innerWidth;
+      chartHosts.forEach(c => { if(c._tr && c.isConnected) renderTrendChart(c, c._tr.points, c._tr.opts, true); });
+      if(window.__trRedraw) window.__trRedraw();
+    }, 160);
+  });
+
+  // ---------- мини-график для плитки ----------
+  function sparkline(values, color){
+    const v = values.slice(); if(v.length < 2) return "";
+    const w = 120, h = 34, pad = 3, max = Math.max(...v), min = Math.min(...v), span = (max - min) || 1;
+    const pts = v.map((x, i) => [pad + i * ((w - pad * 2) / (v.length - 1)), h - pad - ((x - min) / span) * (h - pad * 2)]);
+    let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+    for(let i = 1; i < pts.length; i++){ const mx = (pts[i-1][0] + pts[i][0]) / 2, my = (pts[i-1][1] + pts[i][1]) / 2; d += ` Q ${pts[i-1][0].toFixed(1)} ${pts[i-1][1].toFixed(1)} ${mx.toFixed(1)} ${my.toFixed(1)}`; }
+    const last = pts[pts.length - 1];
+    d += ` T ${last[0].toFixed(1)} ${last[1].toFixed(1)}`;
+    const id = "sp" + (chartSeq++);
+    return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".35"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>` +
+      `<path d="${d} L ${last[0].toFixed(1)} ${h} L ${pts[0][0].toFixed(1)} ${h} Z" fill="url(#${id})"/><path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke"/>` +
+      `</svg>`;
   }
 
-  function renderDelta(el, delta){
-    if(delta > 0){ el.textContent = "▲ +" + delta; el.className = "tr-panel-stat-delta up"; }
-    else if(delta < 0){ el.textContent = "▼ " + delta; el.className = "tr-panel-stat-delta down"; }
-    else{ el.textContent = "— 0"; el.className = "tr-panel-stat-delta flat"; }
-  }
-
-  // масштаб графика по колесу мыши (и по клику на бейдж — для тач-экранов, там
-  // колеса нет). Уровней всего два на график и дальше них не идём — например,
-  // у посещаемости это «неделя»/«день», по годам смысла нет вообще
+  // масштаб графика по колесу мыши (и по клику на бейдж для тач-экранов): два уровня на график
   function makeGranularityControl(levels, chartEl, badgeEl, render){
     let level = levels[0];
-    function apply(){
-      badgeEl.textContent = L2I18n.t("trends.gran" + level, level) + " ▾";
-      render(level);
-    }
+    function apply(){ badgeEl.textContent = t("trends.gran" + level, level) + " ▾"; render(level); }
     function cycle(dir){
-      const idx = levels.indexOf(level);
-      const next = levels[Math.max(0, Math.min(levels.length - 1, idx + dir))];
+      const next = levels[Math.max(0, Math.min(levels.length - 1, levels.indexOf(level) + dir))];
       if(next !== level){ level = next; apply(); }
     }
-    chartEl.addEventListener("wheel", (e) => {
-      e.preventDefault();
-      cycle(e.deltaY < 0 ? 1 : -1);
-    }, { passive: false });
+    chartEl.addEventListener("wheel", (e) => { e.preventDefault(); cycle(e.deltaY < 0 ? 1 : -1); }, { passive: false });
     badgeEl.addEventListener("click", () => cycle(level === levels[0] ? 1 : -1));
     return apply;
   }
 
-  async function loadAttendanceTrend(){
-    const errEl = document.getElementById("attTrendError");
-    const emptyEl = document.getElementById("attTrendEmpty");
-    const chartEl = document.getElementById("attTrendChart");
-    errEl.textContent = "";
+  // ---------- загрузка данных: один раз на всю страницу ----------
+  const WEEKS_BACK = 12;
+  const thisMonday = mondayOf(new Date());
+  const weeks = Array.from({ length: WEEKS_BACK }, (_, i) => isoDate(addWeeks(thisMonday, i - (WEEKS_BACK - 1))));
+  const todayIso = isoDate(new Date());
+  $("trSub").textContent = t("trends.subtitle", "Последние 12 недель") + " · " + shortLabel(weeks[0]) + " – " + shortLabel(todayIso);
 
-    const WEEKS_BACK = 12;
-    const thisMonday = mondayOf(new Date());
-    const fromMonday = addWeeks(thisMonday, -(WEEKS_BACK - 1));
-    const weeks = Array.from({ length: WEEKS_BACK }, (_, i) => isoDate(addWeeks(fromMonday, i)));
+  async function loadCore(){
+    const res = { events: [], entries: [], stats: [], census: [], error: null };
+    const { data: events, error: evErr } = await db.from("attendance_events").select("id, week_start, event_date").gte("week_start", weeks[0]);
+    if(evErr){ res.error = evErr.message; return res; }
+    res.events = events || [];
+    const ids = res.events.map(e => e.id);
+    const censusFrom = isoDate(addDays(new Date(weeks[0] + "T00:00:00"), -21)); // с запасом: первая перепись окна сравнивается с предыдущей
+    const [ent, st, cs] = await Promise.all([
+      ids.length ? L2Cabinet.selectAllIn((part) => db.from("attendance_entries").select("event_id, nickname").in("event_id", part).order("id"), ids) : Promise.resolve({ data: [] }),
+      ids.length ? L2Cabinet.selectAllIn((part) => db.from("event_stats").select("event_id, nickname, kills, deaths, pvp_damage, pve_damage, removed").in("event_id", part).order("id"), ids) : Promise.resolve({ data: [] }),
+      L2Cabinet.selectAll(() => db.from("census_entries").select("nickname, week_start").gte("week_start", censusFrom).order("id")),
+    ]);
+    if(ent.error) res.error = ent.error.message; else res.entries = ent.data || [];
+    if(st.error) console.error(st.error); else res.stats = (st.data || []).filter(r => !r.removed);
+    if(cs.error) console.error(cs.error); else res.census = cs.data || [];
+    return res;
+  }
+  const core = await loadCore();
+  if(core.error){ $("attTrendError").textContent = core.error; }
 
-    const { data: events, error: evErr } = await db.from("attendance_events")
-      .select("id, week_start, event_date")
-      .gte("week_start", weeks[0]);
-    if(evErr){ errEl.textContent = evErr.message; return; }
-
-    const rawEvents = events || [];
-    const eventIds = rawEvents.map(e => e.id);
-
-    let rawEntries = [];
-    if(eventIds.length){
-      const { data, error } = await L2Cabinet.selectAllIn((part) => db.from("attendance_entries").select("event_id, nickname").in("event_id", part).order("id"), eventIds);
-      if(error){ errEl.textContent = error.message; return; }
-      rawEntries = data || [];
+  // события → неделя/день; явка по неделям и дням; боевая статистика по неделям
+  const weekByEvent = new Map(core.events.map(e => [e.id, e.week_start]));
+  const dateByEvent = new Map(core.events.map(e => [e.id, e.event_date]));
+  const shownNick = new Map(); // ключ → как показывать
+  const attByWeek = new Map(weeks.map(w => [w, new Set()]));
+  const attByDay = new Map();
+  const weeksOfNick = new Map(); // ключ → Set(индексов недель)
+  const eventsOfNick = new Map(); // ключ → Map(индекс недели → число мероприятий)
+  const seenPair = new Set();
+  core.entries.forEach(e => {
+    const k = normalizeNick(e.nickname);
+    if(!shownNick.has(k)) shownNick.set(k, e.nickname);
+    const wk = weekByEvent.get(e.event_id), day = dateByEvent.get(e.event_id);
+    if(wk && attByWeek.has(wk)){
+      attByWeek.get(wk).add(k);
+      const wi = weeks.indexOf(wk);
+      if(!weeksOfNick.has(k)) weeksOfNick.set(k, new Set());
+      weeksOfNick.get(k).add(wi);
+      const pk = k + "|" + e.event_id;
+      if(!seenPair.has(pk)){
+        seenPair.add(pk);
+        if(!eventsOfNick.has(k)) eventsOfNick.set(k, new Map());
+        eventsOfNick.get(k).set(wi, (eventsOfNick.get(k).get(wi) || 0) + 1);
+      }
     }
+    if(day){ if(!attByDay.has(day)) attByDay.set(day, new Set()); attByDay.get(day).add(k); }
+  });
+  const statByWeek = new Map(weeks.map(w => [w, { kills: 0, deaths: 0, pvp: 0, pve: 0 }]));
+  core.stats.forEach(r => {
+    const s = statByWeek.get(weekByEvent.get(r.event_id)); if(!s) return;
+    s.kills += r.kills || 0; s.deaths += r.deaths || 0; s.pvp += Number(r.pvp_damage) || 0; s.pve += Number(r.pve_damage) || 0;
+  });
+  const weekAtt = weeks.map(w => attByWeek.get(w).size);
+  // текущая неделя без единой отметки — ещё не итог: «последняя неделя» тогда прошлая
+  const curEmpty = weekAtt[WEEKS_BACK - 1] === 0;
+  const lastIdx = curEmpty ? WEEKS_BACK - 2 : WEEKS_BACK - 1;
+  const ser = (arr) => curEmpty ? arr.slice(0, -1) : arr; // ряд для графиков — без пустой текущей недели
+  const capText = (curEmpty ? t("trends.lastFullWeek", "прошлая неделя") : t("trends.thisWeek", "эта неделя")) + " · " + shortLabel(weeks[lastIdx]);
 
-    function pointsByWeek(){
-      const weekByEvent = new Map(rawEvents.map(e => [e.id, e.week_start]));
-      const attendeesByWeek = new Map(weeks.map(w => [w, new Set()]));
-      rawEntries.forEach(e => {
-        const wk = weekByEvent.get(e.event_id);
-        if(wk && attendeesByWeek.has(wk)) attendeesByWeek.get(wk).add(normalizeNick(e.nickname));
-      });
-      return weeks.map(w => ({ label: shortLabel(w), value: attendeesByWeek.get(w).size }));
+  // ---------- плитки сверху ----------
+  const kpis = [];
+  const pctDelta = (cur, prev) => prev > 0 ? Math.round((cur - prev) / prev * 100) : null;
+  {
+    const prev = lastIdx > 0 ? weekAtt[lastIdx - 1] : 0;
+    kpis.push({ label: t("trends.kpiAttend", "Явка"), color: cssVar("--gold", "#e0a52a"), value: weekAtt[lastIdx], format: fmtInt, series: ser(weekAtt), delta: pctDelta(weekAtt[lastIdx], prev), cap: capText });
+    const sw = weeks.map(w => statByWeek.get(w));
+    const kd = (s) => s.deaths > 0 ? s.kills / s.deaths : s.kills;
+    if(sw.some(s => s.kills || s.pvp)){
+      const cur = sw[lastIdx], pv = lastIdx > 0 ? sw[lastIdx - 1] : { kills: 0, deaths: 0, pvp: 0, pve: 0 };
+      kpis.push({ label: t("trends.kpiKills", "Килы"), color: "#6fcf8a", value: cur.kills, format: fmtInt, series: ser(sw.map(s => s.kills)), delta: pctDelta(cur.kills, pv.kills), cap: capText });
+      kpis.push({ label: t("trends.kpiKd", "K:D"), color: "#c792ea", value: kd(cur), format: fmtKd, series: ser(sw.map(kd)), deltaAbs: kd(cur) - kd(pv), cap: capText });
+      kpis.push({ label: t("trends.kpiPvp", "PvP урон"), color: "#e8b44a", value: cur.pvp, format: fmtBig, series: ser(sw.map(s => s.pvp)), delta: pctDelta(cur.pvp, pv.pvp), cap: capText });
     }
-    // «по дням» — те же уже загруженные события/явки, просто группировка по
-    // event_date (конкретной дате мероприятия) вместо недели — без лишнего
-    // запроса к базе; дни без единого мероприятия за эти 12 недель не показываем
-    // (иначе на графике почти сплошные нули между редкими рейдовыми днями)
-    function pointsByDay(){
-      const dateByEvent = new Map(rawEvents.map(e => [e.id, e.event_date]));
-      const days = [...new Set(rawEvents.map(e => e.event_date))].sort();
-      if(!days.length) return [];
-      const attendeesByDay = new Map(days.map(d => [d, new Set()]));
-      rawEntries.forEach(e => {
-        const d = dateByEvent.get(e.event_id);
-        if(d && attendeesByDay.has(d)) attendeesByDay.get(d).add(normalizeNick(e.nickname));
-      });
-      return days.map(d => ({ label: shortLabel(d), value: attendeesByDay.get(d).size }));
-    }
+  }
+  // состав клана — по переписям
+  const censusDates = [...new Set(core.census.map(r => r.week_start))].sort();
+  const censusSets = new Map(censusDates.map(d => [d, new Set()]));
+  const shownByKey = new Map();
+  core.census.forEach(r => { const k = normalizeNick(r.nickname); censusSets.get(r.week_start).add(k); if(!shownByKey.has(k)) shownByKey.set(k, r.nickname); });
+  if(censusDates.length){
+    const cur = censusSets.get(censusDates[censusDates.length - 1]).size;
+    const prev = censusDates.length > 1 ? censusSets.get(censusDates[censusDates.length - 2]).size : null;
+    kpis.push({ label: t("trends.kpiMembers", "В клане"), color: "#6aaeea", value: cur, format: fmtInt, series: censusDates.map(d => censusSets.get(d).size), deltaAbs: prev == null ? null : cur - prev, deltaInt: true,
+      vs: t("trends.vsPrevCensus", "к прошлой переписи"), cap: t("trends.censusOf", "перепись") + " · " + shortLabel(censusDates[censusDates.length - 1]) });
+  }
 
-    // шапка (число + дельта) всегда по неделям — не скачет при переключении масштаба графика.
-    // Текущая неделя, пока на ней никого нет (только началась), — не итог: показываем
-    // последнюю полную неделю и сравниваем с предыдущей, иначе висело «0 ▼ −50»
-    const allWeekPoints = pointsByWeek();
-    const curEmpty = allWeekPoints[allWeekPoints.length - 1].value === 0;
-    const weekPoints = curEmpty ? allWeekPoints.slice(0, -1) : allWeekPoints;
-    const lastWeek = weekPoints[weekPoints.length - 1].value;
-    const prevWeek = weekPoints.length > 1 ? weekPoints[weekPoints.length - 2].value : 0;
-    animateNumber(document.getElementById("statAttWeekValue"), lastWeek, v => String(Math.round(v)));
-    renderDelta(document.getElementById("statAttDeltaValue"), lastWeek - prevWeek);
-    const capEl = document.getElementById("statAttWeekCaption");
-    if(capEl) capEl.textContent = (curEmpty ? L2I18n.t("trends.lastFullWeek", "прошлая неделя") : L2I18n.t("trends.thisWeek", "эта неделя")) +
-      " · " + weekPoints[weekPoints.length - 1].label;
+  // налоги — отдельной плиткой, если включены
+  let taxData = null;
+  if(L2Taxes.enabled()){
+    try {
+      const MONTHS_BACK = 6;
+      const thisMonth = firstOfMonth(new Date()), fromMonth = addMonths(thisMonth, -(MONTHS_BACK - 1));
+      const months = Array.from({ length: MONTHS_BACK }, (_, i) => addMonths(fromMonth, i));
+      const [settings, payments] = await Promise.all([
+        db.from("tax_settings").select("weekly_tax_amount").eq("clan_id", profile.clan_id).maybeSingle(),
+        // origin_week — реальная неделя получения денег (наперёд/долг считаются там, где по ним нажали «ОК»)
+        L2Cabinet.selectAll(() => db.from("tax_payments").select("origin_week").gte("origin_week", isoDate(fromMonth)).order("id")),
+      ]);
+      if(settings.error) $("taxTrendError").textContent = settings.error.message;
+      else if(payments.error) $("taxTrendError").textContent = payments.error.message;
+      else taxData = { months, amount: Number(settings.data?.weekly_tax_amount) || 0, payments: payments.data || [] };
+    } catch(e){ console.error(e); }
+  }
+  function taxMonthPoints(){
+    const cnt = new Map(taxData.months.map(m => [monthKey(m), 0]));
+    taxData.payments.forEach(p => { const key = monthKey(firstOfMonth(new Date(p.origin_week + "T00:00:00"))); if(cnt.has(key)) cnt.set(key, cnt.get(key) + 1); });
+    return taxData.months.map(m => ({ label: monthLabel(m), value: cnt.get(monthKey(m)) * taxData.amount }));
+  }
+  function taxWeekPoints(){
+    const cnt = new Map(weeks.map(w => [w, 0]));
+    taxData.payments.forEach(p => { if(cnt.has(p.origin_week)) cnt.set(p.origin_week, cnt.get(p.origin_week) + 1); });
+    return weeks.map(w => ({ label: shortLabel(w), value: cnt.get(w) * taxData.amount }));
+  }
+  if(taxData){
+    const mp = taxMonthPoints(), cur = mp[mp.length - 1].value, prev = mp.length > 1 ? mp[mp.length - 2].value : 0;
+    kpis.push({ label: t("trends.kpiTax", "Налоги за месяц"), color: "#d9a441", value: cur, format: fmtGold, series: mp.map(p => p.value), delta: pctDelta(cur, prev),
+      vs: t("trends.vsPrevMonth", "к прошлому месяцу"), cap: t("trends.taxCap", "за 6 месяцев") + ": " + fmtGold(mp.reduce((s, p) => s + p.value, 0)) });
+  }
 
-    const apply = makeGranularityControl(["week", "day"], chartEl, document.getElementById("attGranBadge"), (level) => {
-      const points = level === "day" ? pointsByDay() : weekPoints;
-      const hasAny = points.length > 0 && points.some(p => p.value > 0);
-      emptyEl.style.display = hasAny ? "none" : "";
-      if(points.length) renderTrendChart(chartEl, points, {});
-      else chartEl.innerHTML = "";
+  (function renderKpis(){
+    const box = $("trKpis"); box.innerHTML = "";
+    kpis.forEach((k, i) => {
+      const el = document.createElement("div");
+      el.className = "tr-kpi"; el.style.setProperty("--k", k.color); el.style.setProperty("--n", i);
+      let dl = "", cls = "";
+      if(k.delta != null){ cls = k.delta > 0 ? "up" : k.delta < 0 ? "down" : ""; dl = (k.delta > 0 ? "▲ +" : k.delta < 0 ? "▼ −" : "— ") + Math.abs(k.delta) + "%"; }
+      else if(k.deltaAbs != null){
+        const d = k.deltaAbs; cls = d > 0.0049 ? "up" : d < -0.0049 ? "down" : "";
+        dl = (d > 0.0049 ? "▲ +" : d < -0.0049 ? "▼ −" : "— ") + (k.deltaInt ? Math.abs(d) : Math.abs(d).toFixed(2));
+      }
+      el.innerHTML = `<div class="lbl">${escapeHtml(k.label)}</div><div class="val">0</div>` +
+        (dl ? `<div class="dl ${cls}">${dl}<span>${escapeHtml(k.vs || t("trends.vsPrev", "к прошлой неделе"))}</span></div>` : "") +
+        `<div class="cap">${escapeHtml(k.cap || "")}</div><div class="spark">${sparkline(k.series, k.color)}</div>`;
+      box.appendChild(el);
+      animateNumber(el.querySelector(".val"), k.value, k.format, 800);
+    });
+  })();
+
+  // ---------- посещаемость по неделям / дням ----------
+  const attChart = $("attTrendChart"); trackChart(attChart);
+  {
+    const wkLabels = weeks.map(shortLabel);
+    const best = weekAtt.reduce((b, v, i) => v > b.v ? { v, i } : b, { v: 0, i: -1 });
+    $("attRecord").innerHTML = best.i >= 0 && best.v > 0
+      ? "🏆 " + fmtT(t("trends.record", "рекорд: {label} — <b>{n}</b>"), { label: wkLabels[best.i], n: best.v }) : "";
+    const weekPoints = ser(weekAtt).map((v, i) => ({ label: wkLabels[i], value: v }));
+    const dayPoints = () => [...attByDay.keys()].sort().map(d => ({ label: shortLabel(d), value: attByDay.get(d).size }));
+    const apply = makeGranularityControl(["week", "day"], attChart, $("attGranBadge"), (level) => {
+      const points = level === "day" ? dayPoints() : weekPoints;
+      $("attTrendEmpty").style.display = points.some(p => p.value > 0) ? "none" : "";
+      renderTrendChart(attChart, points, { color: cssVar("--gold", "#e0a52a") });
     });
     apply();
   }
 
-  async function loadTaxTrend(){
-    const errEl = document.getElementById("taxTrendError");
-    const emptyEl = document.getElementById("taxTrendEmpty");
-    const chartEl = document.getElementById("taxTrendChart");
-    errEl.textContent = "";
-    if(!L2Taxes.enabled()){ // налоги выключены — вместо графика только пометка
-      document.getElementById("taxPanel").innerHTML =
-        '<div class="tr-panel-head"><div class="tr-panel-title"><span class="tr-dot"></span><h2>' + L2I18n.t("trends.taxTitle", "Сбор налогов по месяцам") + '</h2></div></div>' +
-        '<p class="hint">' + L2I18n.t("taxes.disabled", "Налоги выключены") + '</p>';
-      document.getElementById("taxPanel").classList.add("tr-panel-off"); // узкая плашка, график посещаемости — на всю ширину
-      return;
+  // ---------- бои по неделям (вкладки: килы / K:D / PvP / PvE) ----------
+  const cmbChart = $("cmbChart"); trackChart(cmbChart);
+  {
+    const sw = weeks.map(w => statByWeek.get(w));
+    const kd = (s) => s.deaths > 0 ? s.kills / s.deaths : s.kills;
+    const METRICS = [
+      { id: "kills", label: t("trends.metricKills", "Килы"), color: "#6fcf8a", get: s => s.kills, fmt: fmtInt },
+      { id: "kd", label: t("trends.metricKd", "K:D"), color: "#c792ea", get: kd, fmt: fmtKd },
+      { id: "pvp", label: t("trends.metricPvp", "PvP урон"), color: "#e8b44a", get: s => s.pvp, fmt: fmtBig },
+      { id: "pve", label: t("trends.metricPve", "PvE урон"), color: "#6aaeea", get: s => s.pve, fmt: fmtBig },
+    ];
+    if(!sw.some(s => s.kills || s.pvp || s.pve)){
+      $("cmbEmpty").style.display = ""; $("cmbTabs").style.display = "none";
+    } else {
+      let cur = METRICS[0];
+      const tabs = $("cmbTabs");
+      const draw = () => {
+        tabs.innerHTML = METRICS.map(m => `<button type="button" class="tr-badge${m === cur ? " active" : ""}" data-m="${m.id}">${escapeHtml(m.label)}</button>`).join("");
+        $("cmbPanel").style.setProperty("--tr-accent", cur.color);
+        const pts = ser(weeks).map((w, i) => ({ label: shortLabel(w), value: cur.get(sw[i]) }));
+        const best = pts.reduce((b, p, i) => p.value > b.v ? { v: p.value, i } : b, { v: 0, i: -1 });
+        $("cmbRecord").innerHTML = best.i >= 0 && best.v > 0 ? "🏆 " + fmtT(t("trends.record", "рекорд: {label} — <b>{n}</b>"), { label: pts[best.i].label, n: cur.fmt(best.v) }) : "";
+        renderTrendChart(cmbChart, pts, { color: cur.color, format: cur.fmt });
+      };
+      tabs.addEventListener("click", (e) => { const b = e.target.closest("[data-m]"); if(!b) return; cur = METRICS.find(m => m.id === b.dataset.m); draw(); });
+      draw();
     }
+  }
 
-    const { data: settings, error: setErr } = await db.from("tax_settings")
-      .select("weekly_tax_amount").eq("clan_id", profile.clan_id).maybeSingle();
-    if(setErr){ errEl.textContent = setErr.message; return; }
-    const weeklyTaxAmount = Number(settings?.weekly_tax_amount) || 0;
-
-    const MONTHS_BACK = 6;
-    const thisMonth = firstOfMonth(new Date());
-    const fromMonth = addMonths(thisMonth, -(MONTHS_BACK - 1));
-    const months = Array.from({ length: MONTHS_BACK }, (_, i) => addMonths(fromMonth, i));
-
-    // origin_week — реальная неделя получения денег (наперёд/долг считаются там,
-    // где по ним нажали «ОК», а не там, куда легла отметка), тот же принцип,
-    // что и «Итого за неделю» в taxes.html. 6 месяцев с запасом покрывают и
-    // последние 12 недель — «по неделям» ниже не делает отдельного запроса
-    const { data: payments, error: payErr } = await L2Cabinet.selectAll(() => db.from("tax_payments")
-      .select("origin_week")
-      .gte("origin_week", isoDate(fromMonth))
-      .order("id"));
-    if(payErr){ errEl.textContent = payErr.message; return; }
-
-    const rawPayments = payments || [];
-
-    function pointsByMonth(){
-      const countByMonth = new Map(months.map(m => [monthKey(m), 0]));
-      rawPayments.forEach(p => {
-        const d = new Date(p.origin_week + "T00:00:00");
-        const key = monthKey(firstOfMonth(d));
-        if(countByMonth.has(key)) countByMonth.set(key, countByMonth.get(key) + 1);
+  // ---------- карта активности: дни недели × недели ----------
+  {
+    const WD = [0, 1, 2, 3, 4, 5, 6].map(i => t("trends.wd." + i, ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"][i]));
+    const grid = $("trHeat"); grid.innerHTML = "";
+    const max = Math.max(1, ...[...attByDay.values()].map(s => s.size));
+    grid.appendChild(Object.assign(document.createElement("div"), { className: "wd" }));
+    weeks.forEach(w => grid.appendChild(Object.assign(document.createElement("div"), { className: "wk", textContent: shortLabel(w) })));
+    for(let r = 0; r < 7; r++){
+      grid.appendChild(Object.assign(document.createElement("div"), { className: "wd", textContent: WD[r] }));
+      weeks.forEach(w => {
+        const date = isoDate(addDays(new Date(w + "T00:00:00"), r));
+        const cell = document.createElement("div");
+        const people = attByDay.get(date);
+        if(date > todayIso){ cell.className = "tr-cell future"; }
+        else if(!people){ cell.className = "tr-cell none"; cell.title = WD[r] + " " + shortLabel(date) + " — " + t("trends.heatNoEvent", "мероприятий не было"); }
+        else {
+          cell.className = "tr-cell l" + (people.size === 0 ? 0 : Math.max(1, Math.ceil(5 * people.size / max)));
+          cell.title = WD[r] + " " + shortLabel(date) + " — " + fmtT(t("trends.heatPeople", "{n} чел."), { n: people.size });
+        }
+        grid.appendChild(cell);
       });
-      return months.map(m => ({ label: monthLabel(m), value: countByMonth.get(monthKey(m)) * weeklyTaxAmount }));
     }
-    function pointsByWeek(){
-      const WEEKS_BACK = 12;
-      const thisMonday = mondayOf(new Date());
-      const fromMonday = addWeeks(thisMonday, -(WEEKS_BACK - 1));
-      const weeks = Array.from({ length: WEEKS_BACK }, (_, i) => isoDate(addWeeks(fromMonday, i)));
-      const countByWeek = new Map(weeks.map(w => [w, 0]));
-      rawPayments.forEach(p => {
-        if(countByWeek.has(p.origin_week)) countByWeek.set(p.origin_week, countByWeek.get(p.origin_week) + 1);
-      });
-      return weeks.map(w => ({ label: shortLabel(w), value: countByWeek.get(w) * weeklyTaxAmount }));
+    $("trHeatLegend").innerHTML = `<span>${escapeHtml(t("trends.heatLess", "меньше"))}</span>` + [0, 1, 2, 3, 4, 5].map(l => `<div class="tr-cell l${l}"></div>`).join("") + `<span>${escapeHtml(t("trends.heatMore", "больше"))}</span>`;
+  }
+
+  // ---------- приток и отток по переписям ----------
+  const flowChart = $("flowChart");
+  function drawFlow(){
+    const steps = [];
+    for(let i = 1; i < censusDates.length; i++){
+      const a = censusSets.get(censusDates[i - 1]), b = censusSets.get(censusDates[i]);
+      steps.push({ date: censusDates[i], joined: [...b].filter(k => !a.has(k)), left: [...a].filter(k => !b.has(k)), total: b.size });
     }
+    const shown = steps.slice(-8);
+    if(!shown.length){ $("flowEmpty").style.display = ""; $("flowSum").innerHTML = ""; flowChart.innerHTML = ""; return; }
+    $("flowEmpty").style.display = "none";
+    const j = shown.reduce((s, x) => s + x.joined.length, 0), l = shown.reduce((s, x) => s + x.left.length, 0);
+    $("flowSum").innerHTML = `<span class="tr-pill up">+${j} ${escapeHtml(t("trends.flowJoined", "пришли"))}</span><span class="tr-pill down">−${l} ${escapeHtml(t("trends.flowLeft", "ушли"))}</span>` +
+      `<span class="tr-pill">${shown[shown.length - 1].total} ${escapeHtml(t("trends.flowNow", "сейчас в клане"))}</span>`;
+    const w = Math.max(300, Math.floor(flowChart.clientWidth || 520)), h = 200, padT = 22, padB = 30, mid = padT + (h - padT - padB) / 2;
+    const maxV = Math.max(1, ...shown.map(s => Math.max(s.joined.length, s.left.length)));
+    const colW = w / shown.length, bw = Math.min(30, colW * 0.5), half = (h - padT - padB) / 2 - 12;
+    const names = (arr) => arr.slice(0, 12).map(k => shownByKey.get(k) || k).join(", ") + (arr.length > 12 ? "…" : "");
+    let svg = `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" class="tr-flow-svg"><line x1="0" y1="${mid}" x2="${w}" y2="${mid}" class="tr-axis" />`;
+    shown.forEach((s, i) => {
+      const cx = colW * i + colW / 2, up = (s.joined.length / maxV) * half, dn = (s.left.length / maxV) * half;
+      const tip = shortLabel(s.date) + "\n+" + s.joined.length + (s.joined.length ? ": " + names(s.joined) : "") + "\n−" + s.left.length + (s.left.length ? ": " + names(s.left) : "");
+      svg += `<g class="col"><title>${escapeHtml(tip)}</title><rect x="${cx - colW / 2}" y="0" width="${colW}" height="${h}" fill="transparent"/>` +
+        `<rect class="bar" x="${cx - bw / 2}" y="${mid - up}" width="${bw}" height="${Math.max(up, s.joined.length ? 2 : 0)}" rx="4" fill="${cssVar("--ok", "#46a066")}"/>` +
+        `<rect class="bar" x="${cx - bw / 2}" y="${mid}" width="${bw}" height="${Math.max(dn, s.left.length ? 2 : 0)}" rx="4" fill="${cssVar("--danger-lit", "#d07070")}"/>` +
+        (s.joined.length ? `<text class="cnt" x="${cx}" y="${mid - up - 5}" text-anchor="middle">+${s.joined.length}</text>` : "") +
+        (s.left.length ? `<text class="cnt" x="${cx}" y="${mid + dn + 13}" text-anchor="middle">−${s.left.length}</text>` : "") +
+        `<text class="lbl" x="${cx}" y="${h - 8}" text-anchor="middle">${escapeHtml(shortLabel(s.date))}</text></g>`;
+    });
+    flowChart.innerHTML = svg + `</svg>`;
+  }
+  drawFlow();
 
-    // шапка (месяц + за полгода) всегда из месячной раскладки — не скачет при переключении масштаба
-    const monthPoints = pointsByMonth();
-    const thisMonthTotal = monthPoints[monthPoints.length - 1].value;
-    const sixMonthTotal = monthPoints.reduce((s, p) => s + p.value, 0);
-    animateNumber(document.getElementById("statTaxMonthValue"), thisMonthTotal, fmtGold);
-    document.getElementById("statTaxTotalValue").textContent =
-      L2I18n.t("trends.statTaxTotalLabel", "Собрано за 6 месяцев") + ": " + fmtGold(sixMonthTotal);
+  // ---------- серии / растут / просели ----------
+  {
+    const lastW = lastIdx;
+    const streakOf = (k) => { const s = weeksOfNick.get(k); if(!s) return 0; let c = 0; for(let i = lastW; i >= 0 && s.has(i); i--) c++; return c; };
+    const sumEv = (k, from, to) => { const m = eventsOfNick.get(k); if(!m) return 0; let c = 0; for(let i = Math.max(0, from); i <= to; i++) c += m.get(i) || 0; return c; };
+    const keys = [...weeksOfNick.keys()];
+    const totalEv = (k) => sumEv(k, 0, WEEKS_BACK - 1); // при равной серии выше тот, кто посетил больше мероприятий
+    const diffs = keys.map(k => { const now = sumEv(k, lastW - 3, lastW), before = sumEv(k, lastW - 7, lastW - 4); return { k, now, before, d: now - before }; });
+    const lists = {
+      streak: keys.map(k => ({ k, v: streakOf(k), e: totalEv(k) })).filter(x => x.v >= 2).sort((a, b) => (b.v - a.v) || (b.e - a.e)).slice(0, 8)
+        .map(x => ({ k: x.k, main: "🔥 " + x.v, sub: fmtT(t("trends.weeksShort", "{n} нед."), { n: x.v }) + " · " + x.e, dots: true })),
+      rising: diffs.filter(x => x.d >= 2).sort((a, b) => b.d - a.d).slice(0, 8).map(x => ({ k: x.k, main: "+" + x.d, cls: "up", sub: x.before + " → " + x.now })),
+      falling: diffs.filter(x => x.d <= -2 && x.before >= 2).sort((a, b) => a.d - b.d).slice(0, 8).map(x => ({ k: x.k, main: "−" + Math.abs(x.d), cls: "down", sub: x.before + " → " + x.now })),
+    };
+    const TABS = [
+      { id: "streak", label: "🔥 " + t("trends.tabStreak", "Серии"), hint: t("trends.streakHint", "Сколько недель подряд человек был хотя бы на одном мероприятии."), empty: t("trends.streakEmpty", "Пока нет никого с серией от двух недель.") },
+      { id: "rising", label: "▲ " + t("trends.tabRising", "Растут"), hint: t("trends.risingHint", "Больше мероприятий за последние 4 недели, чем за 4 до них."), empty: t("trends.risingEmpty", "Заметного роста пока нет.") },
+      { id: "falling", label: "▼ " + t("trends.tabFalling", "Просели"), hint: t("trends.fallingHint", "Стали ходить заметно реже, чем раньше."), empty: t("trends.fallingEmpty", "Заметных просадок нет — отлично.") },
+    ];
+    let cur = TABS[0];
+    function draw(){
+      $("rankTabs").innerHTML = TABS.map(x => `<button type="button" class="tr-badge${x === cur ? " active" : ""}" data-r="${x.id}">${escapeHtml(x.label)}</button>`).join("");
+      $("rankHint").textContent = cur.hint;
+      const rows = lists[cur.id];
+      $("rankEmpty").style.display = rows.length ? "none" : ""; $("rankEmpty").textContent = cur.empty;
+      $("rankList").innerHTML = rows.map((r, i) => {
+        const set = weeksOfNick.get(r.k) || new Set(), name = shownNick.get(r.k) || shownByKey.get(r.k) || r.k;
+        const dots = r.dots ? `<div class="dots">${weeks.map((_, wi) => `<i class="${set.has(wi) ? "on" : ""}"></i>`).join("")}</div>` : "";
+        return `<div class="tr-rank-row" style="--i:${i}"><div class="n">${i + 1}</div><div class="who"><span class="nm" title="${escapeHtml(name)}">${escapeHtml(name)}</span>${dots}</div>` +
+          `<div class="val ${r.cls || ""}">${escapeHtml(r.main)}${r.sub ? `<small>${escapeHtml(r.sub)}</small>` : ""}</div></div>`;
+      }).join("");
+    }
+    $("rankTabs").addEventListener("click", (e) => { const b = e.target.closest("[data-r]"); if(!b) return; cur = TABS.find(x => x.id === b.dataset.r); draw(); });
+    draw();
+  }
 
-    const apply = makeGranularityControl(["month", "week"], chartEl, document.getElementById("taxGranBadge"), (level) => {
-      const points = level === "week" ? pointsByWeek() : monthPoints;
-      const hasAny = points.some(p => p.value > 0);
-      emptyEl.style.display = hasAny ? "none" : "";
-      renderTrendChart(chartEl, points, { color: "#d9a441", format: fmtGold });
+  // ---------- налоги ----------
+  const taxChart = $("taxTrendChart"); trackChart(taxChart);
+  if(!taxData){
+    $("taxPanel").style.display = "none"; // налоги выключены (или не загрузились) — панель не нужна
+  } else {
+    const apply = makeGranularityControl(["month", "week"], taxChart, $("taxGranBadge"), (level) => {
+      const points = level === "week" ? taxWeekPoints() : taxMonthPoints();
+      $("taxTrendEmpty").style.display = points.some(p => p.value > 0) ? "none" : "";
+      renderTrendChart(taxChart, points, { color: "#d9a441", format: fmtGold });
     });
     apply();
   }
 
-  await Promise.all([loadAttendanceTrend(), loadTaxTrend()]);
+  window.__trRedraw = drawFlow;
 })();
 </script>
 </body>
