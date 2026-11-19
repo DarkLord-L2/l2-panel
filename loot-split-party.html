@@ -31,14 +31,12 @@
   .ls-ev-chip input{ margin:0; }
   .ls-wrap .card{ padding-top:12px; }
 
-  /* тот же приём, что в «ДКП Соло»/matrix-scroll: без своего overflow — таблица
-     продолжается вниз и вбок вместе со всей страницей, не в отдельном "окошке" */
-  .ls-table-scroll{ display:inline-block; vertical-align:top; overflow:visible; }
-  /* строки-«карточки»: border-spacing по вертикали разводит соседние строки, а
-     скруглённые левый/правый край первой/последней ячейки делает каждую строку
-     отдельным закруглённым блоком — без цвета по значению, разница между
-     колонками только в насыщенности/жирности шрифта */
-  table.ls-table{ border-collapse:separate; border-spacing:0 8px; width:auto; font-size:13px; }
+  /* таблица шире экрана (колонка на каждое мероприятие периода) — крутится вбок ВНУТРИ карточки, а не уезжает
+     за край и не тянет за собой всю страницу; ники слева и шапка остаются на месте (sticky внутри этого блока) */
+  .ls-table-scroll{ display:block; max-width:100%; overflow-x:auto; overflow-y:hidden; }
+  /* пати идут сплошным списком без зазоров: между строками тонкая линия, скруглены только внешние углы блока —
+     без цвета по значению, разница между колонками только в насыщенности/жирности шрифта */
+  table.ls-table{ border-collapse:separate; border-spacing:0; width:auto; font-size:13px; }
   table.ls-table th{
     padding:0 14px 10px;
     position:sticky; top:0; z-index:2;
@@ -59,8 +57,15 @@
     border-bottom:1px solid var(--border-lit);
     white-space:nowrap;
   }
-  table.ls-table tbody tr:not(.ls-roster-row) td:first-child{ border-left:1px solid var(--border-lit); border-top-left-radius:10px; border-bottom-left-radius:10px; }
-  table.ls-table tbody tr:not(.ls-roster-row) td:last-child{ border-right:1px solid var(--border-lit); border-top-right-radius:10px; border-bottom-right-radius:10px; }
+  /* у каждой пати за строкой идёт свёрнутая строка «участники» (ls-roster-row), поэтому последняя пати — предпоследняя tr */
+  table.ls-table tbody tr:not(.ls-roster-row) td{ border-bottom:none; }
+  table.ls-table tbody tr:not(.ls-roster-row):nth-last-child(2) td{ border-bottom:1px solid var(--border-lit); }
+  table.ls-table tbody tr:not(.ls-roster-row) td:first-child{ border-left:1px solid var(--border-lit); }
+  table.ls-table tbody tr:not(.ls-roster-row) td:last-child{ border-right:1px solid var(--border-lit); }
+  table.ls-table tbody tr:first-child td:first-child{ border-top-left-radius:10px; }
+  table.ls-table tbody tr:first-child td:last-child{ border-top-right-radius:10px; }
+  table.ls-table tbody tr:not(.ls-roster-row):nth-last-child(2) td:first-child{ border-bottom-left-radius:10px; }
+  table.ls-table tbody tr:not(.ls-roster-row):nth-last-child(2) td:last-child{ border-bottom-right-radius:10px; }
   table.ls-table tbody td.ls-col-nick{
     position:sticky; left:0; z-index:1;
   }
@@ -88,7 +93,7 @@
      свои финальные баллы и своя доля голды пати. Своя рамка с акцентной левой
      полосой — чтобы визуально читалось как «выехавшая деталь» строки пати, а не
      ещё один самостоятельный кусок таблицы */
-  tr.ls-roster-row td{ padding:0; border:none !important; background:none !important; border-radius:0 !important; }
+  tr.ls-roster-row td{ padding:0 !important; border:none !important; background:none !important; border-radius:0 !important; }
   .ls-roster-wrap{
     max-height:0; opacity:0; overflow:hidden;
     transition: max-height .28s ease, opacity .2s ease;
@@ -193,7 +198,7 @@
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=27"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=104"></script>
+<script src="js/i18n.js?v=106"></script>
 <script src="js/datepicker.js?v=2"></script>
 <script src="js/table-cards.js?v=2"></script>
 <script src="js/num-format.js?v=1"></script>

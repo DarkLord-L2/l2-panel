@@ -229,6 +229,7 @@
       <button type="button" class="admin-nav-item" data-tab="users" data-i18n="admin.tabUsers">Пользователи</button>
       <button type="button" class="admin-nav-item" data-tab="sections" data-i18n="admin.tabSections">Разделы и права</button>
       <button type="button" class="admin-nav-item" data-tab="rules" data-i18n="admin.tabRules">Налоги</button>
+      <button type="button" class="admin-nav-item" data-tab="attendance" data-i18n="admin.tabAttendance">Журнал посещаемости</button>
       <button type="button" class="admin-nav-item" data-tab="dkp" data-i18n="admin.tabDkp">ДКП</button>
       <button type="button" class="admin-nav-item" data-tab="branding" data-i18n="admin.tabBranding">Оформление</button>
       <button type="button" class="admin-nav-item" data-tab="shares" data-i18n="admin.tabShares">Ссылки</button>
@@ -369,6 +370,21 @@
     <textarea id="taxReportTemplateInput" rows="8" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:13px; padding:9px 11px; border-radius:5px; border:1px solid var(--border); background:var(--panel-2); color:var(--text); resize:vertical;"></textarea>
     <p class="error-msg" id="taxReportTemplateError"></p>
     <p class="ok-msg" id="taxReportTemplateOk" style="display:none;" data-i18n="admin.saved">Сохранено.</p>
+  </section>
+    </div>
+
+    <div class="admin-tab-panel" data-panel="attendance">
+  <section class="card">
+    <h2 data-i18n="admin.attJoinTitle">Дни до вступления в клан</h2>
+    <div class="section-toggle-row" style="max-width:520px;">
+      <span class="label" data-i18n="admin.attJoinLabel">Штриховать дни до вступления в клан</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="attJoinInput" />
+        <span class="track"></span>
+      </label>
+    </div>
+    <p class="hint" data-i18n="admin.attJoinHint">Включено — в таблице «Посещаемость» клетки за дни, когда человека ещё не было в клане, серые в штрих (при наведении: «Не был в клане — в клане с …»), а «Итого» и «%» считаются только по мероприятиям с его вступления (4 из 8 вместо 4 из 13). Дата вступления — первая перепись, где он появился, или первое посещение, если оно раньше. Выключено — все клетки как раньше, «Итого» и «%» по всем мероприятиям периода.</p>
+    <p class="error-msg" id="attJoinError"></p>
   </section>
     </div>
 
@@ -680,7 +696,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=27"></script>
-<script src="js/i18n.js?v=104"></script>
+<script src="js/i18n.js?v=106"></script>
 <script src="js/invite.js?v=1"></script>
 <script src="js/backup.js?v=7"></script>
 <script src="js/num-format.js?v=1"></script>
@@ -1155,6 +1171,32 @@
       cb.checked = !cb.checked;
     } else {
       logAdminAction(cb.checked ? L2I18n.t("admin.auditLbFullOn", "Лидерборд: все роли видят весь клан") : L2I18n.t("admin.auditLbFullOff", "Лидерборд: участники видят только свою пати"));
+    }
+    cb.disabled = false;
+  });
+
+  // ---------- «Штриховать дни до вступления в клан» (attendance_report_style.mark_before_join) ----------
+  async function loadAttJoin(){
+    const cb = document.getElementById("attJoinInput");
+    const { data, error } = await db.from("attendance_report_style").select("mark_before_join").eq("clan_id", profile.clan_id).maybeSingle();
+    if(error){
+      cb.disabled = true; // колонки ещё нет — ползунок неактивен, подсказка что выполнить
+      document.getElementById("attJoinError").textContent = L2I18n.t("admin.attJoinNeedSql", "Сначала выполните в Supabase файл supabase/schema_attendance_join_mark.sql.");
+      return;
+    }
+    cb.checked = data?.mark_before_join ?? true; // нет строки = включено
+  }
+  document.getElementById("attJoinInput").addEventListener("change", async () => {
+    const cb = document.getElementById("attJoinInput");
+    const errEl = document.getElementById("attJoinError");
+    errEl.textContent = "";
+    cb.disabled = true;
+    const { error } = await db.from("attendance_report_style").upsert({ clan_id: profile.clan_id, mark_before_join: cb.checked }, { onConflict: "clan_id" });
+    if(error){
+      errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
+      cb.checked = !cb.checked;
+    } else {
+      logAdminAction(cb.checked ? L2I18n.t("admin.auditAttJoinOn", "Журнал посещаемости: штрих до вступления включён") : L2I18n.t("admin.auditAttJoinOff", "Журнал посещаемости: штрих до вступления выключен"));
     }
     cb.disabled = false;
   });
@@ -2590,6 +2632,7 @@
     users: async () => { await loadUsers(); },
     sections: async () => { await Promise.all([loadMatrix(), loadSectionOrder(), ensureToggles(), loadLbFull()]); renderSectionOrder(); renderSectionToggleList(); },
     rules: async () => { await Promise.all([loadWeeklyTaxAmount(), loadTaxesEnabled(), loadTaxReportTemplate()]); },
+    attendance: async () => { await loadAttJoin(); },
     dkp: async () => {
       await Promise.all([ensureToggles(), loadLootCoefficients(), loadLootPartyCoefficients(), loadLootLeaderCoefficients(), loadLootHideZero(), loadLootLeaderSolo(),
         loadMinBoostPercent(), loadPayoutShowLeft(), loadClosePayoutState()]);

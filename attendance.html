@@ -195,6 +195,7 @@
   #attTableWrap.matrix-mode #attReportBody td{ border-bottom:1px solid #c4c4c4; }
   #attTableWrap.matrix-mode .att-mark-yes{ background:#d9ead3; color:#274e13; font-weight:700; }
   #attTableWrap.matrix-mode .att-mark-no{ background:#f4cccc; }
+  #attTableWrap.matrix-mode .att-mark-na{ background: repeating-linear-gradient(135deg, #e6e6e6 0 4px, #cfcfcf 4px 8px); cursor:help; }
   #attTableWrap.matrix-mode .att-tier-high{ background:#f1c232; color:#4a3200; font-weight:700; }
   #attTableWrap.matrix-mode .att-tier-mid{ background:#76a5af; color:#0b2b30; font-weight:600; }
   #attTableWrap.matrix-mode .att-tier-low{ background:#a0522d; color:#fff; font-weight:600; }
@@ -212,6 +213,7 @@
   #attTableWrap.matrix-mode.dark-matrix #attReportBody td{ border-bottom:1px solid var(--border); }
   #attTableWrap.matrix-mode.dark-matrix .att-mark-yes{ background: rgba(76,154,99,.22); color:#7fce97; font-weight:700; }
   #attTableWrap.matrix-mode.dark-matrix .att-mark-no{ background: rgba(196,106,106,.2); }
+  #attTableWrap.matrix-mode.dark-matrix .att-mark-na{ background: repeating-linear-gradient(135deg, rgba(255,255,255,.07) 0 4px, rgba(255,255,255,.015) 4px 8px); }
   #attTableWrap.matrix-mode.dark-matrix .att-tier-high{ background: rgba(232,180,42,.24); color:#e8c468; font-weight:700; }
   #attTableWrap.matrix-mode.dark-matrix .att-tier-mid{ background: rgba(90,160,175,.24); color:#8fd0e0; font-weight:600; }
   #attTableWrap.matrix-mode.dark-matrix .att-tier-low{ background: rgba(160,90,45,.3); color:#e0aa85; font-weight:600; }
@@ -447,7 +449,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=27"></script>
-<script src="js/i18n.js?v=104"></script>
+<script src="js/i18n.js?v=106"></script>
 <script src="js/datepicker.js?v=2"></script>
 <script src="js/paste-drop.js?v=1"></script>
 <script src="js/tax-flag.js?v=1"></script>
@@ -949,6 +951,8 @@
 
   // ---- отчёт «Посещаемость» ----
   let attReportRows = [];
+  let markBeforeJoin = true; // Админ-панель → «Журнал посещаемости»: штриховать дни до вступления и считать «Итого/%» только с вступления
+  let attFirstCensusDate = null; // самая ранняя перепись клана: кто появился уже в ней — «в клане с … или раньше», клетки не штрихуем
   let attFilterVisibility = {};
 
   // налоги выключены — фильтры про оплату («Ходил / Платил», «Платит и ходит», «Не платит и не ходит») не показываем
@@ -983,6 +987,7 @@
     }
 
     const firstSeen = new Map();
+    attFirstCensusDate = (census || []).reduce((m, r) => (!m || r.week_start < m) ? r.week_start : m, null);
     let latestCensusWeek = null;
     (census || []).forEach(row => {
       if(!latestCensusWeek || row.week_start > latestCensusWeek) latestCensusWeek = row.week_start;
@@ -1019,17 +1024,31 @@
     const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
     const cutoffStr = isoDate(cutoff);
 
+    const eventDates = (evs || []).map(e => e.event_date);
     const allNicks = new Set([...latestRoster, ...attendedCount.keys(), ...paidSet]);
     const rows = [...allNicks].map(nickname => {
       const attendedN = attendedCount.get(nickname) || 0;
       const fs = firstSeen.get(nickname);
       const isOld = fs !== undefined && fs <= cutoffStr;
+      // Дата вступления в клан: человек впервые появился в переписи ПОЗЖЕ самой первой — до той даты его в клане не было.
+      // Явка — доказательство, что он уже был: в старых переписях его могло просто не быть в списке, поэтому берём
+      // более раннюю из двух дат (первая перепись и первое посещение в периоде). Кто был уже в самой первой переписи —
+      // «в клане с … или раньше», дат до этого не знаем, ничего не отрезаем
+      let joinedOn = (fs && fs !== attFirstCensusDate) ? fs : null;
+      const myDays = nickDays.get(nickname);
+      if(joinedOn && myDays && myDays.size){
+        const firstAttend = [...myDays].sort()[0];
+        if(firstAttend < joinedOn) joinedOn = firstAttend;
+      }
+      // «Итого» и «%» — только по мероприятиям, на которых человек уже мог быть (с даты вступления)
+      const total = (markBeforeJoin && joinedOn) ? eventDates.filter(d => d >= joinedOn).length : totalEvents;
       return {
         nickname,
+        joinedOn,
         attended: attendedCount.has(nickname),
         attendedN,
-        total: totalEvents,
-        percent: totalEvents ? Math.round((attendedN / totalEvents) * 100) : 0,
+        total,
+        percent: total ? Math.round((attendedN / total) * 100) : 0,
         isOld,
         paid: paidSet.has(nickname),
         since: fs || null,
@@ -1188,11 +1207,20 @@
       tdNick.addEventListener("click", () => showNickInfo(r.nickname));
       tr.append(tdNum, tdNick);
       const nickDaySet = attReportNickDays.get(r.nickname) || new Set();
+      // до даты вступления (см. buildAttendanceReport → joinedOn) человека в клане не было, ходить он не мог:
+      // клетка серая в штрих с подсказкой, а не красная «не ходил». Отметка явки важнее — ✓ остаётся.
+      // Включается в Админ-панели → «Журнал посещаемости»
+      const joinedOn = markBeforeJoin ? r.joinedOn : null;
       attReportDays.forEach(d => {
         const td = document.createElement("td");
         const was = nickDaySet.has(d);
-        td.className = (was ? "att-mark-yes" : "att-mark-no") + (weekStartDays.has(d) ? " week-start" : "");
+        const beforeJoin = !was && joinedOn && d < joinedOn;
+        td.className = (was ? "att-mark-yes" : beforeJoin ? "att-mark-na" : "att-mark-no") + (weekStartDays.has(d) ? " week-start" : "");
         td.textContent = was ? "✓" : "";
+        if(beforeJoin){
+          const [jy, jm, jd] = joinedOn.split("-");
+          td.title = L2I18n.t("attendance.notInClanYet", "Не был в клане — в переписи клана с {date}").replace("{date}", `${jd}.${jm}.${jy}`);
+        }
         tr.appendChild(td);
       });
       const tier = percentTierClass(r.percent);
@@ -1298,6 +1326,9 @@
     darkMatrix = data?.dark_matrix || false;
     tierHighThreshold = data?.tier_high_threshold ?? 75;
     tierMidThreshold = data?.tier_mid_threshold ?? 40;
+    // отдельным запросом: пока не выполнен schema_attendance_join_mark.sql, ошибка колонки не должна ломать настройки выше
+    const { data: jm, error: jmErr } = await db.from("attendance_report_style").select("mark_before_join").eq("clan_id", profile.clan_id).maybeSingle();
+    markBeforeJoin = jmErr ? true : (jm?.mark_before_join ?? true);
   }
 
   function renderFilterTabs(){
