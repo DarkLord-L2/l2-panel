@@ -260,10 +260,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/page-keys.js?v=2"></script>
-<script src="js/supabase-client.js?v=25"></script>
+<script src="js/supabase-client.js?v=27"></script>
 <script src="js/classes.js?v=1"></script>
 <script src="js/i18n.js?v=104"></script>
-<script src="js/nick-match.js?v=4"></script>
+<script src="js/nick-match.js?v=5"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -430,14 +430,28 @@
   let allEventDates = []; // даты всех мероприятий клана по возрастанию
   const FADING_DAYS = 14;
   async function loadAttendance(){
-    const [{ data }, { data: evs }] = await Promise.all([
-      L2Cabinet.selectAll(() => db.from("attendance_entries").select("nickname, event_id").order("id")),
+    // быстрый путь — готовая сводка из базы (ник → мероприятий, последняя дата) вместо всей истории явки;
+    // даты мероприятий нужны в любом случае (сколько ивентов человек пропустил)
+    const [sum, { data: evs }] = await Promise.all([
+      L2Cabinet.attendanceSummary(),
       db.from("attendance_events").select("id, event_date"),
     ]);
-    attendedNormSet = new Set((data || []).map(r => normalizeNick(r.nickname)));
-    const dateById = new Map((evs || []).map(e => [e.id, e.event_date]));
     allEventDates = [...new Set((evs || []).map(e => e.event_date).filter(Boolean))].sort();
     attendStats = new Map();
+    if(sum){
+      attendedNormSet = new Set(sum.map(r => normalizeNick(r.nickname)));
+      sum.forEach(r => {
+        const k = normalizeNick(r.nickname);
+        const s = attendStats.get(k) || { last: "", count: 0 };
+        s.count += Number(r.events || 0); // разные написания одного человека — складываем
+        if(r.last_date && r.last_date > s.last) s.last = r.last_date;
+        attendStats.set(k, s);
+      });
+      return;
+    }
+    const { data } = await L2Cabinet.selectAll(() => db.from("attendance_entries").select("nickname, event_id").order("id"));
+    attendedNormSet = new Set((data || []).map(r => normalizeNick(r.nickname)));
+    const dateById = new Map((evs || []).map(e => [e.id, e.event_date]));
     (data || []).forEach(r => {
       const d = dateById.get(r.event_id); if(!d) return;
       const k = normalizeNick(r.nickname);

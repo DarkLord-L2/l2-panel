@@ -632,11 +632,11 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/page-keys.js?v=2"></script>
-<script src="js/supabase-client.js?v=25"></script>
+<script src="js/supabase-client.js?v=27"></script>
 <script src="js/i18n.js?v=104"></script>
 <script src="js/tax-flag.js?v=1"></script>
 <script src="js/layout-board.js?v=10"></script>
-<script src="js/nick-match.js?v=4"></script>
+<script src="js/nick-match.js?v=5"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){
@@ -808,8 +808,14 @@
   // таблица, что в «Не посещали» в «Участниках клана») — за всё время, не за период
   let attendanceCountByNorm = new Map();
   async function loadAttendanceCheck(){
-    const { data } = await L2Cabinet.selectAll(() => db.from("attendance_entries").select("nickname").order("id"));
     attendanceCountByNorm = new Map();
+    // быстрый путь — готовая сводка из базы (по строке на ник), а не вся история явки
+    const sum = await L2Cabinet.attendanceSummary();
+    if(sum){
+      sum.forEach(r => { const key = normalizeNick(r.nickname); attendanceCountByNorm.set(key, (attendanceCountByNorm.get(key) || 0) + Number(r.entries || 0)); });
+      return;
+    }
+    const { data } = await L2Cabinet.selectAll(() => db.from("attendance_entries").select("nickname").order("id"));
     (data || []).forEach(r => {
       const key = normalizeNick(r.nickname);
       attendanceCountByNorm.set(key, (attendanceCountByNorm.get(key) || 0) + 1);

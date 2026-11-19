@@ -142,7 +142,7 @@ async function switchAccount(userId){
   const { data, error } = await client.auth.setSession({ access_token: acc.access_token, refresh_token: acc.refresh_token });
   if(error) throw error;
 
-  const profile = await getProfile().catch(() => null);
+  const profile = await getProfile({ fresh: true }).catch(() => null);
   if(profile?.clans?.access_enabled === false){
     if(prevUserId && prevUserId !== userId){
       const prevAcc = loadSavedAccounts().find(a => a.userId === prevUserId);
@@ -191,9 +191,29 @@ function applyClanBranding(clan){
 // строки в profiles, например незавершённо созданной) 0 строк — это ожидаемый случай,
 // а не ошибка: .single() в такой ситуации бросает PGRST116 и рвёт всю страницу вместо
 // того, чтобы дать index.html показать «Профиль не найден».
-async function getProfile(){
-  const { data: { user } } = await client.auth.getUser();
+//
+// Скорость: каждый раздел — отдельный iframe, и раньше КАЖДЫЙ заново шёл на сервер авторизации (getUser) и за профилем
+// с названием роли — три запроса друг за другом (~0.3 с) перед своими данными. Теперь:
+//  • кто вошёл — из локальной сессии (getSession, без сети). Это безопасно: токен всё равно проверяет база при
+//    каждом запросе (RLS), подделанный или отозванный токен просто не получит данных;
+//  • профиль кэшируется в sessionStorage (общий для оболочки и всех разделов одной вкладки) на PROFILE_TTL_MS.
+//    Оболочка (index.html) при каждой загрузке берёт свежий — getProfile({ fresh: true }), так что после F5 всё
+//    актуально; права всё равно проверяет база, кэш влияет только на то, что нарисовано
+const PROFILE_TTL_MS = 3 * 60 * 1000;
+const profileCacheKey = (uid) => "l2Profile:" + uid;
+function invalidateProfile(){
+  try { Object.keys(sessionStorage).filter(k => k.indexOf("l2Profile:") === 0).forEach(k => sessionStorage.removeItem(k)); } catch(e){}
+}
+async function getProfile(opts){
+  const { data: { session } } = await client.auth.getSession();
+  const user = session?.user;
   if(!user) return null;
+  if(!(opts && opts.fresh)){
+    try {
+      const c = JSON.parse(sessionStorage.getItem(profileCacheKey(user.id)) || "null");
+      if(c && Date.now() - c.t < PROFILE_TTL_MS && c.data){ applyClanBranding(c.data.clans); return c.data; }
+    } catch(e){}
+  }
   const { data, error } = await client
     .from("profiles")
     .select("id, username, nickname, clan_id, party_id, must_change_password, role_id, roles(key, label, rank), clan_groups(name), clans(access_enabled, name, theme_preset, accent_color, display_name, logo_url)")
@@ -211,16 +231,21 @@ async function getProfile(){
       .eq("clan_id", data.clan_id)
       .eq("role_id", data.role_id)
       .maybeSingle();
-    if(override?.label) data.roles.label = override.label;
+    if(override?.label){ data.roles.label = override.label; data.role_label_override = override.label; }
   }
+  if(data){ try { sessionStorage.setItem(profileCacheKey(user.id), JSON.stringify({ t: Date.now(), data })); } catch(e){} }
   return data;
 }
 
 // Разделы сайта, видимые роли (уже отсортированные для навигации). roleKey — например "glavadmin".
-async function getVisibleSections(roleKey){
-  const { data: roleRow, error: roleErr } = await client
-    .from("roles").select("id").eq("key", roleKey).single();
-  if(roleErr) throw roleErr;
+// roleId (profile.role_id) — если известен, лишний запрос «id роли по ключу» не нужен
+async function getVisibleSections(roleKey, roleId){
+  let roleRow = roleId ? { id: roleId } : null;
+  if(!roleRow){
+    const { data: r, error: roleErr } = await client.from("roles").select("id").eq("key", roleKey).single();
+    if(roleErr) throw roleErr;
+    roleRow = r;
+  }
 
   // порядок пунктов меню клан-лидер задаёт сам (Админ-панель → «Порядок разделов в меню»);
   // clan_section_order виден только своему клану, а чего в нём нет — идёт по sections.sort.
@@ -393,6 +418,7 @@ async function adminOcrEventStats(imageDataUrl){
 async function clearMustChangePassword(){
   const { error } = await client.rpc("clear_must_change_password");
   if(error) throw error;
+  invalidateProfile();
 }
 
 // Все строки запроса, а не первые 1000. Supabase (PostgREST) отдаёт за один запрос не больше 1000 строк и остальное
@@ -443,7 +469,44 @@ async function censusWeeks(count = 1){
   return { weeks, rows: res.data || [], error: res.error };
 }
 
+// Сводка явки по нику за всё время: сколько отметок, на скольких мероприятиях, дата последнего — считается В БАЗЕ
+// (функция attendance_summary, supabase/schema_perf.sql), а не выкачиванием всей истории явки страницами по 1000 строк.
+// Нет функции (миграция не выполнена) — null, страница считает по-старому.
+// Ответ — [{ nickname, entries, events, last_date }]; кэш на вкладку на 60 с (сводку берут и «Группы», и «Участники»)
+async function attendanceSummary(){
+  const ck = "l2AttSummary";
+  try { const c = JSON.parse(sessionStorage.getItem(ck) || "null"); if(c && Date.now() - c.t < 60000) return c.rows; } catch(e){}
+  const { data, error } = await selectAll(() => client.rpc("attendance_summary").order("nickname"));
+  if(error) return null;
+  try { sessionStorage.setItem(ck, JSON.stringify({ t: Date.now(), rows: data })); } catch(e){}
+  return data;
+}
+
+// Сводка переписи: { weeks: [все недели по возрастанию], rows: [{ nickname, weeks, first_week, last_week }] } — считается
+// в базе (census_summary / census_week_list, supabase/schema_perf.sql) вместо выкачивания всей истории переписи.
+// Нет функций (миграция не выполнена) — null, страница считает по-старому. Кэш на вкладку на 60 с
+async function censusSummary(){
+  const ck = "l2CensusSummary";
+  try { const c = JSON.parse(sessionStorage.getItem(ck) || "null"); if(c && Date.now() - c.t < 60000) return c.v; } catch(e){}
+  const [s, w] = await Promise.all([
+    selectAll(() => client.rpc("census_summary").order("nickname")),
+    selectAll(() => client.rpc("census_week_list").order("week_start")),
+  ]);
+  if(s.error || w.error) return null;
+  const v = { weeks: (w.data || []).map(r => r.week_start), rows: s.data || [] };
+  try { sessionStorage.setItem(ck, JSON.stringify({ t: Date.now(), v })); } catch(e){}
+  return v;
+}
+
+// Страницы, где правят перепись/явку: сводки выше сбрасываются при заходе на них. Разделы открываются по одному (iframe),
+// поэтому следующая страница со сводкой («Группы», «Участники», «Мой кабинет», «Выплаты») возьмёт уже свежие данные
+if(/\/(attendance|census|loot-split|loot-split-party)\.html$/.test(location.pathname)){
+  try { sessionStorage.removeItem("l2AttSummary"); sessionStorage.removeItem("l2CensusSummary"); } catch(e){}
+}
+
 window.L2Cabinet = {
+  censusSummary,
+  attendanceSummary,
   client,
   selectAll,
   selectAllIn,
@@ -452,6 +515,7 @@ window.L2Cabinet = {
   signOut,
   requireSession,
   getProfile,
+  invalidateProfile,
   getVisibleSections,
   adminCreateUser,
   adminSetUserPassword,

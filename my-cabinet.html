@@ -284,11 +284,11 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/page-keys.js?v=2"></script>
-<script src="js/supabase-client.js?v=25"></script>
+<script src="js/supabase-client.js?v=27"></script>
 <script src="js/classes.js?v=1"></script>
 <script src="js/i18n.js?v=104"></script>
 <script src="js/tax-flag.js?v=1"></script>
-<script src="js/nick-match.js?v=4"></script>
+<script src="js/nick-match.js?v=5"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -697,6 +697,19 @@
 
   // ---------- перепись: в клане ли сейчас, когда последний раз отмечен ----------
   async function loadCensusInfo(){
+    // быстрый путь — сводка из базы (по строке на ник), а не вся история переписи
+    const sum = await L2Cabinet.censusSummary();
+    if(sum){
+      const latest = sum.weeks.length ? sum.weeks[sum.weeks.length - 1] : null;
+      const mine = sum.rows.filter(r => isMe(r.nickname));
+      const lastSeen = mine.reduce((m, r) => (!m || r.last_week > m) ? r.last_week : m, null);
+      return {
+        totalWeeks: sum.weeks.length,
+        myWeeksCount: Math.min(sum.weeks.length, mine.reduce((n, r) => n + Number(r.weeks || 0), 0)),
+        inLatest: !!latest && lastSeen === latest,
+        lastSeen,
+      };
+    }
     const { data } = await L2Cabinet.selectAll(() => db.from("census_entries").select("nickname, week_start").order("id"));
     const rows = data || [];
     const weeks = [...new Set(rows.map(r => r.week_start))].sort();
@@ -840,22 +853,28 @@
 
   const memberInfo = await loadMyMemberInfo();
   renderHead(memberInfo);
-  renderBuffText(await loadBuffText(memberInfo.class_name));
+  // все блоки кабинета друг от друга не зависят — запросы уходят разом (раньше шли цепочкой, каждый ждал предыдущий),
+  // а рисуются в прежнем порядке по мере готовности
+  const buffP = loadBuffText(memberInfo.class_name);
+  const statsP = Promise.all([loadEvents(), loadMyStats()]);
+  const boostP = loadBoost(), censusP = loadCensusInfo(), taxP = loadTaxInfo(), payoutP = loadPayoutHistory();
 
-  await Promise.all([loadEvents(), loadMyStats()]);
+  renderBuffText(await buffP);
+
+  await statsP;
   renderPeriodOptions();
   renderStats();
 
-  const boostData = await loadBoost();
+  const boostData = await boostP;
   renderBoost(boostData);
 
-  const censusInfo = await loadCensusInfo();
+  const censusInfo = await censusP;
   renderCensus(censusInfo);
 
-  const taxInfo = await loadTaxInfo();
+  const taxInfo = await taxP;
   renderTaxInfo(taxInfo);
 
-  const payoutHistory = await loadPayoutHistory();
+  const payoutHistory = await payoutP;
   renderPayoutHistory(payoutHistory);
 
   // «Классическая шапка сайта» — личная настройка интерфейса (localStorage на

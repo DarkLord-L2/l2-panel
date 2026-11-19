@@ -191,10 +191,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/page-keys.js?v=2"></script>
-<script src="js/supabase-client.js?v=25"></script>
+<script src="js/supabase-client.js?v=27"></script>
 <script src="js/i18n.js?v=104"></script>
 <script src="js/datepicker.js?v=2"></script>
-<script src="js/nick-match.js?v=4"></script>
+<script src="js/nick-match.js?v=5"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -270,6 +270,21 @@
   // из клана давно, а не только на прошлой неделе
   let lastSeenWeekByNorm = new Map();
   async function loadCensus(){
+    // быстрый путь — сводка из базы: last_week ника = последняя неделя, где он был; кто был в самой свежей — в клане
+    const sum = await L2Cabinet.censusSummary();
+    if(sum){
+      const latest = sum.weeks.length ? sum.weeks[sum.weeks.length - 1] : null;
+      const inLatest = latest ? sum.rows.filter(r => r.last_week === latest) : [];
+      censusNormSet = new Set(inLatest.map(r => normalizeNick(r.nickname)));
+      latestCensusNicks = [...new Set(inLatest.map(r => r.nickname))];
+      lastSeenWeekByNorm = new Map();
+      sum.rows.forEach(r => {
+        const norm = normalizeNick(r.nickname);
+        const prev = lastSeenWeekByNorm.get(norm);
+        if(!prev || r.last_week > prev) lastSeenWeekByNorm.set(norm, r.last_week);
+      });
+      return;
+    }
     const { data } = await L2Cabinet.selectAll(() => db.from("census_entries").select("nickname, week_start").order("id"));
     const weeks = [...new Set((data || []).map(r => r.week_start))].sort();
     const latest = weeks.length ? weeks[weeks.length - 1] : null;
@@ -355,14 +370,14 @@
   let manualKmEnabled = false;
   const manualActive = () => manualKmEnabled && manualKmPrice > 0;
   async function loadPayoutShowLeft(){
-    const { data } = await db.from("loot_split_settings").select("show_left_in_payout").eq("clan_id", profile.clan_id).maybeSingle();
+    // отдельными запросами (пока не выполнены миграции колонок, ошибка одной не должна ломать остальные), но разом, не по очереди
+    const q = (cols) => db.from("loot_split_settings").select(cols).eq("clan_id", profile.clan_id).maybeSingle();
+    const [{ data }, { data: lm, error: lmErr }, { data: se, error: seErr }, { data: mk, error: mkErr }] = await Promise.all([
+      q("show_left_in_payout"), q("left_money_mode"), q("payout_show_else"), q("manual_km_price, manual_km_enabled"),
+    ]);
     showLeftInPayout = data?.show_left_in_payout ?? true;
-    // отдельным запросом: пока не выполнен schema_left_money_mode.sql, ошибка колонки не должна ломать настройку выше
-    const { data: lm, error: lmErr } = await db.from("loot_split_settings").select("left_money_mode").eq("clan_id", profile.clan_id).maybeSingle();
     leftMoneyMode = (!lmErr && lm?.left_money_mode) || "party";
-    const { data: se, error: seErr } = await db.from("loot_split_settings").select("payout_show_else").eq("clan_id", profile.clan_id).maybeSingle();
     showElseInfo = seErr ? true : (se?.payout_show_else ?? true);
-    const { data: mk, error: mkErr } = await db.from("loot_split_settings").select("manual_km_price, manual_km_enabled").eq("clan_id", profile.clan_id).maybeSingle();
     manualKmPrice = mkErr ? 0 : (Number(mk?.manual_km_price) || 0);
     manualKmEnabled = mkErr ? false : !!mk?.manual_km_enabled;
   }
@@ -579,10 +594,12 @@
   let leaderCoefByNorm = new Map();
   let leaderCoefInSolo = false;
   async function loadLeaderCoefs(){
-    const { data } = await db.from("loot_leader_coefficients").select("nickname, coefficient");
+    const [{ data }, { data: ls, error }] = await Promise.all([
+      db.from("loot_leader_coefficients").select("nickname, coefficient"),
+      db.from("loot_split_settings").select("leader_coef_in_solo").eq("clan_id", profile.clan_id).maybeSingle(),
+    ]);
     leaderCoefByNorm = new Map((data || []).map(r => [normalizeNick(r.nickname), Number(r.coefficient)]));
     leaderCoefRaw = (data || []).map(r => [r.nickname, Number(r.coefficient)]);
-    const { data: ls, error } = await db.from("loot_split_settings").select("leader_coef_in_solo").eq("clan_id", profile.clan_id).maybeSingle();
     leaderCoefInSolo = !error && !!ls?.leader_coef_in_solo;
   }
   function leaderCoefLabel(nick){

@@ -121,10 +121,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=25"></script>
+<script src="js/supabase-client.js?v=27"></script>
 <script src="js/classes.js?v=1"></script>
 <script src="js/i18n.js?v=104"></script>
-<script src="js/nick-match.js?v=4"></script>
+<script src="js/nick-match.js?v=5"></script>
 <script src="js/tax-flag.js?v=1"></script>
 <script>
 (async function(){
@@ -193,8 +193,10 @@
     return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
   }
 
-  const profile = await L2Cabinet.getProfile();
-  if(profile){ try { await L2Nick.init(L2Cabinet.client, profile.clan_id); } catch(e){ console.error(e); } } // общий справочник ников
+  // оболочка всегда берёт свежий профиль (и кладёт его в кэш — разделы в iframe возьмут оттуда, без запросов)
+  const profile = await L2Cabinet.getProfile({ fresh: true });
+  // общий справочник ников — грузится параллельно с правами и налогами (ниже), меню его не ждёт по очереди
+  const nickReady = profile ? L2Nick.init(L2Cabinet.client, profile.clan_id).catch(e => console.error(e)) : Promise.resolve();
   if(!profile){
     // сессия есть, а профиля нет — учётку создали не полностью, работать нельзя
     document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
@@ -290,9 +292,9 @@
   // своё название роли для этого клана (Админ-панель → Разное → «Названия ролей»),
   // иначе — обычный перевод роли; та же логика, что roleDisplayLabel в admin.html
   async function loadMyRoleLabel(){
-    if(!profile.role_id) return L2I18n.t("role." + roleKey, profile.roles?.label || roleKey);
-    const { data } = await db.from("clan_role_labels").select("label").eq("clan_id", profile.clan_id).eq("role_id", profile.role_id).maybeSingle();
-    return data?.label || L2I18n.t("role." + roleKey, profile.roles?.label || roleKey);
+    // своё название уже пришло вместе с профилем (getProfile → role_label_override) — отдельный запрос не нужен
+    if(profile.role_label_override) return profile.role_label_override;
+    return L2I18n.t("role." + roleKey, profile.roles?.label || roleKey);
   }
   async function renderMyRoleLabel(){
     const label = await loadMyRoleLabel();
@@ -309,7 +311,9 @@
     if(!mine) return null;
     return mine.icon || (window.L2_CLASS_ICON && mine.class_name ? window.L2_CLASS_ICON(mine.class_name) : null);
   }
-  document.getElementById("whoAvatar").src = (await loadMyAvatar()) || BLANK_AVATAR;
+  // аватарка не держит меню: дорисуется, когда придёт (ей нужен справочник ников — ждём его)
+  document.getElementById("whoAvatar").src = BLANK_AVATAR;
+  nickReady.then(loadMyAvatar).then(src => { if(src) document.getElementById("whoAvatar").src = src; }).catch(e => console.error(e));
 
   document.getElementById("signOutBtn").addEventListener("click", () => L2Cabinet.signOut());
   document.getElementById("classicSignOutBtn").addEventListener("click", () => L2Cabinet.signOut());
@@ -323,7 +327,12 @@
   });
   document.getElementById("sidebarBackdrop").addEventListener("click", () => setMobileNavOpen(false));
 
-  const sections = await L2Cabinet.getVisibleSections(roleKey);
+  // права разделов, флаг налогов и справочник ников — параллельно (раньше шли друг за другом)
+  const [sections] = await Promise.all([
+    L2Cabinet.getVisibleSections(roleKey, profile.role_id),
+    L2Taxes.init(db, profile.clan_id).catch(e => console.error(e)),
+    nickReady,
+  ]);
   // «Лидерборд» — пока в базе нет раздела leaderboard (не выполнен
   // supabase/schema_leaderboard_section.sql), показываем его тем, кому открыты
   // «Отчёты» (те же данные), сразу после них. Как только раздел появился в
@@ -340,7 +349,6 @@
   // налоги выключены клан-лидером (Админ-панель → «Налоги») — пункт меню не нужен,
   // он вёл на пустую страницу «Налоги выключены»; включить обратно можно там же в админке
   try{
-    await L2Taxes.init(db, profile.clan_id);
     if(!L2Taxes.enabled()){ const ti = sections.findIndex(s => s.key === "taxes"); if(ti >= 0) sections.splice(ti, 1); }
   }catch(e){ console.error(e); }
   const nav = document.getElementById("sidebarNav");

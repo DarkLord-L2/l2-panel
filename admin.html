@@ -679,7 +679,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/page-keys.js?v=2"></script>
-<script src="js/supabase-client.js?v=25"></script>
+<script src="js/supabase-client.js?v=27"></script>
 <script src="js/i18n.js?v=104"></script>
 <script src="js/invite.js?v=1"></script>
 <script src="js/backup.js?v=7"></script>
@@ -994,12 +994,14 @@
         input.disabled = true;
         let error;
         if(val){
+          L2Cabinet.invalidateProfile(); // своё название роли — в кэше профиля (шапка, разделы)
           ({ error } = await db.from("clan_role_labels").upsert(
             { clan_id: profile.clan_id, role_id: role.id, label: val },
             { onConflict: "clan_id,role_id" }
           ));
           if(!error) roleLabelOverrides.set(role.id, val);
         } else {
+          L2Cabinet.invalidateProfile();
           ({ error } = await db.from("clan_role_labels").delete().eq("clan_id", profile.clan_id).eq("role_id", role.id));
           if(!error) roleLabelOverrides.delete(role.id);
         }
@@ -1656,6 +1658,7 @@
         const val = nickInput.value.trim();
         nickInput.disabled = true;
         const { error } = await db.from("profiles").update({ nickname: val || null }).eq("id", u.id);
+        L2Cabinet.invalidateProfile(); // мог поменять ник самому себе — кэш профиля в этой вкладке устарел
         if(error) errEl.textContent = L2I18n.t("admin.saveNickFailed", "Не удалось сохранить ник: ") + error.message;
         nickInput.disabled = false;
       }
@@ -1681,6 +1684,7 @@
           errEl.textContent = "";
           const newRole = roles.find(r => r.id === sel.value);
           const { error } = await db.from("profiles").update({ role_id: sel.value }).eq("id", u.id);
+          L2Cabinet.invalidateProfile();
           if(error) errEl.textContent = L2I18n.t("admin.changeRoleFailed", "Не удалось изменить роль: ") + error.message;
           else logAdminAction(L2I18n.t("admin.auditRoleChanged", "Сменил роль «{name}» на «{role}»").replace("{name}", u.username).replace("{role}", newRole ? roleDisplayLabel(newRole) : sel.value));
           sel.disabled = false;
@@ -1708,6 +1712,7 @@
           errEl.textContent = "";
           const newParty = parties.find(p => p.id === partySel.value);
           const { error } = await db.from("profiles").update({ party_id: partySel.value || null }).eq("id", u.id);
+          L2Cabinet.invalidateProfile();
           if(error) errEl.textContent = L2I18n.t("admin.changePartyFailed", "Не удалось изменить пати: ") + error.message;
           else logAdminAction(L2I18n.t("admin.auditPartyChanged", "Сменил пати «{name}» на «{party}»").replace("{name}", u.username).replace("{party}", newParty ? newParty.name : "—"));
           partySel.disabled = false;
