@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=38" />
+<link rel="stylesheet" href="js/theme.css?v=39" />
 <!-- приложение на телефоне/компьютере: иконка, название, тёмная шапка -->
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" type="image/png" sizes="32x32" href="assets/app/favicon-32.png" />
@@ -123,7 +123,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=27"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=110"></script>
+<script src="js/i18n.js?v=111"></script>
 <script src="js/nick-match.js?v=5"></script>
 <script src="js/tax-flag.js?v=1"></script>
 <script>
@@ -492,10 +492,38 @@
   const wanted = location.hash.replace("#", "");
   const startKey = sections.find(s => s.key === wanted)?.key || sections[0]?.key;
 
+  // Разделы меню с подписями. Подписи — чисто визуальные, на права не влияют; порядок разделов фиксированный,
+  // а внутри раздела пункты идут так, как их расставил клан-лидер (Админ-панель → «Порядок разделов в меню»).
+  // Раздел, которого нет в списке ниже (новый, из базы), попадает в «Инструменты».
+  const NAV_SECTIONS = [
+    { id: "main", i18nKey: null, label: null, keys: ["my_cabinet"] },
+    { id: "clan", i18nKey: "navsec.clan", label: "Клан", keys: ["groups", "roster", "gear_check", "census", "taxes", "attendance"] },
+    { id: "stats", i18nKey: "navsec.stats", label: "Статистика", keys: ["reports", "leaderboard", "trends"] },
+    { id: "economy", i18nKey: "navsec.economy", label: "Экономика", keys: ["loot_split", "loot_split_party", "loot_payout"] },
+    { id: "tools", i18nKey: "navsec.tools", label: "Инструменты", keys: ["skill_cd", "abilities", "skill_panel"], rest: true },
+    { id: "system", i18nKey: "navsec.system", label: "Система", keys: ["admin"] },
+  ];
+  const knownNavKeys = new Set(NAV_SECTIONS.flatMap(g => g.keys));
   const groupedKeys = new Set(NAV_GROUPS.flatMap(g => g.keys));
-  const renderedGroups = new Set();
 
-  sections.forEach(s => {
+  NAV_SECTIONS.forEach(sec => {
+    const list = sections.filter(s => sec.keys.includes(s.key) || (sec.rest && !knownNavKeys.has(s.key)));
+    if(!list.length) return;
+    if(sec.label){
+      const head = document.createElement("div");
+      head.className = "nav-section";
+      head.setAttribute("data-i18n", sec.i18nKey);
+      head.setAttribute("data-i18n-fallback", sec.label);
+      head.textContent = L2I18n.t(sec.i18nKey, sec.label);
+      head.style.setProperty("--i", navStagger++);
+      nav.appendChild(head);
+    }
+    renderNavItems(list);
+  });
+
+  function renderNavItems(list){
+  const renderedGroups = new Set();
+  list.forEach(s => {
     if(!groupedKeys.has(s.key)){
       nav.appendChild(makeNavLink(s, false));
       return;
@@ -504,7 +532,7 @@
     if(renderedGroups.has(group.label)) return; // дочерние пункты уже выведены вместе с первым
     renderedGroups.add(group.label);
 
-    const children = sections.filter(x => group.keys.includes(x.key));
+    const children = list.filter(x => group.keys.includes(x.key));
     const startsOpen = children.some(x => x.key === startKey);
 
     const toggle = document.createElement("button");
@@ -527,6 +555,7 @@
     nav.appendChild(toggle);
     nav.appendChild(childWrap);
   });
+  }
 
   if(startKey) renderSection(startKey);
   else content.innerHTML = '<p class="hint">' + L2I18n.t("shell.noSectionsForRole", "Для вашей роли пока не открыто ни одного раздела.") + '</p>';
