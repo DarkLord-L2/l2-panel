@@ -38,10 +38,52 @@
   /* роль/пати в таблице пользователей обрезались («Пати Ли…», «Соклан…») — даём им места */
   /* ширина — по самому длинному варианту (роль/пати целиком), а не обрезанная фиксированная */
   #usersTable td select{ width:auto; min-width:0; max-width:190px; }
-  #usersTable th, #usersTable td{ padding-left:8px; padding-right:8px; }
+  #usersTable th, #usersTable td{ padding-left:6px; padding-right:6px; }
+  /* «🔒 Защищён» и «Снять защиту» — друг под другом, а не в строку (иначе колонка широкая) */
+  #usersTable td .btn{ white-space:nowrap; }
+  .user-del-btn{ width:36px; height:34px; padding:0; display:grid; place-items:center; border-radius:9px; }
+  .user-del-btn svg{ width:16px; height:16px; }
   #usersTable td input[type="text"]{ min-width:110px; width:100%; }
   /* на узком экране таблица прокручивается сама, а не растягивает всю страницу вбок */
   .users-table-scroll{ overflow-x:auto; }
+  /* «Новый пользователь»: Один / Несколько сразу, 🎲 у пароля */
+  .nu-head{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:6px; }
+  .nu-head h2{ margin:0; }
+  .nu-modes{ display:inline-flex; gap:2px; padding:3px; border-radius:10px; background:#111215; border:1px solid var(--border-lit); }
+  .nu-modes button{ font-family:inherit; font-size:12.5px; font-weight:600; padding:6px 14px; border-radius:7px; border:none; background:none; color: var(--text-dim); cursor:pointer; }
+  .nu-modes button:hover{ color: var(--text); }
+  .nu-modes button.active{ background: var(--panel-3); color: var(--gold); box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 2px 6px rgba(0,0,0,.35); }
+  .pw-gen-row{ display:flex; gap:6px; }
+  .pw-gen-row input{ flex:1; min-width:0; font-family: ui-monospace, Consolas, monospace; letter-spacing:.02em; }
+  .pw-gen{ flex:none; width:36px; padding:0; font-size:15px; }
+  .bulk-tools{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin:6px 0 10px; }
+  .bulk-tools .field{ margin:0; }
+  .bulk-count input{ width:80px; }
+  .bulk-suffix input{ width:110px; }
+  .bulk-paste{ display:flex; gap:8px; align-items:flex-start; margin:0 0 10px; }
+  .bulk-paste textarea{ flex:1; min-height:80px; resize:vertical; }
+  .bulk-all{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; padding:10px 12px; margin:0 0 10px; border-radius:10px;
+    background: var(--accent-soft); border:1px solid color-mix(in srgb, var(--gold) 20%, transparent); }
+  .bulk-all-lbl{ font-size:12.5px; font-weight:600; color: var(--gold); }
+  .bulk-all select{ width:auto; }
+  .bulk-table td{ padding:5px 6px; vertical-align:middle; }
+  .bulk-table input[type="text"]{ width:100%; min-width:110px; padding:6px 8px; font-size:13px; }
+  .bulk-table .b-pass{ min-width:100px; }
+  .bulk-table select{ width:auto; min-width:0; padding:6px 8px; font-size:13px; }
+  .bulk-table .b-n{ color: var(--text-dim); width:28px; text-align:center; }
+  .bulk-table .b-st{ white-space:nowrap; min-width:70px; }
+  .bulk-table .b-del, .bulk-table .b-copy{ padding:3px 9px; }
+  .bulk-table input.b-bad{ border-color: var(--danger-lit); box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 25%, transparent); }
+  .bulk-table tr.b-done td{ opacity:.75; }
+  .b-ok{ color: var(--ok); font-weight:700; margin-right:6px; }
+  .b-err{ color: var(--danger-lit); font-size:12px; margin-right:6px; }
+  .b-warn{ color:#e8b44a; margin-right:6px; cursor:help; }
+  .b-busy{ color: var(--text-dim); }
+  .bulk-foot{ display:flex; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap; }
+  .bulk-spacer{ flex:1; }
+  .bulk-out{ width:100%; margin-top:8px; font-family: ui-monospace, Consolas, monospace; font-size:12px; }
+  .bulk-out-actions{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:8px; }
+  .bulk-out-actions .hint{ margin:0; }
   /* 🔗 ссылка для входа */
   .inv-btn{ width:38px; height:34px; padding:0; display:grid; place-items:center; border-radius:9px; }
   .inv-btn svg{ width:17px; height:17px; }
@@ -198,7 +240,13 @@
     <div class="admin-content">
     <div class="admin-tab-panel" data-panel="users">
   <section class="card">
-    <h2 data-i18n="admin.newUserTitle">Новый пользователь</h2>
+    <div class="nu-head">
+      <h2 data-i18n="admin.newUserTitle">Новый пользователь</h2>
+      <div class="nu-modes" id="nuModes">
+        <button type="button" data-nu="one" class="active" data-i18n="admin.nuOne">Один</button>
+        <button type="button" data-nu="many" data-i18n="admin.nuMany">Несколько сразу</button>
+      </div>
+    </div>
     <form id="createUserForm">
       <div class="form-row">
         <div class="field">
@@ -207,7 +255,10 @@
         </div>
         <div class="field">
           <label for="newPassword" data-i18n="admin.passwordLabel">Пароль</label>
-          <input type="text" id="newPassword" required minlength="6" />
+          <div class="pw-gen-row">
+            <input type="text" id="newPassword" required minlength="6" autocomplete="off" spellcheck="false" />
+            <button type="button" class="btn pw-gen" id="newPasswordGen" data-i18n-attr="title:admin.genPassword" title="Сгенерировать пароль">🎲</button>
+          </div>
         </div>
         <div class="field">
           <label for="newNickname" data-i18n="admin.nicknameOptionalLabel">Ник в игре (необязательно)</label>
@@ -228,6 +279,45 @@
       <!-- ссылка для входа только что созданного пользователя (пароль ещё известен) -->
       <div class="inv-result" id="createUserInvite" style="display:none;"></div>
     </form>
+
+    <!-- «Несколько сразу»: таблица строк, общие роль/пати одним кликом, пароли генерируются сами -->
+    <div id="bulkCreate" style="display:none;">
+      <div class="bulk-tools">
+        <div class="field bulk-count"><label for="bulkCount" data-i18n="admin.bulkCount">Сколько</label><input type="number" id="bulkCount" min="1" max="50" value="5" /></div>
+        <button type="button" class="btn" id="bulkSetCount" data-i18n="admin.bulkSetCount">Сделать строк</button>
+        <button type="button" class="btn btn-ghost" id="bulkClear" data-i18n="admin.bulkClear">Очистить</button>
+        <button type="button" class="btn" id="bulkFromCensus" disabled data-i18n="admin.bulkFromCensusLoading">Из переписи…</button>
+        <button type="button" class="btn" id="bulkPasteBtn" data-i18n="admin.bulkPaste">Вставить список ников</button>
+        <div class="field bulk-suffix"><label for="bulkSuffix" data-i18n="admin.bulkSuffix">Окончание логина</label><input type="text" id="bulkSuffix" maxlength="10" /></div>
+      </div>
+      <p class="hint" id="bulkNote" style="margin:-4px 0 10px;"></p>
+      <div class="bulk-paste" id="bulkPasteBox" style="display:none;">
+        <textarea id="bulkPasteText" rows="4" data-i18n-attr="placeholder:admin.bulkPastePlaceholder" placeholder="По одному нику в строке (или через запятую)"></textarea>
+        <button type="button" class="btn btn-primary" id="bulkPasteApply" data-i18n="admin.bulkPasteApply">Добавить в таблицу</button>
+      </div>
+      <div class="bulk-all">
+        <span class="bulk-all-lbl" data-i18n="admin.bulkForAll">Всем сразу:</span>
+        <select id="bulkAllRole"></select>
+        <select id="bulkAllParty"></select>
+        <label class="checkbox-row" style="margin:0;"><input type="checkbox" id="bulkAddToGroup" checked /><span data-i18n="admin.bulkAddToGroup">и в состав группы</span></label>
+        <button type="button" class="btn" id="bulkApplyAll" data-i18n="admin.bulkApplyAll">Применить ко всем</button>
+        <button type="button" class="btn" id="bulkRegenAll" data-i18n="admin.bulkRegenAll">🎲 Новые пароли всем</button>
+      </div>
+      <div class="users-table-scroll">
+        <table class="data-table bulk-table">
+          <thead><tr><th>#</th><th data-i18n="admin.colNickname">Ник в игре</th><th data-i18n="admin.colLogin">Логин</th><th data-i18n="admin.passwordLabel">Пароль</th><th data-i18n="admin.colRole">Роль</th><th data-i18n="admin.colParty">Пати</th><th></th></tr></thead>
+          <tbody id="bulkBody"></tbody>
+        </table>
+      </div>
+      <div class="bulk-foot">
+        <button type="button" class="btn" id="bulkAddRow" data-i18n="admin.bulkAddRow">+ Строка</button>
+        <span class="bulk-spacer"></span>
+        <span class="hint" id="bulkSummary"></span>
+        <button type="button" class="btn btn-primary" id="bulkCreateBtn" data-i18n="admin.bulkCreate">Создать всех</button>
+      </div>
+      <p class="error-msg" id="bulkErr"></p>
+      <div class="inv-result" id="bulkResult" style="display:none;"></div>
+    </div>
   </section>
 
   <section class="card">
@@ -577,7 +667,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=25"></script>
-<script src="js/i18n.js?v=98"></script>
+<script src="js/i18n.js?v=100"></script>
 <script src="js/invite.js?v=1"></script>
 <script src="js/backup.js?v=7"></script>
 <script src="js/num-format.js?v=1"></script>
@@ -1519,7 +1609,7 @@
       nickInput.type = "text";
       nickInput.value = u.nickname || "";
       nickInput.placeholder = "—";
-      nickInput.style.width = "140px";
+      nickInput.style.width = "124px";
       async function saveNickname(){
         const errEl = document.getElementById("usersError");
         errEl.textContent = "";
@@ -1589,7 +1679,7 @@
       if(u.delete_protected){
         const badge = document.createElement("span");
         badge.textContent = L2I18n.t("admin.protectedBadge", "🔒 Защищён");
-        badge.style.cssText = "font-size:12px; color: var(--text-dim); margin-right:6px;";
+        badge.style.cssText = "display:block; font-size:12px; color: var(--text-dim); margin:0 0 3px;";
         const unprotectBtn = document.createElement("button");
         unprotectBtn.className = "btn";
         unprotectBtn.textContent = L2I18n.t("admin.removeProtectionBtn", "Снять защиту");
@@ -1649,7 +1739,8 @@
           const s = document.createElement("div");
           s.className = "inv-status" + (st.used_at ? " used" : (st.expired ? " expired" : " live"));
           s.textContent = st.used_at
-            ? L2I18n.t("admin.inviteUsed", "вошёл {date}").replace("{date}", new Date(st.used_at).toLocaleDateString(L2I18n.locale()))
+            // коротко «вошёл 17.11» — полная дата раздувала колонку и всю таблицу вбок
+            ? L2I18n.t("admin.inviteUsed", "вошёл {date}").replace("{date}", new Date(st.used_at).toLocaleDateString(L2I18n.locale(), { day: "2-digit", month: "2-digit" }))
             : st.expired ? L2I18n.t("admin.inviteExpired", "ссылка истекла") : L2I18n.t("admin.inviteLive", "ссылка ждёт");
           tdInvite.appendChild(s);
         }
@@ -1663,8 +1754,11 @@
       const tdActions = document.createElement("td");
       if(!isSelf){
         const delBtn = document.createElement("button");
-        delBtn.className = "btn btn-danger";
-        delBtn.textContent = L2I18n.t("admin.deleteBtn", "Удалить");
+        delBtn.className = "btn btn-danger user-del-btn";
+        // иконка корзины вместо слова — колонка уже, таблица не вылезает вбок; текст — в подсказке
+        delBtn.title = L2I18n.t("admin.deleteBtn", "Удалить");
+        delBtn.setAttribute("aria-label", delBtn.title);
+        delBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg>';
         delBtn.addEventListener("click", async () => {
           if(!confirm(L2I18n.t("admin.confirmDeleteUser", "Удалить пользователя «{name}»? Это необратимо.").replace("{name}", u.username))) return;
           let phrase;
@@ -2149,6 +2243,295 @@
       body.appendChild(tr);
     });
   }
+
+  // ---------- создание пользователей: 🎲 пароль, логин из ника, «Несколько сразу» ----------
+  const TRANSLIT = { "а":"a","б":"b","в":"v","г":"g","ґ":"g","д":"d","е":"e","ё":"e","є":"ye","ж":"zh","з":"z","и":"i","і":"i","ї":"yi","й":"y",
+    "к":"k","л":"l","м":"m","н":"n","о":"o","п":"p","р":"r","с":"s","т":"t","у":"u","ф":"f","х":"h","ц":"ts","ч":"ch","ш":"sh","щ":"sch",
+    "ъ":"","ы":"y","ь":"","э":"e","ю":"yu","я":"ya" };
+  function translit(s){
+    return [...String(s || "")].map(ch => {
+      const low = ch.toLowerCase(), tr = TRANSLIT[low];
+      if(tr === undefined) return ch;
+      return (ch !== low && tr) ? tr[0].toUpperCase() + tr.slice(1) : tr;
+    }).join("");
+  }
+  const nickKey = (n) => String(n || "").trim().toLowerCase();
+  const takenLogins = () => new Set((lastUsersData || []).map(u => String(u.username || "").toLowerCase()));
+  // окончание логина — как у большинства уже созданных (у вас «X5»: Лунтик → LuntikX5)
+  function detectSuffix(){
+    const names = (lastUsersData || []).map(u => u.username || "");
+    if(names.length < 2) return "";
+    for(let k = 4; k >= 1; k--){
+      const cnt = new Map();
+      names.forEach(n => { if(n.length > k + 2){ const s = n.slice(-k); cnt.set(s, (cnt.get(s) || 0) + 1); } });
+      const best = [...cnt.entries()].sort((a, b) => b[1] - a[1])[0];
+      if(best && best[1] >= Math.max(2, names.length * .6)) return best[0];
+    }
+    return "";
+  }
+  // логин из ника: латиница (кириллицу — транслитом) + окончание; занят — добавляем цифру
+  function loginFromNick(nick, suffix, taken){
+    const sfx = String(suffix || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    let base = translit(nick).replace(/[^a-zA-Z0-9_-]/g, "");
+    if(base.length < 2) base = "player";
+    base = base.slice(0, Math.max(3, 30 - sfx.length));
+    let login = base + sfx, n = 2;
+    while(taken.has(login.toLowerCase())){ login = base + n + sfx; n++; }
+    return login;
+  }
+  function createErrText(msg){
+    const m = String(msg || "");
+    if(m === "invalid_username") return L2I18n.t("admin.errLogin", "логин: 3–32 символа, латиница, цифры, - и _");
+    if(m === "weak_password") return L2I18n.t("admin.inviteWeak", "Пароль — минимум 6 символов.");
+    if(/already|registered|exists|duplicate/i.test(m)) return L2I18n.t("admin.errLoginTaken", "такой логин уже есть");
+    return m;
+  }
+
+  // одиночная форма: 🎲 и логин из ника, пока логин не трогали руками
+  document.getElementById("newPasswordGen").addEventListener("click", () => { document.getElementById("newPassword").value = L2Invite.generatePassword(); });
+  let newLoginTouched = false;
+  document.getElementById("newUsername").addEventListener("input", (e) => { newLoginTouched = !!e.target.value; });
+  document.getElementById("newNickname").addEventListener("input", (e) => {
+    if(newLoginTouched) return;
+    const nick = e.target.value.trim();
+    document.getElementById("newUsername").value = nick ? loginFromNick(nick, detectSuffix(), takenLogins()) : "";
+  });
+  document.getElementById("createUserForm").addEventListener("reset", () => { newLoginTouched = false; });
+
+  // ---- «Несколько сразу» ----
+  const $b = (id) => document.getElementById(id);
+  let bulkRows = [], bulkInited = false, censusNoAccount = [];
+  function defaultRoleId(){ return (roles.find(r => r.key === "obychniy") || roles[roles.length - 1] || {}).id || ""; }
+  function newBulkRow(nick){
+    return { nick: nick || "", login: "", loginEdited: false, pass: L2Invite.generatePassword(),
+      roleId: $b("bulkAllRole").value || defaultRoleId(), partyId: $b("bulkAllParty").value || "", status: null, msg: "", link: null, note: "" };
+  }
+  function refreshBulkLogins(){
+    const taken = takenLogins(), sfx = $b("bulkSuffix").value;
+    bulkRows.forEach(r => { if(r.status === "ok" || r.loginEdited) taken.add(r.login.toLowerCase()); });
+    bulkRows.forEach(r => {
+      if(r.status === "ok" || r.loginEdited) return;
+      r.login = r.nick.trim() ? loginFromNick(r.nick.trim(), sfx, taken) : "";
+      if(r.login) taken.add(r.login.toLowerCase());
+    });
+  }
+  // проблемы строки (пустые строки — просто пропускаются)
+  function rowProblem(r, i){
+    if(r.status === "ok") return "";
+    if(!r.nick.trim() && !r.login.trim()) return "";
+    if(!/^[a-zA-Z0-9_-]{3,32}$/.test(r.login.trim())) return L2I18n.t("admin.errLogin", "логин: 3–32 символа, латиница, цифры, - и _");
+    const lg = r.login.trim().toLowerCase();
+    if(takenLogins().has(lg)) return L2I18n.t("admin.errLoginTaken", "такой логин уже есть");
+    if(bulkRows.some((x, j) => j !== i && x.status !== "ok" && x.login.trim().toLowerCase() === lg)) return L2I18n.t("admin.errLoginDup", "логин повторяется в таблице");
+    if(r.pass.length < 6) return L2I18n.t("admin.inviteWeak", "Пароль — минимум 6 символов.");
+    const nk = nickKey(r.nick);
+    if(nk && (lastUsersData || []).some(u => nickKey(u.nickname) === nk)) return L2I18n.t("admin.errNickHasAccount", "у этого ника уже есть аккаунт");
+    return "";
+  }
+  function optionsHtml(list, labelFn, selected, withEmpty){
+    return (withEmpty ? `<option value="">—</option>` : "") +
+      list.map(x => `<option value="${escapeHtml(x.id)}"${x.id === selected ? " selected" : ""}>${labelFn(x)}</option>`).join("");
+  }
+  function renderBulk(){
+    const body = $b("bulkBody");
+    body.innerHTML = bulkRows.map((r, i) => {
+      const done = r.status === "ok", dis = done || r.status === "busy" ? " disabled" : "";
+      return `<tr data-i="${i}" class="b-row${done ? " b-done" : ""}">` +
+        `<td class="b-n">${i + 1}</td>` +
+        `<td><input type="text" class="b-nick" value="${escapeHtml(r.nick)}" placeholder="${escapeHtml(L2I18n.t("admin.colNickname", "Ник в игре"))}"${dis} /></td>` +
+        `<td><input type="text" class="b-login" value="${escapeHtml(r.login)}" spellcheck="false"${dis} /></td>` +
+        `<td><div class="pw-gen-row"><input type="text" class="b-pass" value="${escapeHtml(r.pass)}" spellcheck="false"${dis} />` +
+          `<button type="button" class="btn pw-gen b-gen" title="${escapeHtml(L2I18n.t("admin.genPassword", "Сгенерировать пароль"))}"${dis}>🎲</button></div></td>` +
+        `<td><select class="b-role"${dis}>${optionsHtml(roles, x => escapeHtml(roleDisplayLabel(x)), r.roleId, false)}</select></td>` +
+        `<td><select class="b-party"${dis}>${optionsHtml(parties, x => escapeHtml(x.name), r.partyId, true)}</select></td>` +
+        `<td class="b-st"></td></tr>`;
+    }).join("");
+    bulkRows.forEach((r, i) => renderBulkStatus(i));
+    updateBulkSummary();
+  }
+  function renderBulkStatus(i){
+    const r = bulkRows[i], tr = $b("bulkBody").querySelector(`tr[data-i="${i}"]`); if(!tr) return;
+    const st = tr.querySelector(".b-st");
+    const prob = rowProblem(r, i);
+    tr.querySelector(".b-login").classList.toggle("b-bad", !!prob);
+    tr.querySelector(".b-login").title = prob;
+    if(r.status === "busy") st.innerHTML = `<span class="b-busy">…</span>`;
+    else if(r.status === "ok") st.innerHTML = `<span class="b-ok" title="${escapeHtml(r.note || "")}">✓</span>` +
+      (r.link ? `<button type="button" class="btn b-copy" data-link="${escapeHtml(r.link)}" title="${escapeHtml(L2I18n.t("admin.bulkCopyLink", "Скопировать ссылку для входа"))}">🔗</button>` : "");
+    else if(r.status === "err") st.innerHTML = `<span class="b-err" title="${escapeHtml(r.msg)}">✗ ${escapeHtml(r.msg)}</span><button type="button" class="btn b-del" title="${escapeHtml(L2I18n.t("common.delete", "Удалить"))}">×</button>`;
+    else st.innerHTML = (prob ? `<span class="b-warn" title="${escapeHtml(prob)}">⚠</span>` : "") + `<button type="button" class="btn b-del" title="${escapeHtml(L2I18n.t("common.delete", "Удалить"))}">×</button>`;
+  }
+  function updateBulkSummary(){
+    const todo = bulkRows.filter(r => r.status !== "ok" && (r.nick.trim() || r.login.trim()));
+    const bad = bulkRows.filter((r, i) => rowProblem(r, i)).length;
+    $b("bulkSummary").textContent = L2I18n.t("admin.bulkSummary", "К созданию: {n}").replace("{n}", todo.length) +
+      (bad ? " · " + L2I18n.t("admin.bulkProblems", "с ошибками: {n}").replace("{n}", bad) : "");
+    $b("bulkCreateBtn").textContent = L2I18n.t("admin.bulkCreateN", "Создать всех ({n})").replace("{n}", todo.length);
+    $b("bulkCreateBtn").disabled = !todo.length || !!bad;
+  }
+  function addBulkNicks(nicks){
+    const clean = [...new Set(nicks.map(s => s.trim()).filter(Boolean))];
+    const have = new Set(bulkRows.map(r => nickKey(r.nick)).filter(Boolean));
+    clean.filter(n => !have.has(nickKey(n))).forEach(n => {
+      const empty = bulkRows.find(r => !r.nick.trim() && !r.login.trim() && r.status !== "ok");
+      if(empty) empty.nick = n; else if(bulkRows.length < 50) bulkRows.push(newBulkRow(n));
+    });
+    refreshBulkLogins(); renderBulk();
+  }
+  async function initBulk(){
+    if(bulkInited) return;
+    bulkInited = true;
+    if(!lastUsersData || !lastUsersData.length) await loadUsers();
+    $b("bulkAllRole").innerHTML = optionsHtml(roles, x => escapeHtml(roleDisplayLabel(x)), defaultRoleId(), false);
+    $b("bulkAllParty").innerHTML = `<option value="">${escapeHtml(L2I18n.t("admin.bulkNoParty", "Пати: —"))}</option>` + optionsHtml(parties, x => escapeHtml(x.name), "", false);
+    $b("bulkSuffix").value = detectSuffix();
+    bulkRows = Array.from({ length: Number($b("bulkCount").value) || 5 }, () => newBulkRow(""));
+    renderBulk();
+    // кто в последней переписи, но без аккаунта — кандидаты одним кликом
+    try{
+      const { rows, weeks } = await L2Cabinet.censusWeeks(1);
+      const have = new Set((lastUsersData || []).map(u => nickKey(u.nickname)).filter(Boolean));
+      censusNoAccount = [...new Set((rows || []).filter(r => r.week_start === weeks[0]).map(r => r.nickname))]
+        .filter(n => !have.has(nickKey(n))).sort((a, b) => a.localeCompare(b));
+      $b("bulkFromCensus").textContent = L2I18n.t("admin.bulkFromCensus", "Из переписи без аккаунта ({n})").replace("{n}", censusNoAccount.length);
+      $b("bulkFromCensus").disabled = !censusNoAccount.length;
+    }catch(e){ console.error(e); $b("bulkFromCensus").style.display = "none"; }
+  }
+  function setNuMode(m){
+    document.querySelectorAll("#nuModes [data-nu]").forEach(x => x.classList.toggle("active", x.dataset.nu === m));
+    $b("createUserForm").style.display = m === "one" ? "" : "none";
+    $b("bulkCreate").style.display = m === "many" ? "" : "none";
+    if(m === "many") initBulk();
+  }
+  $b("nuModes").addEventListener("click", (e) => { const b = e.target.closest("[data-nu]"); if(b) setNuMode(b.dataset.nu); });
+
+  // «Сделать строк»: ровно N строк — недостающие добавляем пустыми, лишние убираем с конца
+  // (и заполненные тоже: раньше убирались только пустые, и после «Из переписи» на 50 строк
+  // кнопка «не реагировала»). Уже созданные (✓) не трогаем — они просто остаются сверх N
+  $b("bulkSetCount").addEventListener("click", () => {
+    const n = Math.max(1, Math.min(50, Number($b("bulkCount").value) || 1));
+    $b("bulkCount").value = n;
+    const pending = bulkRows.filter(r => r.status !== "ok");
+    if(pending.length > n){
+      const drop = new Set(pending.slice(n));
+      bulkRows = bulkRows.filter(r => !drop.has(r));
+    }
+    while(bulkRows.filter(r => r.status !== "ok").length < n) bulkRows.push(newBulkRow(""));
+    $b("bulkNote").textContent = "";
+    refreshBulkLogins(); renderBulk();
+  });
+  // «Очистить» — начать заново: N пустых строк, итоги прошлого создания убираем
+  $b("bulkClear").addEventListener("click", () => {
+    const n = Math.max(1, Math.min(50, Number($b("bulkCount").value) || 5));
+    bulkRows = Array.from({ length: n }, () => newBulkRow(""));
+    $b("bulkResult").style.display = "none"; $b("bulkResult").innerHTML = "";
+    $b("bulkErr").textContent = ""; $b("bulkNote").textContent = "";
+    renderBulk();
+  });
+  $b("bulkAddRow").addEventListener("click", () => { if(bulkRows.length < 50){ bulkRows.push(newBulkRow("")); renderBulk(); } });
+  $b("bulkFromCensus").addEventListener("click", () => {
+    const before = new Set(bulkRows.map(r => nickKey(r.nick)).filter(Boolean));
+    addBulkNicks(censusNoAccount);
+    const added = bulkRows.filter(r => r.nick.trim() && !before.has(nickKey(r.nick))).length;
+    const left = censusNoAccount.filter(n => !bulkRows.some(r => nickKey(r.nick) === nickKey(n))).length;
+    $b("bulkCount").value = bulkRows.filter(r => r.status !== "ok").length;
+    $b("bulkNote").textContent = left
+      ? L2I18n.t("admin.bulkCensusPartial", "Добавлено {a}, ещё {left} не влезли (максимум 50 строк за раз). Уберите лишних кнопкой «Сделать строк» или крестиками, создайте — и нажмите ещё раз.").replace("{a}", added).replace("{left}", left)
+      : L2I18n.t("admin.bulkCensusAll", "Добавлено {a}.").replace("{a}", added);
+  });
+  $b("bulkPasteBtn").addEventListener("click", () => { const box = $b("bulkPasteBox"); box.style.display = box.style.display === "none" ? "" : "none"; if(box.style.display === "") $b("bulkPasteText").focus(); });
+  $b("bulkPasteApply").addEventListener("click", () => {
+    addBulkNicks($b("bulkPasteText").value.split(/[\n,;]+/));
+    $b("bulkPasteText").value = ""; $b("bulkPasteBox").style.display = "none";
+  });
+  $b("bulkSuffix").addEventListener("input", () => { refreshBulkLogins(); renderBulk(); });
+  $b("bulkApplyAll").addEventListener("click", () => {
+    bulkRows.forEach(r => { if(r.status === "ok") return; r.roleId = $b("bulkAllRole").value; r.partyId = $b("bulkAllParty").value; });
+    renderBulk();
+  });
+  $b("bulkRegenAll").addEventListener("click", () => { bulkRows.forEach(r => { if(r.status !== "ok") r.pass = L2Invite.generatePassword(); }); renderBulk(); });
+
+  $b("bulkBody").addEventListener("input", (e) => {
+    const tr = e.target.closest("tr[data-i]"); if(!tr) return;
+    const i = Number(tr.dataset.i), r = bulkRows[i];
+    if(e.target.classList.contains("b-nick")){
+      r.nick = e.target.value;
+      refreshBulkLogins();
+      // обновляем только поля логинов, не перерисовывая таблицу (иначе слетает курсор)
+      bulkRows.forEach((x, j) => { const inp = $b("bulkBody").querySelector(`tr[data-i="${j}"] .b-login`); if(inp && inp !== document.activeElement) inp.value = x.login; });
+    } else if(e.target.classList.contains("b-login")){ r.login = e.target.value.trim(); r.loginEdited = !!r.login; if(!r.login) refreshBulkLogins(); }
+    else if(e.target.classList.contains("b-pass")) r.pass = e.target.value.trim();
+    bulkRows.forEach((x, j) => renderBulkStatus(j));
+    updateBulkSummary();
+  });
+  $b("bulkBody").addEventListener("change", (e) => {
+    const tr = e.target.closest("tr[data-i]"); if(!tr) return;
+    const r = bulkRows[Number(tr.dataset.i)];
+    if(e.target.classList.contains("b-role")) r.roleId = e.target.value;
+    if(e.target.classList.contains("b-party")) r.partyId = e.target.value;
+  });
+  $b("bulkBody").addEventListener("click", (e) => {
+    const tr = e.target.closest("tr[data-i]"); if(!tr) return;
+    const i = Number(tr.dataset.i);
+    if(e.target.closest(".b-del")){ bulkRows.splice(i, 1); refreshBulkLogins(); renderBulk(); return; }
+    if(e.target.closest(".b-gen")){ bulkRows[i].pass = L2Invite.generatePassword(); tr.querySelector(".b-pass").value = bulkRows[i].pass; renderBulkStatus(i); return; }
+    const cp = e.target.closest(".b-copy");
+    if(cp){ navigator.clipboard?.writeText(cp.dataset.link).then(() => { cp.textContent = "✓"; setTimeout(() => { cp.textContent = "🔗"; }, 1200); }).catch(() => {}); }
+  });
+
+  $b("bulkCreateBtn").addEventListener("click", async () => {
+    const err = $b("bulkErr"); err.textContent = "";
+    const todo = bulkRows.filter(r => r.status !== "ok" && (r.nick.trim() || r.login.trim()));
+    if(!todo.length) return;
+    if(bulkRows.some((r, i) => rowProblem(r, i))){ err.textContent = L2I18n.t("admin.bulkFixFirst", "Сначала исправьте строки с ⚠."); return; }
+    if(!confirm(L2I18n.t("admin.bulkConfirm", "Создать пользователей: {n}?").replace("{n}", todo.length))) return;
+    const btn = $b("bulkCreateBtn"); btn.disabled = true;
+    const addToGroup = $b("bulkAddToGroup").checked;
+    let groupOf = new Map();
+    if(addToGroup && todo.some(r => r.partyId && r.nick.trim())){
+      const { data } = await db.from("clan_group_members").select("group_id, nickname");
+      groupOf = new Map((data || []).map(m => [nickKey(m.nickname), m.group_id]));
+    }
+    for(const r of todo){
+      const i = bulkRows.indexOf(r);
+      r.status = "busy"; renderBulk();
+      try{
+        const role = roles.find(x => x.id === r.roleId);
+        const created = await L2Cabinet.adminCreateUser({ username: r.login.trim(), password: r.pass, nickname: r.nick.trim() || null, role_key: role?.key, party_id: r.partyId || null });
+        r.status = "ok";
+        logAdminAction(L2I18n.t("admin.auditUserCreated", "Создал пользователя «{name}» ({role})").replace("{name}", r.login.trim()).replace("{role}", role ? roleDisplayLabel(role) : "—"));
+        // в состав группы (страница «Группы») — если человек ещё ни в одной группе
+        if(addToGroup && r.partyId && r.nick.trim()){
+          const inGroup = groupOf.get(nickKey(r.nick));
+          if(!inGroup){
+            const { error } = await db.from("clan_group_members").insert({ group_id: r.partyId, nickname: r.nick.trim() });
+            if(error) r.note = error.message; else groupOf.set(nickKey(r.nick), r.partyId);
+          } else if(inGroup !== r.partyId){
+            r.note = L2I18n.t("admin.bulkInOtherGroup", "уже в группе «{g}» — состав не менял").replace("{g}", (parties.find(p => p.id === inGroup) || {}).name || "?");
+          }
+        }
+        if(created && created.id){
+          try{ r.link = await L2Invite.makeLink({ db, clanId: profile.clan_id, userId: created.id, createdBy: profile.id, username: r.login.trim(), password: r.pass }); }
+          catch(e2){ r.note = (r.note ? r.note + "; " : "") + inviteErrorText(e2); }
+        }
+      }catch(e){ r.status = "err"; r.msg = createErrText(e.message); }
+      renderBulk();
+    }
+    btn.disabled = false;
+    const ok = todo.filter(r => r.status === "ok");
+    const res = $b("bulkResult");
+    const lines = ok.map(r => `${r.nick.trim() || r.login}: ${r.link || (r.login + " / " + r.pass)}`).join("\n");
+    res.innerHTML = `<b>${escapeHtml(L2I18n.t("admin.bulkDone", "Создано: {ok} из {n}").replace("{ok}", ok.length).replace("{n}", todo.length))}</b>` +
+      (ok.length ? `<textarea class="bulk-out" rows="${Math.min(8, ok.length + 1)}" readonly>${escapeHtml(lines)}</textarea>` +
+        `<div class="bulk-out-actions"><button type="button" class="btn btn-primary" id="bulkCopyAll">${escapeHtml(L2I18n.t("admin.bulkCopyAll", "Скопировать всё"))}</button>` +
+        `<span class="hint">${escapeHtml(L2I18n.t("admin.bulkOutHint", "Каждому — его строку в личку Telegram: ник и одноразовая ссылка для входа. Если ссылка не создалась — там логин и пароль."))}</span></div>` : "");
+    res.style.display = "";
+    $b("bulkCopyAll")?.addEventListener("click", (e) => {
+      const b = e.currentTarget;
+      navigator.clipboard?.writeText(lines).then(() => { b.textContent = "✓ " + L2I18n.t("admin.inviteCopied", "Скопировано"); }).catch(() => { res.querySelector("textarea").select(); document.execCommand("copy"); });
+    });
+    await loadUsers();
+  });
 
   await loadLookups();
   fillSelect(document.getElementById("newRole"), roles, r => escapeHtml(roleDisplayLabel(r)), false);
