@@ -44,7 +44,12 @@ Deno.serve(async (req) => {
   if (userErr || !userData?.user) return json({ error: "unauthenticated" }, 401);
 
   const { data: isAdmin, error: adminErr } = await callerClient.rpc("is_platform_admin");
-  if (adminErr || !isAdmin) return json({ error: "forbidden" }, 403);
+  if (adminErr || !isAdmin) {
+    // причина в тексте ошибки: либо сбой самой проверки, либо не владелец, либо сессия без кода 2FA (aal1 при включённом require_mfa)
+    let aal = "?";
+    try { aal = JSON.parse(atob(authHeader.replace("Bearer ", "").split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).aal ?? "?"; } catch { /* не критично */ }
+    return json({ error: "forbidden: " + (adminErr ? "rpc_error " + adminErr.message : "not_platform_admin") + " (aal=" + aal + ")" }, 403);
+  }
 
   let body: { clan_id?: string };
   try {

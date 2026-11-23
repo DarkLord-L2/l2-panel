@@ -186,7 +186,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=29"></script>
-<script src="js/i18n.js?v=138"></script>
+<script src="js/i18n.js?v=140"></script>
 <script>
 (async function(){
   // тот же публичный URL проекта, что и в js/supabase-client.js — не тянем его оттуда,
@@ -254,6 +254,9 @@
     hasOwnerSql = !res.error;
     if(res.error) res = await client.from("clans").select("id, name, leader_username, access_enabled").order("name");
     if(res.error){ errEl.textContent = res.error.message; return; }
+    // пустой список без ошибки = база не признала в этой сессии владельца (RLS молча отдаёт ноль строк): сессию сменили в другой
+    // вкладке (например «Войти в клан»), истекла проверка 2FA и т.п. Не рисуем пустую таблицу — просим войти заново
+    if(!(res.data || []).length && !(await ensureOwner())) return;
     document.getElementById("needSqlBanner").style.display = hasOwnerSql ? "none" : "";
 
     const stats = new Map();
@@ -292,9 +295,12 @@
         };
         paintLeft();
         const save = async (v) => {
-          const { error } = await client.from("clans").update({ paid_until: v || null }).eq("id", c.id);
+          // .select("id"): база при нехватке прав не выдаёт ошибку, а просто не меняет строки — по пустому ответу это видно
+          const { data: upd, error } = await client.from("clans").update({ paid_until: v || null }).eq("id", c.id).select("id");
+          if(!error && !(upd || []).length){ inp.value = c.paid_until || ""; paintLeft(); await ensureOwner(); errEl.textContent = T("oc.notApplied", "Не применилось: у этой сессии нет прав владельца. Войдите в консоль заново."); return; }
           if(error){ errEl.textContent = error.message; inp.value = c.paid_until || ""; paintLeft(); return; }
           c.paid_until = v || null; paintLeft();
+          await loadClans(); // сразу перерисовать: от даты зависит и колонка «Доступ» (срок вышел → доступ закрыт, срок продлён → открыт)
         };
         inp.addEventListener("change", () => save(inp.value));
         const plus = document.createElement("button"); plus.type = "button"; plus.className = "btn"; plus.textContent = T("oc.plus30", "+30 дн.");
@@ -311,10 +317,14 @@
         wrap.append(inp, plus, none, left); paidTd.appendChild(wrap);
       } else paidTd.textContent = "—";
 
+      // фактический доступ: отключён вручную ИЛИ срок оплаты вышел (в базе доступ в обоих случаях закрывается сам, без расписания)
+      const lapsed = hasOwnerSql && !!c.paid_until && c.paid_until < isoToday();
+      const open = c.access_enabled && !lapsed;
       const accessTd = td();
-      const sp = document.createElement("span"); sp.className = c.access_enabled ? "oc-access-on" : "oc-access-off";
-      sp.textContent = c.access_enabled ? T("oc.yes", "Да") : T("oc.no", "Нет");
+      const sp = document.createElement("span"); sp.className = open ? "oc-access-on" : "oc-access-off";
+      sp.textContent = open ? T("oc.yes", "Да") : T("oc.no", "Нет");
       accessTd.appendChild(sp);
+      if(lapsed && c.access_enabled) accessTd.appendChild(div("oc-note", T("oc.autoClosed", "Срок оплаты вышел — доступ закрыт автоматически. Продлите дату, и он откроется сам.")));
       if(!c.access_enabled && c.access_note) accessTd.appendChild(div("oc-note", T("oc.noteShown", "Сообщение клану: ") + c.access_note));
 
       const actTd = td(); const act = document.createElement("div"); act.className = "oc-actions"; actTd.appendChild(act);
@@ -333,8 +343,9 @@
           patch = { access_enabled: true }; if(hasOwnerSql) patch.access_note = null;
         }
         btn.disabled = true;
-        const { error: updErr } = await client.from("clans").update(patch).eq("id", c.id);
+        const { data: upd, error: updErr } = await client.from("clans").update(patch).eq("id", c.id).select("id");
         if(updErr){ errEl.textContent = updErr.message; btn.disabled = false; return; }
+        if(!(upd || []).length){ btn.disabled = false; if(await ensureOwner()) errEl.textContent = T("oc.notApplied", "Не применилось: у этой сессии нет прав владельца. Войдите в консоль заново."); return; }
         await loadClans();
       });
       const expired = hasOwnerSql && c.paid_until && c.paid_until < isoToday();
@@ -520,6 +531,18 @@
     btn.disabled = false;
   });
   $("mfaCancel").addEventListener("click", async () => { await client.auth.signOut({ scope: "local" }); showView("loginView"); });
+
+  // владелец ли эта сессия прямо сейчас. Нет — уходим на экран входа/кода (checkAndShow), true — всё в порядке
+  async function ensureOwner(){
+    const { data: ok } = await client.rpc("is_platform_admin");
+    if(ok) return true;
+    await checkAndShow();
+    return false;
+  }
+  // вернулись во вкладку консоли — сессию могли подменить в соседней вкладке (вход в клан) или у неё пропал код 2FA
+  document.addEventListener("visibilitychange", () => {
+    if(!document.hidden && document.getElementById("panelWrap").style.display !== "none") ensureOwner();
+  });
 
   async function checkAndShow(){
     // 2FA: если у аккаунта привязано приложение, а в этой сессии код ещё не вводили — сначала просим код (до любых проверок и данных)

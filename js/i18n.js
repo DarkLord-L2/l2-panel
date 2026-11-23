@@ -850,6 +850,8 @@
     "oc.secDisable": ["Не требовать код", "Не вимагати код", "Don't require a code"],
     "oc.secEnrollFail": ["Не удалось начать привязку: ", "Не вдалося почати прив'язку: ", "Couldn't start linking: "],
     "oc.secNeedCode": ["Сначала подтвердите код в этой сессии: выйдите и войдите снова.", "Спочатку підтвердьте код у цій сесії: вийдіть і увійдіть знову.", "Confirm a code in this session first: sign out and back in."],
+    "oc.autoClosed": ["Срок оплаты вышел — доступ закрыт автоматически. Продлите дату, и он откроется сам.", "Термін оплати вийшов — доступ закрито автоматично. Продовжте дату, і він відкриється сам.", "The paid period has ended — access closed automatically. Extend the date and it reopens by itself."],
+    "oc.notApplied": ["Не применилось: у этой сессии нет прав владельца. Войдите в консоль заново.", "Не застосувалося: у цієї сесії немає прав власника. Увійдіть у консоль знову.", "Not applied: this session has no owner rights. Sign in to the console again."],
     "oc.enterClan": ["Войти в клан", "Увійти в клан", "Enter clan"],
     "oc.enterTitle": ["Посмотреть клан изнутри, только чтение", "Подивитися клан зсередини, лише читання", "View the clan from inside, read-only"],
     "oc.enterBlocked": ["Клан отключён или срок оплаты вышел — данных не видно. Сначала включите доступ.", "Клан вимкнено або термін оплати вийшов — даних не видно. Спочатку увімкніть доступ.", "The clan is disabled or its paid period ended — no data is visible. Enable access first."],
