@@ -498,6 +498,11 @@ async function censusSummary(){
   return v;
 }
 
+// Сбросить кэш сводок: после замены/удаления ника (js/nick-tools.js) и перед проверкой ников — иначе минуту видны старые написания
+function invalidateSummaries(){
+  try { sessionStorage.removeItem("l2AttSummary"); sessionStorage.removeItem("l2CensusSummary"); } catch(e){}
+}
+
 // Страницы, где правят перепись/явку: сводки выше сбрасываются при заходе на них. Разделы открываются по одному (iframe),
 // поэтому следующая страница со сводкой («Группы», «Участники», «Мой кабинет», «Выплаты») возьмёт уже свежие данные
 if(/\/(attendance|census|loot-split|loot-split-party)\.html$/.test(location.pathname)){
@@ -505,6 +510,7 @@ if(/\/(attendance|census|loot-split|loot-split-party)\.html$/.test(location.path
 }
 
 window.L2Cabinet = {
+  invalidateSummaries,
   censusSummary,
   attendanceSummary,
   client,

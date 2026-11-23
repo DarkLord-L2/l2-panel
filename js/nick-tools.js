@@ -40,6 +40,7 @@
   }
 
   const selectAll = (make) => global.L2Cabinet.selectAll(make);
+  const invalidateSummaries = () => { try { if(global.L2Cabinet && global.L2Cabinet.invalidateSummaries) global.L2Cabinet.invalidateSummaries(); } catch(e){} };
   const cols = (order) => order;
 
   // сколько строк с этим ником в каждой таблице
@@ -97,6 +98,7 @@
           .replace("{t}", u.label).replace("{n}", oldNick).replace("{c}", u.count)));
       } catch(e){ console.error(e); }
     }
+    invalidateSummaries(); // иначе проверка ников ещё минуту видела бы старый ник из кэша сводки явки
     try { if(global.L2Nick){ global.L2Nick.invalidate(ctx.clanId); await global.L2Nick.refresh(db, ctx.clanId); } } catch(e){ console.error(e); }
     return problems;
   }
@@ -112,6 +114,7 @@
       const { error } = await db.from("clan_groups").update({ [col]: null }).eq(col, nick);
       if(error) problems.push(error.message);
     }
+    invalidateSummaries();
     return problems;
   }
 
@@ -186,6 +189,7 @@
   // не сводятся написания, и «проблемных» было бы слишком много.
   async function audit(db, clanId){
     if(global.L2Nick && !global.L2Nick.ready()){ try { await global.L2Nick.init(db, clanId); } catch(e){ console.error(e); } }
+    invalidateSummaries(); // проверка ников всегда по свежим данным, не по кэшу сводок на 60 с
     const pick = async (table, c, order) => {
       const r = await selectAll(() => order.reduce((q, o) => q.order(o), db.from(table).select(c)));
       if(r.error) console.error(table, r.error);
