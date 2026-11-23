@@ -137,6 +137,15 @@ function isAmbiguousNick(s){
 // уже занят/неоднозначен (чтобы подсветить их в чипах).
 function resolveNicknames(rows, knownNicks){
   const collided = new Set();
+  // проход -1 — правило ников клана (js/nick-match.js): латиница и кириллица в одном нике не смешиваются; если смесь
+  // и каждой «чужой» букве есть однозначный двойник — приводим ник к одному алфавиту (латинская B вместо русской В и т.п.)
+  if(window.L2Nick && L2Nick.scriptFix){
+    const used0 = new Set(rows.map(r => r.nickname));
+    rows.forEach(r => {
+      const sf = L2Nick.scriptFix(r.nickname);
+      if(sf && sf !== r.nickname && !used0.has(sf)){ used0.delete(r.nickname); r.nickname = sf; used0.add(sf); }
+    });
+  }
   // проход 0 — общий справочник (js/nick-match.js): ручные привязки и ник из ПОСЛЕДНЕЙ переписи (регистр, путаница
   // символов) главнее старых написаний за всё время. Если два разных ника скрина сошлись на один — не трогаем второй
   if(window.L2Nick && L2Nick.ready()){

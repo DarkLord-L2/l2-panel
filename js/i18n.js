@@ -574,6 +574,8 @@
     ],
     "admin.nicksLeftover": ["{t}: осталось строк со старым ником «{n}» — {c} (нет прав на изменение или конфликт)", "{t}: лишилось рядків зі старим ніком «{n}» — {c} (немає прав на зміну або конфлікт)", "{t}: rows with the old nick “{n}” left — {c} (no permission to change, or a conflict)"],
     "admin.twinsAutoFailed": ["Не удалось: {n} — причина показана выше.", "Не вдалося: {n} — причину показано вище.", "Failed: {n} — the reason is shown above."],
+    "admin.nicksMixed": ["⚠ смешаны русские и английские буквы", "⚠ змішано російські й англійські літери", "⚠ Cyrillic and Latin letters are mixed"],
+    "census.chipMixed": ["В нике смешаны русские и английские буквы — так в клане не бывает. Сверьте со скрином и поправьте.", "У ніку змішано російські й англійські літери — так у клані не буває. Звірте зі скріном і виправте.", "The nick mixes Cyrillic and Latin letters — that doesn't happen in the clan. Check the screenshot and fix it."],
     "admin.traceLoading": ["Ищу, где он встречается…", "Шукаю, де він трапляється…", "Looking for where it appears…"],
     "admin.traceNothing": ["Следов не найдено — запись уже пропала.", "Слідів не знайдено — запис уже зник.", "No traces found — the record is already gone."],
     "admin.traceAddedBy": ["внёс", "вніс", "added by"],

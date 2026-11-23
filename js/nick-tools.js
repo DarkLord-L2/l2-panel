@@ -280,6 +280,17 @@
       if(["alias", "exact", "case", "ocr"].includes(r.how) && censusNicks.has(r.canon)) return; // написание отличается, но уже сводится к нику из переписи
       orphans.push({ nick, by, total: [...by.values()].reduce((s, x) => s + x, 0) });
     });
+    // правило ников клана: латиница и кириллица в одном нике не смешиваются. Такие ники — проблема, даже если они есть в переписи
+    if(global.L2Nick && global.L2Nick.scriptInfo){
+      const have = new Set(orphans.map(o => o.nick));
+      const all = new Set([...used.keys(), ...censusNicks]);
+      all.forEach(nick => {
+        if(have.has(nick) || !global.L2Nick.scriptInfo(nick).mixed) return;
+        const by = used.get(nick) || new Map([[label(TABLES[7]), 1]]);
+        orphans.push({ nick, by, total: [...by.values()].reduce((s, x) => s + x, 0), mixed: true });
+      });
+      orphans.forEach(o => { if(!o.mixed && global.L2Nick.scriptInfo(o.nick).mixed) o.mixed = true; });
+    }
     orphans.sort((a, b) => b.total - a.total || a.nick.localeCompare(b.nick));
     const pool = [...censusNicks];
     orphans.forEach(o => {
@@ -292,6 +303,11 @@
         o.sug = (global.L2Nick ? global.L2Nick.suggest(o.nick, pool, 6) : []).map(s => ({
           nick: s.nick, dist: s.dist, classMatch: sameCls(s.nick),
         })).sort((a, b) => (b.classMatch - a.classMatch) || (a.dist - b.dist)).slice(0, 3);
+      }
+      // смесь алфавитов с однозначным исправлением — это подсказка №1
+      if(o.mixed){
+        const fix = global.L2Nick.scriptFix(o.nick);
+        if(fix && fix !== o.nick){ o.sug = [{ nick: fix, dist: 0, classMatch: !!sameCls(fix), script: true }].concat(o.sug.filter(s => s.nick !== fix)).slice(0, 3); }
       }
     });
     const twins = findTwins(used, censusWeeks);

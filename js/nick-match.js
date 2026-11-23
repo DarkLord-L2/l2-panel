@@ -28,6 +28,36 @@
     "0":"O","l":"I","|":"I" };
   const ONLY_CONFUSABLE = /^[0Oo1lIi|!]{3,}$/;
 
+  // ПРАВИЛО НИКОВ КЛАНА: ник бывает ЛИБО латиница + цифры, ЛИБО кириллица + цифры, ЛИБО одни цифры — латиница и кириллица в одном
+  // нике НЕ смешиваются. Если в распознанном/введённом нике смешаны, значит, часть букв — «двойники» из другого алфавита
+  // (латинская B вместо русской В и т.п.). scriptInfo/scriptFix приводят такой ник к одному алфавиту, но ТОЛЬКО когда каждая
+  // «чужая» буква имеет однозначного двойника; если нет (например «ПJIЮТВА») — ник просто помечается как смешанный.
+  const LAT2CYR = { A:"А", B:"В", C:"С", E:"Е", H:"Н", K:"К", M:"М", O:"О", P:"Р", T:"Т", X:"Х", Y:"У",
+    a:"а", c:"с", e:"е", o:"о", p:"р", x:"х", y:"у", k:"к", m:"м", h:"н", t:"т" };
+  const CYR2LAT = (() => {
+    const m = { "Ј":"J", "ј":"j", "І":"I", "і":"i", "Ѕ":"S", "ѕ":"s" }; // сербские/украинские буквы, выглядящие как латинские
+    Object.keys(CYR).forEach(k => { if(/[Ѐ-ӿ]/.test(k)) m[k] = CYR[k]; });
+    return m;
+  })();
+  function scriptInfo(nick){
+    const s = String(nick == null ? "" : nick);
+    const lat = (s.match(/[A-Za-z]/g) || []).length, cyr = (s.match(/[Ѐ-ӿ]/g) || []).length;
+    if(!lat || !cyr) return { mixed: false, fix: null };
+    let toCyr = "", okC = true, toLat = "", okL = true;
+    for(const ch of s){
+      if(/[A-Za-z]/.test(ch)){ if(LAT2CYR[ch]) toCyr += LAT2CYR[ch]; else okC = false; toLat += ch; }
+      else if(/[Ѐ-ӿ]/.test(ch)){ if(CYR2LAT[ch]) toLat += CYR2LAT[ch]; else okL = false; toCyr += ch; }
+      else { toCyr += ch; toLat += ch; }
+    }
+    toCyr = okC ? toCyr : null; toLat = okL ? toLat : null;
+    // оба варианта возможны — берём алфавит, которого в нике больше; поровну — не угадываем
+    let fix = null;
+    if(toCyr && toLat) fix = cyr > lat ? toCyr : (lat > cyr ? toLat : null);
+    else fix = toCyr || toLat;
+    return { mixed: true, fix, toCyr, toLat, lat, cyr };
+  }
+  const scriptFix = (nick) => scriptInfo(nick).fix;
+
   // ступень 1 — «ключ человека» (регистр сохраняется)
   function norm(s){
     const raw = String(s == null ? "" : s);
@@ -256,6 +286,6 @@
     return (globalReady ? globalResolver : createResolver({ tiers: [pool || []] })).suggestAmbiguous(nick, pool, classOk);
   }
 
-  global.L2Nick = { norm, caseKey, ocrKey, distance, createResolver, init, invalidate, refresh, suggest, suggestAmbiguous, key, same,
+  global.L2Nick = { norm, caseKey, ocrKey, distance, createResolver, init, invalidate, refresh, suggest, suggestAmbiguous, key, same, scriptInfo, scriptFix,
     ready: () => globalReady, resolve: (n) => globalReady ? globalResolver.resolve(n) : { canon: n, key: norm(n), how: "none", candidates: [] } };
 })(window);

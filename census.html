@@ -185,10 +185,10 @@
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=28"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=133"></script>
+<script src="js/i18n.js?v=134"></script>
 <script src="js/paste-drop.js?v=1"></script>
-<script src="js/nick-match.js?v=7"></script>
-<script src="js/nick-tools.js?v=6"></script>
+<script src="js/nick-match.js?v=8"></script>
+<script src="js/nick-tools.js?v=7"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -386,6 +386,11 @@
       const g = L2Nick.resolve(n);
       if(["alias", "case", "ocr"].includes(g.how) && g.canon && g.canon !== n){ chipFixed.set(g.canon, n); return g.canon; }
     }
+    // правило ников клана: латиница и кириллица в одном нике не смешиваются — приводим к одному алфавиту, если у каждой «чужой» буквы есть двойник
+    if(window.L2Nick && L2Nick.scriptFix){
+      const sf = L2Nick.scriptFix(n);
+      if(sf && sf !== n){ chipFixed.set(sf, n); return sf; }
+    }
     return n;
   }
   let knownCensusCache = null;
@@ -416,6 +421,11 @@
       } else if(chipFixed.has(nick)){
         chip.title = L2I18n.t("census.chipFixed", "Исправлено по прежним переписям: со скрина пришло «{from}»").replace("{from}", chipFixed.get(nick));
         span.textContent = "↺ " + nick;
+      } else if(window.L2Nick && L2Nick.scriptInfo && L2Nick.scriptInfo(nick).mixed){
+        // смесь русских и английских букв, которую нельзя починить автоматически — подсвечиваем, пусть админ сверит со скрином
+        chip.classList.add("chip-warn");
+        chip.title = L2I18n.t("census.chipMixed", "В нике смешаны русские и английские буквы — так в клане не бывает. Сверьте со скрином и поправьте.");
+        span.textContent = "⚠ " + nick;
       }
       const btn = document.createElement("button");
       btn.textContent = "×";
