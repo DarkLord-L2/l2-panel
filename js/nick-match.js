@@ -130,25 +130,46 @@
       return { canon: nick, key: k, how: ambiguous ? "ambiguous" : "none", candidates: ambiguous || [] };
     }
 
+    // Подсказки для ника из одних неотличимых символов (l I 1 | i 0 O !): по тексту их не различить, поэтому кандидаты — ТОЛЬКО такие
+    // же «путаемые» ники из pool с длиной в пределах ±1. Если известна профессия (classOk(кандидат) → да/нет), остаются только те,
+    // у кого она совпала. Без профессии подсказки даём лишь когда кандидатов мало (до 3) — иначе это был бы случайный выбор.
+    function suggestAmbiguous(nick, pool, classOk){
+      const base = String(nick == null ? "" : nick);
+      const src = pool || (tiers[0] ? tiers[0].list : []);
+      const seen = new Set(), scored = [];
+      src.forEach(n => {
+        if(seen.has(n)) return; seen.add(n);
+        if(n === base || !ONLY_CONFUSABLE.test(n) || Math.abs(n.length - base.length) > 1) return;
+        scored.push({ nick: n, dist: distance(base, n), classMatch: classOk ? !!classOk(n) : false });
+      });
+      const byDist = (a, b) => a.dist - b.dist || a.nick.localeCompare(b.nick);
+      if(classOk) return scored.filter(x => x.classMatch).sort(byDist).slice(0, 3);
+      return scored.length <= 3 ? scored.sort(byDist) : [];
+    }
+
     // подсказки для неопознанного ника: самые похожие ники из pool (по умолчанию — первый справочник)
     function suggest(nick, pool, max){
       const src = pool || (tiers[0] ? tiers[0].list : []);
       const q = ocrKey(nick);
       if(!q) return [];
-      const maxDist = q.length >= 9 ? 2 : (q.length >= 5 ? 1 : 0);
+      // допустимая «разница в буквах» зависит от длины БОЛЕЕ ДЛИННОГО из двух ников: у распознанного ника могла потеряться
+      // буква («Нтка» вместо «Нотка»), и по его длине подсказку пропускали. Это только подсказка (нужен клик), не автозамена
+      const maxFor = (len) => len >= 9 ? 2 : (len >= 5 ? 1 : 0);
       const seen = new Set(), out = [];
       src.forEach(n => {
         if(seen.has(n)) return; seen.add(n);
         const c = ocrKey(n);
-        if(!c || Math.abs(c.length - q.length) > maxDist) return;
+        if(!c) return;
+        const md = maxFor(Math.max(q.length, c.length));
+        if(Math.abs(c.length - q.length) > md) return;
         const dist = distance(q, c);
-        if(dist <= maxDist) out.push({ nick: n, dist });
+        if(dist <= md) out.push({ nick: n, dist });
       });
       out.sort((a, b) => a.dist - b.dist || a.nick.localeCompare(b.nick));
       return out.slice(0, max || 3);
     }
 
-    return { resolve, key: (n) => resolve(n).key, canon: (n) => resolve(n).canon, suggest };
+    return { resolve, key: (n) => resolve(n).key, canon: (n) => resolve(n).canon, suggest, suggestAmbiguous };
   }
 
   // ---------- общий справочник ников клана (один на страницу) ----------
@@ -230,6 +251,11 @@
     await init(db, clanId);
   }
 
-  global.L2Nick = { norm, caseKey, ocrKey, distance, createResolver, init, invalidate, refresh, suggest, key, same,
+  // ник из одних путаемых символов: общие подсказки (без привязки к конкретному справочнику страницы)
+  function suggestAmbiguous(nick, pool, classOk){
+    return (globalReady ? globalResolver : createResolver({ tiers: [pool || []] })).suggestAmbiguous(nick, pool, classOk);
+  }
+
+  global.L2Nick = { norm, caseKey, ocrKey, distance, createResolver, init, invalidate, refresh, suggest, suggestAmbiguous, key, same,
     ready: () => globalReady, resolve: (n) => globalReady ? globalResolver.resolve(n) : { canon: n, key: norm(n), how: "none", candidates: [] } };
 })(window);

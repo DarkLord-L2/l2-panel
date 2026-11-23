@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Журнал посещаемости — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=39" />
+<link rel="stylesheet" href="js/theme.css?v=43" />
 <style>
   #daysContainer{
     display:grid;
@@ -449,15 +449,15 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=27"></script>
-<script src="js/i18n.js?v=112"></script>
+<script src="js/i18n.js?v=125"></script>
 <script src="js/datepicker.js?v=2"></script>
 <script src="js/paste-drop.js?v=1"></script>
 <script src="js/tax-flag.js?v=1"></script>
-<script src="js/nick-match.js?v=5"></script>
+<script src="js/nick-match.js?v=7"></script>
 <script src="js/classes.js?v=1"></script>
 <script src="js/class-icon-match.js?v=1"></script>
-<script src="js/screenshot-review.js?v=2"></script>
-<script src="js/event-roster.js?v=32"></script>
+<script src="js/screenshot-review.js?v=5"></script>
+<script src="js/event-roster.js?v=37"></script>
 <script src="js/share-report.js?v=2"></script>
 <script>
 (async function(){
@@ -1008,8 +1008,12 @@
     if(eventIds.length){
       const { data: entries, error: entErr } = await L2Cabinet.selectAllIn((part) => db.from("attendance_entries").select("nickname, event_id").in("event_id", part).order("id"), eventIds);
       if(entErr) console.error(entErr);
+      const seenEntry = new Set(); // ник × мероприятие считается один раз, даже если в базе строка продублирована
       (entries || []).forEach(row => {
         const nickname = resolveNick(row.nickname);
+        const pairKey = nickname + "\u0001" + row.event_id;
+        if(seenEntry.has(pairKey)) return;
+        seenEntry.add(pairKey);
         attendedCount.set(nickname, (attendedCount.get(nickname) || 0) + 1);
         const d = eventDateById.get(row.event_id);
         if(!nickDays.has(nickname)) nickDays.set(nickname, new Set());

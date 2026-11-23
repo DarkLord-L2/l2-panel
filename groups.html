@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Группы — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=39" />
+<link rel="stylesheet" href="js/theme.css?v=43" />
 <style>
   .groups-wrap{ padding:0 0 32px; }
   .groups-toolbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:10px 0 14px; }
@@ -52,6 +52,9 @@
   .group-card-name{ font-size:calc(14.5px * var(--d, 1)); font-weight:600; color: var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .group-card-leader{ font-size:calc(11.5px * var(--d, 1)); color: var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .group-card-stats{ display:flex; gap:8px; }
+  /* в плитках карточки одного ряда одинаковой высоты: «Ср. К/Д / Ср. Урон» и подвал прижаты к низу, поэтому у всех на одном уровне,
+     даже если у одной группы полоска классов в две строки */
+  .group-grid:not(.lb-rows):not(.lb-custom) .group-card:not(.lb-wide) .group-card-stats{ margin-top:auto; }
   .group-card-stat{ flex:1; min-width:0; background: var(--panel-2); border:1px solid var(--border); border-radius:7px; padding:6px 10px; }
   .group-card-stat .lbl{ font-size:10px; color: var(--text-dim); }
   .group-card-stat .val{ font-size:calc(14px * var(--d, 1)); font-weight:700; color: var(--text); }
@@ -633,10 +636,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=27"></script>
-<script src="js/i18n.js?v=112"></script>
+<script src="js/i18n.js?v=125"></script>
 <script src="js/tax-flag.js?v=1"></script>
 <script src="js/layout-board.js?v=10"></script>
-<script src="js/nick-match.js?v=5"></script>
+<script src="js/nick-match.js?v=7"></script>
 <script src="js/classes.js?v=1"></script>
 <script>
 (async function(){

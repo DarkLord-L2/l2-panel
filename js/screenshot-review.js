@@ -25,7 +25,7 @@
   // screens: [{ idx, rows: [{ nick, orig, kills, deaths, pvp, pve }] }]
   // known: массив ников из переписи (может быть пустым); collided: Set ников, не сопоставленных из-за конфликта
   // Возвращает Map(idx скрина -> { rows: [[{level, code, text}]], notes: [{level, text}] })
-  function analyze(screens, known, collided){
+  function analyze(screens, known, collided, nickInfo){
     const knownSet = new Set(known || []);
     const posOf = new Map(screens.map((sc, i) => [sc.idx, i + 1])); // человеческий номер скрина
     const nickScreens = new Map(); // ник -> номера скринов (по порядку)
@@ -53,7 +53,13 @@
           if(counts.get(n) > 1) f.push({ level: "warn", code: "dupScreen", text: t("review.flagDupScreen", "Этот ник есть в двух строках скрина — при сохранении останется одна") });
           const others = (nickScreens.get(n) || []).filter(i => i !== sc.idx).map(i => posOf.get(i));
           if(others.length) f.push({ level: "warn", code: "dupOther", text: t("review.flagDupOther", "Этот ник есть и на скрине {n} — при сохранении останется одна запись").replace("{n}", [...new Set(others)].join(", ")) });
-          if(knownSet.size && !knownSet.has(n)) f.push({ level: "info", code: "unknown", text: t("review.flagUnknown", "Нет в переписи — новый участник или ник распознан с ошибкой") });
+          if(knownSet.size && !knownSet.has(n)){
+            // nickInfo (из event-roster.js): есть ли похожий ник в переписи — тогда это скорее ошибка распознавания, а не новичок
+            const inf = nickInfo ? nickInfo(n, r.cls && r.cls.className) : null;
+            const best = inf && inf.sug && inf.sug[0];
+            if(best) f.push({ level: "warn", code: "unknown", text: t("review.flagUnknownSug", "Нет в переписи, но очень похож на «{nick}»{cls} — это он? Нажмите на предложение под ником, чтобы заменить.").replace("{nick}", best.nick).replace("{cls}", best.classMatch ? t("review.sameClass", " (та же профессия)") : "") });
+            else f.push({ level: "info", code: "unknown", text: t("review.flagUnknown", "Нет в переписи — новый участник или ник распознан с ошибкой") });
+          }
         }
         const nums = [r.kills, r.deaths, r.pvp, r.pve];
         if(nums.some(isBadNumber)){
@@ -125,6 +131,14 @@
       .rv-star{ background:none; border:none; cursor:pointer; font-size:15px; color:var(--text-dim); padding:0 3px; }
       .rv-star.on{ color:#e8b44a; }
       .rv-del{ background:none; border:none; cursor:pointer; color:var(--danger-lit); font-size:15px; padding:0 4px; }
+      .rv-sug{ display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin-top:3px; text-align:left; min-height:0; }
+      .rv-sug:empty{ display:none; }
+      .rv-sug-btn{ font:inherit; font-size:11.5px; font-weight:600; padding:2px 8px; border-radius:10px; cursor:pointer; color:#111; background:#e8b44a; border:1px solid #e8b44a; }
+      .rv-sug-btn:hover{ filter:brightness(1.1); }
+      .rv-sug-btn.cls{ background:#6fcf8a; border-color:#6fcf8a; }
+      .rv-sug-note{ font-size:11px; color:var(--text-dim); }
+      .rv-sug-note.ok{ color:#6fcf8a; opacity:.85; }
+      .rv-sug-note.new{ color:#6aaeea; }
       .rv-flags{ white-space:nowrap; text-align:left; min-width:46px; }
       .rv-flag{ cursor:help; margin-right:3px; }
       .rv-flag.warn{ color:#e8b44a; }
@@ -167,7 +181,7 @@
     const $ = (sel) => overlay.querySelector(sel);
     const tabsEl = $(".rv-tabs"), tbody = $("tbody"), notesEl = $(".rv-notes"), sumEl = $(".rv-sum"), shotEl = $(".rv-shot"), imgEl = $(".rv-shot img");
     let analysis = new Map();
-    const recompute = () => { analysis = analyze(work, opts.known, opts.collided); };
+    const recompute = () => { analysis = analyze(work, opts.known, opts.collided, opts.nickInfo); };
 
     function setFlagsCells(){
       const a = analysis.get(work[cur].idx);
@@ -176,6 +190,20 @@
         tr.classList.toggle("rv-has-warn", flags.some(x => x.level === "warn"));
         tr.querySelector(".rv-flags").innerHTML = flags.map(x =>
           `<span class="rv-flag ${x.level}" title="${esc(x.text)}">${x.level === "warn" ? "⚠" : "ℹ"}</span>`).join("");
+        // проверка ника по переписи: «✓ в переписи» / «нет в переписи — это он?» с кнопками-предложениями
+        const row = work[cur].rows[i], nk = row ? trimNick(row.nick) : "";
+        const inf = (opts.nickInfo && nk) ? opts.nickInfo(nk, row.cls && row.cls.className) : null;
+        let html = "";
+        if(inf){
+          if(inf.status === "latest") html = `<span class="rv-sug-note ok">✓ ${esc(t("review.inCensus", "в переписи"))}</span>`;
+          else if(inf.status === "old" && inf.sug && inf.sug.length) html = `<span class="rv-sug-note">${esc(t("review.oldButNear", "Есть только в старых переписях; в свежей — похожий:"))}</span>` +
+            inf.sug.map(sg => `<button type="button" class="rv-sug-btn${sg.classMatch ? " cls" : ""}" data-nick="${esc(sg.nick)}">→ ${esc(sg.nick)}${sg.classMatch ? " ✓" : ""}</button>`).join("");
+          else if(inf.status === "old") html = `<span class="rv-sug-note ok">✓ ${esc(t("review.inOldCensus", "есть в старых переписях"))}</span>`;
+          else if(inf.sug && inf.sug.length) html = `<span class="rv-sug-note">${esc(t("review.itsHim", "Нет в переписи. Это он?"))}</span>` +
+            inf.sug.map(sg => `<button type="button" class="rv-sug-btn${sg.classMatch ? " cls" : ""}" data-nick="${esc(sg.nick)}" title="${esc(sg.classMatch ? t("review.sameClassTitle", "Совпадает и профессия") : "")}">→ ${esc(sg.nick)}${sg.classMatch ? " ✓" : ""}</button>`).join("");
+          else html = `<span class="rv-sug-note new">${esc(t("review.newPlayer", "Нет в переписи, похожих нет — новый игрок?"))}</span>`;
+        }
+        tr.querySelector(".rv-sug").innerHTML = html;
       });
       notesEl.innerHTML = ((a && a.notes) || []).map(x => `<p>⚠ ${esc(x.text)}</p>`).join("");
       // бейджи на вкладках и общая сводка
@@ -200,7 +228,7 @@
         tr.innerHTML =
           `<td class="rv-n">${i + 1}</td>` +
           `<td>${iconSrc ? `<img class="rv-ico${uncertain ? " rv-q" : ""}" src="${esc(iconSrc)}" alt="" title="${esc(cls.className)}${uncertain ? " (?)" : ""}" />` : ""}</td>` +
-          `<td><input class="rv-nick" data-f="nick" value="${esc(r.nick)}" spellcheck="false" /></td>` +
+          `<td class="rv-nickcell"><input class="rv-nick" data-f="nick" value="${esc(r.nick)}" spellcheck="false" /><div class="rv-sug"></div></td>` +
           `<td><button type="button" class="rv-star${r.leader ? " on" : ""}" title="${esc(t("review.leaderTitle", "Лидер пати"))}">★</button></td>` +
           ["kills", "deaths", "pvp", "pve"].map(f => `<td><input class="rv-num" type="number" min="0" step="1" data-f="${f}" value="${esc(r[f] == null ? "" : r[f])}" /></td>`).join("") +
           `<td class="rv-flags"></td>` +
@@ -212,6 +240,11 @@
             if(f !== "nick") inp.classList.toggle("rv-bad", isBadNumber(r[f]));
             recompute(); setFlagsCells();
           });
+        });
+        tr.querySelector(".rv-sug").addEventListener("click", (e) => {
+          const b = e.target.closest(".rv-sug-btn"); if(!b) return;
+          r.nick = b.dataset.nick;
+          recompute(); renderTable();
         });
         tr.querySelector(".rv-star").addEventListener("click", () => {
           const was = r.leader;
@@ -275,8 +308,21 @@
           pvp: Math.max(0, Math.round(Number(r.pvp) || 0)), pve: Math.max(0, Math.round(Number(r.pve) || 0)),
         })),
       }));
+      // исправленный вручную или по подсказке ник, который есть в переписи, запоминается как привязка:
+      // в следующий раз такое написание со скрина подставится само
+      const aliases = [];
+      if(opts.nickInfo && opts.onAliases){
+        const seen = new Set();
+        edited.forEach(sc => sc.rows.forEach(r => {
+          const from = trimNick(r.orig), to = trimNick(r.nick);
+          if(!from || !to || from === to || AMBIGUOUS.test(from) || seen.has(from)) return;
+          const a = opts.nickInfo(from, r.cls && r.cls.className), b = opts.nickInfo(to, r.cls && r.cls.className);
+          if(a && a.status === "unknown" && b && b.status !== "unknown"){ seen.add(from); aliases.push({ alias: from, canonical: to }); }
+        }));
+      }
       close();
       opts.onApply(edited);
+      if(aliases.length) opts.onAliases(aliases);
     });
 
     renderTabs();

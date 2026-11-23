@@ -4,7 +4,10 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=39" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap" />
+<link rel="stylesheet" href="js/theme.css?v=43" />
 <!-- приложение на телефоне/компьютере: иконка, название, тёмная шапка -->
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" type="image/png" sizes="32x32" href="assets/app/favicon-32.png" />
@@ -60,13 +63,25 @@
     <nav class="sidebar-nav" id="sidebarNav">
       <!-- бренд: название клана крупными золотыми буквами + орнамент (линии, флаг клана,
            «КАБИНЕТ КЛАНА»); длинное название само уменьшается, чтобы влезть (fitBrandName) -->
-      <div class="sidebar-brand" id="brand">
-        <span class="brand-name" id="brandName" data-i18n="shell.defaultBrandName">Кабинет клана</span>
-        <div class="brand-orn">
-          <span class="brand-orn-in">
-            <img id="brandLogo" class="brand-flag" alt="" style="display:none;" />
-            <span class="brand-sub" id="brandSub" data-i18n="shell.brandSub">Кабинет клана</span>
-          </span>
+      <div class="sidebar-brand" id="brand" data-style="classic">
+        <svg class="brand-lattice" viewBox="0 0 210 78" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path d="M105 4L150 39L105 74L60 39Z"/><path d="M105 14L135 39L105 64L75 39Z"/><path d="M150 39L195 4M150 39L195 74M60 39L15 4M60 39L15 74"/></svg>
+        <svg class="brand-blades" viewBox="0 0 46 100" aria-hidden="true">
+          <defs>
+            <linearGradient id="brandCu" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="brand-blade-a"/><stop offset=".45" class="brand-blade-b"/><stop offset="1" class="brand-blade-c"/></linearGradient>
+            <path id="brandBlade" d="M2 0C15 26 15 74 2 100C8 74 8 26 2 0Z"/>
+          </defs>
+          <g transform="translate(9 0)"><use href="#brandBlade" fill="url(#brandCu)"/></g>
+          <g transform="translate(37 0) scale(-1 1)"><use href="#brandBlade" fill="url(#brandCu)"/></g>
+          <path class="brand-chev" d="M17 22L23 30L29 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gold)"/>
+        </svg>
+        <div class="brand-text">
+          <span class="brand-name" id="brandName" data-i18n="shell.defaultBrandName">Кабинет клана</span>
+          <div class="brand-orn">
+            <span class="brand-orn-in">
+              <img id="brandLogo" class="brand-flag" alt="" style="display:none;" />
+              <span class="brand-sub" id="brandSub" data-i18n="shell.brandSub">Кабинет клана</span>
+            </span>
+          </div>
         </div>
       </div>
       <button type="button" class="nav-search-btn" id="navSearchBtn">
@@ -123,9 +138,11 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase-client.js?v=27"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=112"></script>
-<script src="js/nick-match.js?v=5"></script>
+<script src="js/i18n.js?v=125"></script>
+<script src="js/nick-match.js?v=7"></script>
+<script src="js/nick-tools.js?v=3"></script>
 <script src="js/tax-flag.js?v=1"></script>
+<script src="js/nav-config.js?v=1"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -155,10 +172,7 @@
 
   // Чисто визуальная группировка пунктов меню — на права доступа не влияет,
   // каждый раздел внутри группы по-прежнему включается/выключается по роли отдельно.
-  const NAV_GROUPS = [
-    { label: "Учёт клана", i18nKey: "navgroup.uchet", keys: ["census", "taxes", "attendance"] },
-    { label: "ДКП", i18nKey: "navgroup.dkp", keys: ["loot_split", "loot_split_party", "loot_payout"] },
-  ];
+  const NAV_GROUPS = L2_NAV.GROUPS; // раскладка меню — js/nav-config.js (общая с Админ-панелью)
 
   // Иконки меню — инлайн SVG (не картинки-файлы, чтобы не плодить запросы и чтобы
   // цвет (currentColor) сам подхватывал акцент текущего оформления клана: amber/azure/emerald.
@@ -495,14 +509,7 @@
   // Разделы меню с подписями. Подписи — чисто визуальные, на права не влияют; порядок разделов фиксированный,
   // а внутри раздела пункты идут так, как их расставил клан-лидер (Админ-панель → «Порядок разделов в меню»).
   // Раздел, которого нет в списке ниже (новый, из базы), попадает в «Инструменты».
-  const NAV_SECTIONS = [
-    { id: "main", i18nKey: null, label: null, keys: ["my_cabinet"] },
-    { id: "clan", i18nKey: "navsec.clan", label: "Клан", keys: ["groups", "roster", "gear_check", "census", "taxes", "attendance"] },
-    { id: "stats", i18nKey: "navsec.stats", label: "Статистика", keys: ["reports", "leaderboard", "trends"] },
-    { id: "economy", i18nKey: "navsec.economy", label: "Экономика", keys: ["loot_split", "loot_split_party", "loot_payout"] },
-    { id: "tools", i18nKey: "navsec.tools", label: "Инструменты", keys: ["skill_cd", "abilities", "skill_panel"], rest: true },
-    { id: "system", i18nKey: "navsec.system", label: "Система", keys: ["admin"] },
-  ];
+  const NAV_SECTIONS = L2_NAV.SECTIONS;
   const knownNavKeys = new Set(NAV_SECTIONS.flatMap(g => g.keys));
   const groupedKeys = new Set(NAV_GROUPS.flatMap(g => g.keys));
 
@@ -556,6 +563,35 @@
     nav.appendChild(childWrap);
   });
   }
+
+  // ---------- «!» у «Админ-панели»: есть ники, которые нужно проверить ----------
+  // Только клан-лидеру и админу. Число считает js/nick-tools.js (ники, которых нет ни в одной переписи, и группы похожих написаний);
+  // результат кэшируется в браузере на 6 часов, чтобы не гонять проверку всей базы при каждой загрузке сайта.
+  // Вкладка «Ники и игроки» пересчитывает число сама после каждого действия (L2Nav.setNickBadge).
+  const NICK_BADGE_TTL = 6 * 3600 * 1000;
+  const canSeeNickBadge = ["glavadmin", "admin"].includes(roleKey);
+  function setNickBadge(n){
+    const link = nav.querySelector('a[data-key="admin"]'); if(!link) return;
+    let b = link.querySelector(".nav-alert");
+    if(!(n > 0)){ if(b) b.remove(); return; }
+    if(!b){ b = document.createElement("span"); b.className = "nav-alert"; b.textContent = "!"; link.appendChild(b); }
+    b.title = L2I18n.t("nav.nickAlert", "Нужно проверить ники: {n} — «Ники и игроки»").replace("{n}", n);
+  }
+  async function refreshNickBadge(force){
+    if(!canSeeNickBadge || !window.L2NickTools) return;
+    try{
+      const c = L2NickTools.cachedCount(profile.clan_id);
+      if(c) setNickBadge(c.n);
+      if(!force && c && Date.now() - c.t < NICK_BADGE_TTL) return;
+      const res = await L2NickTools.audit(db, profile.clan_id);
+      const n = L2NickTools.attentionCount(res, profile.clan_id);
+      L2NickTools.setCachedCount(profile.clan_id, n); setNickBadge(n);
+    }catch(e){ console.error("nick badge:", e); }
+  }
+  window.L2Nav.setNickBadge = (n) => { setNickBadge(n); if(canSeeNickBadge) L2NickTools.setCachedCount(profile.clan_id, n); };
+  window.L2Nav.refreshNickBadge = refreshNickBadge;
+  // в фоне, когда страница уже показана и браузер свободен — на первый экран это не влияет
+  if(canSeeNickBadge) setTimeout(() => (window.requestIdleCallback ? requestIdleCallback(() => refreshNickBadge(false), { timeout: 8000 }) : refreshNickBadge(false)), 2500);
 
   if(startKey) renderSection(startKey);
   else content.innerHTML = '<p class="hint">' + L2I18n.t("shell.noSectionsForRole", "Для вашей роли пока не открыто ни одного раздела.") + '</p>';
@@ -933,12 +969,32 @@
 
   // длинное название клана — уменьшаем шрифт, пока не влезет в ширину меню (до 13px,
   // дальше — многоточие); мерить можно только когда оболочка уже видна
-  (function fitBrandName(){
+  // начальный размер берём из CSS выбранного стиля шапки (classic 20px, blades-h/i — свой), потом уменьшаем до 11px
+  function fitBrandName(){
     const el = document.getElementById("brandName");
-    let size = 20;
-    el.style.fontSize = size + "px";
-    while(el.scrollWidth > el.clientWidth + 1 && size > 13){ size -= 1; el.style.fontSize = size + "px"; }
-  })();
+    el.style.fontSize = "";
+    let size = parseFloat(getComputedStyle(el).fontSize) || 20;
+    const min = Math.min(13, size);
+    while(el.scrollWidth > el.clientWidth + 1 && size > min){ size -= 1; el.style.fontSize = size + "px"; }
+  }
+  fitBrandName();
+
+  // стиль шапки меню (clans.brand_style, выбирает глав-админ в «Оформление»). Кэш в localStorage — чтобы при следующем
+  // заходе шапка сразу рисовалась нужным стилем, без мигания; актуальное значение подтягиваем из БД. Если колонки ещё
+  // нет (SQL schema_brand_style.sql не выполнен) — молча остаётся classic
+  const BRAND_STYLES = ["classic", "blades-h", "blades-i"];
+  window.applyBrandStyle = function(style){
+    const s = BRAND_STYLES.includes(style) ? style : "classic";
+    document.getElementById("brand").dataset.style = s;
+    try{ localStorage.setItem("l2BrandStyle", s); }catch(e){}
+    fitBrandName();
+  };
+  try{ const cached = localStorage.getItem("l2BrandStyle"); if(cached) window.applyBrandStyle(cached); }catch(e){}
+  db.from("clans").select("brand_style").eq("id", profile.clan_id).maybeSingle()
+    .then(({ data, error }) => { if(!error && data) window.applyBrandStyle(data.brand_style); })
+    .catch(() => {});
+  // шрифт Cinzel подгружается позже — после загрузки пересчитываем размер названия
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(fitBrandName);
 
   // ---------- первый вход по ссылке-приглашению (login.html → sessionStorage):
   // один раз показываем логин и пароль — «сохраните, чтобы войти с другого устройства».

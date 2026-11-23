@@ -235,6 +235,27 @@ input[type="date"]{ color-scheme: dark; }
   color: color-mix(in srgb, var(--gold) 85%, #fff);
 }
 
+/* ---- стили шапки меню (выбирает глав-админ: «Оформление» → «Стиль шапки меню»), data-style на .sidebar-brand ----
+   classic — как выше; blades-h — два клинка над названием; blades-i — клинки слева + ромбовая сетка.
+   Клинки/сетка по умолчанию скрыты — показывают их только эти два стиля; цвет — от --gold клана */
+.brand-blades, .brand-lattice{ display:none; }
+.sidebar-brand[data-style="blades-h"] .brand-name,
+.sidebar-brand[data-style="blades-i"] .brand-name{ font-family:'Cinzel', Georgia, 'Times New Roman', serif; font-weight:700; letter-spacing:.06em; }
+.brand-blade-a{ stop-color: color-mix(in srgb, var(--gold) 45%, #fff); }
+.brand-blade-b{ stop-color: var(--gold); }
+.brand-blade-c{ stop-color: color-mix(in srgb, var(--gold) 55%, #3a1a05); }
+.sidebar-brand[data-style="blades-h"] .brand-blades{ display:block; width:46px; height:56px; margin:2px auto 6px; }
+.sidebar-brand[data-style="blades-h"] .brand-orn-in::before,
+.sidebar-brand[data-style="blades-h"] .brand-orn-in::after{ content:""; width:5px; height:5px; flex:none; background: var(--gold); transform: rotate(45deg); }
+.sidebar-brand[data-style="blades-i"]{ flex-direction:row; align-items:center; gap:12px; text-align:left; position:relative; overflow:hidden; padding:16px 14px; }
+.sidebar-brand[data-style="blades-i"] .brand-blades{ display:block; width:24px; height:46px; flex:none; position:relative; }
+.sidebar-brand[data-style="blades-i"] .brand-chev{ display:none; }
+.sidebar-brand[data-style="blades-i"] .brand-text{ position:relative; min-width:0; flex:1; }
+.sidebar-brand[data-style="blades-i"] .brand-orn{ margin:5px 0 0; }
+.sidebar-brand[data-style="blades-i"] .brand-orn::before,
+.sidebar-brand[data-style="blades-i"] .brand-orn::after{ display:none; }
+.sidebar-brand[data-style="blades-i"] .brand-lattice{ display:block; position:absolute; inset:0; width:100%; height:100%; stroke: var(--gold); stroke-opacity:.14; fill:none; pointer-events:none; }
+
 /* классическая полоса сверху — старый вид шапки, скрыта по умолчанию (только
    .classic-topbar её показывает и прячет sidebar-brand/who-widget взамен) */
 .topbar{
@@ -448,6 +469,14 @@ input[type="date"]{ color-scheme: dark; }
 }
 .sidebar-nav > .nav-section:first-child{ padding-top:2px; }
 .nav-section + a, .nav-section + .nav-group-toggle{ margin-top:0; }
+/* «!» у пункта меню: есть что проверить (например, ники в «Админ-панели → Ники и игроки») */
+.nav-alert{
+  margin-left:auto; flex:none; width:18px; height:18px; border-radius:50%; display:grid; place-items:center;
+  background: var(--danger-lit); color:#fff; font-size:12px; font-weight:800; line-height:1;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger-lit) 26%, transparent);
+  animation: navAlertPulse 2.2s ease-in-out infinite;
+}
+@keyframes navAlertPulse{ 0%,100%{ box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger-lit) 26%, transparent); } 50%{ box-shadow: 0 0 0 6px color-mix(in srgb, var(--danger-lit) 8%, transparent); } }
 .nav-group-children{ display:none; flex-direction:column; gap:2px; position:relative; }
 .nav-group-children.open{ display:flex; }
 /* тонкая вертикальная линия-«ветка» слева от вложенных пунктов */
@@ -726,6 +755,66 @@ table.data-table tr:hover td{ background: rgba(255,255,255,.025); }
 .er-class-chip{ display:inline-flex; align-items:center; gap:6px; }
 .er-class-chip img{ width:18px; height:18px; border-radius:4px; object-fit:cover; }
 .er-class-chip.er-skipped{ opacity:.55; }
+
+/* ---- окно загрузки скринов явки (js/event-roster.js): шаги → загрузка → сводка → ники по пати → панель сохранения ---- */
+.er-up{ margin-top:10px; border:1px solid var(--border); border-radius:12px; background: var(--panel); overflow:hidden; }
+.er-up > *:not(.er-steps):not(.er-foot):not(.er-drop){ margin-left:16px; margin-right:16px; }
+.er-steps{ display:flex; border-bottom:1px solid var(--border); font-size:12.5px; }
+.er-step{ flex:1; display:flex; align-items:center; gap:8px; padding:10px 14px; color: var(--text-dim); }
+.er-step .er-n{ width:20px; height:20px; border-radius:50%; border:1px solid var(--border-lit); display:inline-flex; align-items:center; justify-content:center; font-size:11px; flex:none; }
+.er-step.on{ color: var(--text); font-weight:600; background: var(--panel-2); }
+.er-step.on .er-n{ background: var(--gold); color:#111; border-color:transparent; }
+.er-step.done{ color: var(--ok); }
+.er-step.done .er-n{ border-color: var(--ok); }
+.er-drop{ display:flex; align-items:center; gap:14px; margin:14px 16px 0; padding:14px 16px; border:1.5px dashed var(--border-lit); border-radius:12px; background: var(--panel-2); }
+.er-drop-ic{ font-size:24px; color: var(--text-dim); line-height:1; }
+.er-drop-txt{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.er-drop-txt b{ font-size:13.5px; font-weight:600; color: var(--text); }
+.er-drop-txt small{ font-size:12px; color: var(--text-dim); }
+.er-up .upload-status{ margin-top:10px; margin-bottom:0; }
+.er-reviewrow{ margin-top:6px; margin-bottom:0; }
+.er-reviewrow:has(button[style*="none"]){ margin-top:0; }
+.er-body{ display:flex; flex-direction:column; gap:14px; margin-top:12px; }
+.er-body:empty{ display:none; }
+.er-thumbs{ display:flex; gap:8px; flex-wrap:wrap; }
+.er-th{ width:122px; padding:6px; border:1px solid var(--border); border-radius:8px; background: var(--panel-2); font-size:11.5px; }
+.er-th img{ display:block; width:100%; height:52px; object-fit:cover; object-position:top; border-radius:4px; margin-bottom:5px; background:#000; }
+.er-th-t{ color: var(--text); font-weight:600; }
+.er-th-s{ color: var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.er-metrics{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; }
+.er-mc{ padding:8px 12px; border-radius:8px; background: var(--panel-2); }
+.er-mc b{ display:block; font-size:20px; font-weight:600; color: var(--text); }
+.er-mc span{ font-size:11.5px; color: var(--text-dim); }
+.er-mc.warn b{ color:#e8b44a; }
+.er-warn{ margin:0; padding:8px 12px; border-radius:8px; border:1px solid #d9a300; background:rgba(217,163,0,.10); font-size:12.5px; color: var(--text); }
+.er-sec .chip-row{ margin:6px 0 0; }
+.er-h{ margin:0; display:flex; justify-content:space-between; gap:10px; font-size:12px; font-weight:600; color: var(--text-dim); }
+.er-h-n{ font-weight:400; }
+.er-note{ margin:4px 0 0; font-size:12px; color: var(--text-dim); }
+.er-chip{ padding-left:10px; }
+.er-chip.er-ok{ border-color: color-mix(in srgb, var(--ok) 55%, transparent); background: color-mix(in srgb, var(--ok) 12%, transparent); }
+.er-chip.er-fix{ border-color: color-mix(in srgb, #5b9dd9 55%, transparent); background: color-mix(in srgb, #5b9dd9 13%, transparent); }
+.er-chip.er-chk{ border-color:#d9a300; background:rgba(217,163,0,.14); }
+.er-chip.er-new{ background: var(--panel-2); }
+.er-sec-chk{ padding:10px 12px; border:1px solid rgba(217,163,0,.45); border-radius:10px; background:rgba(217,163,0,.06); }
+.er-chk-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.er-why{ font-size:12px; color: var(--text-dim); }
+.er-sug, .er-keep, .er-miss{ padding:2px 10px; border-radius:12px; border:1px solid #d9a300; background:#e8b44a; color:#111; font-size:12px; font-weight:600; cursor:pointer; }
+.er-sug.cls{ background:#7fc79a; border-color:#46a066; }
+.er-keep{ background:transparent; color: var(--text-dim); border-color: var(--border-lit); font-weight:400; }
+.er-miss{ background: var(--panel-2); color: var(--text); border-color: var(--border-lit); font-weight:400; }
+.er-miss:hover, .er-keep:hover{ border-color: var(--gold); }
+.er-manual{ margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
+.er-manual-title{ font-size:12px; font-weight:600; color: var(--text-dim); margin-bottom:6px; }
+.er-manual-row{ display:flex; gap:8px; flex-wrap:wrap; }
+.er-manual-row input{ flex:1 1 150px; min-width:0; }
+.er-manual-row select{ flex:1 1 200px; min-width:0; max-width:100%; }
+.er-manual-hint{ display:block; min-height:1.3em; margin-top:4px; font-size:12px; color: var(--text-dim); }
+.er-up .error-msg{ margin-top:0; }
+.er-foot{ position:sticky; bottom:0; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:12px; padding:10px 16px; border-top:1px solid var(--border); background: var(--panel-2); font-size:12.5px; }
+.er-foot-info{ color: var(--text-dim); }
+.er-foot-btns{ display:flex; gap:8px; }
+@media (max-width:560px){ .er-metrics{ grid-template-columns:repeat(2, minmax(0, 1fr)); } .er-drop{ flex-wrap:wrap; } }
 
 /* ---- окно «сохраните логин и пароль» после входа по ссылке-приглашению (index.html) ---- */
 .welcome-modal{ width:min(440px, 100%); text-align:center; padding:26px 26px 22px; }

@@ -152,14 +152,14 @@ end $$;
 -- ---------- первый главный админ (сделать вручную, после этого файла) ----------
 --
 -- 1. В Dashboard → Authentication → Users → Add user создайте пользователя:
---    email:    <ваш_логин>@l2clan.local   (например darklord@l2clan.local)
+--    email:    <ваш_логин>@l2clan.local   (например admin@l2clan.local)
 --    password: <пароль, который сами придумаете>
 -- 2. Скопируйте его UID (виден в списке пользователей) и выполните:
 --
 -- insert into public.profiles (id, username, clan_id, role_id, party_id, created_by)
 -- values (
 --   '<UID пользователя из шага 1>',
---   'МрачныйЛорд',
+--   '<ваш_логин>',
 --   (select id from public.clans limit 1),
 --   (select id from public.roles where key = 'glavadmin'),
 --   null,

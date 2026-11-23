@@ -4,7 +4,10 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Админ-панель — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=39" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap" />
+<link rel="stylesheet" href="js/theme.css?v=43" />
 <style>
   .admin-wrap{ display:flex; flex-direction:column; gap:14px; padding:0 0 32px; }
   .admin-head{ display:flex; align-items:center; justify-content:space-between; }
@@ -152,6 +155,31 @@
     background: var(--panel-2); border:1px solid var(--border); border-radius:7px;
     padding:8px 10px;
   }
+  /* ---- «Ники и игроки» ---- */
+  .twin-auto{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:12px 0; }
+  .twin-group{ padding:12px 14px; border:1px solid var(--border); border-radius:var(--radius-sm); background: var(--panel-2); }
+  .twin-group + .twin-group{ margin-top:10px; }
+  .twin-opt{ display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:6px 0; cursor:pointer; }
+  .twin-opt input{ margin:0 2px 0 0; }
+  .twin-opt b{ font-size:14px; overflow-wrap:anywhere; }
+  .twin-opt span{ font-size:11.5px; color: var(--text-dim); }
+  .twin-actions{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .twin-actions .btn{ padding:5px 12px; font-size:12.5px; }
+  .nick-row{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-sm); background: var(--panel-2); }
+  .nick-row + .nick-row{ margin-top:8px; }
+  .nick-row .nr-main{ flex:1 1 220px; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .nick-row .nr-main b{ font-size:14px; overflow-wrap:anywhere; }
+  .nick-row .nr-main span{ font-size:11.5px; color: var(--text-dim); }
+  .nick-row .nr-actions{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .nick-row .nr-actions .btn{ padding:5px 11px; font-size:12.5px; }
+  .nick-row .nr-actions input{ width:170px; padding:6px 9px; font-size:13px; }
+  .nick-sug{ font-weight:600; }
+  .nick-sug.cls{ border-color: var(--ok); }
+  .nicks-manual{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px; }
+  .nicks-manual input{ width:220px; max-width:100%; }
+  .nicks-bar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:10px 0; }
+  .sec-order-title{ margin:10px 0 0; font-size:10.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color: var(--text-dim); opacity:.8; }
+  .sec-order-title:first-child{ margin-top:0; }
   .sec-order-row .num{ flex:none; width:18px; font-size:11.5px; color: var(--text-dim); text-align:right; }
   .sec-order-row .label{ flex:1; min-width:0; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .sec-order-row .sub{ font-size:11px; color: var(--text-dim); }
@@ -218,6 +246,18 @@
   .preset-card:hover{ border-color: var(--border-lit); }
   .preset-card.active{ border-color: var(--gold); color: var(--text); }
   .preset-card .dot{ width:28px; height:28px; border-radius:50%; }
+
+  /* выбор стиля шапки меню: превью — настоящая разметка шапки сайдбара (стили из theme.css) */
+  .brand-style-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap:14px; }
+  .brand-style-card{
+    border:1px solid var(--border); border-radius:10px; background: var(--panel-2); cursor:pointer; overflow:hidden;
+    display:flex; flex-direction:column;
+  }
+  .brand-style-card:hover{ border-color: var(--border-lit); }
+  .brand-style-card.active{ border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+  .brand-style-card .sidebar-brand{ margin:0; border-bottom:1px solid var(--border); pointer-events:none; }
+  .brand-style-card .bs-label{ padding:9px 12px; font-size:12.5px; color: var(--text-dim); }
+  .brand-style-card.active .bs-label{ color: var(--text); }
 </style>
 </head>
 <body>
@@ -232,6 +272,7 @@
       <div class="admin-nav-title" data-i18n="admin.navPeople">Люди и доступ</div>
       <button type="button" class="admin-nav-item" data-tab="users" data-i18n="admin.tabUsers">Пользователи</button>
       <button type="button" class="admin-nav-item" data-tab="sections" data-i18n="admin.tabSections">Разделы и права</button>
+      <button type="button" class="admin-nav-item" data-tab="nicks" data-i18n="admin.tabNicks">Ники и игроки</button>
       <div class="admin-nav-title" data-i18n="admin.navAccounting">Учёт клана</div>
       <button type="button" class="admin-nav-item" data-tab="rules" data-i18n="admin.tabRules">Налоги</button>
       <button type="button" class="admin-nav-item" data-tab="attendance" data-i18n="admin.tabAttendance">Журнал посещаемости</button>
@@ -378,6 +419,46 @@
     <textarea id="taxReportTemplateInput" rows="8" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:13px; padding:9px 11px; border-radius:5px; border:1px solid var(--border); background:var(--panel-2); color:var(--text); resize:vertical;"></textarea>
     <p class="error-msg" id="taxReportTemplateError"></p>
     <p class="ok-msg" id="taxReportTemplateOk" style="display:none;" data-i18n="admin.saved">Сохранено.</p>
+  </section>
+    </div>
+
+    <div class="admin-tab-panel" data-panel="nicks">
+  <section class="card">
+    <h2 data-i18n="admin.twinsTitle">Похожие написания</h2>
+    <p class="hint" data-i18n="admin.twinsHint">Один и тот же игрок мог попасть в базу под разными написаниями (регистр, похожие буквы, потерянная буква — особенно после распознавания скринов). Здесь такие ники собраны в группы. Выберите правильное написание — остальные заменятся на него везде, а при следующей загрузке скринов подставятся сами. Если ники в группе — разные игроки, нажмите «Это разные игроки».</p>
+    <div class="twin-auto" id="twinsAutoBar" style="display:none;">
+      <button type="button" class="btn btn-primary" id="twinsAuto"></button>
+      <span class="hint" id="twinsAutoHint" data-i18n="admin.twinsAutoHint">Склеиваются только написания, которые отличаются регистром или похожими символами (0 и O, l и I, латиница и кириллица). Остальное остаётся на ручной выбор.</span>
+    </div>
+    <div id="twinsList"></div>
+    <p class="hint" id="twinsEmpty" style="display:none;" data-i18n="admin.twinsEmpty">Похожих написаний нет.</p>
+    <p class="error-msg" id="twinsError"></p>
+  </section>
+  <section class="card">
+    <h2 data-i18n="admin.nicksTitle">Проблемные ники</h2>
+    <p class="hint" data-i18n="admin.nicksHint">Ники, которые есть в группах, явке, статистике, налогах и других разделах, но которых нет ни в одной переписи: обычно это ошибка распознавания или человек, убранный из переписи. Для каждого можно заменить его везде на правильный ник из переписи или убрать из состава.</p>
+    <div class="nicks-bar">
+      <button type="button" class="btn btn-primary" id="nicksScan" data-i18n="admin.nicksScan">Проверить</button>
+      <span class="hint" id="nicksStatus"></span>
+    </div>
+    <div id="nicksList"></div>
+    <p class="hint" id="nicksEmpty" style="display:none;" data-i18n="admin.nicksEmpty">Проблемных ников нет — всё сходится с переписью.</p>
+    <p class="error-msg" id="nicksError"></p>
+  </section>
+  <section class="card">
+    <h2 data-i18n="admin.nicksManualTitle">Заменить ник вручную</h2>
+    <p class="hint" data-i18n="admin.nicksManualHint">Если неправильный ник попал в саму перепись или нужно объединить два написания одного игрока: впишите, что заменить и на какой ник. Замена пройдёт везде (перепись, группы, явка, статистика, налоги, профессии, буст), старое написание запомнится — при следующей загрузке скринов оно подставится само.</p>
+    <div class="nicks-manual">
+      <input type="text" id="nicksOld" list="nicksDatalist" data-i18n-attr="placeholder:admin.nicksOldPh" placeholder="Ник, который заменить" />
+      <span>→</span>
+      <input type="text" id="nicksNew" list="nicksDatalist" data-i18n-attr="placeholder:admin.nicksNewPh" placeholder="Правильный ник" />
+      <button type="button" class="btn" id="nicksUsage" data-i18n="admin.nicksUsage">Где встречается</button>
+      <button type="button" class="btn btn-primary" id="nicksRename" data-i18n="admin.nicksRename">Заменить везде</button>
+      <button type="button" class="btn btn-danger" id="nicksRemoveBtn" data-i18n="admin.nicksRemove">Убрать из состава</button>
+    </div>
+    <datalist id="nicksDatalist"></datalist>
+    <p class="hint" id="nicksPreview"></p>
+    <p class="error-msg" id="nicksManualError"></p>
   </section>
     </div>
 
@@ -610,6 +691,13 @@
     <p class="error-msg" id="brandingError"></p>
     <p class="ok-msg" id="brandingOk" style="display:none;" data-i18n="admin.saved">Сохранено.</p>
   </section>
+
+  <section class="card">
+    <h2 data-i18n="admin.brandStyleTitle">Стиль шапки меню</h2>
+    <p class="hint" data-i18n="admin.brandStyleHint">Как выглядит название клана вверху бокового меню. Применяется всем в клане; цвет берётся из выбранной цветовой схемы. Название и лого — из блока выше.</p>
+    <div class="brand-style-grid" id="brandStyleGrid"></div>
+    <p class="error-msg" id="brandStyleError"></p>
+  </section>
     </div>
 
     <div class="admin-tab-panel" data-panel="shares">
@@ -719,7 +807,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=27"></script>
-<script src="js/i18n.js?v=112"></script>
+<script src="js/i18n.js?v=125"></script>
+<script src="js/nav-config.js?v=1"></script>
+<script src="js/nick-match.js?v=7"></script>
+<script src="js/nick-tools.js?v=3"></script>
 <script src="js/invite.js?v=1"></script>
 <script src="js/backup.js?v=7"></script>
 <script src="js/num-format.js?v=1"></script>
@@ -1250,6 +1341,173 @@
     cb.disabled = false;
   });
 
+  // ---------- «Ники и игроки» ----------
+  // Вся логика (проверка, замена, удаление, поиск похожих написаний) — в js/nick-tools.js: её же использует значок «!» у
+  // «Админ-панели» в меню. Здесь только экран.
+  const NT = L2NickTools;
+  const nctx = () => ({ clanId: profile.clan_id, userId: profile.id });
+  const usageText = (u) => u.length ? u.map(x => x.label + " " + x.count).join(" · ") : L2I18n.t("admin.nicksNowhere", "нигде не найден");
+  let lastAudit = null, twinObvious = [];
+
+  function nickSetStatus(text){ document.getElementById("nicksStatus").textContent = text || ""; }
+  // значок: красная точка у вкладки и «!» у «Админ-панели» в меню (если есть что проверить)
+  function paintAttention(n){
+    document.querySelector('.admin-nav-item[data-tab="nicks"]')?.classList.toggle("sec-warn", n > 0);
+    try { if(window.top && window.top.L2Nav && window.top.L2Nav.setNickBadge) window.top.L2Nav.setNickBadge(n); } catch(e){}
+  }
+  { const c = NT.cachedCount(profile.clan_id); if(c) paintAttention(c.n); }
+
+  async function scanNicks(){
+    const errEl = document.getElementById("nicksError"); errEl.textContent = "";
+    document.getElementById("nicksEmpty").style.display = "none";
+    nickSetStatus(L2I18n.t("admin.nicksLoading", "Загружаю данные…"));
+    let res;
+    try { res = await NT.audit(db, profile.clan_id); }
+    catch(e){ errEl.textContent = e.message || String(e); nickSetStatus(""); return; }
+    lastAudit = res;
+    document.getElementById("nicksDatalist").innerHTML = [...res.censusNicks].sort((a, b) => a.localeCompare(b)).map(n => `<option value="${escapeHtml(n)}"></option>`).join("");
+    const ignored = NT.loadIgnored(profile.clan_id);
+    const orphans = res.orphans.filter(o => !ignored.has(o.nick));
+    document.getElementById("nicksEmpty").style.display = orphans.length ? "none" : "";
+    renderNickRows(orphans);
+    renderTwins(res.twins, ignored);
+    const n = NT.attentionCount(res, profile.clan_id);
+    NT.setCachedCount(profile.clan_id, n); paintAttention(n);
+    nickSetStatus(L2I18n.t("admin.nicksStatus", "В переписях: {c} · в других разделах: {u} · проблемных: {o}").replace("{c}", res.censusNicks.size).replace("{u}", res.used.size).replace("{o}", orphans.length) +
+      (ignored.size ? " · " + L2I18n.t("admin.nicksIgnored", "скрыто: {n}").replace("{n}", ignored.size) : ""));
+  }
+
+  function renderNickRows(orphans){
+    const list = document.getElementById("nicksList"); list.innerHTML = "";
+    orphans.forEach(o => {
+      const row = document.createElement("div"); row.className = "nick-row"; row.dataset.nick = o.nick;
+      const where = [...o.by.entries()].map(([k, v]) => k + " " + v).join(" · ");
+      row.innerHTML = `<div class="nr-main"><b>${escapeHtml(o.nick)}</b><span>${escapeHtml(where)}</span></div><div class="nr-actions">` +
+        o.sug.map(s => `<button type="button" class="btn nick-sug${s.classMatch ? " cls" : ""}" data-act="to" data-to="${escapeHtml(s.nick)}" title="${escapeHtml(s.classMatch ? L2I18n.t("admin.nicksSameClass", "Совпадает и профессия") : "")}">→ ${escapeHtml(s.nick)}${s.classMatch ? " ✓" : ""}</button>`).join("") +
+        `<input type="text" list="nicksDatalist" data-custom placeholder="${escapeHtml(L2I18n.t("admin.nicksCustomPh", "Другой ник…"))}" />` +
+        `<button type="button" class="btn" data-act="custom">${escapeHtml(L2I18n.t("admin.nicksReplace", "Заменить"))}</button>` +
+        `<button type="button" class="btn btn-danger" data-act="remove">${escapeHtml(L2I18n.t("admin.nicksRemove", "Убрать из состава"))}</button>` +
+        `<button type="button" class="btn" data-act="hide" title="${escapeHtml(L2I18n.t("admin.nicksHideTitle", "Оставить как есть и не показывать"))}">${escapeHtml(L2I18n.t("admin.nicksHide", "Скрыть"))}</button></div>`;
+      list.appendChild(row);
+    });
+  }
+
+  // ---- «Похожие написания» ----
+  function paintAuto(){
+    const bar = document.getElementById("twinsAutoBar"), btn = document.getElementById("twinsAuto");
+    bar.style.display = twinObvious.length ? "" : "none";
+    btn.textContent = L2I18n.t("admin.twinsAuto", "Объединить все очевидные ({n})").replace("{n}", twinObvious.length);
+  }
+  function renderTwins(groups, ignored){
+    twinObvious = NT.obviousMerges(groups, ignored); paintAuto();
+    const shown = groups.filter(g => !ignored.has("twin:" + g.key));
+    const list = document.getElementById("twinsList"); list.innerHTML = "";
+    document.getElementById("twinsEmpty").style.display = shown.length ? "none" : "";
+    shown.forEach((g, gi) => {
+      const box = document.createElement("div"); box.className = "twin-group"; box.dataset.key = g.key;
+      box.innerHTML = g.info.map((x, i) => `<label class="twin-opt"><input type="radio" name="twin${gi}" value="${escapeHtml(x.nick)}" ${i === 0 ? "checked" : ""} />` +
+        `<b>${escapeHtml(x.nick)}</b><span>${escapeHtml([...x.by.entries()].map(([k, v]) => k + " " + v).join(" · "))}</span></label>`).join("") +
+        `<div class="twin-actions"><button type="button" class="btn btn-primary" data-twin="merge">${escapeHtml(L2I18n.t("admin.twinsMerge", "Объединить в выбранный"))}</button>` +
+        `<button type="button" class="btn" data-twin="split">${escapeHtml(L2I18n.t("admin.twinsSplit", "Это разные игроки"))}</button></div>`;
+      list.appendChild(box);
+    });
+  }
+  document.getElementById("twinsList").addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-twin]"); if(!btn) return;
+    const box = btn.closest(".twin-group"), errEl = document.getElementById("twinsError");
+    errEl.textContent = "";
+    if(btn.dataset.twin === "split"){
+      const ig = NT.loadIgnored(profile.clan_id); ig.add("twin:" + box.dataset.key); NT.saveIgnored(profile.clan_id, ig); box.remove(); scanNicks(); return;
+    }
+    const target = box.querySelector("input:checked").value;
+    const others = [...box.querySelectorAll("input")].map(i => i.value).filter(v => v !== target);
+    // без вопросов: замена обратима (старое написание запоминается привязкой, вернуть можно тем же инструментом)
+    btn.disabled = true; box.style.opacity = ".5";
+    try {
+      const problems = [];
+      for(const o of others) problems.push(...await NT.rename(db, nctx(), o, target));
+      errEl.textContent = problems.length ? L2I18n.t("admin.nicksRenamePartial", "Не всё удалось: ") + problems.join("; ") : "";
+      if(!problems.length) box.remove(); else { box.style.opacity = ""; btn.disabled = false; }
+      scanNicks(); // обновление списка и счётчиков — в фоне, ждать не нужно
+    } catch(err){ box.style.opacity = ""; btn.disabled = false; errEl.textContent = err.message; }
+  });
+  document.getElementById("twinsAuto").addEventListener("click", async () => {
+    const btn = document.getElementById("twinsAuto"), errEl = document.getElementById("twinsError");
+    const jobs = twinObvious.slice(); if(!jobs.length) return;
+    errEl.textContent = ""; btn.disabled = true;
+    const problems = []; let done = 0;
+    const paint = () => { btn.textContent = L2I18n.t("admin.twinsAutoBusy", "Объединяю… {i}/{n}").replace("{i}", done).replace("{n}", jobs.length); };
+    paint();
+    // несколько групп одновременно: группы между собой не пересекаются (разные ники), внутри группы замены идут по очереди
+    let next = 0;
+    const worker = async () => {
+      while(next < jobs.length){
+        const job = jobs[next++];
+        try { for(const o of job.others) problems.push(...await NT.rename(db, nctx(), o, job.target)); }
+        catch(e){ problems.push(job.target + ": " + e.message); }
+        done++; paint();
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    errEl.textContent = problems.length ? L2I18n.t("admin.nicksRenamePartial", "Не всё удалось: ") + problems.join("; ") : "";
+    btn.disabled = false;
+    document.getElementById("nicksPreview").textContent = L2I18n.t("admin.twinsAutoDone", "Готово: объединено групп — {n}.").replace("{n}", jobs.length);
+    await scanNicks();
+  });
+
+  // ---- замена / удаление ----
+  async function doRename(oldNick, newNick, errEl){
+    newNick = (newNick || "").trim();
+    if(!newNick || newNick === oldNick){ errEl.textContent = L2I18n.t("admin.nicksPickNew", "Укажите правильный ник, отличный от старого."); return false; }
+    // единственная страховка — от опечатки: нового ника нет ни в одной переписи
+    if(lastAudit && !lastAudit.censusNicks.has(newNick) && !confirm(L2I18n.t("admin.nicksNotInCensus", "Ника «{n}» нет ни в одной переписи. Всё равно заменить?").replace("{n}", newNick))) return false;
+    const problems = await NT.rename(db, nctx(), oldNick, newNick);
+    errEl.textContent = problems.length ? L2I18n.t("admin.nicksRenamePartial", "Не всё удалось: ") + problems.join("; ") : "";
+    return !problems.length;
+  }
+  async function doRemove(nick, errEl){
+    const u = await NT.usage(db, nick);
+    if(!confirm(L2I18n.t("admin.nicksConfirmRemove", "Убрать «{n}» из состава?\n\nБудет убрано из групп, профессий, буста, коэффициентов лидеров и метки списка. История (явка, статистика, налоги, перепись) останется.\n\nСейчас: {u}.").replace(/\{n\}/g, nick).replace("{u}", usageText(u)))) return false;
+    const problems = await NT.removeFromRoster(db, nick);
+    errEl.textContent = problems.length ? L2I18n.t("admin.nicksRenamePartial", "Не всё удалось: ") + problems.join("; ") : "";
+    return !problems.length;
+  }
+
+  document.getElementById("nicksScan").addEventListener("click", () => scanNicks());
+  document.getElementById("nicksList").addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-act]"); if(!btn) return;
+    const row = btn.closest(".nick-row"), nick = row.dataset.nick, errEl = document.getElementById("nicksError");
+    errEl.textContent = "";
+    btn.disabled = true;
+    try {
+      let ok = false;
+      if(btn.dataset.act === "to") ok = await doRename(nick, btn.dataset.to, errEl);
+      else if(btn.dataset.act === "custom") ok = await doRename(nick, row.querySelector("[data-custom]").value, errEl);
+      else if(btn.dataset.act === "remove") ok = await doRemove(nick, errEl);
+      else if(btn.dataset.act === "hide"){ const ig = NT.loadIgnored(profile.clan_id); ig.add(nick); NT.saveIgnored(profile.clan_id, ig); ok = true; }
+      if(ok){ if(btn.dataset.act !== "remove") row.remove(); scanNicks(); } // строку убираем сразу, список и счётчики обновятся в фоне
+    } finally { btn.disabled = false; }
+  });
+  const manualErr = () => document.getElementById("nicksManualError");
+  document.getElementById("nicksUsage").addEventListener("click", async () => {
+    const o = document.getElementById("nicksOld").value.trim(); if(!o) return;
+    const prev = document.getElementById("nicksPreview"); prev.textContent = "…";
+    prev.textContent = "«" + o + "»: " + usageText(await NT.usage(db, o));
+  });
+  document.getElementById("nicksRename").addEventListener("click", async () => {
+    const o = document.getElementById("nicksOld").value.trim(), n = document.getElementById("nicksNew").value.trim();
+    manualErr().textContent = "";
+    if(!o){ manualErr().textContent = L2I18n.t("admin.nicksPickOld", "Впишите ник, который нужно заменить."); return; }
+    if(!lastAudit) await scanNicks();
+    if(await doRename(o, n, manualErr())){ document.getElementById("nicksPreview").textContent = L2I18n.t("admin.nicksDone", "Готово."); document.getElementById("nicksOld").value = ""; document.getElementById("nicksNew").value = ""; scanNicks(); }
+  });
+  document.getElementById("nicksRemoveBtn").addEventListener("click", async () => {
+    const o = document.getElementById("nicksOld").value.trim();
+    manualErr().textContent = "";
+    if(!o){ manualErr().textContent = L2I18n.t("admin.nicksPickOld", "Впишите ник, который нужно заменить."); return; }
+    if(await doRemove(o, manualErr())){ document.getElementById("nicksPreview").textContent = L2I18n.t("admin.nicksDone", "Готово."); document.getElementById("nicksOld").value = ""; scanNicks(); }
+  });
+
   // ---------- сумма недельного налога с человека ----------
   async function loadWeeklyTaxAmount(){
     const { data, error } = await db.from("tax_settings").select("weekly_tax_amount").eq("clan_id", profile.clan_id).maybeSingle();
@@ -1619,85 +1877,91 @@
   }
 
   // ---------- порядок разделов в левом меню ----------
-  // группировка пунктов повторяет NAV_GROUPS из index.html: в меню «Учёт клана» —
-  // один пункт с подпунктами, поэтому и переставлять его надо целиком
-  const NAV_GROUPS = [
-    { i18nKey: "navgroup.uchet", fallback: "Учёт клана", keys: ["census", "taxes", "attendance"] },
-    { i18nKey: "navgroup.dkp", fallback: "ДКП", keys: ["loot_split", "loot_split_party", "loot_payout"] },
-  ];
-
-  let menuItems = []; // [{ group?, keys: [section_key, ...] }] в текущем порядке меню
+  // Раскладка та же, что в самом меню (js/nav-config.js): разделы с подписями идут по порядку и не двигаются, а пункты
+  // переставляются стрелками ▲▼ внутри своего раздела. Показаны только те пункты, что реально есть в меню
+  // (выключенные на весь клан и «Налоги» при выключенных налогах не показываем — их там нет).
+  const NAV_GROUPS = L2_NAV.GROUPS, NAV_SECTIONS = L2_NAV.SECTIONS;
+  let orderKeys = [];   // все ключи разделов в текущем порядке меню
+  let taxesOff = false;
 
   async function loadSectionOrder(){
-    const { data, error } = await db.from("clan_section_order").select("section_key, sort");
+    const [{ data, error }, tx] = await Promise.all([
+      db.from("clan_section_order").select("section_key, sort"),
+      db.from("tax_settings").select("taxes_enabled").eq("clan_id", profile.clan_id).maybeSingle(),
+    ]);
     if(error){ console.error(error); }
+    taxesOff = !tx.error && tx.data ? tx.data.taxes_enabled === false : false;
     const custom = new Map((data || []).map(r => [r.section_key, r.sort]));
-
-    const ordered = sections.slice().sort((a, b) =>
-      (custom.get(a.key) ?? a.sort) - (custom.get(b.key) ?? b.sort));
-
-    // сворачиваем разделы группы в один пункт — на месте первого из них
-    menuItems = [];
-    const seenGroups = new Set();
-    ordered.forEach(sec => {
-      const group = NAV_GROUPS.find(g => g.keys.includes(sec.key));
-      if(!group){
-        menuItems.push({ keys: [sec.key] });
-        return;
-      }
-      if(seenGroups.has(group.i18nKey)) return;
-      seenGroups.add(group.i18nKey);
-      const children = ordered.filter(x => group.keys.includes(x.key));
-      menuItems.push({ group, keys: children.map(x => x.key) });
-    });
+    orderKeys = sections.slice().sort((a, b) => (custom.get(a.key) ?? a.sort) - (custom.get(b.key) ?? b.sort)).map(s => s.key);
   }
+
+  // [{ sec, items: [{ group?, keys }] }] — то, что сейчас показывает меню
+  function navLayout(){
+    const enabled = (k) => k === "admin" || (sectionToggles.get(k) ?? true);
+    const visible = orderKeys.filter(k => enabled(k) && !(k === "taxes" && taxesOff));
+    const known = new Set(NAV_SECTIONS.flatMap(s => s.keys));
+    return NAV_SECTIONS.map(sec => {
+      const list = visible.filter(k => sec.keys.includes(k) || (sec.rest && !known.has(k)));
+      const items = [], seen = new Set();
+      list.forEach(k => {
+        const g = NAV_GROUPS.find(x => x.keys.includes(k));
+        if(!g){ items.push({ keys: [k] }); return; }
+        if(seen.has(g.i18nKey)) return;
+        seen.add(g.i18nKey);
+        items.push({ group: g, keys: list.filter(x => g.keys.includes(x)) });
+      });
+      return { sec, items };
+    }).filter(l => l.items.length);
+  }
+  const secLabel = (k) => L2I18n.t("section." + k, sections.find(s => s.key === k)?.label || k);
 
   function renderSectionOrder(){
     const list = document.getElementById("secOrderList");
     list.innerHTML = "";
-    menuItems.forEach((item, i) => {
-      const row = document.createElement("div");
-      row.className = "sec-order-row";
-
-      const num = document.createElement("span");
-      num.className = "num";
-      num.textContent = String(i + 1);
-
-      const label = document.createElement("span");
-      label.className = "label";
-      if(item.group){
-        label.textContent = L2I18n.t(item.group.i18nKey, item.group.fallback);
-        const sub = document.createElement("span");
-        sub.className = "sub";
-        sub.textContent = " — " + item.keys.map(k => {
-          const sec = sections.find(s => s.key === k);
-          return L2I18n.t("section." + k, sec?.label || k);
-        }).join(", ");
-        label.appendChild(sub);
-      } else {
-        const sec = sections.find(s => s.key === item.keys[0]);
-        label.textContent = L2I18n.t("section." + item.keys[0], sec?.label || item.keys[0]);
+    let n = 0;
+    navLayout().forEach((layout, li, all) => {
+      if(layout.sec.label){
+        const head = document.createElement("div");
+        head.className = "sec-order-title";
+        head.textContent = L2I18n.t(layout.sec.i18nKey, layout.sec.label);
+        list.appendChild(head);
       }
-
-      const moves = document.createElement("div");
-      moves.className = "moves";
-      const up = document.createElement("button");
-      up.textContent = "▲"; up.title = L2I18n.t("admin.moveUp", "Выше"); up.disabled = i === 0;
-      up.addEventListener("click", () => moveMenuItem(i, -1));
-      const down = document.createElement("button");
-      down.textContent = "▼"; down.title = L2I18n.t("admin.moveDown", "Ниже"); down.disabled = i === menuItems.length - 1;
-      down.addEventListener("click", () => moveMenuItem(i, 1));
-      moves.append(up, down);
-
-      row.append(num, label, moves);
-      list.appendChild(row);
+      layout.items.forEach((item, i) => {
+        const row = document.createElement("div");
+        row.className = "sec-order-row";
+        const num = document.createElement("span");
+        num.className = "num"; num.textContent = String(++n);
+        const label = document.createElement("span");
+        label.className = "label";
+        if(item.group){
+          label.textContent = L2I18n.t(item.group.i18nKey, item.group.label);
+          const sub = document.createElement("span");
+          sub.className = "sub"; sub.textContent = " — " + item.keys.map(secLabel).join(", ");
+          label.appendChild(sub);
+        } else label.textContent = secLabel(item.keys[0]);
+        const moves = document.createElement("div");
+        moves.className = "moves";
+        const up = document.createElement("button");
+        up.textContent = "▲"; up.title = L2I18n.t("admin.moveUp", "Выше"); up.disabled = i === 0;
+        up.addEventListener("click", () => moveMenuItem(li, i, -1));
+        const down = document.createElement("button");
+        down.textContent = "▼"; down.title = L2I18n.t("admin.moveDown", "Ниже"); down.disabled = i === layout.items.length - 1;
+        down.addEventListener("click", () => moveMenuItem(li, i, 1));
+        moves.append(up, down);
+        row.append(num, label, moves);
+        list.appendChild(row);
+      });
     });
   }
 
-  async function moveMenuItem(index, delta){
-    const target = index + delta;
-    if(target < 0 || target >= menuItems.length) return;
-    [menuItems[index], menuItems[target]] = [menuItems[target], menuItems[index]];
+  async function moveMenuItem(layoutIndex, index, delta){
+    const layout = navLayout();
+    const items = layout[layoutIndex].items, target = index + delta;
+    if(target < 0 || target >= items.length) return;
+    [items[index], items[target]] = [items[target], items[index]];
+    const shown = layout.flatMap(l => l.items.flatMap(it => it.keys));
+    const shownSet = new Set(shown);
+    orderKeys = shown.concat(orderKeys.filter(k => !shownSet.has(k))); // выключенные разделы остаются в конце, их порядок не теряется
     renderSectionOrder();
     await saveSectionOrder();
   }
@@ -1706,12 +1970,7 @@
     const errEl = document.getElementById("secOrderError");
     const okEl = document.getElementById("secOrderOk");
     errEl.textContent = "";
-    // сквозная нумерация по всем ключам: подпункты группы получают подряд идущие номера
-    const rows = [];
-    let sort = 0;
-    menuItems.forEach(item => item.keys.forEach(key => {
-      rows.push({ clan_id: profile.clan_id, section_key: key, sort: sort++ });
-    }));
+    const rows = orderKeys.map((key, sort) => ({ clan_id: profile.clan_id, section_key: key, sort }));
     const { error } = await db.from("clan_section_order").upsert(rows, { onConflict: "clan_id,section_key" });
     if(error){ okEl.style.display = "none"; errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message; return; }
     okEl.style.display = "";
@@ -2214,10 +2473,74 @@
     if(error) errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message;
   }
 
+  // ---- Стиль шапки меню (clans.brand_style, SQL: schema_brand_style.sql). Превью — та же разметка, что в index.html,
+  // со стилями из theme.css; id градиента свои у каждой карточки (иначе ссылка попадёт в скрытый svg первой карточки)
+  const BRAND_STYLES = [
+    { key: "classic", i18nKey: "admin.brandStyleClassic", label: "Классика (как сейчас)" },
+    { key: "blades-h", i18nKey: "admin.brandStyleBladesH", label: "Два клинка над названием" },
+    { key: "blades-i", i18nKey: "admin.brandStyleBladesI", label: "Клинки слева, ромбовая сетка" },
+  ];
+  let brandStyleKey = "classic";
+
+  function brandPreviewHtml(key){
+    const name = clanBranding.display_name || L2I18n.t("shell.defaultBrandName", "Кабинет клана");
+    const logo = clanBranding.logo_url ? `<img class="brand-flag" alt="" src="${escapeHtml(clanBranding.logo_url)}" />` : "";
+    const sub = clanBranding.display_name ? `<span class="brand-sub">${escapeHtml(L2I18n.t("shell.brandSub", "Кабинет клана"))}</span>` : "";
+    const id = "bs" + key.replace(/\W/g, "");
+    return `<div class="sidebar-brand" data-style="${key}">
+      <svg class="brand-lattice" viewBox="0 0 210 78" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path d="M105 4L150 39L105 74L60 39Z"/><path d="M105 14L135 39L105 64L75 39Z"/><path d="M150 39L195 4M150 39L195 74M60 39L15 4M60 39L15 74"/></svg>
+      <svg class="brand-blades" viewBox="0 0 46 100" aria-hidden="true">
+        <defs>
+          <linearGradient id="${id}Cu" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="brand-blade-a"/><stop offset=".45" class="brand-blade-b"/><stop offset="1" class="brand-blade-c"/></linearGradient>
+          <path id="${id}Bl" d="M2 0C15 26 15 74 2 100C8 74 8 26 2 0Z"/>
+        </defs>
+        <g transform="translate(9 0)"><use href="#${id}Bl" fill="url(#${id}Cu)"/></g>
+        <g transform="translate(37 0) scale(-1 1)"><use href="#${id}Bl" fill="url(#${id}Cu)"/></g>
+        <path class="brand-chev" d="M17 22L23 30L29 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gold)"/>
+      </svg>
+      <div class="brand-text">
+        <span class="brand-name" style="font-size:${key === "classic" ? 20 : key === "blades-h" ? 17 : 15}px">${escapeHtml(name)}</span>
+        <div class="brand-orn"><span class="brand-orn-in">${logo}${sub}</span></div>
+      </div>
+    </div>`;
+  }
+
+  function renderBrandStyleGrid(){
+    const grid = document.getElementById("brandStyleGrid");
+    if(!grid) return;
+    grid.innerHTML = "";
+    BRAND_STYLES.forEach(s => {
+      const card = document.createElement("div");
+      card.className = "brand-style-card" + (brandStyleKey === s.key ? " active" : "");
+      card.innerHTML = brandPreviewHtml(s.key) + `<div class="bs-label">${escapeHtml(L2I18n.t(s.i18nKey, s.label))}</div>`;
+      card.addEventListener("click", () => selectBrandStyle(s.key));
+      grid.appendChild(card);
+    });
+  }
+
+  async function selectBrandStyle(key){
+    const errEl = document.getElementById("brandStyleError");
+    errEl.textContent = "";
+    const prev = brandStyleKey;
+    brandStyleKey = key;
+    renderBrandStyleGrid();
+    const { error } = await db.rpc("update_clan_brand_style", { p_style: key });
+    if(error){
+      brandStyleKey = prev;
+      renderBrandStyleGrid();
+      errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message + " " +
+        L2I18n.t("admin.brandStyleNeedSql", "(если ошибка про функцию — выполните в Supabase SQL Editor файл supabase/schema_brand_style.sql)");
+      return;
+    }
+    // админка — iframe внутри index.html (тот же origin): сразу перерисовываем шапку, без перезагрузки
+    try{ if(window.parent && window.parent.applyBrandStyle) window.parent.applyBrandStyle(key); }catch(e){}
+  }
+
   function updateLogoPreview(){
     const url = document.getElementById("brandLogoInput").value.trim();
     const img = document.getElementById("brandLogoPreview");
     if(url){ img.src = url; img.style.display = ""; } else { img.style.display = "none"; }
+    renderBrandStyleGrid();
   }
 
   async function loadBranding(){
@@ -2231,6 +2554,11 @@
     document.getElementById("accentColorInput").value = clanBranding.accent_color || "#e8e8ea";
     document.getElementById("brandNameInput").value = clanBranding.display_name || "";
     document.getElementById("brandLogoInput").value = clanBranding.logo_url || "";
+    // колонки brand_style может ещё не быть (SQL не выполнен) — тогда просто classic
+    try{
+      const r = await db.from("clans").select("brand_style").eq("id", profile.clan_id).maybeSingle();
+      if(!r.error && r.data && BRAND_STYLES.some(s => s.key === r.data.brand_style)) brandStyleKey = r.data.brand_style;
+    }catch(e){}
     updateLogoPreview();
   }
 
@@ -2259,6 +2587,7 @@
     const okEl = document.getElementById("brandingOk");
     errEl.textContent = ""; okEl.style.display = "none";
     clanBranding.display_name = e.target.value.trim() || null;
+    renderBrandStyleGrid();
     const error = await saveBranding();
     if(error){ errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message; return; }
     okEl.style.display = "";
@@ -2681,6 +3010,7 @@
     users: async () => { await loadUsers(); },
     sections: async () => { await Promise.all([loadMatrix(), loadSectionOrder(), ensureToggles(), loadLbFull()]); renderSectionOrder(); renderSectionToggleList(); },
     rules: async () => { await Promise.all([loadWeeklyTaxAmount(), loadTaxesEnabled(), loadTaxReportTemplate()]); },
+    nicks: async () => { await scanNicks(); },
     attendance: async () => { await loadAttJoin(); },
     evreports: async () => { await loadRepAll(); },
     dkp: async () => {

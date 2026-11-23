@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Перепись клана — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=39" />
+<link rel="stylesheet" href="js/theme.css?v=43" />
 <style>
   /* «Перепись клана» больше не привязана к календарной неделе — вкладки на
      произвольные даты (когда вздумается), а не ◀/▶ по 7 дней. Общий
@@ -32,6 +32,16 @@
       <!-- рядом с заголовком, а не в правом углу шапки — там её перекрывает
            виджет профиля (.who-widget, плавает поверх контента в углу) -->
       <button class="btn" id="historyBtn" data-i18n="census.historyBtn">История</button>
+    </div>
+  </div>
+
+  <div class="card" id="leftoverBanner" style="display:none; border-color: var(--gold-dim);">
+    <p style="margin:0 0 8px;"><b id="leftoverTitle"></b></p>
+    <p class="hint" id="leftoverText" style="margin:0 0 10px;"></p>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" class="btn btn-primary" id="leftoverOpen" data-i18n="census.leftoversOpen">Открыть «Ники и игроки»</button>
+      <button type="button" class="btn btn-danger" id="leftoverDo" style="display:none;" data-i18n="census.cleanDo">Убрать из состава</button>
+      <button type="button" class="btn" id="leftoverClose" data-i18n="census.leftoversClose">Закрыть</button>
     </div>
   </div>
 
@@ -145,9 +155,10 @@
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=27"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=112"></script>
+<script src="js/i18n.js?v=125"></script>
 <script src="js/paste-drop.js?v=1"></script>
-<script src="js/nick-match.js?v=5"></script>
+<script src="js/nick-match.js?v=7"></script>
+<script src="js/nick-tools.js?v=3"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -266,6 +277,28 @@
 
   // ник целиком из неотличимых на скрине символов — только подсвечиваем, не правим
   function isAmbiguousNick(s){ return /^[0Oo1lIi|!]{3,}$/.test(String(s || "")); }
+
+  // Новая перепись — главный источник ников, и именно здесь раньше рождались «двойники» одного игрока (BloodYRaB3n / BloodyRaB3n…).
+  // Поэтому распознанный ник сверяется с тем, что уже есть в переписях: по привязкам, регистру и путанице символов он сам
+  // становится прежним написанием (chipFixed помнит, каким он пришёл со скрина). Что не сошлось, но на кого-то похоже,
+  // получает кнопку «→ ник» (и запоминается привязкой, чтобы в следующий раз подставилось само).
+  const chipFixed = new Map(); // ник → как был распознан
+  function normalizeScanned(n){
+    if(window.L2Nick && L2Nick.ready() && !isAmbiguousNick(n)){
+      const g = L2Nick.resolve(n);
+      if(["alias", "case", "ocr"].includes(g.how) && g.canon && g.canon !== n){ chipFixed.set(g.canon, n); return g.canon; }
+    }
+    return n;
+  }
+  let knownCensusCache = null;
+  const knownCensus = () => { if(!knownCensusCache || knownCensusCache.size !== allEntries.length){ knownCensusCache = { size: allEntries.length, set: new Set(allEntries.map(e => e.nickname)) }; knownCensusCache.list = [...knownCensusCache.set]; } return knownCensusCache; };
+  async function saveScannedAlias(alias, canonical){
+    try{
+      const { error } = await db.from("nick_aliases").upsert({ clan_id: profile.clan_id, alias, canonical, created_by: profile.id }, { onConflict: "clan_id,alias" });
+      if(error){ console.error(error); return; }
+      if(window.L2Nick){ L2Nick.invalidate(profile.clan_id); await L2Nick.refresh(db, profile.clan_id); }
+    }catch(e){ console.error(e); }
+  }
   function renderChips(){
     const row = document.getElementById("chipRow");
     row.innerHTML = "";
@@ -278,11 +311,37 @@
         chip.classList.add("chip-warn");
         chip.title = L2I18n.t("eventRoster.ambiguousNick", "Ник из похожих символов (0 O 1 l I i) — сверьте со скрином");
         span.textContent = "⚠ " + nick;
+      } else if(chipFixed.has(nick)){
+        chip.title = L2I18n.t("census.chipFixed", "Исправлено по прежним переписям: со скрина пришло «{from}»").replace("{from}", chipFixed.get(nick));
+        span.textContent = "↺ " + nick;
       }
       const btn = document.createElement("button");
       btn.textContent = "×";
       btn.addEventListener("click", () => { pendingChips.splice(i, 1); renderChips(); });
-      chip.append(span, btn);
+      chip.append(span);
+      // нет в прежних переписях, но похож на чей-то — предлагаем заменить (это и есть главная защита от двойников)
+      const kc = knownCensus();
+      if(kc.list.length && !kc.set.has(nick) && window.L2Nick){
+        // для «неотличимых» ников (l I 1 |) — подсказки среди таких же ников, и только если их мало (профессии на скрине переписи нет)
+        const sug = isAmbiguousNick(nick) ? L2Nick.suggestAmbiguous(nick, kc.list) : L2Nick.suggest(nick, kc.list, 2);
+        if(sug.length){
+          chip.classList.add("chip-warn");
+          chip.title = L2I18n.t("census.chipSuggest", "Нет в прежних переписях, но похож на «{n}» — это он? Нажмите кнопку, чтобы заменить.").replace("{n}", sug[0].nick);
+          sug.forEach(sg => {
+            const sb = document.createElement("button");
+            sb.type = "button"; sb.textContent = "→ " + sg.nick; sb.title = chip.title;
+            sb.style.cssText = "margin-left:6px; padding:1px 8px; border-radius:10px; border:1px solid #d9a300; background:#e8b44a; color:#111; font-size:11.5px; font-weight:600; cursor:pointer;";
+            sb.addEventListener("click", () => {
+              const old = pendingChips[i];
+              if(pendingChips.includes(sg.nick)) pendingChips.splice(i, 1); else pendingChips[i] = sg.nick;
+              saveScannedAlias(old, sg.nick);
+              renderChips();
+            });
+            chip.appendChild(sb);
+          });
+        }
+      }
+      chip.append(btn);
       row.appendChild(chip);
     });
   }
@@ -409,13 +468,78 @@
   document.getElementById("deleteSelectedBtn").addEventListener("click", async () => {
     if(!selectedIds.size) return;
     if(!confirm(L2I18n.t("weekRoster.confirmDeleteSelected", "Удалить выбранных: {n}?").replace("{n}", selectedIds.size))) return;
+    const delNicks = [...new Set(allEntries.filter(e => selectedIds.has(e.id)).map(e => e.nickname))];
     const { error } = await db.from("census_entries").delete().in("id", Array.from(selectedIds));
     if(!error){
       selectMode = false;
       document.getElementById("bulkTools").style.display = "none";
       await loadAll();
+      await warnLeftovers(delNicks);
     }
   });
+
+  // Убрали человека из переписи — он сам убирается и из остального состава (группы, профессия, буст, коэффициент лидера,
+  // метка списка), заходить в админку не нужно. «Убран из переписи» = его нет в САМОЙ СВЕЖЕЙ переписи (в старых неделях он
+  // может остаться — состав берётся по последней). Два случая:
+  //  • в свежей переписи есть тот же игрок под правильным написанием (убрали ДВОЙНИКА: BloodyRaB3n при BloodYRaB3n) —
+  //    ник заменяется на правильный везде, чтобы человек не пропал из группы вместе с неправильным написанием;
+  //  • иначе — человек ушёл: убирается из состава. История (явка, статистика, налоги, старые переписи) остаётся.
+  // Если за раз убрано очень много ников (случайно удалили всю перепись?), сначала спрашиваем.
+  const AUTO_CLEAN_MAX = 15;
+  async function warnLeftovers(nicks){
+    try{
+      const NT = window.L2NickTools; if(!NT || !window.L2Nick) return;
+      const latest = allEntries.reduce((m, e) => (!m || e.week_start > m) ? e.week_start : m, null);
+      const inLatest = new Set(allEntries.filter(e => e.week_start === latest).map(e => e.nickname));
+      const gone = nicks.filter(n => !inLatest.has(n));
+      if(!gone.length) return;
+      const ctx = { clanId: profile.clan_id, userId: profile.id };
+      const rosterLabels = new Set([...NT.TABLES.filter(t => t.roster).map(t => NT.label(t)), L2I18n.t("admin.nickTblLeader", "Лидер группы"), L2I18n.t("admin.nickTblDeputy", "Зам группы")]);
+      const run = async () => {
+        const pool = [...inLatest], merged = [], removed = [], problems = [];
+        for(const step of NT.cleanupPlan(gone, pool)){
+          const n = step.nick;
+          if(step.merge){
+            problems.push(...await NT.rename(db, ctx, n, step.merge));
+            merged.push(n + " → " + step.merge);
+          } else {
+            const where = (await NT.usage(db, n)).filter(x => rosterLabels.has(x.label)).map(x => x.label);
+            if(!where.length) continue; // в составе его и не было — делать нечего
+            problems.push(...await NT.removeFromRoster(db, n));
+            removed.push(n + " (" + where.join(", ") + ")");
+          }
+        }
+        return { merged, removed, problems };
+      };
+      const show = (title, text, withDo) => {
+        document.getElementById("leftoverTitle").textContent = title;
+        document.getElementById("leftoverText").textContent = text;
+        document.getElementById("leftoverOpen").style.display = withDo ? "none" : "";
+        document.getElementById("leftoverDo").style.display = withDo ? "" : "none";
+        const bar = document.getElementById("leftoverBanner");
+        bar.style.display = ""; bar.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      };
+      const report = (r) => {
+        if(!r.merged.length && !r.removed.length && !r.problems.length) return;
+        const parts = [];
+        if(r.removed.length) parts.push(L2I18n.t("census.cleanRemoved", "Убраны из состава: {list}.").replace("{list}", r.removed.slice(0, 10).join("; ") + (r.removed.length > 10 ? "…" : "")));
+        if(r.merged.length) parts.push(L2I18n.t("census.cleanMerged", "Это был двойник — заменены на правильный ник: {list}.").replace("{list}", r.merged.slice(0, 10).join("; ")));
+        if(r.problems.length) parts.push(L2I18n.t("admin.nicksRenamePartial", "Не всё удалось: ") + r.problems.join("; "));
+        else parts.push(L2I18n.t("census.cleanKeep", "История (явка, статистика, налоги) осталась."));
+        show(L2I18n.t("census.cleanTitle", "Убраны из переписи — убраны и из состава"), parts.join(" "), false);
+        try { window.top.L2Nav && window.top.L2Nav.refreshNickBadge && setTimeout(() => window.top.L2Nav.refreshNickBadge(true), 1500); } catch(e){}
+      };
+      if(gone.length > AUTO_CLEAN_MAX){
+        show(L2I18n.t("census.cleanManyTitle", "Из переписи убрано много ников"), L2I18n.t("census.cleanMany", "Убрано ников: {n}. Убрать их и из состава (группы, профессии, буст)? История останется.").replace("{n}", gone.length), true);
+        const btn = document.getElementById("leftoverDo");
+        btn.onclick = async () => { btn.disabled = true; try { report(await run()); } finally { btn.disabled = false; } };
+        return;
+      }
+      report(await run());
+    }catch(e){ console.error(e); }
+  }
+  document.getElementById("leftoverClose").addEventListener("click", () => { document.getElementById("leftoverBanner").style.display = "none"; });
+  document.getElementById("leftoverOpen").addEventListener("click", () => { if(window.top && window.top.L2Nav) window.top.L2Nav.openSection("admin", { tab: "nicks" }); });
 
   // ---- загрузка и OCR (без изменений по сути — просто теперь пишет на selectedDate) ----
   function fileToDataUrl(file){
@@ -451,6 +575,7 @@
         const dataUrl = await fileToDataUrl(files[i]);
         const nicknames = await L2Cabinet.adminOcrNicknames(dataUrl);
         nicknames.forEach(n => {
+          n = n ? normalizeScanned(n) : n;
           if(n && !pendingChips.includes(n)) pendingChips.push(n);
         });
         renderChips();
@@ -495,6 +620,7 @@
       created_by: profile.id,
     }));
     const { error } = await db.from("census_entries").insert(rows);
+    if(!error){ try { if(window.L2Nick) L2Nick.invalidate(profile.clan_id); window.top.L2Nav && window.top.L2Nav.refreshNickBadge && setTimeout(() => window.top.L2Nav.refreshNickBadge(true), 1500); } catch(e){} }
     if(!error && window.L2Nick) L2Nick.invalidate(profile.clan_id); // новые ники сразу попадут в общий справочник
     if(error){ errEl.textContent = L2I18n.t("weekRoster.saveFailed", "Не удалось сохранить: ") + error.message; return; }
     resetUploadPreview();

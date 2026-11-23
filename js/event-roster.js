@@ -65,6 +65,56 @@ function loadKnownNicks(db){
   return knownNicksPromise;
 }
 
+// Контекст для проверки ников в окне «Проверка распознанного»: ники последней переписи, вся история переписи и профессии
+// (для подсказки «это он?»: у похожего ника та же профессия — почти наверняка один человек). Грузится один раз на страницу
+let nickCtxPromise = null;
+function loadNickCtx(db){
+  if(!nickCtxPromise){
+    nickCtxPromise = (async () => {
+      const known = await loadKnownNicks(db);
+      let latest = new Set();
+      try { const r = await L2Cabinet.censusWeeks(1); latest = new Set((r.rows || []).map(x => x.nickname)); } catch(e){ console.error(e); }
+      let cls = new Map();
+      try { const { data } = await db.from("member_classes").select("nickname, class_name"); cls = new Map((data || []).map(r => [r.nickname, r.class_name])); } catch(e){ console.error(e); }
+      return { known: new Set(known), latest, cls, pool: [...new Set([...latest, ...known])], memo: new Map() };
+    })();
+  }
+  return nickCtxPromise;
+}
+// (ник, профессия со скрина) → { status: "latest"|"old"|"unknown", sug: [{ nick, dist, classMatch }] }
+function makeNickInfo(ctx){
+  return (nick, clsName) => {
+    const key = nick + "\u0001" + (clsName || "");
+    if(ctx.memo.has(key)) return ctx.memo.get(key);
+    let res;
+    if(ctx.latest.has(nick)) res = { status: "latest", sug: [] };
+    else if(ctx.known.has(nick)){
+      // есть только в старых переписях: если в СВЕЖЕЙ есть очень похожий ник — это, скорее всего, прежнее неверное написание (двойник)
+      const want = clsName ? String(clsName).toLowerCase() : "";
+      const near = (window.L2Nick && !/^[0Oo1lIi|!]{3,}$/.test(nick) ? L2Nick.suggest(nick, [...ctx.latest], 3) : []).map(sg => ({
+        nick: sg.nick, dist: sg.dist, classMatch: !!(want && ctx.cls.get(sg.nick) && String(ctx.cls.get(sg.nick)).toLowerCase() === want),
+      }));
+      res = { status: "old", sug: near };
+    }
+    else {
+      const want = clsName ? String(clsName).toLowerCase() : "";
+      const sameCls = (c) => !!(ctx.cls.get(c) && String(ctx.cls.get(c)).toLowerCase() === want);
+      let cand;
+      if(!window.L2Nick) cand = [];
+      else if(/^[0Oo1lIi|!]{3,}$/.test(nick)){
+        // ник из неотличимых символов: подсказки только среди таких же ников, по профессии со скрина (см. L2Nick.suggestAmbiguous)
+        cand = L2Nick.suggestAmbiguous(nick, ctx.pool, want ? sameCls : undefined);
+      } else {
+        cand = L2Nick.suggest(nick, ctx.pool, 6).map(sg => ({ nick: sg.nick, dist: sg.dist, classMatch: !!(want && sameCls(sg.nick)) }));
+        cand.sort((a, b) => (b.classMatch - a.classMatch) || (a.dist - b.dist));
+      }
+      res = { status: "unknown", sug: cand.slice(0, 3) };
+    }
+    ctx.memo.set(key, res);
+    return res;
+  };
+}
+
 // ник целиком из символов, которые в шрифте игры не отличить друг от друга
 // (0 O o 1 l I i | !) — «0000000000», «1111111111», «iIiIiIiIIiIi». По картинке
 // такие ники не различить, поэтому их не «исправляем» по базе, а только
@@ -139,28 +189,48 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
     <p class="empty-hint" data-role="empty" style="display:none;">${L2I18n.t("eventRoster.notMarkedHint", "Явка ещё не отмечена.")}</p>
     ${isAdmin ? `<button class="btn" data-role="add-btn" style="margin-top:8px;">${L2I18n.t("eventRoster.addAttendanceBtn", "+ Добавить явку")}</button>` : ""}
     ${isAdmin ? `
-    <div data-role="upload" style="display:none; margin-top:10px;">
+    <div data-role="upload" class="er-up" style="display:none;">
       <input type="file" data-role="file-input" accept="image/*" multiple style="display:none;" />
-      <button class="btn" data-role="file-btn">${L2I18n.t("eventRoster.pickFilesBtn", "Выбрать файлы…")}</button>
-      <button class="btn" data-role="review-btn" style="display:none; margin-left:8px;"></button>
+      <div class="er-steps" data-role="steps">
+        <div class="er-step on"><span class="er-n">1</span>${L2I18n.t("eventRoster.step1", "Загрузить")}</div>
+        <div class="er-step"><span class="er-n">2</span>${L2I18n.t("eventRoster.step2", "Проверить")}</div>
+        <div class="er-step"><span class="er-n">3</span>${L2I18n.t("eventRoster.step3", "Сохранить")}</div>
+      </div>
+      <div class="er-drop">
+        <span class="er-drop-ic" aria-hidden="true">⇪</span>
+        <div class="er-drop-txt">
+          <b>${L2I18n.t("eventRoster.dropTitle", "Перетащите скрины сюда или вставьте Ctrl+V")}</b>
+          <small>${L2I18n.t("eventRoster.dropHint", "Можно сразу несколько (до 9): пати 1, пати 2, соло — каждый скрин считается отдельной пати")}</small>
+        </div>
+        <button class="btn" data-role="file-btn">${L2I18n.t("eventRoster.pickFilesBtn", "Выбрать файлы…")}</button>
+      </div>
       <p class="upload-status" data-role="status"></p>
-      <div class="chip-row" data-role="chips"></div>
+      <div data-role="review-row" class="er-reviewrow"><button class="btn" data-role="review-btn" style="display:none;"></button></div>
+      <div class="er-body" data-role="chips"></div>
       <div data-role="classes" class="er-classes"></div>
-      <div class="manual-add">
-        <input type="text" data-role="manual-input" placeholder="${L2I18n.t("eventRoster.manualPlaceholder", "Добавить ник вручную")}" />
-        <button class="btn" data-role="manual-btn">${L2I18n.t("common.add", "Добавить")}</button>
+      <div class="er-manual">
+        <div class="er-manual-title">${L2I18n.t("eventRoster.manualTitle", "Добавить игрока вручную")}</div>
+        <div class="er-manual-row">
+          <input type="text" data-role="manual-input" placeholder="${L2I18n.t("eventRoster.manualNickPh", "Ник игрока")}" />
+          <select data-role="manual-party" title="${L2I18n.t("eventRoster.manualPartyTitle", "К какой пати отнести")}"></select>
+          <button class="btn" data-role="manual-btn">${L2I18n.t("common.add", "Добавить")}</button>
+        </div>
+        <small class="er-manual-hint" data-role="manual-hint"></small>
       </div>
       <p class="error-msg" data-role="error"></p>
-      <div style="display:flex; gap:10px; margin-top:8px;">
-        <button class="btn btn-primary" data-role="save-btn">${L2I18n.t("common.save", "Сохранить")}</button>
-        <button class="btn btn-ghost" data-role="cancel-btn">${L2I18n.t("common.cancel", "Отмена")}</button>
+      <div class="er-foot">
+        <span class="er-foot-info" data-role="foot-info"></span>
+        <span class="er-foot-btns">
+          <button class="btn btn-ghost" data-role="cancel-btn">${L2I18n.t("common.cancel", "Отмена")}</button>
+          <button class="btn btn-primary" data-role="save-btn">${L2I18n.t("eventRoster.saveAttendance", "Сохранить явку")}</button>
+        </span>
       </div>
     </div>` : ""}
   `;
 
   const q = (role) => root.querySelector(`[data-role="${role}"]`);
   // Ctrl+V скрина из буфера и перетаскивание файлов — в тот же file-input (js/paste-drop.js)
-  if(isAdmin && window.L2PasteDrop) L2PasteDrop.attach(q("file-input"), q("upload"), { hintAfter: q("file-btn") });
+  if(isAdmin && window.L2PasteDrop) L2PasteDrop.attach(q("file-input"), q("upload")); // подсказка про Ctrl+V уже в самом блоке загрузки
 
   // язык может смениться, пока этот блок явки уже отрисован (переключатель живёт
   // в родительском окне) — точечно обновляем статичные подписи, не перестраивая
@@ -170,9 +240,8 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
     if(isAdmin){
       q("add-btn").textContent = L2I18n.t("eventRoster.addAttendanceBtn", "+ Добавить явку");
       q("file-btn").textContent = L2I18n.t("eventRoster.pickFilesBtn", "Выбрать файлы…");
-      q("manual-input").placeholder = L2I18n.t("eventRoster.manualPlaceholder", "Добавить ник вручную");
+      q("manual-input").placeholder = L2I18n.t("eventRoster.manualNickPh", "Ник игрока");
       q("manual-btn").textContent = L2I18n.t("common.add", "Добавить");
-      q("save-btn").textContent = L2I18n.t("common.save", "Сохранить");
       q("cancel-btn").textContent = L2I18n.t("common.cancel", "Отмена");
     }
     render();
@@ -205,6 +274,20 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
   // копии строк каждого скрина для окна «Проверить распознанное» (js/screenshot-review.js):
   // [{ idx, image, rows: [{ nick, orig, kills, deaths, pvp, pve, cls, leader }] }]
   let reviewScreens = [];
+  // исправленные автоматически (по справочнику переписи): текущий ник → как пришёл со скрина
+  let pendingFixed = new Map();
+  // ники, которые админ осознанно оставил как есть («это новый игрок», «оставить»)
+  let acknowledged = new Set();
+  // ники, добавленные вручную: ник → { batch } — к какой пати отнесён (индекс скрина этой загрузки, "S:<id>" для уже сохранённой пати
+  // этого мероприятия, либо без batch — «Соло»)
+  let manualMeta = new Map();
+  let savedParties = null;   // пати этого мероприятия, уже сохранённые в базе: [{ id, leader, count }]
+  let prevInfo = null;       // прошлая явка этого же мероприятия: { date, nicks } или false, если сравнивать не с чем
+  let nickInfoFn = null;     // сверка ника с переписью (js: makeNickInfo), появляется после загрузки справочников
+  let nickInfoLoading = false;
+
+  // ключ человека для сравнения ников (через общий справочник, если он загружен)
+  const keyOf = (n) => (window.L2Nick && L2Nick.ready()) ? L2Nick.key(n) : String(n || "");
 
   async function load(){
     const { data, error } = await db
@@ -212,7 +295,19 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
       .select("id, nickname")
       .eq("event_id", eventId)
       .order("nickname");
-    entries = error ? [] : (data || []);
+    // Один ник в мероприятии — одна запись. Дубли появлялись при двойном нажатии «Сохранить»: весь список записывался дважды
+    // (в окне ники шли парами, а в отчёте было «39 из 38»). Показываем без повторов, а лишние строки админ при открытии убирает.
+    const byNick = new Map(), extraIds = [];
+    (error ? [] : (data || [])).forEach(e => {
+      const k = keyOf(e.nickname);
+      if(!byNick.has(k)) byNick.set(k, { id: e.id, nickname: e.nickname, ids: [e.id] });
+      else { byNick.get(k).ids.push(e.id); extraIds.push(e.id); }
+    });
+    entries = [...byNick.values()];
+    if(isAdmin && extraIds.length){
+      const { error: delErr } = await db.from("attendance_entries").delete().in("id", extraIds);
+      if(delErr) console.error(delErr);
+    }
     render();
   }
 
@@ -236,7 +331,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
           // помечается и уходит в самый низ, а не пропадает молча
           await db.from("event_stats").update({ removed: true, updated_at: new Date().toISOString() })
             .eq("event_id", eventId).eq("nickname", entry.nickname);
-          const { error } = await db.from("attendance_entries").delete().eq("id", entry.id);
+          const { error } = await db.from("attendance_entries").delete().in("id", entry.ids || [entry.id]);
           if(!error) await load();
         });
         chip.appendChild(x);
@@ -246,31 +341,280 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
   }
 
   if(isAdmin){
-    function renderChips(){
-      const row = q("chips");
-      row.innerHTML = "";
-      pending.forEach((nick, i) => {
-        const chip = document.createElement("div");
-        chip.className = "chip";
-        const span = document.createElement("span");
-        span.textContent = nick;
-        const warn = isAmbiguousNick(nick)
-          ? L2I18n.t("eventRoster.ambiguousNick", "Ник из похожих символов (0 O 1 l I i) — сверьте со скрином")
-          : pendingCollided.has(nick)
-            ? L2I18n.t("eventRoster.collidedNick", "Похож на ник из переписи, но тот уже занят другой строкой скрина — оставлен как распознан, проверьте")
-            : "";
-        if(warn){
-          chip.classList.add("chip-warn");
-          chip.title = warn;
-          span.textContent = "⚠ " + nick;
-        }
-        const btn = document.createElement("button");
-        btn.textContent = "×";
-        btn.addEventListener("click", () => { pending.splice(i, 1); renderChips(); });
-        chip.append(span, btn);
-        row.appendChild(chip);
+    // ---------- окно загрузки: шаги, сводка, ники по пати со статусами ----------
+    const T = (k, f) => L2I18n.t(k, f);
+    const el = (tag, cls, text) => { const e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e; };
+    const zeroStats = () => ({ kills: 0, deaths: 0, pvp_damage: 0, pve_damage: 0, manual: true });
+
+    // справочники переписи грузятся один раз на страницу; пока их нет, ники показываются без статусов, потом список перерисуется
+    function ensureNickInfo(){
+      if(nickInfoFn || nickInfoLoading) return;
+      nickInfoLoading = true;
+      loadNickCtx(db).then(ctx => { nickInfoFn = makeNickInfo(ctx); }).catch(e => console.error(e))
+        .finally(() => { nickInfoLoading = false; if(nickInfoFn) renderChips(); });
+    }
+
+    // статус ника: ok — есть в переписи; fix — исправлен автоматически; chk — проверьте; new — нового игрока в переписи нет
+    function statusOf(n){
+      const c = pendingClass.get(n);
+      const inf = nickInfoFn ? nickInfoFn(n, c && c.className) : null;
+      const sug = inf ? inf.sug : [];
+      let st;
+      if(isAmbiguousNick(n)) st = { k: "chk", why: T("eventRoster.ambiguousNick", "Ник из похожих символов (0 O 1 l I i) — сверьте со скрином") };
+      else if(pendingCollided.has(n)) st = { k: "chk", why: T("eventRoster.collidedNick", "Похож на ник из переписи, но тот уже занят другой строкой скрина — оставлен как распознан, проверьте") };
+      else if(inf && inf.status === "unknown") st = sug.length
+        ? { k: "chk", why: T("eventRoster.notInCensusAsk", "Нет в переписи. Это он?") }
+        : { k: "new", why: T("eventRoster.newPlayerWhy", "Нет в переписи — новый игрок") };
+      else if(inf && inf.status === "old" && sug.length) st = { k: "chk", why: T("review.oldButNear", "Есть только в старых переписях; в свежей — похожий:") };
+      else if(pendingFixed.has(n)) st = { k: "fix", why: T("eventRoster.fixedWhy", "Исправлен по переписи: на скрине было «{from}»").replace("{from}", pendingFixed.get(n)) };
+      else st = { k: "ok", why: "" };
+      st.sug = st.k === "chk" ? sug : [];
+      if(st.k === "chk" && acknowledged.has(n)) st = { k: "new", why: T("eventRoster.keptWhy", "Оставлен как есть"), sug: [] };
+      return st;
+    }
+
+    // ключ пати ника: "n<idx>" — скрин этой загрузки, "S:<id>" — уже сохранённая пати мероприятия, "solo" — без пати
+    function partyKey(n){ const b = pendingBatchOf.get(n); return b == null ? "solo" : (typeof b === "string" ? b : "n" + b); }
+    const partyRank = (k) => k === "solo" ? 2000 : (k[0] === "n" ? +k.slice(1) : 1000);
+    const savedParty = (key) => (savedParties || []).find(p => "S:" + p.id === key);
+    function partyLeader(key){ return key[0] === "n" ? batchLeaderOf.get(+key.slice(1)) : (savedParty(key) || {}).leader; }
+
+    function removeNick(n){
+      const i = pending.indexOf(n); if(i >= 0) pending.splice(i, 1);
+      [pendingStats, pendingBatchOf, pendingClass, pendingFixed, manualMeta].forEach(m => m.delete(n));
+      pendingCollided.delete(n); acknowledged.delete(n);
+      reviewScreens.forEach(sc => { sc.rows = sc.rows.filter(r => r.nick !== n); });
+      renderChips(); updateReviewBtn();
+    }
+
+    // «это он?» — заменяем ник везде (в списке, статистике, пати, профессии, окне проверки) и запоминаем привязку на будущее
+    function replaceNick(old, nw){
+      const i = pending.indexOf(old); if(i < 0) return;
+      const dup = pending.indexOf(nw);
+      const mv = (m) => { if(m.has(old)){ if(!m.has(nw)) m.set(nw, m.get(old)); m.delete(old); } };
+      [pendingStats, pendingBatchOf, pendingClass, manualMeta].forEach(mv);
+      pendingFixed.set(nw, pendingFixed.has(old) ? pendingFixed.get(old) : old); pendingFixed.delete(old);
+      pendingCollided.delete(old); acknowledged.delete(old);
+      if(dup >= 0 && dup !== i) pending.splice(i, 1); else pending[i] = nw;
+      batchLeaderOf.forEach((v, k) => { if(v === old) batchLeaderOf.set(k, nw); });
+      reviewScreens.forEach(sc => sc.rows.forEach(r => { if(r.nick === old){ r.nick = nw; r.orig = nw; } }));
+      saveAliases([{ alias: old, canonical: nw }]);
+      renderChips(); updateReviewBtn();
+    }
+
+    function mkChip(n, s, leader){
+      const chip = el("div", "chip er-chip er-" + s.k);
+      chip.title = s.why || "";
+      chip.appendChild(el("span", "", (leader ? "★ " : "") + ({ fix: "↺ ", chk: "⚠ ", new: "+ " }[s.k] || "") + n));
+      const x = el("button", "", "×"); x.type = "button";
+      x.title = T("eventRoster.removeFromListTitle", "Убрать из списка");
+      x.addEventListener("click", () => removeNick(n));
+      chip.appendChild(x);
+      return chip;
+    }
+
+    function updateSteps(){
+      const cur = pending.length ? 1 : 0;
+      [...q("steps").children].forEach((d, i) => { d.classList.toggle("on", i === cur); d.classList.toggle("done", i < cur); });
+    }
+
+    // выбор пати для ручного добавления: Соло / новая пати / пати этой загрузки / уже сохранённая пати
+    function renderPartySelect(){
+      const sel = q("manual-party"); if(!sel) return;
+      const prev = sel.value || "solo";
+      const opts = [["solo", T("eventRoster.partyOptSolo", "Соло (без пати)")], ["new", T("eventRoster.partyOptNew", "Новая пати — этот ник лидер")]];
+      [...batchLeaderOf.entries()].sort((a, b) => a[0] - b[0]).forEach(([idx, lead]) => {
+        if(pending.some(n => pendingBatchOf.get(n) === idx)) opts.push(["n" + idx, T("eventRoster.partyOptOf", "Пати: {l}").replace("{l}", lead)]);
       });
+      (savedParties || []).forEach(p => opts.push(["S:" + p.id, T("eventRoster.partyOptSaved", "Пати: {l} (уже сохранена)").replace("{l}", p.leader)]));
+      const sig = JSON.stringify(opts);
+      if(sel.dataset.sig === sig) return;
+      sel.innerHTML = opts.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join("");
+      sel.dataset.sig = sig;
+      sel.value = opts.some(o => o[0] === prev) ? prev : "solo";
+    }
+
+    function addManual(raw, partyVal){
+      const val = String(raw || "").trim();
+      const hint = q("manual-hint");
+      if(!val) return false;
+      const dup = pending.find(n => keyOf(n) === keyOf(val));
+      if(dup){ hint.textContent = T("eventRoster.manualDup", "«{n}» уже в списке — повторно не добавлен.").replace("{n}", dup); return false; }
+      pending.push(val);
+      const meta = {};
+      let where = T("eventRoster.partySolo", "Соло / без пати");
+      if(partyVal === "new"){
+        const idx = batchCount++; batchLeaderOf.set(idx, val); meta.batch = idx;
+        where = T("eventRoster.partyNewLeader", "новая пати, он лидер");
+      } else if(/^n\d+$/.test(partyVal || "")){
+        meta.batch = +partyVal.slice(1);
+        where = T("eventRoster.partyOptOf", "Пати: {l}").replace("{l}", batchLeaderOf.get(meta.batch) || "?");
+      } else if(String(partyVal || "").startsWith("S:")){
+        meta.batch = partyVal;
+        where = T("eventRoster.partyOptOf", "Пати: {l}").replace("{l}", (savedParty(meta.batch) || {}).leader || "?");
+      }
+      manualMeta.set(val, meta);
+      if(meta.batch != null){ pendingBatchOf.set(val, meta.batch); pendingStats.set(val, zeroStats()); }
+      hint.textContent = T("eventRoster.manualAdded", "Добавлен: {n} → {w}").replace("{n}", val).replace("{w}", where);
+      return true;
+    }
+
+    function renderChips(){
+      const box = q("chips");
+      box.innerHTML = "";
+      updateSteps();
+      renderPartySelect();
+      ensureNickInfo();
+      const sts = new Map();
+      if(pending.length || reviewScreens.length){
+        pending.forEach(n => sts.set(n, statusOf(n)));
+
+        // миниатюры скринов
+        if(reviewScreens.length){
+          const th = el("div", "er-thumbs");
+          reviewScreens.forEach(sc => {
+            const d = el("div", "er-th");
+            const im = document.createElement("img"); im.src = sc.image; im.alt = "";
+            const lead = batchLeaderOf.get(sc.idx);
+            d.append(im, el("div", "er-th-t", T("eventRoster.screenN", "Скрин {n}").replace("{n}", sc.idx + 1)),
+              el("div", "er-th-s", T("eventRoster.screenRows", "ников: {n}").replace("{n}", sc.rows.filter(r => r.nick).length) + (lead ? " · ★ " + lead : "")));
+            th.appendChild(d);
+          });
+          box.appendChild(th);
+        }
+
+        // сводка
+        const cnt = { fix: 0, chk: 0, new: 0 };
+        sts.forEach(s => { if(cnt[s.k] != null) cnt[s.k]++; });
+        const mt = el("div", "er-metrics");
+        [[pending.length, T("eventRoster.mTotal", "в списке"), ""], [cnt.fix, T("eventRoster.mFixed", "исправлено само"), ""],
+         [cnt.chk, T("eventRoster.mCheck", "проверить"), cnt.chk ? "warn" : ""], [cnt.new, T("eventRoster.mNew", "новых игроков"), ""]].forEach(([v, l, c]) => {
+          const d = el("div", "er-mc" + (c ? " " + c : "")); d.append(el("b", "", v), el("span", "", l)); mt.appendChild(d);
+        });
+        box.appendChild(mt);
+
+        // предупреждения
+        const warns = [];
+        reviewScreens.forEach(sc => {
+          const k = sc.rows.filter(r => r.nick).length;
+          if(k < 3) warns.push(T("eventRoster.warnFew", "Скрин {n}: распознано только {k} — возможно, скрин обрезан или таблица не поместилась.").replace("{n}", sc.idx + 1).replace("{k}", k));
+        });
+        const entryKeys = new Set(entries.map(e => keyOf(e.nickname)));
+        const already = pending.filter(n => entryKeys.has(keyOf(n))).length;
+        if(already) warns.push(T("eventRoster.warnDup", "Уже в явке этого мероприятия: {n} — повторно не добавятся (статистика обновится).").replace("{n}", already));
+        let missing = [];
+        if(prevInfo){
+          const have = new Set([...pending, ...entries.map(e => e.nickname)].map(keyOf));
+          missing = prevInfo.nicks.filter(n => !have.has(keyOf(n)));
+          if(prevInfo.nicks.length >= 8 && have.size < prevInfo.nicks.length * 0.5)
+            warns.push(T("eventRoster.warnLess", "В прошлый раз ({d}) было ников: {a}, сейчас: {b} — возможно, загружены не все скрины.").replace("{d}", prevInfo.date).replace("{a}", prevInfo.nicks.length).replace("{b}", have.size));
+        }
+        warns.forEach(w => box.appendChild(el("p", "er-warn", "⚠ " + w)));
+
+        // нужно проверить
+        const chk = pending.filter(n => sts.get(n).k === "chk");
+        if(chk.length){
+          const sec = el("div", "er-sec er-sec-chk");
+          sec.appendChild(el("p", "er-h", T("eventRoster.secCheck", "Нужно проверить") + " (" + chk.length + ")"));
+          chk.forEach(n => {
+            const s = sts.get(n), row = el("div", "er-chk-row");
+            row.appendChild(mkChip(n, s, false));
+            row.appendChild(el("span", "er-why", s.why));
+            s.sug.forEach(sg => {
+              const b = el("button", "er-sug" + (sg.classMatch ? " cls" : ""), "→ " + sg.nick + (sg.classMatch ? " ✓" : "")); b.type = "button";
+              b.title = sg.classMatch ? T("eventRoster.sugClassTitle", "Профессия совпадает") : "";
+              b.addEventListener("click", () => replaceNick(n, sg.nick));
+              row.appendChild(b);
+            });
+            const keep = el("button", "er-keep", T("eventRoster.keepAsIs", "Оставить как есть")); keep.type = "button";
+            keep.addEventListener("click", () => { acknowledged.add(n); renderChips(); });
+            row.appendChild(keep);
+            sec.appendChild(row);
+          });
+          box.appendChild(sec);
+        }
+
+        // ники по пати
+        const groups = new Map();
+        pending.forEach(n => { const k = partyKey(n); if(!groups.has(k)) groups.set(k, []); groups.get(k).push(n); });
+        [...groups.keys()].sort((a, b) => partyRank(a) - partyRank(b)).forEach(k => {
+          const members = groups.get(k), lead = partyLeader(k);
+          members.sort((a, b) => (b === lead) - (a === lead));
+          const sec = el("div", "er-sec");
+          const title = k === "solo" ? T("eventRoster.partySolo", "Соло / без пати")
+            : T("eventRoster.partyOf", "Пати — лидер {l}").replace("{l}", lead || "?") + (k[0] === "S" ? " · " + T("eventRoster.partySavedTag", "уже сохранена") : "");
+          const h = el("p", "er-h"); h.append(el("span", "", title), el("span", "er-h-n", members.length));
+          sec.appendChild(h);
+          const row = el("div", "chip-row");
+          members.forEach(n => row.appendChild(mkChip(n, sts.get(n), n === lead && k !== "solo")));
+          sec.appendChild(row);
+          box.appendChild(sec);
+        });
+
+        // были в прошлый раз, а сейчас нет
+        if(missing.length && pending.length){
+          const sec = el("div", "er-sec");
+          const h = el("p", "er-h"); h.append(el("span", "", T("eventRoster.secMissing", "Были в прошлый раз ({d}), сейчас нет").replace("{d}", prevInfo.date)), el("span", "er-h-n", missing.length));
+          sec.appendChild(h);
+          sec.appendChild(el("p", "er-note", T("eventRoster.missingNote", "Нажмите на ник, чтобы добавить его в пати, выбранную в блоке «Добавить игрока вручную».")));
+          const row = el("div", "chip-row");
+          missing.slice(0, 24).forEach(n => {
+            const b = el("button", "er-miss", "+ " + n); b.type = "button";
+            b.addEventListener("click", () => { addManual(n, q("manual-party").value); renderChips(); });
+            row.appendChild(b);
+          });
+          if(missing.length > 24) row.appendChild(el("span", "er-note", T("eventRoster.andMore", "и ещё {n}").replace("{n}", missing.length - 24)));
+          sec.appendChild(row);
+          box.appendChild(sec);
+        }
+      }
       renderClasses();
+      renderFoot(sts);
+    }
+
+    function renderFoot(sts){
+      const info = q("foot-info"), btn = q("save-btn");
+      let chkN = 0; sts.forEach(s => { if(s.k === "chk") chkN++; });
+      info.textContent = pending.length
+        ? T("eventRoster.footInfo", "К сохранению: {n} ников · повторы не добавятся").replace("{n}", pending.length)
+        : T("eventRoster.footEmpty", "Загрузите скрины или добавьте ники вручную");
+      btn.textContent = chkN ? T("eventRoster.saveAsIs", "Сохранить как есть ({n} ⚠)").replace("{n}", chkN) : T("eventRoster.saveAttendance", "Сохранить явку");
+    }
+
+    // пати этого мероприятия, уже сохранённые в базе (чтобы можно было добавить игрока в существующую пати)
+    async function loadSavedParties(){
+      try{
+        const { data } = await db.from("event_stats").select("nickname, batch_id, is_party_leader, removed").eq("event_id", eventId).not("batch_id", "is", null);
+        const by = new Map();
+        (data || []).filter(r => !r.removed).forEach(r => {
+          const p = by.get(r.batch_id) || { id: r.batch_id, leader: "", first: r.nickname, count: 0 };
+          p.count++; if(r.is_party_leader) p.leader = r.nickname; by.set(r.batch_id, p);
+        });
+        savedParties = [...by.values()].map(p => ({ id: p.id, leader: p.leader || p.first, count: p.count }));
+      }catch(e){ console.error(e); savedParties = []; }
+      renderChips();
+    }
+
+    // прошлая явка этого же мероприятия (то же название, раньше по дате) — для сравнения и подсказки «кого нет»
+    let prevLoading = false;
+    async function loadPrev(){
+      if(prevInfo !== null || prevLoading) return;
+      prevLoading = true;
+      try{
+        const { data: ev } = await db.from("attendance_events").select("event_name, event_date").eq("id", eventId).maybeSingle();
+        let res = false;
+        if(ev){
+          const { data: pe } = await db.from("attendance_events").select("id, event_date").eq("event_name", ev.event_name)
+            .lt("event_date", ev.event_date).order("event_date", { ascending: false }).limit(1);
+          if(pe && pe.length){
+            const { data: ents } = await db.from("attendance_entries").select("nickname").eq("event_id", pe[0].id);
+            const nicks = [...new Set((ents || []).map(r => r.nickname))];
+            if(nicks.length){ const d = String(pe[0].event_date).split("-"); res = { date: d.length === 3 ? d[2] + "." + d[1] : pe[0].event_date, nicks }; }
+          }
+        }
+        prevInfo = res;
+      }catch(e){ console.error(e); prevInfo = false; }
+      finally{ prevLoading = false; renderChips(); }
     }
 
     const classIconOf = (name) => { const c = (window.L2_CLASSES || []).find(x => x.name === name); return c ? c.icon : ""; };
@@ -337,9 +681,14 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
       batchCount = 0;
       batchLeaderOf = new Map();
       reviewScreens = [];
+      pendingFixed = new Map();
+      acknowledged = new Set();
+      manualMeta = new Map();
+      savedParties = null;
       q("file-input").value = "";
       q("status").textContent = "";
       q("error").textContent = "";
+      q("manual-hint").textContent = "";
       renderChips();
       updateReviewBtn();
     }
@@ -354,7 +703,8 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
       let w = 0;
       try{
         const known = await loadKnownNicks(db);
-        w = L2Review.summarize(L2Review.analyze(reviewScreens, known, pendingCollided)).warn;
+        const ctx = await loadNickCtx(db);
+        w = L2Review.summarize(L2Review.analyze(reviewScreens, known, pendingCollided, makeNickInfo(ctx))).warn;
       }catch(e){ console.error(e); }
       btn.textContent = w
         ? L2I18n.t("review.btnWarn", "🔍 Проверить распознанное ({w} ⚠)").replace("{w}", w)
@@ -363,9 +713,20 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
 
     // результат окна проверки → обратно в pending/pendingStats/…: пересобираем из строк скринов,
     // ники, добавленные вручную (не со скринов), остаются как были
+    // исправления ников из окна проверки → привязки (nick_aliases): в следующий раз такое написание подставится само
+    async function saveAliases(pairs){
+      if(!pairs || !pairs.length) return;
+      try{
+        const rows = pairs.map(p => ({ clan_id: profile.clan_id, alias: p.alias, canonical: p.canonical, created_by: profile.id }));
+        const { error } = await db.from("nick_aliases").upsert(rows, { onConflict: "clan_id,alias" });
+        if(error){ console.error(error); return; }
+        if(window.L2Nick){ L2Nick.invalidate(profile.clan_id); try{ await L2Nick.refresh(db, profile.clan_id); }catch(e){ console.error(e); } }
+      }catch(e){ console.error(e); }
+    }
+
     function applyReview(edited){
       try{
-        const manual = pending.filter(n => !pendingBatchOf.has(n));
+        const manual = pending.filter(n => manualMeta.has(n) || !pendingBatchOf.has(n));
         const newClass = new Map();
         const keptCollided = new Set();
         pending = []; pendingStats = new Map(); pendingBatchOf = new Map();
@@ -383,7 +744,13 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
           const first = sc.rows.find(r => r.nick);
           if(first) batchLeaderOf.set(sc.idx, leaderNick || first.nick); else batchLeaderOf.delete(sc.idx);
         });
-        manual.forEach(n => { if(!pending.includes(n)) pending.push(n); });
+        manual.forEach(n => {
+          if(pending.includes(n)) return;
+          pending.push(n);
+          const m = manualMeta.get(n); // вручную добавленный в пати — привязка и пустая статистика сохраняются
+          if(m && m.batch != null){ pendingBatchOf.set(n, m.batch); pendingStats.set(n, zeroStats()); }
+        });
+        [...pendingFixed.keys()].forEach(k => { if(!pending.includes(k)) pendingFixed.delete(k); });
         pendingClass = newClass;
         pendingCollided = keptCollided;
         reviewScreens = edited.map(sc => ({ idx: sc.idx, image: sc.image, rows: sc.rows.map(r => Object.assign({}, r, { orig: r.nick })) }));
@@ -398,6 +765,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
     q("add-btn").addEventListener("click", () => {
       const up = q("upload");
       up.style.display = up.style.display === "none" ? "" : "none";
+      if(up.style.display !== "none"){ loadSavedParties(); loadPrev(); renderChips(); }
     });
 
     q("file-btn").addEventListener("click", () => q("file-input").click());
@@ -460,7 +828,9 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
           // целиком («Лунтик» → «Луник»); при неуверенности ник не трогаем —
           // админ всё равно видит все чипы перед сохранением и может поправить
           const knownNicks = await loadKnownNicks(db);
+          const rawNames = rows.map(r => r.nickname);
           resolveNicknames(rows, knownNicks).forEach(n => pendingCollided.add(n));
+          rows.forEach((r, ri) => { if(r.nickname !== rawNames[ri]) pendingFixed.set(r.nickname, rawNames[ri]); }); // исправлено автоматически
 
           // индекс скрина заводим лениво, только если он реально дал хоть одного ника —
           // «Отчёт по мероприятиям» использует эти индексы, чтобы группировать строки
@@ -526,9 +896,9 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
     q("review-btn").addEventListener("click", async () => {
       if(!window.L2Review || !reviewScreens.length) return;
       try{
-        let known = [];
-        try{ known = await loadKnownNicks(db); }catch(e){ console.error(e); }
-        L2Review.open({ screens: reviewScreens, known, collided: pendingCollided, classIcon: classIconOf, onApply: applyReview });
+        let known = [], nickInfo = null;
+        try{ known = await loadKnownNicks(db); nickInfo = makeNickInfo(await loadNickCtx(db)); }catch(e){ console.error(e); }
+        L2Review.open({ screens: reviewScreens, known, collided: pendingCollided, classIcon: classIconOf, onApply: applyReview, nickInfo, onAliases: saveAliases });
       }catch(err){
         console.error(err);
         q("error").textContent = L2I18n.t("review.openFailed", "Не удалось открыть проверку: ") + err.message;
@@ -537,9 +907,7 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
 
     q("manual-btn").addEventListener("click", () => {
       const input = q("manual-input");
-      const val = input.value.trim();
-      if(val && !pending.includes(val)) pending.push(val);
-      input.value = "";
+      if(addManual(input.value, q("manual-party").value)) input.value = "";
       renderChips();
     });
     q("manual-input").addEventListener("keydown", (e) => {
@@ -551,11 +919,24 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
       q("upload").style.display = "none";
     });
 
+    // кнопка на время сохранения выключена: при втором нажатии список записывался заново и все ники задваивались
+    let saving = false;
     q("save-btn").addEventListener("click", async () => {
+      if(saving) return;
+      saving = true;
+      const btn = q("save-btn"); btn.disabled = true;
+      try { await saveAll(); }
+      finally { saving = false; btn.disabled = false; }
+    });
+    async function saveAll(){
       const errEl = q("error");
       errEl.textContent = "";
-      const existing = new Set(entries.map(e => e.nickname));
-      const toInsert = pending.filter(n => !existing.has(n));
+      // свежая сверка с базой (а не со списком на экране, который мог устареть) и без повторов внутри самой загрузки
+      const { data: curRows, error: curErr } = await db.from("attendance_entries").select("nickname").eq("event_id", eventId);
+      if(curErr){ errEl.textContent = L2I18n.t("eventRoster.saveFailed", "Не удалось сохранить: ") + curErr.message; return; }
+      const existing = new Set((curRows || []).map(e => keyOf(e.nickname)));
+      const toInsert = [];
+      pending.forEach(n => { const k = keyOf(n); if(!existing.has(k)){ existing.add(k); toInsert.push(n); } });
       if(toInsert.length){
         const rows = toInsert.map(nickname => ({
           clan_id: profile.clan_id,
@@ -563,7 +944,10 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
           nickname,
           created_by: profile.id,
         }));
-        const { error } = await db.from("attendance_entries").insert(rows);
+        // если в базе уже есть запрет на дубли (supabase/schema_attendance_dedupe.sql) — повтор просто пропускается;
+        // пока файла нет, обычная вставка (дубли отсекает проверка выше)
+        let { error } = await db.from("attendance_entries").upsert(rows, { onConflict: "event_id,nickname", ignoreDuplicates: true });
+        if(error && /no unique|ON CONFLICT|constraint matching/i.test(error.message)) ({ error } = await db.from("attendance_entries").insert(rows));
         if(error){ errEl.textContent = L2I18n.t("eventRoster.saveFailed", "Не удалось сохранить: ") + error.message; return; }
       }
 
@@ -597,16 +981,34 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
               deaths: s.deaths,
               pvp_damage: s.pvp_damage,
               pve_damage: s.pve_damage,
-              batch_id: (bIdx != null) ? batchIds[bIdx] : null,
-              is_party_leader: bIdx != null && batchLeaderOf.get(bIdx) === n,
+              // число — скрин этой загрузки; "S:<id>" — вручную добавленный в уже сохранённую пати
+              batch_id: bIdx == null ? null : (typeof bIdx === "string" ? bIdx.slice(2) : batchIds[bIdx]),
+              is_party_leader: typeof bIdx === "number" && batchLeaderOf.get(bIdx) === n,
               removed: false, // если ник раньше был помечен «удалён» — новое распознавание снимает пометку
               created_by: profile.id,
               updated_at: new Date().toISOString(),
             };
           });
 
-        const { error: statsErr } = await db.from("event_stats").upsert(statRows, { onConflict: "event_id,nickname" });
-        if(statsErr){ errEl.textContent = L2I18n.t("eventRoster.statsSaveFailed", "Явка сохранена, но статистика — нет: ") + statsErr.message; return; }
+        // вручную добавленному в пати ставим нулевую статистику — но только если у него в этом мероприятии её ещё нет:
+        // иначе при повторном добавлении затёрлись бы настоящие килы/смерти, а у такого ника меняется только пати
+        const manualSet = new Set(pending.filter(n => (pendingStats.get(n) || {}).manual));
+        let haveStat = new Set();
+        if(manualSet.size){
+          const { data: ex } = await db.from("event_stats").select("nickname").eq("event_id", eventId);
+          haveStat = new Set((ex || []).map(r => r.nickname));
+        }
+        const relink = statRows.filter(r => manualSet.has(r.nickname) && haveStat.has(r.nickname));
+        const toUpsert = statRows.filter(r => !(manualSet.has(r.nickname) && haveStat.has(r.nickname)));
+        if(toUpsert.length){
+          const { error: statsErr } = await db.from("event_stats").upsert(toUpsert, { onConflict: "event_id,nickname" });
+          if(statsErr){ errEl.textContent = L2I18n.t("eventRoster.statsSaveFailed", "Явка сохранена, но статистика — нет: ") + statsErr.message; return; }
+        }
+        for(const r of relink){
+          const { error: relErr } = await db.from("event_stats").update({ batch_id: r.batch_id, is_party_leader: r.is_party_leader, removed: false, updated_at: r.updated_at })
+            .eq("event_id", eventId).eq("nickname", r.nickname);
+          if(relErr){ errEl.textContent = L2I18n.t("eventRoster.statsSaveFailed", "Явка сохранена, но статистика — нет: ") + relErr.message; return; }
+        }
       }
 
       // профессии по иконкам → правки «на это мероприятие» (ручные правки из «Отчётов» не трогаем)
@@ -616,7 +1018,9 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
       resetUpload();
       q("upload").style.display = "none";
       await load();
-    });
+      // появились новые ники — значок «!» у «Админ-панели» пересчитает проверку
+      try { if(window.L2Nick) L2Nick.invalidate(profile.clan_id); window.top.L2Nav && window.top.L2Nav.refreshNickBadge && setTimeout(() => window.top.L2Nav.refreshNickBadge(true), 1500); } catch(e){}
+    }
 
     // нормализованный ник — тот же ключ, что в «Отчётах» (report_class_overrides.nickname_norm)
     const classKey = (n) => (window.L2Nick ? (L2Nick.ready() ? L2Nick.key(n) : L2Nick.norm(n)) : String(n).toLowerCase());
