@@ -13,6 +13,17 @@
   .cw-tabs-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   .cw-tabs{ display:flex; flex-wrap:nowrap; overflow:hidden; gap:6px; flex:1; min-width:0; }
   .cw-tabs .cw-tab{ flex:none; }
+  .btn-trash{ padding:7px 9px; line-height:0; color:var(--text-dim); }
+  .btn-trash:hover{ color:var(--danger-lit); border-color:color-mix(in srgb, var(--danger-lit) 55%, var(--border)); background:color-mix(in srgb, var(--danger-lit) 12%, transparent); }
+  /* итоги распознавания переписи */
+  .scan-stats{ display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 4px; }
+  .scan-stats .mc{ min-width:92px; padding:8px 12px; border:1px solid var(--border); border-radius:10px; background:var(--panel-2); }
+  .scan-stats .mc b{ display:block; font-size:20px; line-height:1.2; }
+  .scan-stats .mc span{ font-size:11.5px; color:var(--text-dim); }
+  .scan-stats .mc.fix b{ color:var(--gold); } .scan-stats .mc.chk b{ color:#d9a300; } .scan-stats .mc.new b, .scan-stats .mc.back b{ color:var(--ok); }
+  .scan-legend{ margin:2px 0 6px; font-size:12px; color:var(--text-dim); }
+  .scan-detail{ margin:4px 0 8px; font-size:12px; }
+  .scan-detail summary{ cursor:pointer; color:var(--text-dim); }
   .cw-archive{ position:relative; flex:none; }
   .cw-archive-menu{
     position:absolute; top:100%; right:0; margin-top:6px; z-index:30; width:280px; max-height:260px; overflow:auto;
@@ -74,8 +85,7 @@
       <div class="tools">
         <button class="btn btn-primary" id="addEntryBtn" style="display:none;" data-i18n="census.addEntry">+ Добавить перепись</button>
         <button class="btn" id="trashModeBtn" data-i18n="census.deleteMode" data-i18n-attr="title:census.deleteModeTitle" title="Режим удаления списком" style="display:none;">Удалить</button>
-        <button class="btn btn-danger" id="delWeekBtn" style="display:none;"></button>
-        <button class="btn btn-danger" id="delAllBtn" style="display:none;" data-i18n="census.deleteAllBtn">Удалить все переписи</button>
+        <button class="btn btn-trash" id="delWeekBtn" type="button" style="display:none;"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
       </div>
     </div>
 
@@ -103,6 +113,7 @@
     <button class="btn" id="filePickBtn" style="margin:10px 0;" data-i18n="census.pickFiles">Выбрать файлы…</button>
     <p class="upload-status" id="uploadStatus"></p>
 
+    <div id="scanStats" style="display:none;"></div>
     <div class="sim-box" id="simBox" style="display:none;"></div>
     <div class="chip-row" id="chipRow"></div>
 
@@ -174,7 +185,7 @@
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=28"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=131"></script>
+<script src="js/i18n.js?v=132"></script>
 <script src="js/paste-drop.js?v=1"></script>
 <script src="js/nick-match.js?v=7"></script>
 <script src="js/nick-tools.js?v=5"></script>
@@ -216,6 +227,12 @@
   let selectedIds = new Set();
 
   function entriesForDate(d){ return allEntries.filter(e => e.week_start === d); }
+  // Предыдущая перепись для сравнения: последняя дата РАНЬШЕ beforeDate, в которой есть ники. Пустая «сегодняшняя» дата
+  // из «+ Новая перепись» не считается — иначе всё распознанное выглядело бы «новым»
+  function prevCensusDate(beforeDate){
+    const ds = dates.filter(d => (!beforeDate || d < beforeDate) && entriesForDate(d).length);
+    return ds.length ? ds[ds.length - 1] : null;
+  }
   function nickSetForDate(d){ return new Set(entriesForDate(d).map(e => e.nickname)); }
 
   // Чем состав отличается от переписи prevDate: впервые (ника нет ни в одной более ранней переписи), вернулись (был в более
@@ -383,7 +400,7 @@
   function renderChips(){
     const row = document.getElementById("chipRow");
     row.innerHTML = "";
-    const lastDate = dates.length ? dates[dates.length - 1] : null;
+    const lastDate = prevCensusDate(selectedDate);
     const newSet = new Set();
     const checks = []; // ники, которые нужно решить: тот же человек или нет
     if(lastDate && pendingChips.length){ const dd = diffAgainst(pendingChips, lastDate, null); dd.fresh.concat(dd.back).forEach(n => newSet.add(n)); }
@@ -429,6 +446,44 @@
       row.appendChild(chip);
     });
     renderSimBox(checks);
+    renderScanStats(checks.length, lastDate);
+  }
+
+  // Итоги распознавания: сколько в списке, сколько исправлено само (↺), сколько проверить (жёлтые), сколько новых / вернувшихся /
+  // ушедших относительно предыдущей переписи. Пересчитывается при каждой правке списка
+  function renderScanStats(checkCount, lastDate){
+    const box = document.getElementById("scanStats");
+    box.innerHTML = "";
+    if(!pendingChips.length){ box.style.display = "none"; return; }
+    box.style.display = "";
+    const fixed = pendingChips.filter(n => chipFixed.has(n)).length;
+    const d = lastDate ? diffAgainst(pendingChips, lastDate, null) : null;
+    const cards = [
+      ["", pendingChips.length, L2I18n.t("census.stTotal", "в списке")],
+      ["fix", fixed, L2I18n.t("census.stFixed", "исправлено само ↺")],
+      ["chk", checkCount, L2I18n.t("census.stCheck", "проверить")],
+    ];
+    if(d) cards.push(["new", d.fresh.length, L2I18n.t("census.stNew", "новых")], ["back", d.back.length, L2I18n.t("census.stBack", "вернулись")], ["", d.gone.length, L2I18n.t("census.stGone", "ушли")]);
+    const row = document.createElement("div");
+    row.className = "scan-stats";
+    cards.forEach(([cls, n, label]) => {
+      const c = document.createElement("div"); c.className = "mc " + cls;
+      const b = document.createElement("b"); b.textContent = n;
+      const sp = document.createElement("span"); sp.textContent = label;
+      c.append(b, sp); row.appendChild(c);
+    });
+    box.appendChild(row);
+    const legend = document.createElement("div");
+    legend.className = "scan-legend";
+    legend.textContent = "↺ " + L2I18n.t("census.stLegend", "— ник исправлен по прежним переписям (со скрина пришло иначе; наведите на ник, чтобы увидеть как). Зелёный — новый, жёлтый — нужно решить, тот же ли это человек.") +
+      (d ? " " + L2I18n.t("census.stVs", "Сравнение с переписью {date}.").replace("{date}", shortLabel(lastDate)) : "");
+    box.appendChild(legend);
+    if(d && (d.fresh.length || d.back.length || d.gone.length)){
+      const det = document.createElement("details");
+      det.className = "scan-detail";
+      const sm = document.createElement("summary"); sm.textContent = L2I18n.t("census.stShow", "Показать ники");
+      det.appendChild(sm); appendDiffDetails(det, d); box.appendChild(det);
+    }
   }
 
   // Блок «тот же человек или нет?»: для каждого нового ника, похожего на уже известный, — две явные кнопки.
@@ -488,8 +543,10 @@
     // кнопки «Удалить перепись ДАТА» / «Удалить все переписи»: первая — админам, когда выбрана дата; вторая — только главному админу
     const delWeekBtn = document.getElementById("delWeekBtn");
     delWeekBtn.style.display = isAdmin && selectedDate ? "" : "none";
-    if(selectedDate) delWeekBtn.textContent = L2I18n.t("census.deleteWeekBtn", "Удалить перепись {date}").replace("{date}", shortLabel(selectedDate));
-    document.getElementById("delAllBtn").style.display = profile.roles?.key === "glavadmin" && dates.length ? "" : "none";
+    if(selectedDate){
+      const tip = L2I18n.t("census.deleteWeekTitle", "Удалить перепись {date} целиком").replace("{date}", fullLabel(selectedDate));
+      delWeekBtn.title = tip; delWeekBtn.setAttribute("aria-label", tip);
+    }
     if(!selectedDate){
       headingEl.textContent = "";
       document.getElementById("weekSearch").style.display = "none";
@@ -505,8 +562,7 @@
       entries.length + L2I18n.t("census.entriesHeadingSuffix", ")");
 
     // сравнение с предыдущей по времени переписью — просто чтобы подсветить новеньких
-    const idx = dates.indexOf(selectedDate);
-    const prevDate = idx > 0 ? dates[idx - 1] : null;
+    const prevDate = prevCensusDate(selectedDate);
     // подсветка «нового» ника в списке — тем же правилом, что и счётчик (по общему ключу ника, а не по точному написанию)
     const kfNick = (n) => (window.L2Nick && L2Nick.ready()) ? L2Nick.key(n) : n;
     const prevKeys = prevDate ? new Set(entriesForDate(prevDate).map(e => kfNick(e.nickname))) : null;
@@ -615,8 +671,8 @@
     }
   });
 
-  // Удаление переписи целиком (одной даты или всех). Состав клана (группы, профессии, буст…) и история (явка, статистика, налоги)
-  // НЕ меняются — стирается только список ников переписи. Двойное подтверждение для «все».
+  // Удаление переписи целиком (одной даты; кнопка-корзина). Состав клана (группы, профессии, буст…) и история (явка, статистика,
+  // налоги) НЕ меняются — стирается только список ников этой переписи.
   async function afterCensusDeleted(){
     selectMode = false;
     document.getElementById("bulkTools").style.display = "none";
@@ -629,15 +685,6 @@
     if(!confirm(L2I18n.t("census.confirmDeleteWeek", "Удалить перепись {date} целиком ({n} ников)?\n\nГруппы, профессии и история (явка, статистика, налоги) не изменятся. Это нельзя отменить.")
       .replace("{date}", fullLabel(selectedDate)).replace("{n}", n))) return;
     const { error } = await db.from("census_entries").delete().eq("clan_id", profile.clan_id).eq("week_start", selectedDate);
-    if(error){ alert(L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message); return; }
-    await afterCensusDeleted();
-  });
-  document.getElementById("delAllBtn").addEventListener("click", async () => {
-    if(!dates.length) return;
-    if(!confirm(L2I18n.t("census.confirmDeleteAll", "Удалить ВСЕ переписи ({d} дат, {n} записей)?\n\nГруппы, профессии и история (явка, статистика, налоги) не изменятся, но справочник ников клана опустеет. Это нельзя отменить.")
-      .replace("{d}", dates.length).replace("{n}", allEntries.length))) return;
-    if(!confirm(L2I18n.t("census.confirmDeleteAll2", "Точно удалить все переписи? Вернуть их будет нельзя.")) ) return;
-    const { error } = await db.from("census_entries").delete().eq("clan_id", profile.clan_id);
     if(error){ alert(L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message); return; }
     await afterCensusDeleted();
   });
@@ -749,15 +796,6 @@
     }
     statusEl.textContent = L2I18n.t("weekRoster.scanDone", "Готово, распознано {n} ник(ов) — проверьте перед сохранением.")
       .replace("{n}", pendingChips.length);
-    // сколько из распознанных на самом деле новые: сравнение с последней сохранённой переписью
-    const lastDate = dates.length ? dates[dates.length - 1] : null;
-    if(lastDate && pendingChips.length){
-      const d = diffAgainst(pendingChips, lastDate, null);
-      statusEl.append(document.createElement("br"), document.createTextNode(
-        L2I18n.t("census.scanDiff", "К прошлой переписи ({date}): впервые {f}, вернулись {b}, ушли {g}.")
-          .replace("{date}", shortLabel(lastDate)).replace("{f}", d.fresh.length).replace("{b}", d.back.length).replace("{g}", d.gone.length)));
-      appendDiffDetails(statusEl, d);
-    }
   });
 
   document.getElementById("manualAddBtn").addEventListener("click", () => {
