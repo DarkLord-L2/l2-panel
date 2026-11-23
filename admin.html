@@ -170,6 +170,12 @@
   .nick-row .nr-main{ flex:1 1 220px; min-width:0; display:flex; flex-direction:column; gap:2px; }
   .nick-row .nr-main b{ font-size:14px; overflow-wrap:anywhere; }
   .nick-row .nr-main span{ font-size:11.5px; color: var(--text-dim); }
+  /* «Где найден»: по разделам — мероприятие/дата, группа, кто внёс */
+  .nick-row .nr-trace{ margin-top:6px; padding-top:6px; border-top:1px dashed var(--border); font-size:12px; color: var(--text-dim); line-height:1.55; }
+  .nick-row .nr-trace .tr-sec{ margin-top:3px; }
+  .nick-row .nr-trace .tr-sec b{ color: var(--text); font-weight:600; font-size:12px; margin-right:4px; }
+  .nick-row .nr-trace .tr-ln{ padding-left:10px; }
+  .nick-row .nr-trace .tr-more{ padding-left:10px; opacity:.7; }
   .nick-row .nr-actions{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
   .nick-row .nr-actions .btn{ padding:5px 11px; font-size:12.5px; }
   .nick-row .nr-actions input{ width:170px; padding:6px 9px; font-size:13px; }
@@ -807,10 +813,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=28"></script>
-<script src="js/i18n.js?v=132"></script>
+<script src="js/i18n.js?v=133"></script>
 <script src="js/nav-config.js?v=1"></script>
 <script src="js/nick-match.js?v=7"></script>
-<script src="js/nick-tools.js?v=5"></script>
+<script src="js/nick-tools.js?v=6"></script>
 <script src="js/invite.js?v=1"></script>
 <script src="js/backup.js?v=7"></script>
 <script src="js/num-format.js?v=1"></script>
@@ -1382,7 +1388,7 @@
     orphans.forEach(o => {
       const row = document.createElement("div"); row.className = "nick-row"; row.dataset.nick = o.nick;
       const where = [...o.by.entries()].map(([k, v]) => k + " " + v).join(" · ");
-      row.innerHTML = `<div class="nr-main"><b>${escapeHtml(o.nick)}</b><span>${escapeHtml(where)}</span></div><div class="nr-actions">` +
+      row.innerHTML = `<div class="nr-main"><b>${escapeHtml(o.nick)}</b><span>${escapeHtml(where)}</span><div class="nr-trace" data-trace>${escapeHtml(L2I18n.t("admin.traceLoading", "Ищу, где он встречается…"))}</div></div><div class="nr-actions">` +
         o.sug.map(s => `<button type="button" class="btn nick-sug${s.classMatch ? " cls" : ""}" data-act="to" data-to="${escapeHtml(s.nick)}" title="${escapeHtml(s.classMatch ? L2I18n.t("admin.nicksSameClass", "Совпадает и профессия") : "")}">→ ${escapeHtml(s.nick)}${s.classMatch ? " ✓" : ""}</button>`).join("") +
         `<input type="text" list="nicksDatalist" data-custom placeholder="${escapeHtml(L2I18n.t("admin.nicksCustomPh", "Другой ник…"))}" />` +
         `<button type="button" class="btn" data-act="custom">${escapeHtml(L2I18n.t("admin.nicksReplace", "Заменить"))}</button>` +
@@ -1390,6 +1396,27 @@
         `<button type="button" class="btn" data-act="hide" title="${escapeHtml(L2I18n.t("admin.nicksHideTitle", "Оставить как есть и не показывать"))}">${escapeHtml(L2I18n.t("admin.nicksHide", "Скрыть"))}</button></div>`;
       list.appendChild(row);
     });
+    // «Где найден и кто внёс»: подгружаем для каждой строки (по три запроса одновременно, чтобы не заваливать базу)
+    const rows = [...list.querySelectorAll(".nick-row")];
+    let next = 0;
+    const worker = async () => {
+      while(next < rows.length){
+        const row = rows[next++], box = row.querySelector("[data-trace]");
+        try {
+          const sections = await NT.trace(db, row.dataset.nick);
+          box.innerHTML = "";
+          if(!sections.length){ box.textContent = L2I18n.t("admin.traceNothing", "Следов не найдено — запись уже пропала."); continue; }
+          sections.forEach(s => {
+            const sec = document.createElement("div"); sec.className = "tr-sec";
+            const b = document.createElement("b"); b.textContent = s.label;
+            sec.appendChild(b); box.appendChild(sec);
+            s.lines.forEach(t => { const ln = document.createElement("div"); ln.className = "tr-ln"; ln.textContent = t; box.appendChild(ln); });
+            if(s.more){ const m = document.createElement("div"); m.className = "tr-more"; m.textContent = L2I18n.t("census.andMoreN", "и ещё {n}").replace("{n}", s.more); box.appendChild(m); }
+          });
+        } catch(e){ box.textContent = ""; console.error(e); }
+      }
+    };
+    Promise.all([worker(), worker(), worker()]);
   }
 
   // ---- «Похожие написания» ----

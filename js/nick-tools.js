@@ -57,6 +57,56 @@
     return out;
   }
 
+  // «Где он найден и кто его внёс»: по каждому разделу — конкретные строки (мероприятие и дата, группа, неделя налога…) и
+  // кто из админов внёс (created_by → логин). Для профессии автор не хранится — показываем только саму профессию.
+  // Возвращает [{ label, lines: [..], more }] — только разделы, где ник есть
+  async function trace(db, nick){
+    const LIM = 6;
+    const dm = (iso) => iso ? String(iso).slice(8, 10) + "." + String(iso).slice(5, 7) : "?";
+    const safe = async (p) => { try { const r = await p; return r && !r.error ? (r.data || []) : []; } catch(e){ return []; } };
+    const [profs, att, stats, mem, classes, tax, don, ledA, ledB] = await Promise.all([
+      safe(db.from("profiles").select("id, username, nickname")),
+      safe(db.from("attendance_entries").select("event_id, created_by, created_at").eq("nickname", nick).limit(300)),
+      safe(db.from("event_stats").select("event_id, kills, created_by, created_at").eq("nickname", nick).limit(300)),
+      safe(db.from("clan_group_members").select("group_id").eq("nickname", nick)),
+      safe(db.from("member_classes").select("class_name, class_name_2, class_name_3, class_name_4").eq("nickname", nick)),
+      safe(db.from("tax_payments").select("week_start").eq("nickname", nick).order("week_start", { ascending: false }).limit(50)),
+      safe(db.from("tax_donations").select("amount, created_by, created_at").eq("nickname", nick).limit(50)),
+      safe(db.from("clan_groups").select("name").eq("leader_nickname", nick)),
+      safe(db.from("clan_groups").select("name").eq("deputy_nickname", nick)),
+    ]);
+    const who = new Map(profs.map(p => [p.id, p.nickname || p.username]));
+    const by = (id) => who.get(id) || "—";
+    const evIds = [...new Set([...att, ...stats].map(r => r.event_id))];
+    const evs = new Map();
+    for(let i = 0; i < evIds.length; i += 100){
+      (await safe(db.from("attendance_events").select("id, event_name, event_date").in("id", evIds.slice(i, i + 100)))).forEach(e => evs.set(e.id, e));
+    }
+    const grpIds = mem.map(m => m.group_id);
+    const grps = grpIds.length ? await safe(db.from("clan_groups").select("id, name").in("id", grpIds)) : [];
+    const evLine = (r, extra) => {
+      const e = evs.get(r.event_id) || {};
+      return { d: e.event_date || "", text: dm(e.event_date) + " · " + (e.event_name || "?") + (extra || "") + " — " + t("admin.traceAddedBy", "внёс") + " " + by(r.created_by) + (r.created_at ? ", " + dm(String(r.created_at).slice(0, 10)) : "") };
+    };
+    const pack = (label, rows) => {
+      if(!rows.length) return null;
+      rows.sort((a, b) => String(b.d).localeCompare(String(a.d)));
+      return { label, lines: rows.slice(0, LIM).map(x => x.text), more: Math.max(0, rows.length - LIM) };
+    };
+    const out = [];
+    const add = (x) => { if(x) out.push(x); };
+    const cls = classes[0] ? [classes[0].class_name, classes[0].class_name_2, classes[0].class_name_3, classes[0].class_name_4].filter(Boolean) : [];
+    if(classes[0]) add({ label: t("admin.nickTblClasses", "Профессии"), lines: [(cls.length ? cls.join(" / ") : t("admin.traceNoClass", "профессия не указана")) + " — " + t("admin.traceClassNoAuthor", "кто поставил, не записано")], more: 0 });
+    add(pack(t("admin.nickTblAttendance", "Явка"), att.map(r => evLine(r))));
+    add(pack(t("admin.nickTblStats", "Статистика"), stats.map(r => evLine(r, ", " + t("admin.traceKills", "килов") + " " + (r.kills || 0)))));
+    if(grps.length) add({ label: t("admin.nickTblGroups", "Группы"), lines: grps.map(g => g.name), more: 0 });
+    if(ledA.length) add({ label: t("admin.nickTblLeader", "Лидер группы"), lines: ledA.map(g => g.name), more: 0 });
+    if(ledB.length) add({ label: t("admin.nickTblDeputy", "Зам группы"), lines: ledB.map(g => g.name), more: 0 });
+    if(tax.length) add({ label: t("admin.nickTblTax", "Налоги"), lines: [t("admin.traceTaxWeeks", "недели") + ": " + tax.slice(0, 8).map(r => dm(r.week_start)).join(", ") + (tax.length > 8 ? " …" : "")], more: 0 });
+    if(don.length) add({ label: t("admin.nickTblDonations", "Пожертвования"), lines: don.slice(0, LIM).map(r => r.amount + " — " + t("admin.traceAddedBy", "внёс") + " " + by(r.created_by) + (r.created_at ? ", " + dm(String(r.created_at).slice(0, 10)) : "")), more: 0 });
+    return out;
+  }
+
   // замена ника везде. ctx: { clanId, userId }. Возвращает список проблем (пустой — всё прошло)
   async function rename(db, ctx, oldNick, newNick){
     const problems = [];
@@ -262,5 +312,5 @@
     try { global.localStorage.setItem(cacheKey(clanId), JSON.stringify({ t: Date.now(), n })); } catch(e){}
   }
 
-  global.L2NickTools = { TABLES, label, usage, rename, removeFromRoster, findTwins, obviousMerges, cleanupPlan, audit, attentionCount, cachedCount, setCachedCount, loadIgnored, saveIgnored };
+  global.L2NickTools = { TABLES, label, usage, trace, rename, removeFromRoster, findTwins, obviousMerges, cleanupPlan, audit, attentionCount, cachedCount, setCachedCount, loadIgnored, saveIgnored };
 })(window);
