@@ -4,20 +4,35 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Перепись клана — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=43" />
+<link rel="stylesheet" href="js/theme.css?v=44" />
 <style>
   /* «Перепись клана» больше не привязана к календарной неделе — вкладки на
      произвольные даты (когда вздумается), а не ◀/▶ по 7 дней. Общий
      js/week-roster.js тут больше не используется (он остался общим с
      «Налогами», где неделя нужна взаправду) — вся логика теперь своя, в этом файле. */
   .cw-tabs-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-  .cw-tabs{ display:flex; flex-wrap:wrap; gap:6px; flex:1; min-width:0; }
+  .cw-tabs{ display:flex; flex-wrap:nowrap; overflow:hidden; gap:6px; flex:1; min-width:0; }
+  .cw-tabs .cw-tab{ flex:none; }
+  .cw-archive{ position:relative; flex:none; }
+  .cw-archive-menu{
+    position:absolute; top:100%; right:0; margin-top:6px; z-index:30; width:280px; max-height:260px; overflow:auto;
+    display:flex; flex-wrap:wrap; gap:6px; padding:10px; border-radius:10px;
+    background: var(--panel); border:1px solid var(--border-lit); box-shadow: 0 10px 28px rgba(0,0,0,.5);
+  }
   .cw-tab{ font-size:12.5px; padding:6px 12px; }
   .cw-new-hint{ margin:8px 0 0; }
-  /* новый (по сравнению с предыдущей по времени переписью) ник — зелёная полоска
-     слева на чипе, тот же приём, что у активного пункта в сайдбаре */
-  .roster-chip.cw-new{ box-shadow: inset 3px 0 0 var(--ok); }
+  /* новый (по сравнению с предыдущей по времени переписью) ник — слегка зелёный чип
+     с зелёной полоской слева, тот же приём, что у активного пункта в сайдбаре */
+  .roster-chip.cw-new{ box-shadow: inset 3px 0 0 var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, var(--border)); background: color-mix(in srgb, var(--ok) 12%, transparent); }
   .roster-chip{ gap:9px; padding-left:8px; }
+  /* блок «тот же человек или нет?» при распознавании */
+  .sim-box{ margin:12px 0; padding:10px 14px; border:1px solid #d9a300; background:rgba(217,163,0,.07); border-radius:10px; }
+  .sim-head{ font-weight:600; font-size:13.5px; margin-bottom:6px; }
+  .sim-row{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:7px 0; border-top:1px solid var(--border); font-size:13px; }
+  .sim-row:first-of-type{ border-top:none; }
+  .sim-lbl b{ color:var(--text); }
+  .sim-yes{ padding:3px 10px; font-size:12px; border-color:#d9a300; background:rgba(217,163,0,.18); }
+  .sim-no{ padding:3px 10px; font-size:12px; border-color:color-mix(in srgb, var(--ok) 55%, var(--border)); background:color-mix(in srgb, var(--ok) 14%, transparent); }
   .roster-chip .cw-ico{ width:22px; height:22px; border-radius:50%; object-fit:cover; flex:none; display:block; box-shadow: 0 0 0 1px var(--border-lit); }
   .roster-chip .cw-ico-none{ background: var(--panel-3); box-shadow: inset 0 0 0 1px var(--border-lit); }
   .roster-chip input[type="checkbox"] + .cw-ico{ margin-left:-2px; }
@@ -48,6 +63,7 @@
   <section class="card" id="cwTabsSection">
     <div class="cw-tabs-row">
       <div class="cw-tabs" id="cwTabs"></div>
+      <div class="cw-archive" id="cwArchive" style="display:none;"></div>
       <button class="btn btn-primary" id="newCensusBtn" style="display:none;" data-i18n="census.newCensusBtn" data-i18n-attr="title:census.newCensusBtnTitle" title="Начать новую перепись на сегодня">+ Новая перепись</button>
     </div>
   </section>
@@ -58,6 +74,8 @@
       <div class="tools">
         <button class="btn btn-primary" id="addEntryBtn" style="display:none;" data-i18n="census.addEntry">+ Добавить перепись</button>
         <button class="btn" id="trashModeBtn" data-i18n="census.deleteMode" data-i18n-attr="title:census.deleteModeTitle" title="Режим удаления списком" style="display:none;">Удалить</button>
+        <button class="btn btn-danger" id="delWeekBtn" style="display:none;"></button>
+        <button class="btn btn-danger" id="delAllBtn" style="display:none;" data-i18n="census.deleteAllBtn">Удалить все переписи</button>
       </div>
     </div>
 
@@ -85,6 +103,7 @@
     <button class="btn" id="filePickBtn" style="margin:10px 0;" data-i18n="census.pickFiles">Выбрать файлы…</button>
     <p class="upload-status" id="uploadStatus"></p>
 
+    <div class="sim-box" id="simBox" style="display:none;"></div>
     <div class="chip-row" id="chipRow"></div>
 
     <div class="manual-add">
@@ -155,10 +174,10 @@
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=27"></script>
 <script src="js/classes.js?v=1"></script>
-<script src="js/i18n.js?v=125"></script>
+<script src="js/i18n.js?v=131"></script>
 <script src="js/paste-drop.js?v=1"></script>
 <script src="js/nick-match.js?v=7"></script>
-<script src="js/nick-tools.js?v=3"></script>
+<script src="js/nick-tools.js?v=4"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -192,11 +211,40 @@
   let selectedDate = null;
   let historyMode = false;
   let pendingChips = [];
+  const keptDistinct = new Set(); // ники, про которые решили «это другой человек, а не двойник»
   let selectMode = false;
   let selectedIds = new Set();
 
   function entriesForDate(d){ return allEntries.filter(e => e.week_start === d); }
   function nickSetForDate(d){ return new Set(entriesForDate(d).map(e => e.nickname)); }
+
+  // Чем состав отличается от переписи prevDate: впервые (ника нет ни в одной более ранней переписи), вернулись (был в более
+  // ранних, но не в prevDate), ушли (были в prevDate, сейчас нет). Сравнение по общему ключу ника (L2Nick.key) — «двойники»
+  // одного игрока (Samovar / Samovar1, регистр, похожие символы) не считаются ни новыми, ни ушедшими.
+  // beforeDate — «более ранние» берём строго раньше этой даты (null — все имеющиеся)
+  function diffAgainst(curNicks, prevDate, beforeDate){
+    const kf = (n) => (window.L2Nick && L2Nick.ready()) ? L2Nick.key(n) : n;
+    const prevEntries = entriesForDate(prevDate);
+    const prevKeys = new Set(prevEntries.map(e => kf(e.nickname)));
+    const olderKeys = new Set(allEntries.filter(e => e.week_start !== prevDate && (!beforeDate || e.week_start < beforeDate)).map(e => kf(e.nickname)));
+    const curKeys = new Set(curNicks.map(kf));
+    const fresh = [], back = [], gone = [];
+    curNicks.forEach(n => { const k = kf(n); if(prevKeys.has(k)) return; (olderKeys.has(k) ? back : fresh).push(n); });
+    prevEntries.forEach(e => { if(!curKeys.has(kf(e.nickname))) gone.push(e.nickname); });
+    return { fresh, back, gone };
+  }
+  // подробности отличий: подпись + ники построчно (текстом, без разметки из ников)
+  function appendDiffDetails(parent, d){
+    [["census.diffFresh", "Впервые в переписях", d.fresh], ["census.diffBack", "Вернулись (были в более ранних, в прошлой нет)", d.back],
+     ["census.diffGoneList", "Ушли (были в прошлой, сейчас нет)", d.gone]].forEach(([key, fb, list]) => {
+      if(!list.length) return;
+      const line = document.createElement("div");
+      line.style.cssText = "margin-top:4px; font-size:12px; color:var(--text-dim); line-height:1.5;";
+      const b = document.createElement("b"); b.style.color = "var(--text)"; b.textContent = L2I18n.t(key, fb) + " (" + list.length + "): ";
+      line.append(b, document.createTextNode(list.join(", ")));
+      parent.appendChild(line);
+    });
+  }
 
   async function loadAll(){
     const { data, error } = await L2Cabinet.selectAll(() => db.from("census_entries").select("id, week_start, nickname").order("nickname").order("id"));
@@ -212,37 +260,70 @@
 
   // ← / → на клавиатуре — более ранняя/более поздняя перепись (вкладки идут от новой к старой)
   window.L2PageKeys = (key) => {
-    const tabs = [...document.querySelectorAll("#cwTabs .cw-tab")];
-    const i = tabs.findIndex(b => b.classList.contains("btn-primary"));
-    const next = tabs[key === "ArrowLeft" ? i + 1 : i - 1];
-    if(i < 0 || !next) return false;
-    next.click(); return true;
+    const i = dates.indexOf(selectedDate);
+    const d = dates[key === "ArrowLeft" ? i - 1 : i + 1]; // dates — по возрастанию: ← старее, → новее
+    if(i < 0 || !d) return false;
+    selectCensusDate(d); return true;
   };
 
+  function selectCensusDate(d){
+    if(d === selectedDate) return;
+    selectedDate = d;
+    selectMode = false; selectedIds = new Set();
+    document.getElementById("bulkTools").style.display = "none";
+    closeUploadCard();
+    renderTabs();
+    renderList();
+  }
+
+  // Вкладки с датами идут от новой к старой в один ряд. Когда ряд доходит до зелёной кнопки «+ Новая перепись», самые старые
+  // уходят в «Архив» (выпадающий список рядом); выбранная дата из архива подсвечивается на самой кнопке «Архив».
   function renderTabs(){
-    const wrap = document.getElementById("cwTabs");
-    wrap.innerHTML = "";
-    [...dates].reverse().forEach(d => {
+    const wrap = document.getElementById("cwTabs"), arch = document.getElementById("cwArchive");
+    wrap.innerHTML = ""; arch.innerHTML = ""; arch.style.display = "none";
+    const tabs = [...dates].reverse().map(d => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "btn cw-tab" + (d === selectedDate ? " btn-primary" : "");
       btn.textContent = shortLabel(d);
       btn.title = fullLabel(d);
-      btn.addEventListener("click", () => {
-        if(d === selectedDate) return;
-        selectedDate = d;
-        selectMode = false; selectedIds = new Set();
-        document.getElementById("bulkTools").style.display = "none";
-        closeUploadCard();
-        renderTabs();
-        renderList();
-      });
+      btn.addEventListener("click", () => selectCensusDate(d));
       wrap.appendChild(btn);
+      return { d, btn };
     });
+    if(!wrap.clientWidth || wrap.scrollWidth <= wrap.clientWidth + 1) return; // всё влезло (или блок скрыт — не мерим)
+
+    const abtn = document.createElement("button");
+    abtn.type = "button"; abtn.className = "btn cw-tab"; abtn.textContent = "Архив (99) ▾";
+    const menu = document.createElement("div");
+    menu.className = "cw-archive-menu"; menu.style.display = "none";
+    arch.append(abtn, menu); arch.style.display = "";
+    const archived = [];
+    while(wrap.scrollWidth > wrap.clientWidth + 1 && wrap.children.length > 1){
+      const t = tabs[wrap.children.length - 1];
+      wrap.removeChild(t.btn); archived.push(t.d);
+    }
+    archived.reverse(); // в меню — от новых к старым
+    const inArch = archived.includes(selectedDate);
+    abtn.textContent = inArch ? L2I18n.t("census.archiveSel", "Архив · {date} ▾").replace("{date}", shortLabel(selectedDate))
+                              : L2I18n.t("census.archive", "Архив ({n}) ▾").replace("{n}", archived.length);
+    if(inArch) abtn.classList.add("btn-primary");
+    archived.forEach(d => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "btn cw-tab" + (d === selectedDate ? " btn-primary" : "");
+      b.textContent = shortLabel(d); b.title = fullLabel(d);
+      b.addEventListener("click", () => { menu.style.display = "none"; selectCensusDate(d); });
+      menu.appendChild(b);
+    });
+    abtn.addEventListener("click", (e) => { e.stopPropagation(); menu.style.display = menu.style.display === "none" ? "" : "none"; });
   }
+  document.addEventListener("click", () => { const m = document.querySelector("#cwArchive .cw-archive-menu"); if(m) m.style.display = "none"; });
+  let tabsResizeTimer = null;
+  window.addEventListener("resize", () => { clearTimeout(tabsResizeTimer); tabsResizeTimer = setTimeout(renderTabs, 120); });
 
   function resetUploadPreview(){
     pendingChips = [];
+    keptDistinct.clear();
     document.getElementById("fileInput").value = "";
     document.getElementById("uploadStatus").textContent = "";
     document.getElementById("uploadError").textContent = "";
@@ -302,6 +383,10 @@
   function renderChips(){
     const row = document.getElementById("chipRow");
     row.innerHTML = "";
+    const lastDate = dates.length ? dates[dates.length - 1] : null;
+    const newSet = new Set();
+    const checks = []; // ники, которые нужно решить: тот же человек или нет
+    if(lastDate && pendingChips.length){ const dd = diffAgainst(pendingChips, lastDate, null); dd.fresh.concat(dd.back).forEach(n => newSet.add(n)); }
     pendingChips.forEach((nick, i) => {
       const chip = document.createElement("div");
       chip.className = "chip";
@@ -325,24 +410,67 @@
         // для «неотличимых» ников (l I 1 |) — подсказки среди таких же ников, и только если их мало (профессии на скрине переписи нет)
         const sug = isAmbiguousNick(nick) ? L2Nick.suggestAmbiguous(nick, kc.list) : L2Nick.suggest(nick, kc.list, 2);
         if(sug.length){
-          chip.classList.add("chip-warn");
-          chip.title = L2I18n.t("census.chipSuggest", "Нет в прежних переписях, но похож на «{n}» — это он? Нажмите кнопку, чтобы заменить.").replace("{n}", sug[0].nick);
-          sug.forEach(sg => {
-            const sb = document.createElement("button");
-            sb.type = "button"; sb.textContent = "→ " + sg.nick; sb.title = chip.title;
-            sb.style.cssText = "margin-left:6px; padding:1px 8px; border-radius:10px; border:1px solid #d9a300; background:#e8b44a; color:#111; font-size:11.5px; font-weight:600; cursor:pointer;";
-            sb.addEventListener("click", () => {
-              const old = pendingChips[i];
-              if(pendingChips.includes(sg.nick)) pendingChips.splice(i, 1); else pendingChips[i] = sg.nick;
-              saveScannedAlias(old, sg.nick);
-              renderChips();
-            });
-            chip.appendChild(sb);
-          });
+          if(keptDistinct.has(nick)){
+            // уже решили: это другой человек — чип остаётся обычным «новым» (зелёным)
+            chip.title = L2I18n.t("census.simKept", "Подтверждено: это другой человек");
+          } else {
+            chip.classList.add("chip-warn");
+            chip.title = L2I18n.t("census.chipSuggest", "Нет в прежних переписях, но похож на «{n}» — тот же человек или нет? Решите в блоке выше.").replace("{n}", sug[0].nick);
+            checks.push({ i, nick, sug });
+          }
         }
+      }
+      // новый относительно последней переписи (впервые или вернулся) — слегка зелёным; жёлтое «это он?» важнее и остаётся жёлтым
+      if(newSet.has(nick) && !chip.classList.contains("chip-warn")){
+        chip.classList.add("chip-new");
+        if(!chip.title) chip.title = L2I18n.t("census.chipNew", "Новый: нет в последней переписи");
       }
       chip.append(btn);
       row.appendChild(chip);
+    });
+    renderSimBox(checks);
+  }
+
+  // Блок «тот же человек или нет?»: для каждого нового ника, похожего на уже известный, — две явные кнопки.
+  // «Да, это X» — заменяет ник на прежнее написание и запоминает привязку (nick_aliases), в следующий раз подставится само.
+  // «Нет, другой человек» — оставляет ник как есть и считает его новым игроком (зелёный чип).
+  function renderSimBox(checks){
+    const box = document.getElementById("simBox");
+    box.innerHTML = "";
+    if(!checks.length){ box.style.display = "none"; return; }
+    box.style.display = "";
+    const h = document.createElement("div");
+    h.className = "sim-head";
+    h.textContent = L2I18n.t("census.simTitle", "Похожие на уже известных ники — тот же человек или нет? ({n})").replace("{n}", checks.length);
+    box.appendChild(h);
+    checks.forEach(({ nick, sug }) => {
+      const r = document.createElement("div");
+      r.className = "sim-row";
+      const lbl = document.createElement("span");
+      lbl.className = "sim-lbl";
+      const b1 = document.createElement("b"); b1.textContent = nick;
+      lbl.append(b1, document.createTextNode(" " + L2I18n.t("census.simLike", "похож на") + " "));
+      sug.forEach((sg, k) => { const b2 = document.createElement("b"); b2.textContent = sg.nick; if(k) lbl.append(document.createTextNode(" / ")); lbl.append(b2); });
+      r.appendChild(lbl);
+      sug.forEach(sg => {
+        const yes = document.createElement("button");
+        yes.type = "button"; yes.className = "btn sim-yes";
+        yes.textContent = L2I18n.t("census.simYes", "Да, это {n}").replace("{n}", sg.nick);
+        yes.addEventListener("click", () => {
+          const i = pendingChips.indexOf(nick);
+          if(i < 0) return;
+          if(pendingChips.includes(sg.nick)) pendingChips.splice(i, 1); else pendingChips[i] = sg.nick;
+          saveScannedAlias(nick, sg.nick);
+          renderChips();
+        });
+        r.appendChild(yes);
+      });
+      const no = document.createElement("button");
+      no.type = "button"; no.className = "btn sim-no";
+      no.textContent = L2I18n.t("census.simNo", "Нет, другой человек");
+      no.addEventListener("click", () => { keptDistinct.add(nick); renderChips(); });
+      r.appendChild(no);
+      box.appendChild(r);
     });
   }
 
@@ -357,6 +485,11 @@
     const newHintEl = document.getElementById("cwNewHint");
     body.innerHTML = "";
 
+    // кнопки «Удалить перепись ДАТА» / «Удалить все переписи»: первая — админам, когда выбрана дата; вторая — только главному админу
+    const delWeekBtn = document.getElementById("delWeekBtn");
+    delWeekBtn.style.display = isAdmin && selectedDate ? "" : "none";
+    if(selectedDate) delWeekBtn.textContent = L2I18n.t("census.deleteWeekBtn", "Удалить перепись {date}").replace("{date}", shortLabel(selectedDate));
+    document.getElementById("delAllBtn").style.display = profile.roles?.key === "glavadmin" && dates.length ? "" : "none";
     if(!selectedDate){
       headingEl.textContent = "";
       document.getElementById("weekSearch").style.display = "none";
@@ -374,11 +507,15 @@
     // сравнение с предыдущей по времени переписью — просто чтобы подсветить новеньких
     const idx = dates.indexOf(selectedDate);
     const prevDate = idx > 0 ? dates[idx - 1] : null;
-    const prevSet = prevDate ? nickSetForDate(prevDate) : null;
-    if(prevSet){
-      const newCount = entries.filter(e => !prevSet.has(e.nickname)).length;
+    // подсветка «нового» ника в списке — тем же правилом, что и счётчик (по общему ключу ника, а не по точному написанию)
+    const kfNick = (n) => (window.L2Nick && L2Nick.ready()) ? L2Nick.key(n) : n;
+    const prevKeys = prevDate ? new Set(entriesForDate(prevDate).map(e => kfNick(e.nickname))) : null;
+    if(prevDate){
+      const d = diffAgainst(entries.map(e => e.nickname), prevDate, selectedDate);
       newHintEl.textContent = L2I18n.t("census.newSinceHint", "Новых по сравнению с переписью {date}: {n}")
-        .replace("{date}", shortLabel(prevDate)).replace("{n}", newCount);
+        .replace("{date}", shortLabel(prevDate)).replace("{n}", d.fresh.length + d.back.length) +
+        " · " + L2I18n.t("census.diffGone", "ушли: {n}").replace("{n}", d.gone.length);
+      appendDiffDetails(newHintEl, d);
       newHintEl.style.display = "";
     } else {
       newHintEl.style.display = "none";
@@ -410,7 +547,7 @@
 
         const chip = document.createElement("div");
         chip.className = "chip roster-chip";
-        if(prevSet && !prevSet.has(entry.nickname)) chip.classList.add("cw-new");
+        if(prevKeys && !prevKeys.has(kfNick(entry.nickname))) chip.classList.add("cw-new");
 
         if(selectMode){
           const cb = document.createElement("input");
@@ -476,6 +613,33 @@
       await loadAll();
       await warnLeftovers(delNicks);
     }
+  });
+
+  // Удаление переписи целиком (одной даты или всех). Состав клана (группы, профессии, буст…) и история (явка, статистика, налоги)
+  // НЕ меняются — стирается только список ников переписи. Двойное подтверждение для «все».
+  async function afterCensusDeleted(){
+    selectMode = false;
+    document.getElementById("bulkTools").style.display = "none";
+    try{ if(window.L2Nick){ L2Nick.invalidate(profile.clan_id); await L2Nick.refresh(db, profile.clan_id); } }catch(e){ console.error(e); }
+    await loadAll();
+  }
+  document.getElementById("delWeekBtn").addEventListener("click", async () => {
+    if(!selectedDate) return;
+    const n = entriesForDate(selectedDate).length;
+    if(!confirm(L2I18n.t("census.confirmDeleteWeek", "Удалить перепись {date} целиком ({n} ников)?\n\nГруппы, профессии и история (явка, статистика, налоги) не изменятся. Это нельзя отменить.")
+      .replace("{date}", fullLabel(selectedDate)).replace("{n}", n))) return;
+    const { error } = await db.from("census_entries").delete().eq("clan_id", profile.clan_id).eq("week_start", selectedDate);
+    if(error){ alert(L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message); return; }
+    await afterCensusDeleted();
+  });
+  document.getElementById("delAllBtn").addEventListener("click", async () => {
+    if(!dates.length) return;
+    if(!confirm(L2I18n.t("census.confirmDeleteAll", "Удалить ВСЕ переписи ({d} дат, {n} записей)?\n\nГруппы, профессии и история (явка, статистика, налоги) не изменятся, но справочник ников клана опустеет. Это нельзя отменить.")
+      .replace("{d}", dates.length).replace("{n}", allEntries.length))) return;
+    if(!confirm(L2I18n.t("census.confirmDeleteAll2", "Точно удалить все переписи? Вернуть их будет нельзя.")) ) return;
+    const { error } = await db.from("census_entries").delete().eq("clan_id", profile.clan_id);
+    if(error){ alert(L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message); return; }
+    await afterCensusDeleted();
   });
 
   // Убрали человека из переписи — он сам убирается и из остального состава (группы, профессия, буст, коэффициент лидера,
@@ -585,6 +749,15 @@
     }
     statusEl.textContent = L2I18n.t("weekRoster.scanDone", "Готово, распознано {n} ник(ов) — проверьте перед сохранением.")
       .replace("{n}", pendingChips.length);
+    // сколько из распознанных на самом деле новые: сравнение с последней сохранённой переписью
+    const lastDate = dates.length ? dates[dates.length - 1] : null;
+    if(lastDate && pendingChips.length){
+      const d = diffAgainst(pendingChips, lastDate, null);
+      statusEl.append(document.createElement("br"), document.createTextNode(
+        L2I18n.t("census.scanDiff", "К прошлой переписи ({date}): впервые {f}, вернулись {b}, ушли {g}.")
+          .replace("{date}", shortLabel(lastDate)).replace("{f}", d.fresh.length).replace("{b}", d.back.length).replace("{g}", d.gone.length)));
+      appendDiffDetails(statusEl, d);
+    }
   });
 
   document.getElementById("manualAddBtn").addEventListener("click", () => {

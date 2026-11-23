@@ -88,6 +88,15 @@
         chk(await db.from("nick_aliases").upsert({ clan_id: ctx.clanId, alias: oldNick, canonical: newNick, created_by: ctx.userId }, { onConflict: "clan_id,alias" }), "nick_aliases");
       })(),
     ]);
+    // Проверка результата: база может молча не обновить строки (нет прав у роли, запрет политикой — ошибки при этом нет).
+    // Тогда старый ник остаётся и группа «похожих» появляется снова после каждого объединения. Считаем строки, что остались.
+    if(!problems.length){
+      try {
+        const left = await usage(db, oldNick);
+        left.forEach(u => problems.push(t("admin.nicksLeftover", "{t}: осталось строк со старым ником «{n}» — {c} (нет прав на изменение или конфликт)")
+          .replace("{t}", u.label).replace("{n}", oldNick).replace("{c}", u.count)));
+      } catch(e){ console.error(e); }
+    }
     try { if(global.L2Nick){ global.L2Nick.invalidate(ctx.clanId); await global.L2Nick.refresh(db, ctx.clanId); } } catch(e){ console.error(e); }
     return problems;
   }
