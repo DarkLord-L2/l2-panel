@@ -136,9 +136,9 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=28"></script>
+<script src="js/supabase-client.js?v=29"></script>
 <script src="js/classes.js?v=3"></script>
-<script src="js/i18n.js?v=134"></script>
+<script src="js/i18n.js?v=138"></script>
 <script src="js/nick-match.js?v=8"></script>
 <script src="js/nick-tools.js?v=7"></script>
 <script src="js/tax-flag.js?v=1"></script>
@@ -223,20 +223,59 @@
     return;
   }
 
-  if(profile.clans?.access_enabled === false){
+  // состояние доступа клана: отключён вручную или вышел срок оплаты (clans.paid_until), плюс сообщение от владельца.
+  // Функция появляется после supabase/schema_owner_console.sql — до этого просто работает прежняя проверка access_enabled
+  let clanAccess = null;
+  try{ const r = await L2Cabinet.client.rpc("my_clan_access"); if(!r.error) clanAccess = r.data; }catch(e){}
+  if(profile.clans?.access_enabled === false || (clanAccess && clanAccess.blocked)){
     // клан отключён супер-админом (например, не оплачен) — данные всё равно
     // не отдадутся ни по одному запросу (RLS), но так у человека есть понятное
     // сообщение вместо пустого зависшего интерфейса
+    const expired = clanAccess && clanAccess.reason === "expired";
     document.body.innerHTML = '<div class="login-wrap"><div class="card login-card">' +
       '<h1>' + L2I18n.t("shell.accessSuspendedTitle", "⛔ Доступ приостановлен") + '</h1>' +
-      '<p class="hint">' + L2I18n.t("shell.accessSuspendedHint", "Доступ к кабинету клана временно отключён. Обратитесь к клан-лидеру.") + '</p>' +
+      '<p class="hint">' + (expired ? L2I18n.t("shell.suspendedExpired", "Срок оплаты доступа к кабинету клана закончился. Обратитесь к клан-лидеру.") : L2I18n.t("shell.accessSuspendedHint", "Доступ к кабинету клана временно отключён. Обратитесь к клан-лидеру.")) + '</p>' +
+      (clanAccess && clanAccess.note ? '<p class="hint"><b>' + escapeHtml(L2I18n.t("shell.suspendedNote", "Сообщение: ")) + '</b>' + escapeHtml(clanAccess.note) + '</p>' : '') +
       '<button class="btn" onclick="L2Cabinet.signOut()">' + L2I18n.t("shell.signOut", "Выйти") + '</button>' +
       "</div></div>";
     return;
   }
-  if(profile.must_change_password){
+  // оплата скоро закончится (≤ 7 дней) — предупреждаем лидера и админов тонкой полосой сверху, чтобы доступ не пропал внезапно
+  if(clanAccess && clanAccess.days_left != null && clanAccess.days_left <= 7 && ["glavadmin", "admin"].includes(profile.roles?.key)){
+    try{
+      if(sessionStorage.getItem("l2PayBannerHidden") !== String(clanAccess.paid_until)){
+        const bar = document.createElement("div");
+        bar.style.cssText = "padding:8px 16px; font-size:13px; text-align:center; background:rgba(217,163,0,.12); border-bottom:1px solid #d9a300; color:var(--text); display:flex; gap:12px; justify-content:center; align-items:center;";
+        const m = document.createElement("span");
+        m.textContent = L2I18n.t("shell.payLeft", "Доступ клана оплачен до {d} (осталось {n} дн.). Чтобы не потерять доступ, продлите оплату.")
+          .replace("{d}", String(clanAccess.paid_until).split("-").reverse().join(".")).replace("{n}", clanAccess.days_left);
+        const x = document.createElement("button");
+        x.type = "button"; x.textContent = "×"; x.className = "btn"; x.style.cssText = "padding:0 8px;";
+        x.onclick = () => { bar.remove(); try{ sessionStorage.setItem("l2PayBannerHidden", String(clanAccess.paid_until)); }catch(e){} };
+        bar.append(m, x);
+        const body = document.querySelector(".app-body");
+        if(body) body.before(bar);
+      }
+    }catch(e){ console.error(e); }
+  }
+  // в режиме просмотра клана (владелец платформы) пароль лидера не трогаем — не отправляем на смену пароля
+  const ownerViewInfo = L2Cabinet.ownerView ? L2Cabinet.ownerView() : null;
+  if(profile.must_change_password && !ownerViewInfo){
     location.href = "change-password.html";
     return;
+  }
+  // полоса «Режим просмотра клана» — всегда видна сверху, пока владелец в чужом клане; «Выйти из клана» возвращает в консоль
+  if(ownerViewInfo){
+    const bar = document.createElement("div");
+    bar.style.cssText = "flex:none; z-index:60; padding:7px 16px; font-size:13px; text-align:center; background:#3b2a6b; border-bottom:1px solid #7a5cd6; color:#fff; display:flex; gap:14px; justify-content:center; align-items:center; flex-wrap:wrap;";
+    const m = document.createElement("span");
+    m.textContent = L2I18n.t("shell.ownerView", "👁 Режим просмотра клана «{name}» — только чтение, изменения заблокированы").replace("{name}", ownerViewInfo.clanName || "");
+    const x = document.createElement("button");
+    x.type = "button"; x.className = "btn"; x.style.cssText = "padding:2px 12px;"; x.textContent = L2I18n.t("shell.ownerViewExit", "Выйти из клана");
+    x.onclick = async () => { x.disabled = true; await L2Cabinet.signOut(); };
+    bar.append(m, x);
+    const shell = document.querySelector(".app-shell");
+    if(shell) shell.prepend(bar); else document.body.prepend(bar); // внутри оболочки (flex-колонка 100vh), чтобы страница не стала выше экрана
   }
 
   L2I18n.renderSwitcher(document.getElementById("langSwitch"));

@@ -22,8 +22,42 @@ const sessionAwareStorage = {
   removeItem: (k) => currentBackingStorage().removeItem(k),
 };
 
+// ---------- режим «просмотр клана» для владельца платформы (owner-console → «Войти в клан») ----------
+// Владелец заходит в чужой клан под сессией лидера этого клана (без создания своего пользователя), но ТОЛЬКО ДЛЯ ЧТЕНИЯ:
+// пока стоит метка OWNER_VIEW_KEY, любой запрос на изменение данных (запись в таблицы, вызов функций, загрузка файлов, смена
+// пароля) блокируется прямо в клиенте и возвращает ошибку «режим просмотра». Метка в localStorage — общая для всех вкладок,
+// потому что сессия тоже общая.
+const OWNER_VIEW_KEY = "l2OwnerView";
+const OWNER_VIEW_READ_RPC = new Set(["is_platform_admin", "my_clan_access", "census_week_list", "census_summary", "attendance_summary"]);
+function ownerView(){
+  try{ return JSON.parse(localStorage.getItem(OWNER_VIEW_KEY) || "null"); }catch(e){ return null; }
+}
+function guardedFetch(input, init){
+  try{
+    if(ownerView()){
+      const url = typeof input === "string" ? input : (input && input.url) || String(input);
+      const method = String((init && init.method) || (input && input.method) || "GET").toUpperCase();
+      if(method !== "GET" && method !== "HEAD" && method !== "OPTIONS"){
+        let blocked = false;
+        if(url.indexOf("/rest/v1/rpc/") >= 0){
+          const name = url.split("/rest/v1/rpc/")[1].split("?")[0];
+          blocked = !OWNER_VIEW_READ_RPC.has(name);
+        } else if(url.indexOf("/rest/v1/") >= 0 || url.indexOf("/functions/v1/") >= 0 || url.indexOf("/storage/v1/") >= 0 || url.indexOf("/auth/v1/user") >= 0){
+          blocked = true;
+        }
+        if(blocked){
+          return Promise.resolve(new Response(JSON.stringify({ message: "Режим просмотра: изменения запрещены", code: "owner_view_readonly" }),
+            { status: 403, headers: { "Content-Type": "application/json" } }));
+        }
+      }
+    }
+  }catch(e){}
+  return fetch(input, init);
+}
+
 const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { storage: sessionAwareStorage, autoRefreshToken: true, persistSession: true },
+  global: { fetch: guardedFetch },
 });
 
 function usernameToEmail(username){
@@ -31,15 +65,49 @@ function usernameToEmail(username){
 }
 
 async function login(username, password, remember){
+  try{ localStorage.removeItem(OWNER_VIEW_KEY); }catch(e){}
   localStorage.setItem(REMEMBER_KEY, remember ? "1" : "0");
   return client.auth.signInWithPassword({ email: usernameToEmail(username), password });
 }
 
 async function signOut(){
+  // в режиме просмотра клана «Выйти» значит «выйти из чужого клана обратно к себе», а НЕ завершить сессии лидера
+  if(ownerView()){
+    const back = await exitClanView();
+    location.href = back ? "owner-console.html" : "login.html";
+    return;
+  }
   const { data: { session } } = await client.auth.getSession();
   if(session) forgetAccount(session.user.id);
   await client.auth.signOut();
   location.href = "login.html";
+}
+
+// Войти в клан: token_hash выдаёт функция owner-enter-clan (только владельцу платформы). Свою сессию владелец сохраняет в список
+// аккаунтов (чтобы вернуться), затем входит под лидером клана; включается режим «только чтение» (см. guardedFetch выше)
+async function enterClanView(tokenHash, meta){
+  await persistCurrentAccountSession();
+  const { data: { session: cur } } = await client.auth.getSession();
+  const ownerId = cur && cur.user ? cur.user.id : null;
+  localStorage.setItem(REMEMBER_KEY, "1");
+  let r = await client.auth.verifyOtp({ token_hash: tokenHash, type: "magiclink" });
+  if(r.error) r = await client.auth.verifyOtp({ token_hash: tokenHash, type: "email" });
+  if(r.error) throw r.error;
+  localStorage.setItem(OWNER_VIEW_KEY, JSON.stringify({ ownerId, leaderId: r.data.user.id, clanName: (meta && meta.clanName) || "", t: Date.now() }));
+}
+// Выйти из чужого клана: сессия лидера закрывается ТОЛЬКО в этом браузере (локально), владелец возвращается на свою сохранённую.
+// true — вернулись к владельцу; false — его сессия не восстановилась (нужно войти заново)
+async function exitClanView(){
+  const ov = ownerView();
+  try{ localStorage.removeItem(OWNER_VIEW_KEY); }catch(e){} // сначала снимаем блокировку записи — иначе не восстановить сессию
+  try{ await client.auth.signOut({ scope: "local" }); }catch(e){}
+  if(ov && ov.leaderId) forgetAccount(ov.leaderId);
+  const acc = ov && loadSavedAccounts().find(a => a.userId === ov.ownerId);
+  if(acc){
+    const { error } = await client.auth.setSession({ access_token: acc.access_token, refresh_token: acc.refresh_token });
+    if(!error){ await persistCurrentAccountSession(); return true; }
+  }
+  return false;
 }
 
 // ---------- переключение между несколькими аккаунтами (как в Google «Добавить
@@ -510,6 +578,9 @@ if(/\/(attendance|census|loot-split|loot-split-party)\.html$/.test(location.path
 }
 
 window.L2Cabinet = {
+  ownerView,
+  enterClanView,
+  exitClanView,
   invalidateSummaries,
   censusSummary,
   attendanceSummary,

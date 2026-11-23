@@ -3,14 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex,nofollow" />
 <title>Консоль</title>
 <link rel="stylesheet" href="js/theme.css?v=44" />
 <style>
   /* 52px сверху — чтобы шапка (заголовок + «Выйти») не наезжала на фиксированный
      переключатель языка в правом верхнем углу на узких экранах */
-  .oc-wrap{ display:flex; flex-direction:column; gap:14px; padding:52px 16px 32px; max-width:900px; margin:0 auto; box-sizing:border-box; }
+  .oc-wrap{ display:flex; flex-direction:column; gap:14px; padding:52px 16px 32px; max-width:1180px; margin:0 auto; box-sizing:border-box; }
   .form-row{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
-  .form-row .field{ margin:0; min-width:200px; flex:1; }
+  .form-row .field{ margin:0; min-width:180px; flex:1; }
   .oc-access-on{ color: var(--ok); font-weight:600; }
   .oc-access-off{ color: var(--danger-lit); font-weight:600; }
   .oc-temp-pass{
@@ -19,6 +20,26 @@
     padding:10px 14px; font-size:13px;
   }
   .oc-temp-pass code{ font-size:14px; color: var(--gold); user-select:all; }
+  .oc-note{ font-size:12px; color: var(--text-dim); margin-top:2px; max-width:220px; }
+  .oc-sub{ font-size:11.5px; color: var(--text-dim); }
+  .oc-actions{ display:flex; flex-wrap:wrap; gap:6px; }
+  .oc-actions .btn{ padding:5px 10px; font-size:12px; }
+  .oc-paid{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .oc-paid input[type=date]{ width:140px; padding:5px 8px; font-size:12.5px; }
+  .oc-paid .btn{ padding:4px 8px; font-size:11.5px; }
+  .oc-left-ok{ color: var(--ok); } .oc-left-warn{ color:#d9a300; } .oc-left-bad{ color: var(--danger-lit); }
+  #clansTable td{ vertical-align:top; }
+  .oc-banner{ padding:10px 14px; border:1px solid #d9a300; background:rgba(217,163,0,.08); border-radius:10px; font-size:13px; }
+  .oc-db-row{ display:flex; gap:10px; padding:5px 0; border-top:1px solid var(--border); font-size:13px; }
+  .oc-db-row:first-child{ border-top:none; }
+  .oc-db-row .st{ width:18px; flex:none; text-align:center; }
+  .oc-db-row .st.ok{ color: var(--ok); } .oc-db-row .st.bad{ color: var(--danger-lit); }
+  .oc-db-row .fl{ margin-left:auto; color: var(--text-dim); font-size:12px; }
+  .oc-modal-bg{ position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:50; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .oc-modal{ background: var(--panel); border:1px solid var(--border-lit); border-radius:12px; padding:18px 20px; width:100%; max-width:440px; }
+  .oc-modal h3{ margin:0 0 10px; font-size:16px; }
+  .oc-modal textarea{ width:100%; min-height:80px; box-sizing:border-box; }
+  .oc-modal .row{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
 </style>
 </head>
 <body>
@@ -41,11 +62,27 @@
   </form>
 </div>
 
+<div class="login-wrap" id="mfaView" style="display:none;">
+  <form class="card login-card" id="mfaForm" autocomplete="off">
+    <h1 data-i18n="oc.mfaTitle">Код подтверждения</h1>
+    <p class="hint" data-i18n="oc.mfaHint">Введите 6-значный код из приложения-аутентификатора.</p>
+    <div class="field">
+      <input type="text" id="mfaCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required />
+    </div>
+    <p class="error-msg" id="mfaError"></p>
+    <button type="submit" class="btn btn-primary" id="mfaSubmit" style="width:100%;" data-i18n="oc.mfaSubmit">Подтвердить</button>
+    <button type="button" class="btn btn-ghost" id="mfaCancel" style="width:100%; margin-top:8px;" data-i18n="oc.signOut">Выйти</button>
+  </form>
+</div>
+
 <div class="login-wrap" id="deniedView" style="display:none;">
   <div class="card login-card">
     <h1 data-i18n="oc.deniedTitle">⛔ Нет доступа</h1>
-    <p class="hint" data-i18n="oc.deniedHint">Эта страница недоступна с этим аккаунтом.</p>
-    <button class="btn" id="deniedBackBtn" data-i18n="oc.backToLogin">Назад ко входу</button>
+    <p class="hint" data-i18n="oc.deniedHint">Эта страница только для владельца платформы. Вы остаётесь в своём аккаунте — из кабинета вас не выкидывало.</p>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn btn-primary" id="deniedPanelBtn" data-i18n="oc.backToPanel">Вернуться в кабинет</button>
+      <button class="btn" id="deniedBackBtn" data-i18n="oc.otherAccount">Войти другой учёткой</button>
+    </div>
   </div>
 </div>
 
@@ -54,6 +91,8 @@
     <h1 data-i18n="oc.title">Консоль</h1>
     <button class="btn btn-ghost" id="signOutBtn" data-i18n="oc.signOut">Выйти</button>
   </div>
+
+  <div class="oc-banner" id="needSqlBanner" style="display:none;" data-i18n="oc.needSql">Выполните в Supabase SQL Editor файл supabase/schema_owner_console.sql — тогда появятся сводка, срок оплаты и проверка базы.</div>
 
   <section class="card">
     <h2 data-i18n="oc.newClan">Новый клан</h2>
@@ -67,6 +106,14 @@
           <label for="leaderUsername" data-i18n="oc.leaderLoginLabel">Логин клан-лидера</label>
           <input type="text" id="leaderUsername" required pattern="[a-zA-Z0-9_\-]{3,32}" data-i18n-attr="title:oc.leaderLoginTitle" title="3–32 символа: латиница, цифры, - и _" />
         </div>
+        <div class="field">
+          <label for="newTheme" data-i18n="oc.themeLabel">Цветовая схема</label>
+          <select id="newTheme"></select>
+        </div>
+        <div class="field">
+          <label for="newBrandStyle" data-i18n="oc.headerStyleLabel">Стиль шапки меню</label>
+          <select id="newBrandStyle"></select>
+        </div>
         <button type="submit" class="btn btn-primary" id="createClanBtn" data-i18n="oc.create">Создать</button>
       </div>
       <p class="error-msg" id="createClanError"></p>
@@ -79,79 +126,260 @@
   </section>
 
   <section class="card">
-    <h2 data-i18n="oc.clansTitle">Кланы</h2>
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+      <h2 data-i18n="oc.clansTitle">Кланы</h2>
+      <button class="btn" id="clansRefreshBtn" type="button" data-i18n="oc.refresh">Обновить</button>
+    </div>
     <div style="overflow-x:auto;">
       <table class="data-table" id="clansTable">
         <thead>
-          <tr><th data-i18n="oc.colName">Название</th><th data-i18n="oc.colLeaderLogin">Логин лидера</th><th data-i18n="oc.colAccess">Доступ</th><th></th></tr>
+          <tr>
+            <th data-i18n="oc.colName">Название</th>
+            <th data-i18n="oc.colMembers">Людей</th>
+            <th data-i18n="oc.colLastSignIn">Последний вход</th>
+            <th data-i18n="oc.colCensus">Перепись</th>
+            <th data-i18n="oc.colEvents">События</th>
+            <th data-i18n="oc.colRows">Записей</th>
+            <th data-i18n="oc.colPaidUntil">Оплачен до</th>
+            <th data-i18n="oc.colAccess">Доступ</th>
+            <th></th>
+          </tr>
         </thead>
         <tbody id="clansBody"></tbody>
       </table>
     </div>
     <p class="error-msg" id="clansError"></p>
   </section>
+
+  <section class="card">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+      <h2 data-i18n="oc.dbTitle">Состояние базы</h2>
+      <button class="btn" id="dbCheckBtn" type="button" data-i18n="oc.dbCheck">Проверить</button>
+    </div>
+    <p class="hint" id="dbSummary"></p>
+    <div id="dbList"></div>
+  </section>
+
+  <section class="card">
+    <h2 data-i18n="oc.logTitle">Мои заходы в кланы</h2>
+    <p class="hint" data-i18n="oc.logHint">Каждый вход через «Войти в клан» записывается сюда. Заходишь только для просмотра: любые изменения в клане заблокированы.</p>
+    <div id="accessLog"></div>
+  </section>
+
+  <section class="card" id="mfaCard">
+    <h2 data-i18n="oc.secTitle">Защита консоли</h2>
+    <p class="hint" data-i18n="oc.secHint">Двухфакторный код (приложение-аутентификатор). Когда включено «требовать код», без кода не работает ничего владельческого — даже при украденном пароле: ни консоль, ни вход в клан, ни создание и удаление кланов.</p>
+    <div id="mfaState" style="margin-bottom:10px;"></div>
+    <div id="mfaEnrollBox" style="display:none; margin-bottom:10px;">
+      <p class="hint" data-i18n="oc.secScan">Отсканируйте QR-код приложением-аутентификатором (или введите ключ вручную), затем введите 6-значный код.</p>
+      <img id="mfaQr" alt="" style="width:170px; height:170px; background:#fff; padding:6px; border-radius:8px; display:block; margin-bottom:8px;" />
+      <div class="hint"><span data-i18n="oc.secKey">Ключ:</span> <code id="mfaSecret" style="user-select:all;"></code></div>
+      <div class="form-row" style="margin-top:8px;">
+        <div class="field" style="max-width:160px;"><input type="text" id="mfaEnrollCode" inputmode="numeric" maxlength="6" autocomplete="off" /></div>
+        <button type="button" class="btn btn-primary" id="mfaEnrollVerify" data-i18n="oc.secVerify">Подтвердить и привязать</button>
+      </div>
+    </div>
+    <div class="oc-actions" id="mfaButtons"></div>
+    <p class="error-msg" id="mfaCardError"></p>
+  </section>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=28"></script>
-<script src="js/i18n.js?v=134"></script>
+<script src="js/supabase-client.js?v=29"></script>
+<script src="js/i18n.js?v=138"></script>
 <script>
 (async function(){
   // тот же публичный URL проекта, что и в js/supabase-client.js — не тянем его оттуда,
   // чтобы не добавлять в общий файл ничего, указывающего на существование этой страницы
   const SUPABASE_URL = "https://owacpvydbqxdhrxxitlj.supabase.co";
   const client = L2Cabinet.client;
+  const T = (k, fb) => L2I18n.t(k, fb);
+  const DAY = 86400000;
+  let viaForm = false; // вошли ли мы только что через форму этой страницы (а не уже были залогинены в кабинете)
 
   function showView(id){
-    ["loginView", "deniedView", "panelWrap"].forEach(v => {
+    ["loginView", "mfaView", "deniedView", "panelWrap"].forEach(v => {
       document.getElementById(v).style.display = (v === id) ? "" : "none";
     });
   }
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const fmtDate = (iso) => { if(!iso) return "—"; const d = new Date(String(iso).slice(0, 10) + "T00:00:00"); return pad2(d.getDate()) + "." + pad2(d.getMonth() + 1) + "." + d.getFullYear(); };
+  const shortDate = (iso) => { if(!iso) return "—"; const d = new Date(String(iso).slice(0, 10) + "T00:00:00"); return pad2(d.getDate()) + "." + pad2(d.getMonth() + 1); };
+  const isoToday = () => { const d = new Date(); return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); };
+  function ago(ts){
+    if(!ts) return T("oc.never", "никогда");
+    const days = Math.floor((Date.now() - new Date(ts).getTime()) / DAY);
+    if(days <= 0) return T("oc.today", "сегодня");
+    if(days === 1) return T("oc.yesterday", "вчера");
+    return T("oc.daysAgo", "{n} дн. назад").replace("{n}", days);
+  }
+  const num = (n) => Number(n || 0).toLocaleString("ru-RU");
 
+  // ---------- выбор оформления при создании клана ----------
+  const THEMES = [["default", "admin.presetDefault", "Классика"], ["amber", "admin.presetAmber", "Янтарь"], ["azure", "admin.presetAzure", "Лазурь"], ["emerald", "admin.presetEmerald", "Изумруд"]];
+  const STYLES = [["classic", "admin.brandStyleClassic", "Классика (как сейчас)"], ["blades-h", "admin.brandStyleBladesH", "Два клинка над названием"], ["blades-i", "admin.brandStyleBladesI", "Клинки слева, ромбовая сетка"]];
+  function fillSelect(id, rows){
+    const sel = document.getElementById(id); sel.innerHTML = "";
+    rows.forEach(([v, k, fb]) => { const o = document.createElement("option"); o.value = v; o.textContent = T(k, fb); sel.appendChild(o); });
+  }
+  fillSelect("newTheme", THEMES); fillSelect("newBrandStyle", STYLES);
+
+  // ---------- модальное окно (вместо prompt/confirm там, где нужен текст) ----------
+  function modal({ title, label, withText, okText, danger }){
+    return new Promise(resolve => {
+      const bg = document.createElement("div"); bg.className = "oc-modal-bg";
+      const box = document.createElement("div"); box.className = "oc-modal";
+      const h = document.createElement("h3"); h.textContent = title; box.appendChild(h);
+      let ta = null;
+      if(label){ const p = document.createElement("p"); p.className = "hint"; p.textContent = label; box.appendChild(p); }
+      if(withText){ ta = document.createElement("textarea"); ta.maxLength = 300; box.appendChild(ta); }
+      const row = document.createElement("div"); row.className = "row";
+      const no = document.createElement("button"); no.className = "btn"; no.type = "button"; no.textContent = T("oc.cancel", "Отмена");
+      const ok = document.createElement("button"); ok.className = "btn " + (danger ? "btn-danger" : "btn-primary"); ok.type = "button"; ok.textContent = okText;
+      const close = (v) => { bg.remove(); resolve(v); };
+      no.onclick = () => close(null); ok.onclick = () => close(ta ? ta.value.trim() : true);
+      bg.addEventListener("click", (e) => { if(e.target === bg) close(null); });
+      row.append(no, ok); box.appendChild(row); bg.appendChild(box); document.body.appendChild(bg);
+      if(ta) ta.focus();
+    });
+  }
+
+  // ---------- таблица кланов ----------
+  let hasOwnerSql = true;
   async function loadClans(){
     const errEl = document.getElementById("clansError");
     errEl.textContent = "";
-    const { data, error } = await client
-      .from("clans")
-      .select("id, name, leader_username, access_enabled")
-      .order("name");
-    if(error){ errEl.textContent = error.message; return; }
+    // новые колонки (paid_until, access_note) появляются после schema_owner_console.sql — без неё читаем только старые
+    let res = await client.from("clans").select("id, name, leader_username, access_enabled, paid_until, access_note").order("name");
+    hasOwnerSql = !res.error;
+    if(res.error) res = await client.from("clans").select("id, name, leader_username, access_enabled").order("name");
+    if(res.error){ errEl.textContent = res.error.message; return; }
+    document.getElementById("needSqlBanner").style.display = hasOwnerSql ? "none" : "";
+
+    const stats = new Map();
+    if(hasOwnerSql){
+      const ov = await client.rpc("owner_clan_overview");
+      if(!ov.error) (ov.data || []).forEach(r => stats.set(r.clan_id, r));
+    }
 
     const body = document.getElementById("clansBody");
     body.innerHTML = "";
-    (data || []).forEach(c => {
+    (res.data || []).forEach(c => {
+      const st = stats.get(c.id);
       const tr = document.createElement("tr");
-      const tdName = document.createElement("td");
-      tdName.textContent = c.name;
-      const tdLeader = document.createElement("td");
-      tdLeader.textContent = c.leader_username || "—";
-      const tdAccess = document.createElement("td");
-      tdAccess.innerHTML = c.access_enabled
-        ? `<span class="oc-access-on">${L2I18n.t("oc.yes", "Да")}</span>`
-        : `<span class="oc-access-off">${L2I18n.t("oc.no", "Нет")}</span>`;
-      const tdToggle = document.createElement("td");
-      tdToggle.style.display = "flex";
-      tdToggle.style.gap = "8px";
-      const toggleBtn = document.createElement("button");
-      toggleBtn.className = c.access_enabled ? "btn btn-danger" : "btn btn-primary";
-      toggleBtn.textContent = c.access_enabled ? L2I18n.t("oc.disableAccess", "Отключить доступ") : L2I18n.t("oc.enableAccess", "Включить доступ");
-      toggleBtn.addEventListener("click", async () => {
-        toggleBtn.disabled = true;
-        const { error: updErr } = await client
-          .from("clans")
-          .update({ access_enabled: !c.access_enabled })
-          .eq("id", c.id);
-        if(updErr){ errEl.textContent = updErr.message; toggleBtn.disabled = false; return; }
+      const td = (...kids) => { const x = document.createElement("td"); kids.forEach(k => x.append(k)); tr.appendChild(x); return x; };
+      const txt = (s) => document.createTextNode(s);
+      const div = (cls, s) => { const d = document.createElement("div"); if(cls) d.className = cls; d.textContent = s; return d; };
+
+      const nameTd = td(); const b = document.createElement("b"); b.textContent = c.name; nameTd.append(b, div("oc-sub", c.leader_username || "—"));
+      td(txt(st ? num(st.members) : "—"));
+      td(txt(st ? ago(st.last_sign_in) : "—"));
+      td(txt(st && st.last_census ? T("oc.censusCell", "{d} · {n} ников").replace("{d}", shortDate(st.last_census)).replace("{n}", num(st.census_people)) : "—"));
+      td(txt(st ? (st.events ? T("oc.eventsCell", "{n} · {d}").replace("{n}", num(st.events)).replace("{d}", shortDate(st.last_event)) : "0") : "—"));
+      td(txt(st ? num(st.rows_total) : "—"));
+
+      // оплачен до: дата + остаток + быстрая кнопка «+30 дн.»
+      const paidTd = td();
+      if(hasOwnerSql){
+        const wrap = document.createElement("div"); wrap.className = "oc-paid";
+        const inp = document.createElement("input"); inp.type = "date"; inp.value = c.paid_until || "";
+        const left = document.createElement("span"); left.className = "oc-sub";
+        const paintLeft = () => {
+          if(!inp.value){ left.textContent = T("oc.noLimit", "без срока"); left.className = "oc-sub"; return; }
+          const n = Math.round((new Date(inp.value + "T00:00:00") - new Date(isoToday() + "T00:00:00")) / DAY);
+          if(n < 0){ left.textContent = T("oc.paidExpired", "просрочено на {n} дн.").replace("{n}", -n); left.className = "oc-sub oc-left-bad"; }
+          else { left.textContent = T("oc.paidLeft", "ещё {n} дн.").replace("{n}", n); left.className = "oc-sub " + (n <= 7 ? "oc-left-warn" : "oc-left-ok"); }
+        };
+        paintLeft();
+        const save = async (v) => {
+          const { error } = await client.from("clans").update({ paid_until: v || null }).eq("id", c.id);
+          if(error){ errEl.textContent = error.message; inp.value = c.paid_until || ""; paintLeft(); return; }
+          c.paid_until = v || null; paintLeft();
+        };
+        inp.addEventListener("change", () => save(inp.value));
+        const plus = document.createElement("button"); plus.type = "button"; plus.className = "btn"; plus.textContent = T("oc.plus30", "+30 дн.");
+        plus.addEventListener("click", () => {
+          const base = inp.value && inp.value > isoToday() ? new Date(inp.value + "T00:00:00") : new Date(isoToday() + "T00:00:00");
+          base.setDate(base.getDate() + 30);
+          const v = base.getFullYear() + "-" + pad2(base.getMonth() + 1) + "-" + pad2(base.getDate());
+          inp.value = v; save(v);
+        });
+        // «Без срока»: убрать дату — клан снова не ограничен по оплате
+        const none = document.createElement("button"); none.type = "button"; none.className = "btn"; none.textContent = T("oc.noLimitBtn", "Без срока");
+        none.title = T("oc.noLimitTitle", "Убрать срок оплаты: доступ клана больше не ограничен датой");
+        none.addEventListener("click", () => { if(!inp.value) return; inp.value = ""; save(""); });
+        wrap.append(inp, plus, none, left); paidTd.appendChild(wrap);
+      } else paidTd.textContent = "—";
+
+      const accessTd = td();
+      const sp = document.createElement("span"); sp.className = c.access_enabled ? "oc-access-on" : "oc-access-off";
+      sp.textContent = c.access_enabled ? T("oc.yes", "Да") : T("oc.no", "Нет");
+      accessTd.appendChild(sp);
+      if(!c.access_enabled && c.access_note) accessTd.appendChild(div("oc-note", T("oc.noteShown", "Сообщение клану: ") + c.access_note));
+
+      const actTd = td(); const act = document.createElement("div"); act.className = "oc-actions"; actTd.appendChild(act);
+      const mk = (cls, label, fn) => { const x = document.createElement("button"); x.type = "button"; x.className = "btn " + cls; x.textContent = label; x.addEventListener("click", () => fn(x)); act.appendChild(x); return x; };
+
+      mk(c.access_enabled ? "btn-danger" : "btn-primary", c.access_enabled ? T("oc.disableAccess", "Отключить доступ") : T("oc.enableAccess", "Включить доступ"), async (btn) => {
+        errEl.textContent = "";
+        let patch;
+        if(c.access_enabled){
+          const note = await modal({ title: T("oc.disableTitle", "Отключить доступ клану «{name}»").replace("{name}", c.name), label: T("oc.disableNoteLabel", "Сообщение клану (увидят лидер и участники на экране блокировки; необязательно)"), withText: true, okText: T("oc.disableConfirm", "Отключить"), danger: true });
+          if(note === null) return;
+          patch = { access_enabled: false }; if(hasOwnerSql) patch.access_note = note || null;
+        } else {
+          const ok = await modal({ title: T("oc.enableConfirm", "Включить доступ клану «{name}»?").replace("{name}", c.name), okText: T("oc.enableAccess", "Включить доступ") });
+          if(!ok) return;
+          patch = { access_enabled: true }; if(hasOwnerSql) patch.access_note = null;
+        }
+        btn.disabled = true;
+        const { error: updErr } = await client.from("clans").update(patch).eq("id", c.id);
+        if(updErr){ errEl.textContent = updErr.message; btn.disabled = false; return; }
         await loadClans();
       });
-      const deleteBtn = document.createElement("button");
-      deleteBtn.className = "btn btn-danger";
-      deleteBtn.textContent = L2I18n.t("oc.deleteClan", "Удалить клан");
-      deleteBtn.addEventListener("click", () => deleteClan(c, deleteBtn));
-      tdToggle.append(toggleBtn, deleteBtn);
-      tr.append(tdName, tdLeader, tdAccess, tdToggle);
+      const expired = hasOwnerSql && c.paid_until && c.paid_until < isoToday();
+      const enterBtn = mk("btn-primary", T("oc.enterClan", "Войти в клан"), (btn) => enterClan(c, btn));
+      if(!c.access_enabled || expired){ enterBtn.disabled = true; enterBtn.title = T("oc.enterBlocked", "Клан отключён или срок оплаты вышел — данных не видно. Сначала включите доступ."); }
+      else enterBtn.title = T("oc.enterTitle", "Посмотреть клан изнутри, только чтение");
+      mk("", T("oc.resetPass", "Сбросить пароль лидеру"), (btn) => resetLeaderPassword(c, btn));
+      mk("btn-danger", T("oc.deleteClan", "Удалить клан"), (btn) => deleteClan(c, btn));
       body.appendChild(tr);
     });
+  }
+
+  async function callFunction(name, payload){
+    const { data: { session } } = await client.auth.getSession();
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+      body: JSON.stringify(payload),
+    });
+    const body = await res.json().catch(() => ({}));
+    return { res, body };
+  }
+  function showTempPass(username, pass){
+    document.getElementById("tempPassUsername").textContent = username;
+    document.getElementById("tempPassValue").textContent = pass;
+    document.getElementById("tempPassBox").style.display = "";
+    document.getElementById("tempPassHint").style.display = "";
+    document.getElementById("tempPassBox").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  // новый временный пароль лидеру, если клан потерял доступ (старый пароль перестаёт работать)
+  async function resetLeaderPassword(c, btn){
+    const errEl = document.getElementById("clansError");
+    errEl.textContent = "";
+    const ok = await modal({ title: T("oc.resetTitle", "Сбросить пароль лидеру клана «{name}»?").replace("{name}", c.name), label: T("oc.resetConfirm", "Старый пароль перестанет работать. Лидер получит временный пароль и сменит его при первом входе."), okText: T("oc.resetPass", "Сбросить пароль лидеру"), danger: true });
+    if(!ok) return;
+    btn.disabled = true;
+    try{
+      const { res, body } = await callFunction("reset-leader-password", { clan_id: c.id });
+      if(!res.ok) throw new Error(body.error || "request_failed");
+      showTempPass(body.username, body.temp_password);
+    }catch(err){
+      const m = String(err.message || err);
+      errEl.textContent = T("oc.resetFailed", "Не удалось сбросить пароль: ") + (/Failed to fetch|NetworkError|not.?found|404/i.test(m) ? T("oc.resetNotDeployed", "функция reset-leader-password не развёрнута — выполните: supabase functions deploy reset-leader-password") : m);
+    }finally{ btn.disabled = false; }
   }
 
   // необратимо: сносит всех участников клана (их логины) и весь клан целиком —
@@ -159,51 +387,177 @@
   async function deleteClan(c, btn){
     const errEl = document.getElementById("clansError");
     errEl.textContent = "";
-    const typed = prompt(L2I18n.t("oc.deleteConfirmPrompt", "Это НЕОБРАТИМО удалит клан «{name}» целиком: всех участников и их логины, всю перепись, группы, буст, налоги, посещаемость. Чтобы подтвердить, введите точное название клана:").replace("{name}", c.name));
+    const typed = prompt(T("oc.deleteConfirmPrompt", "Это НЕОБРАТИМО удалит клан «{name}» целиком: всех участников и их логины, всю перепись, группы, буст, налоги, посещаемость. Чтобы подтвердить, введите точное название клана:").replace("{name}", c.name));
     if(typed === null) return;
-    if(typed !== c.name){ alert(L2I18n.t("oc.nameMismatch", "Название не совпало — отменено.")); return; }
+    if(typed !== c.name){ alert(T("oc.nameMismatch", "Название не совпало — отменено.")); return; }
 
     btn.disabled = true;
     try{
-      const { data: { session } } = await client.auth.getSession();
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-clan`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ clan_id: c.id }),
-      });
-      const body = await res.json().catch(() => ({}));
+      const { res, body } = await callFunction("delete-clan", { clan_id: c.id });
       if(!res.ok) throw new Error(body.error || "request_failed");
       await loadClans();
     }catch(err){
-      errEl.textContent = L2I18n.t("oc.deleteFailed", "Не удалось удалить: ") + err.message;
+      errEl.textContent = T("oc.deleteFailed", "Не удалось удалить: ") + err.message;
       btn.disabled = false;
     }
   }
 
+  // Войти в клан: функция owner-enter-clan выдаёт одноразовый вход под лидером; сайт включает режим «только чтение»
+  async function enterClan(c, btn){
+    const errEl = document.getElementById("clansError");
+    errEl.textContent = "";
+    btn.disabled = true;
+    try{
+      const { res, body } = await callFunction("owner-enter-clan", { clan_id: c.id });
+      if(!res.ok) throw new Error(body.error || "request_failed");
+      await L2Cabinet.enterClanView(body.token_hash, { clanName: body.clan_name });
+      location.href = "index.html";
+    }catch(err){
+      const m = String(err.message || err);
+      errEl.textContent = T("oc.enterFailed", "Не удалось войти в клан: ") + (/Failed to fetch|NetworkError|not.?found|404/i.test(m) ? T("oc.enterNotDeployed", "функция owner-enter-clan не развёрнута (Edge Functions → Deploy a new function)") : m);
+      btn.disabled = false;
+    }
+  }
+
+  // журнал заходов владельца (таблица появляется после supabase/schema_owner_enter.sql)
+  async function loadAccessLog(){
+    const box = document.getElementById("accessLog"); box.innerHTML = "";
+    const { data, error } = await client.from("owner_access_log").select("entered_at, clans(name)").order("entered_at", { ascending: false }).limit(15);
+    if(error){ box.textContent = T("oc.logNeedSql", "Выполните в Supabase SQL Editor файл supabase/schema_owner_enter.sql — тогда здесь появится журнал заходов."); box.className = "hint"; return; }
+    box.className = "";
+    if(!(data || []).length){ box.textContent = T("oc.logEmpty", "Заходов пока не было."); box.className = "hint"; return; }
+    data.forEach(r => {
+      const row = document.createElement("div"); row.className = "oc-db-row";
+      const d = new Date(r.entered_at);
+      const when = pad2(d.getDate()) + "." + pad2(d.getMonth() + 1) + "." + d.getFullYear() + " " + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+      const w = document.createElement("span"); w.textContent = when;
+      const n = document.createElement("span"); n.className = "fl"; n.textContent = (r.clans && r.clans.name) || "—"; n.style.marginLeft = "auto";
+      row.append(w, n); box.appendChild(row);
+    });
+  }
+
+  // ---------- состояние базы: какие миграции выполнены ----------
+  async function checkDb(){
+    const sum = document.getElementById("dbSummary"), list = document.getElementById("dbList");
+    sum.textContent = "…"; list.innerHTML = "";
+    const { data, error } = await client.rpc("owner_schema_status");
+    if(error){ sum.textContent = T("oc.needSql", "Выполните в Supabase SQL Editor файл supabase/schema_owner_console.sql — тогда появятся сводка, срок оплаты и проверка базы."); return; }
+    const rows = (data || []).slice().sort((a, b) => (a.ok - b.ok) || a.file.localeCompare(b.file));
+    const bad = rows.filter(r => !r.ok);
+    sum.textContent = bad.length ? T("oc.dbMissing", "Не хватает: {n} из {t}").replace("{n}", bad.length).replace("{t}", rows.length)
+                                 : T("oc.dbOk", "✓ Всё на месте: {n} проверок").replace("{n}", rows.length);
+    rows.forEach(r => {
+      const row = document.createElement("div"); row.className = "oc-db-row";
+      const st = document.createElement("span"); st.className = "st " + (r.ok ? "ok" : "bad"); st.textContent = r.ok ? "✓" : "✗";
+      const w = document.createElement("span"); w.textContent = r.what;
+      const f = document.createElement("span"); f.className = "fl"; f.textContent = r.ok ? "" : T("oc.dbRunFile", "выполнить файл") + " " + r.file;
+      row.append(st, w, f); list.appendChild(row);
+    });
+  }
+
+  // ---------- двухфакторная защита (TOTP) ----------
+  const $ = (id) => document.getElementById(id);
+  async function totpFactor(){
+    const { data } = await client.auth.mfa.listFactors();
+    return (data && data.totp && data.totp[0]) || null; // только подтверждённые
+  }
+  async function loadMfaCard(){
+    const st = $("mfaState"), btns = $("mfaButtons"), err = $("mfaCardError");
+    st.innerHTML = ""; btns.innerHTML = ""; err.textContent = "";
+    const factor = await totpFactor();
+    const r = await client.rpc("owner_mfa_status");
+    const req = r.error ? null : !!(r.data && r.data.require_mfa); // null — schema_owner_mfa.sql ещё не выполнен
+    const line = (s) => { const d = document.createElement("div"); d.className = "oc-sub"; d.style.fontSize = "13px"; d.textContent = s; st.appendChild(d); };
+    line((factor ? "✓ " + T("oc.secAppOn", "Приложение привязано") : "✗ " + T("oc.secAppOff", "Приложение не привязано")));
+    if(req === null) line(T("oc.secNeedSql", "Выполните в Supabase SQL Editor файл supabase/schema_owner_mfa.sql — тогда можно включить «требовать код»."));
+    else line((req ? "✓ " : "✗ ") + (req ? T("oc.secReqOn", "Консоль требует код: да") : T("oc.secReqOff", "Консоль требует код: нет")));
+    const mk = (cls, label, fn) => { const b = document.createElement("button"); b.type = "button"; b.className = "btn " + cls; b.textContent = label; b.addEventListener("click", () => fn(b)); btns.appendChild(b); };
+    if(!factor) mk("btn-primary", T("oc.secStart", "Привязать приложение"), startEnroll);
+    if(factor && req === false) mk("btn-primary", T("oc.secEnable", "Требовать код при входе в консоль"), (b) => setRequire(true, b));
+    if(req === true) mk("", T("oc.secDisable", "Не требовать код"), (b) => setRequire(false, b));
+  }
+  let enrollFactorId = null;
+  async function startEnroll(btn){
+    const err = $("mfaCardError"); err.textContent = ""; btn.disabled = true;
+    try{
+      // недоделанные привязки (QR показали, код не ввели) убираем, иначе новая не создастся
+      const all = await client.auth.mfa.listFactors();
+      for(const f of ((all.data && all.data.all) || [])) if(f.factor_type === "totp" && f.status !== "verified") await client.auth.mfa.unenroll({ factorId: f.id });
+      const { data, error } = await client.auth.mfa.enroll({ factorType: "totp", friendlyName: "owner-" + Date.now() });
+      if(error) throw error;
+      enrollFactorId = data.id;
+      $("mfaQr").src = data.totp.qr_code; $("mfaSecret").textContent = data.totp.secret;
+      $("mfaEnrollCode").value = ""; $("mfaEnrollBox").style.display = "";
+    }catch(e){ err.textContent = T("oc.secEnrollFail", "Не удалось начать привязку: ") + (e.message || e); }
+    btn.disabled = false;
+  }
+  $("mfaEnrollVerify").addEventListener("click", async () => {
+    const err = $("mfaCardError"); err.textContent = "";
+    try{
+      const { error } = await client.auth.mfa.challengeAndVerify({ factorId: enrollFactorId, code: $("mfaEnrollCode").value.trim() });
+      if(error) throw error;
+      $("mfaEnrollBox").style.display = "none"; enrollFactorId = null;
+      await loadMfaCard();
+    }catch(e){ err.textContent = T("oc.mfaBadCode", "Неверный код") + " (" + (e.message || e) + ")"; }
+  });
+  async function setRequire(on, btn){
+    const err = $("mfaCardError"); err.textContent = ""; btn.disabled = true;
+    const { error } = await client.rpc("owner_set_require_mfa", { p_on: on });
+    if(error){ err.textContent = /mfa_not_verified/.test(error.message) ? T("oc.secNeedCode", "Сначала подтвердите код в этой сессии: выйдите и войдите снова.") : error.message; btn.disabled = false; return; }
+    await loadMfaCard();
+  }
+  $("mfaForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const err = $("mfaError"), btn = $("mfaSubmit"); err.textContent = ""; btn.disabled = true;
+    try{
+      const factor = await totpFactor();
+      if(!factor) throw new Error("no_factor");
+      const { error } = await client.auth.mfa.challengeAndVerify({ factorId: factor.id, code: $("mfaCode").value.trim() });
+      if(error) throw error;
+      $("mfaCode").value = "";
+      await checkAndShow();
+    }catch(ex){ err.textContent = T("oc.mfaBadCode", "Неверный код"); }
+    btn.disabled = false;
+  });
+  $("mfaCancel").addEventListener("click", async () => { await client.auth.signOut({ scope: "local" }); showView("loginView"); });
+
   async function checkAndShow(){
+    // 2FA: если у аккаунта привязано приложение, а в этой сессии код ещё не вводили — сначала просим код (до любых проверок и данных)
+    try{
+      const { data: aal } = await client.auth.mfa.getAuthenticatorAssuranceLevel();
+      if(aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2"){ showView("mfaView"); return; }
+    }catch(e){ console.error(e); }
     // успешный вход сам по себе ничего не значит — авторизация как супер-админ
     // отдельная обязательная проверка (любой валидный email/пароль в системе
     // способен успешно войти, включая аккаунты кланов).
     const { data: isAdmin, error } = await client.rpc("is_platform_admin");
     if(error || !isAdmin){
-      await client.auth.signOut();
+      // если человек только что сам ввёл здесь чужие данные — выходим (локально, только в этом браузере). Если же он уже
+      // был залогинен в кабинете и просто открыл адрес — его сессию НЕ трогаем: signOut() по умолчанию завершает сессии везде
+      if(viaForm) await client.auth.signOut({ scope: "local" });
       showView("deniedView");
       return;
     }
     showView("panelWrap");
     await loadClans();
+    checkDb();
+    loadAccessLog();
+    loadMfaCard();
   }
 
   L2I18n.renderSwitcher(document.getElementById("langSwitch"));
 
-  document.getElementById("deniedBackBtn").addEventListener("click", () => showView("loginView"));
-  document.getElementById("signOutBtn").addEventListener("click", async () => {
-    await client.auth.signOut();
+  document.getElementById("deniedPanelBtn").addEventListener("click", () => { location.href = "index.html"; });
+  document.getElementById("deniedBackBtn").addEventListener("click", async () => {
+    await client.auth.signOut({ scope: "local" }); // осознанный выход ради входа другой учёткой — только в этом браузере
     showView("loginView");
   });
+  document.getElementById("signOutBtn").addEventListener("click", async () => {
+    await client.auth.signOut({ scope: "local" });
+    showView("loginView");
+  });
+  document.getElementById("clansRefreshBtn").addEventListener("click", () => loadClans());
+  document.getElementById("dbCheckBtn").addEventListener("click", () => checkDb());
 
   document.getElementById("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -211,7 +565,7 @@
     const submitBtn = document.getElementById("loginSubmit");
     errorEl.textContent = "";
     submitBtn.disabled = true;
-    submitBtn.textContent = L2I18n.t("oc.submitting", "Входим…");
+    submitBtn.textContent = T("oc.submitting", "Входим…");
 
     const email = document.getElementById("ownerEmail").value;
     const password = document.getElementById("password").value;
@@ -221,12 +575,13 @@
       // свой настоящий email, заданный при создании аккаунта в Supabase Dashboard.
       const { error } = await client.auth.signInWithPassword({ email, password });
       if(error) throw error;
+      viaForm = true;
       await checkAndShow();
     }catch(err){
-      errorEl.textContent = L2I18n.t("oc.loginError", "Неверный email или пароль");
+      errorEl.textContent = T("oc.loginError", "Неверный email или пароль");
     }finally{
       submitBtn.disabled = false;
-      submitBtn.textContent = L2I18n.t("oc.submit", "Войти");
+      submitBtn.textContent = T("oc.submit", "Войти");
     }
   });
 
@@ -241,28 +596,28 @@
 
     const clanName = document.getElementById("clanName").value.trim();
     const leaderUsername = document.getElementById("leaderUsername").value.trim();
+    const theme = document.getElementById("newTheme").value;
+    const style = document.getElementById("newBrandStyle").value;
 
     try{
-      const { data: { session } } = await client.auth.getSession();
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/create-clan`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ clan_name: clanName, leader_username: leaderUsername }),
-      });
-      const body = await res.json().catch(() => ({}));
+      const { res, body } = await callFunction("create-clan", { clan_name: clanName, leader_username: leaderUsername });
       if(!res.ok) throw new Error(body.error || "request_failed");
 
-      document.getElementById("tempPassUsername").textContent = body.username;
-      document.getElementById("tempPassValue").textContent = body.temp_password;
-      document.getElementById("tempPassBox").style.display = "";
-      document.getElementById("tempPassHint").style.display = "";
+      showTempPass(body.username, body.temp_password);
       document.getElementById("createClanForm").reset();
+
+      // оформление нового клана: владелец платформы вправе писать в clans напрямую (RLS). Пароль уже выдан, поэтому сбой здесь
+      // не отменяет создание — только предупреждаем
+      const patch = {};
+      if(theme !== "default") patch.theme_preset = theme;
+      if(style !== "classic") patch.brand_style = style;
+      if(Object.keys(patch).length && body.clan_id){
+        const { error: stErr } = await client.from("clans").update(patch).eq("id", body.clan_id);
+        if(stErr) errEl.textContent = T("oc.styleSaveFailed", "Клан создан, но оформление не сохранилось: ") + stErr.message;
+      }
       await loadClans();
     }catch(err){
-      errEl.textContent = L2I18n.t("oc.createFailed", "Не удалось создать: ") + err.message;
+      errEl.textContent = T("oc.createFailed", "Не удалось создать: ") + err.message;
     }finally{
       btn.disabled = false;
     }
@@ -274,7 +629,7 @@
     const original = btn.textContent;
     try{
       await navigator.clipboard.writeText(val);
-      btn.textContent = "✓ " + L2I18n.t("panel.toastCopied", "Скопировано");
+      btn.textContent = "✓ " + T("panel.toastCopied", "Скопировано");
     }catch(err){
       btn.textContent = "✗";
     }
@@ -284,8 +639,14 @@
 
   // таблица кланов построена через JS (не data-i18n) — перестраиваем при смене языка
   window.addEventListener("storage", (e) => {
-    if(e.key === "l2Lang" && document.getElementById("panelWrap").style.display !== "none") loadClans();
+    if(e.key === "l2Lang" && document.getElementById("panelWrap").style.display !== "none"){
+      fillSelect("newTheme", THEMES); fillSelect("newBrandStyle", STYLES);
+      loadClans(); checkDb();
+    }
   });
+
+  // пришли сюда, находясь в режиме просмотра клана (сессия лидера) — сначала возвращаемся к своей сессии владельца
+  if(L2Cabinet.ownerView && L2Cabinet.ownerView()) await L2Cabinet.exitClanView();
 
   const { data: { session } } = await client.auth.getSession();
   if(session){
