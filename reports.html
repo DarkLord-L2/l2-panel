@@ -194,6 +194,8 @@
   /* радары тянутся вместе с панелью (потолок — чтобы на широкой не распухали) */
   .rep-radar-svg{ width:100%; max-width:min(100%, 380px); display:block; margin:0 auto; overflow:visible; }
   .rep-radar-grid{ fill:none; stroke: var(--border); stroke-width:1; }
+  .rep-radar-grid.minor{ stroke: color-mix(in srgb, var(--border) 55%, transparent); }
+  .rep-radar-grid.best{ stroke: var(--border-lit); stroke-dasharray:3 3; }
   .rep-radar-scale{ font-size:10.5px; color: var(--text-dim); text-align:center; margin:6px 0 0; line-height:1.4; }
   .rep-radar-cur{ fill: rgba(139,92,246,.28); stroke:#8b5cf6; stroke-width:2; }
   .rep-radar-avg{ fill:none; stroke:#8b5cf6; stroke-width:1.5; stroke-dasharray:4 3; opacity:.9; }
@@ -506,7 +508,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=34"></script>
-<script src="js/i18n.js?v=145"></script>
+<script src="js/i18n.js?v=148"></script>
 <script src="js/paste-drop.js?v=1"></script>
 <script src="js/nick-match.js?v=8"></script>
 <script src="js/classes.js?v=3"></script>
@@ -1793,12 +1795,11 @@
       return RADAR_ANGLES.map((a, i) => toPoint(a, fracs[i]))
         .map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
     }
-    // 5 колец по 20% — шкала-линейка от нуля; лучший показатель по оси стоит на 4-м кольце
-    // (см. radarFrac), внешнее кольцо — запас, чтобы фигуры не упирались в край
-    const RINGS = [0.2, 0.4, 0.6, 0.8, 1];
-    const grid = RINGS.map(lvl =>
-      `<polygon class="rep-radar-grid" points="${polyStr(RADAR_ANGLES.map(() => lvl))}"/>`
-    ).join("");
+    // 10 колец по 10%; пунктирное (5-е, середина) — среднее по клану (см. radarFrac). Основные кольца (через 20%) заметнее промежуточных
+    const grid = Array.from({ length: 10 }, (_, k) => k + 1).map(k => {
+      const cls = k === 5 ? " best" : k % 2 ? " minor" : "";
+      return `<polygon class="rep-radar-grid${cls}" points="${polyStr(RADAR_ANGLES.map(() => k / 10))}"/>`;
+    }).join("");
 
     const axes = RADAR_ANGLES.map(a => {
       const p = toPoint(a, 1);
@@ -1814,16 +1815,28 @@
     return { polyStr, grid, axes, labels };
   }
 
-  // Единое честное правило для всех радаров (и на «Группах» тоже): ось — от нуля, длина пропорциональна
-  // значению (вдвое больше — вдвое дальше от центра), лучший по оси — ровно на 4-м кольце (80% радиуса)
-  const RADAR_HEAD = 1.25;
-  const radarFrac = (v, best) => best > 0 ? Math.min(1, Math.max(0, v) / (best * RADAR_HEAD)) : 0;
+  // Единое правило для всех радаров (и на «Группах» тоже): каждая ось — относительно СРЕДНЕГО по клану.
+  // Ниже среднего — линейно от центра до пунктирного кольца (50% радиуса): половина среднего — на 25%.
+  // Выше среднего — 1 − среднее/(2·v): вдвое больше — на 3/4 радиуса, вчетверо — на 7/8; до края не доходит никто,
+  // а на стыке нет излома. Раньше «лучший по оси» всегда вставал ровно на одно кольцо — у сильнейших выходил идеально
+  // ровный пятиугольник, по которому не видно, где они сильнее, а где слабее. Теперь форма — настоящий профиль
+  const radarFrac = (v, avg) => {
+    v = Math.max(0, Number(v) || 0);
+    if(v === 0) return 0;
+    if(!(avg > 0)) return 1;
+    return v <= avg ? 0.5 * v / avg : 1 - 0.5 * avg / v;
+  };
+  // среднее по каждой оси — только по тем, у кого вообще есть статистика (пустые пати/люди без явки среднее не тянут вниз)
+  function radarAvgPerAxis(allVals){
+    const active = allVals.filter(v => v.some(x => x > 0));
+    return RADAR_LABELS_().map((_, i) => active.length ? active.reduce((s, v) => s + (Number(v[i]) || 0), 0) / active.length : 0);
+  }
 
-  // подпись «чему равно 4-е кольцо» под радаром: лучший по каждой оси
-  function radarScaleHint(maxPerAxis, key, fallback){
+  // подпись «чему равно пунктирное кольцо» под радаром: среднее по каждой оси
+  function radarScaleHint(avgPerAxis, key, fallback){
     const loc = L2I18n.locale();
     const fmt = (v, i) => i === 3 ? v.toFixed(2) : (i === 1 || i === 2 ? v.toFixed(1) : Math.round(v).toLocaleString(loc));
-    const vals = RADAR_LABELS_().map((l, i) => l + " " + fmt(maxPerAxis[i], i)).join(" · ");
+    const vals = RADAR_LABELS_().map((l, i) => l + " " + fmt(avgPerAxis[i], i)).join(" · ");
     return `<p class="rep-radar-scale">${escapeHtml(L2I18n.t(key, fallback).replace("{vals}", vals))}</p>`;
   }
 
@@ -1836,9 +1849,9 @@
 
     const curVals = [current.pvp, current.kills, current.deaths, current.kd, current.pve];
     const avgVals = [avg.pvp, avg.kills, avg.deaths, avg.kd, avg.pve];
-    // по каждой оси бо́льшее из двух значений — на 4-м кольце, меньшее — пропорционально от нуля
-    const fracCur = curVals.map((v, i) => radarFrac(v, Math.max(v, avgVals[i])));
-    const fracAvg = avgVals.map((v, i) => radarFrac(v, Math.max(v, curVals[i])));
+    // среднее — на пунктирном кольце, текущий период — насколько выше/ниже среднего по каждой оси
+    const fracCur = curVals.map((v, i) => radarFrac(v, avgVals[i]));
+    const fracAvg = avgVals.map((v, i) => radarFrac(v, avgVals[i]));
 
     const geo = radarGeometry(120, 70);
 
@@ -1853,7 +1866,7 @@
         `<span class="rep-legend-item"><i class="dot"></i>${escapeHtml(L2I18n.t("reports.legendCurrentPeriod", "Текущий период"))}</span>` +
         `<span class="rep-legend-item"><i class="dot avg"></i>${escapeHtml(L2I18n.t("reports.legendAverage", "Среднее"))}</span>` +
       `</div>` +
-      `<p class="rep-radar-scale">${escapeHtml(L2I18n.t("reports.radarScaleWeek", "Шкала от нуля: на 4-м кольце — бо́льшее из двух значений по оси."))}</p>`;
+      `<p class="rep-radar-scale">${escapeHtml(L2I18n.t("reports.radarScaleWeek", "Пунктирное кольцо — среднее. Дальше от центра — выше среднего: вдвое больше — на 3/4 радиуса."))}</p>`;
   }
 
   // ---------- сравнение пати между собой (радар на N групп + таблица с точными цифрами) ----------
@@ -1955,19 +1968,17 @@
         vals: [avg.pvp, avg.kills, avg.deaths, avg.kd, avg.pve],
       };
     });
-    // 100% каждой оси = лучший показатель среди ВСЕХ пати клана за период (а не только
-    // выбранных) — тогда фигура показывает реальную долю, а не «лучший из выбранных
-    // всегда упирается в край». Оси нормируются по отдельности: урон в тысячах и K:D в
-    // единицах иначе не сложить на одной шкале
+    // пунктирное кольцо = среднее среди ВСЕХ пати клана за период (а не только выбранных) — шкала не прыгает от того,
+    // какие пати отмечены. Оси считаются по отдельности: урон в тысячах и K:D в единицах иначе не сложить
     const allVals = groups.map(g => { const a = computeGroupAverages(g.id, normStatsMap); return [a.pvp, a.kills, a.deaths, a.kd, a.pve]; });
-    const maxPerAxis = RADAR_LABELS_().map((_, i) => Math.max(...allVals.map(v => v[i]), ...series.map(s => s.vals[i]), 1e-9));
+    const avgPerAxis = radarAvgPerAxis(allVals);
 
     const geo = radarGeometry(100, 68);
 
     // тонкая обводка (2px) + лёгкая заливка — при 4+ наложенных фигурах сплошная
     // заливка превращается в кашу, обводка остаётся читаемой в любом случае
     const seriesPolys = series.map(s => {
-      const fracs = s.vals.map((v, i) => radarFrac(v, maxPerAxis[i]));
+      const fracs = s.vals.map((v, i) => radarFrac(v, avgPerAxis[i]));
       return `<polygon points="${geo.polyStr(fracs)}" fill="${s.color}1a" stroke="${s.color}" stroke-width="2"/>`;
     }).join("");
 
@@ -1980,7 +1991,7 @@
         geo.grid + geo.axes + seriesPolys + geo.labels +
       `</svg>` +
       `<div class="rep-radar-legend">${legend}</div>` +
-      radarScaleHint(maxPerAxis, "reports.radarScaleParties", "Внешнее кольцо — лучший среди всех пати клана за период (на человека): {vals}");
+      radarScaleHint(avgPerAxis, "reports.radarScaleParties", "Пунктирное кольцо — среднее по пати клана за период (на человека): {vals}. Вдвое выше среднего — на 3/4 радиуса.");
   }
 
   function renderComparisonTable(selectedGroupIds, normStatsMap){
@@ -2084,12 +2095,12 @@
   // человек одновременно; точные цифры отдельно в таблице под радаром
   function renderPeopleRadar(stats, allVals){
     const wrap = document.getElementById("pplRadarWrap");
-    // 4-е кольцо = лучший среди ВСЕХ участников за период, а не только выбранных
-    const maxPerAxis = RADAR_LABELS_().map((_, i) => Math.max(...allVals.map(v => v[i]), ...stats.map(s => s.vals[i]), 1e-9));
+    // пунктирное кольцо = среднее среди ВСЕХ участников за период (у кого есть статистика), а не только выбранных
+    const avgPerAxis = radarAvgPerAxis(allVals);
     const geo = radarGeometry(100, 68);
 
     const seriesPolys = stats.map(s => {
-      const fracs = s.vals.map((v, i) => radarFrac(v, maxPerAxis[i]));
+      const fracs = s.vals.map((v, i) => radarFrac(v, avgPerAxis[i]));
       return `<polygon points="${geo.polyStr(fracs)}" fill="${s.color}1a" stroke="${s.color}" stroke-width="2"/>`;
     }).join("");
 
@@ -2102,7 +2113,7 @@
         geo.grid + geo.axes + seriesPolys + geo.labels +
       `</svg>` +
       `<div class="rep-radar-legend">${legend}</div>` +
-      radarScaleHint(maxPerAxis, "reports.radarScalePeople", "Внешнее кольцо — лучший среди всех участников за период: {vals}");
+      radarScaleHint(avgPerAxis, "reports.radarScalePeople", "Пунктирное кольцо — среднее по участникам за период: {vals}. Вдвое выше среднего — на 3/4 радиуса.");
   }
 
   function renderPeopleTable(stats){

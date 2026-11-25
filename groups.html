@@ -258,6 +258,8 @@
   .gcmp-seg button.active{ background: var(--panel-3); color: var(--gold); }
   .gcmp-radar svg{ width:100%; height:auto; display:block; overflow:visible; }
   .gcmp-radar .ring{ fill:none; stroke: rgba(255,255,255,.07); }
+  .gcmp-radar .ring.minor{ stroke: rgba(255,255,255,.035); }
+  .gcmp-radar .ring.best{ stroke: rgba(255,255,255,.16); stroke-dasharray:3 3; }
   .gcmp-radar .ring.outer{ stroke: rgba(255,255,255,.14); }
   .gcmp-radar .axis{ stroke: rgba(255,255,255,.08); }
   .gcmp-radar .ax-lbl{ fill: var(--text-dim); font-size:10.5px; font-weight:600; font-family:inherit; }
@@ -368,7 +370,7 @@
           </div>
         </div>
         <div class="gcmp-radar" id="gcmpRadar"></div>
-        <p class="hint gcmp-hint" data-i18n="groups.cmpHint">Шкала от нуля, 4-е кольцо — лучшая пати по оси. Нажмите на пати, чтобы убрать её с радара или вернуть.</p>
+        <p class="hint gcmp-hint" data-i18n="groups.cmpHint">Пунктирное кольцо — среднее по пати клана; чем дальше наружу, тем сильнее пати по этой оси (вдвое выше среднего — на 3/4 радиуса). Нажмите на пати, чтобы убрать её с радара или вернуть.</p>
         <div class="gcmp-legend" id="gcmpLegend"></div>
         <div class="gcmp-sum">
           <div class="gcmp-sum-h" data-i18n="groups.cmpTotalsTitle">Общая статистика (все пати)</div>
@@ -637,7 +639,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
 <script src="js/page-keys.js?v=2"></script>
 <script src="js/supabase-client.js?v=34"></script>
-<script src="js/i18n.js?v=145"></script>
+<script src="js/i18n.js?v=148"></script>
 <script src="js/tax-flag.js?v=1"></script>
 <script src="js/layout-board.js?v=10"></script>
 <script src="js/nick-match.js?v=8"></script>
@@ -1047,16 +1049,26 @@
       if(avg && s.n){ ["kills", "deaths", "pvp", "pve"].forEach(k => { v[k] = v[k] / s.n; }); }
       return { g, s, v, color: CMP_COLORS[i % CMP_COLORS.length] };
     });
-    // Честная шкала (как у радаров в «Отчётах»): каждая ось — от нуля, длина пропорциональна значению
-    // (вдвое больше килов — вдвое дальше от центра). Лучшая пати по оси — ровно на 4-м кольце из 5,
-    // внешнее кольцо — запас, поэтому никто не упирается в край. Шкала одна на все пати
-    // (выключение пати в легенде не перемасштабирует остальных)
-    const hi = {}; AX.forEach(a => { hi[a.k] = Math.max(0, ...rows.filter(r => r.s.n).map(r => r.v[a.k])); });
-    const radius = (k, v) => hi[k] > 0 ? Math.min(1, v / (hi[k] * 1.25)) : 0;
+    // Шкала как у радаров в «Отчётах» (radarFrac): каждая ось — относительно СРЕДНЕГО по пати клана. Ниже среднего —
+    // линейно до пунктирного кольца (середина), выше — 1 − среднее/(2·v): вдвое выше — на 3/4 радиуса, вчетверо — на 7/8,
+    // до края никто не доходит. Раньше лучшая пати по оси всегда вставала ровно на одно кольцо — у сильнейшей выходил
+    // идеально ровный пятиугольник без профиля. Шкала одна на все пати (выключение пати в легенде не перемасштабирует остальных).
+    // Колец 10 (через 10%): основные через 20% чуть заметнее, промежуточные — бледнее, чтобы сетка не рябила
+    const active = rows.filter(r => r.s.n);
+    const mean = {}; AX.forEach(a => { mean[a.k] = active.length ? active.reduce((s, r) => s + Math.max(0, r.v[a.k] || 0), 0) / active.length : 0; });
+    const radius = (k, v) => {
+      v = Math.max(0, v || 0); if(!v) return 0;
+      const m = mean[k]; if(!(m > 0)) return 1;
+      return v <= m ? 0.5 * v / m : 1 - 0.5 * m / v;
+    };
     const W = 320, H = 290, cx = 160, cy = 150, R = 100;
     const pt = (i, f) => { const ang = -Math.PI / 2 + i * 2 * Math.PI / AX.length; return [cx + Math.cos(ang) * R * f, cy + Math.sin(ang) * R * f]; };
     let svg = `<svg viewBox="0 0 ${W} ${H}" id="gcmpSvg">`;
-    [0.2, 0.4, 0.6, 0.8, 1].forEach(f => { svg += `<polygon class="ring${f === 1 ? " outer" : ""}" points="${AX.map((a, i) => pt(i, f).join(",")).join(" ")}"/>`; });
+    for(let k = 1; k <= 10; k++){
+      const f = k / 10;
+      const cls = k === 10 ? " outer" : k === 5 ? " best" : k % 2 ? " minor" : "";
+      svg += `<polygon class="ring${cls}" points="${AX.map((a, i) => pt(i, f).join(",")).join(" ")}"/>`;
+    }
     AX.forEach((a, i) => {
       const [x, y] = pt(i, 1), [lx, ly] = pt(i, 1.2);
       svg += `<line class="axis" x1="${cx}" y1="${cy}" x2="${x}" y2="${y}"/>`;
