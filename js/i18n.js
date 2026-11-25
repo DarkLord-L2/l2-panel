@@ -392,6 +392,8 @@
       "Access to the clan cabinet is temporarily disabled. Contact your clan leader.",
     ],
     "shell.sectionNotFound": ["Раздел не найден.", "Розділ не знайдено.", "Section not found."],
+    "shell.navCollapse": ["Свернуть", "Згорнути", "Collapse"],
+    "shell.navExpand": ["Развернуть", "Розгорнути", "Expand"],
     "shell.sectionInDev": [
       "🛠 Раздел закрыт на доработку — скоро снова будет доступен.",
       "🛠 Розділ закрито на доопрацювання — скоро знову буде доступний.",
