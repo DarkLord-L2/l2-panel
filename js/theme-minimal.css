@@ -1,0 +1,327 @@
+/* Стиль интерфейса «Строгий» (минимализм) — ВТОРОЙ вариант оформления поверх js/theme.css, текущий не меняется.
+   Включается атрибутом data-ui="minimal" на <html> (js/supabase-client.js → applyUiStyle). Пока это предпросмотр:
+   ставится только в своём браузере ссылкой index.html?ui=minimal (обратно — ?ui=default). Позже — выбор в «Оформлении».
+   Принципы: плоские поверхности без градиентов/свечений/теней, тонкие линии вместо подложек, маленькие скругления,
+   один нейтральный цвет текста, акцент клана — только там, где он что-то значит (активный пункт, фокус).
+   Все правила под :root[data-ui="minimal"] — без атрибута файл ничего не делает, а специфичность выше, чем у стилей страниц. */
+
+:root[data-ui="minimal"]{
+  --bg: #0a0a0b;
+  --bg-vignette: #0a0a0b;
+  --panel: #0e0e0f;
+  --panel-2: #141415;
+  --panel-3: #1a1a1c;
+  --border: #212123;
+  --border-lit: #2d2d30;
+  --text: #ececee;
+  --text-dim: #85858c;
+  --gold-dim: #6f6f76;
+  --radius: 4px;
+  --radius-sm: 3px;
+  --shadow-1: none;
+  --shadow-2: 0 0 0 1px var(--border-lit);
+  --accent-soft: color-mix(in srgb, var(--gold) 7%, transparent);
+  --accent-line: color-mix(in srgb, var(--gold) 45%, transparent);
+  --ease: linear;
+}
+/* «Классика» в строгом стиле — чистый белый акцент без серого оттенка */
+:root[data-ui="minimal"]:not([data-preset]),
+:root[data-ui="minimal"][data-preset="default"]{ --gold: #f4f4f5; --focus: #f4f4f5; }
+
+/* ---------- база ---------- */
+:root[data-ui="minimal"] body{ background: var(--bg); font-feature-settings: "cv11", "ss01", "tnum"; }
+:root[data-ui="minimal"] ::selection{ background: var(--text); color: var(--bg); }
+:root[data-ui="minimal"] ::-webkit-scrollbar{ width:8px; height:8px; }
+:root[data-ui="minimal"] ::-webkit-scrollbar-track{ background: transparent; }
+:root[data-ui="minimal"] ::-webkit-scrollbar-thumb{ background: var(--border-lit); border:2px solid var(--bg); border-radius:0; }
+:root[data-ui="minimal"] ::-webkit-scrollbar-thumb:hover{ background: var(--text-dim); }
+:root[data-ui="minimal"] h1{ color: var(--text); font-size:19px; font-weight:600; letter-spacing:-.015em; }
+:root[data-ui="minimal"] h2{ font-size:13px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color: var(--text); }
+:root[data-ui="minimal"] h3{ font-size:12px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color: var(--text-dim); }
+:root[data-ui="minimal"] .modal h2{ font-size:13px; letter-spacing:.06em; text-transform:uppercase; }
+:root[data-ui="minimal"] a{ color: var(--text); text-underline-offset:3px; }
+:root[data-ui="minimal"] .hint{ color: var(--text-dim); }
+
+/* ---------- поверхности ---------- */
+:root[data-ui="minimal"] .card{
+  background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); box-shadow:none;
+}
+:root[data-ui="minimal"] .modal{ border-radius:6px; box-shadow:none; border-color: var(--border-lit); }
+:root[data-ui="minimal"] .modal-overlay,
+:root[data-ui="minimal"] .cmdk-overlay{ background: rgba(0,0,0,.72); -webkit-backdrop-filter:none; backdrop-filter:none; }
+:root[data-ui="minimal"] .modal-overlay.show,
+:root[data-ui="minimal"] .modal-overlay.show > .modal,
+:root[data-ui="minimal"] .cmdk-overlay.show,
+:root[data-ui="minimal"] .cmdk,
+:root[data-ui="minimal"] .login-card{ animation:none; }
+:root[data-ui="minimal"] .modal img{ border-radius:2px; }
+:root[data-ui="minimal"] .cmdk{ border-radius:6px; box-shadow:none; }
+:root[data-ui="minimal"] .cmdk-item{ border-radius:3px; }
+:root[data-ui="minimal"] .cmdk-item.on{ background: var(--panel-3); box-shadow: inset 2px 0 0 var(--gold); }
+:root[data-ui="minimal"] .cmdk-ic{ border-radius:3px; background:none; border:1px solid var(--border); }
+:root[data-ui="minimal"] .help-section{ border-radius: var(--radius); background:none; }
+:root[data-ui="minimal"] .help-section summary:hover,
+:root[data-ui="minimal"] .help-section summary:hover::after{ color: var(--text); }
+:root[data-ui="minimal"] .help-btn{ border-radius: var(--radius); box-shadow:none; background: var(--bg); }
+:root[data-ui="minimal"] .empty-hint{ border-radius: var(--radius); background:none; border-style:solid; border-color: var(--border); }
+:root[data-ui="minimal"] .empty-hint::before{ display:none; }
+:root[data-ui="minimal"] .db-problem-bar,
+:root[data-ui="minimal"] .who-toast{ border-radius: var(--radius); box-shadow:none; }
+
+/* ---------- кнопки: плоские, контур; главная — инверсия (светлая плашка, тёмный текст) ---------- */
+:root[data-ui="minimal"] .btn{
+  background: transparent; box-shadow:none; border-radius: var(--radius-sm); border-color: var(--border-lit);
+  font-weight:500; transition: border-color .1s, background .1s, color .1s;
+}
+:root[data-ui="minimal"] .btn:hover{ background: var(--panel-2); border-color: var(--text-dim); }
+:root[data-ui="minimal"] .btn:active:not(:disabled){ transform:none; background: var(--panel-3); }
+:root[data-ui="minimal"] .btn-primary{ background: var(--text); border-color: var(--text); color: var(--bg); box-shadow:none; font-weight:600; }
+:root[data-ui="minimal"] .btn-primary:hover{ background: #ffffff; border-color:#ffffff; color: var(--bg); }
+:root[data-ui="minimal"] .btn-danger{ background: transparent; color: var(--danger-lit); border-color: color-mix(in srgb, var(--danger-lit) 45%, var(--border)); }
+:root[data-ui="minimal"] .btn-danger:hover{ background: var(--danger-lit); border-color: var(--danger-lit); color: var(--bg); }
+:root[data-ui="minimal"] .btn-ghost{ border-color:transparent; }
+:root[data-ui="minimal"] .btn-ghost:hover{ color: var(--text); background: var(--panel-2); }
+
+/* ---------- поля ввода ---------- */
+:root[data-ui="minimal"] input[type="text"], :root[data-ui="minimal"] input[type="password"], :root[data-ui="minimal"] input[type="email"],
+:root[data-ui="minimal"] input[type="date"], :root[data-ui="minimal"] input[type="number"], :root[data-ui="minimal"] input[type="search"],
+:root[data-ui="minimal"] select, :root[data-ui="minimal"] textarea{
+  background: var(--bg); border-color: var(--border-lit); border-radius: var(--radius-sm);
+}
+:root[data-ui="minimal"] input:focus-visible, :root[data-ui="minimal"] select:focus-visible, :root[data-ui="minimal"] textarea:focus-visible{
+  border-color: var(--text); box-shadow:none;
+}
+:root[data-ui="minimal"] button:focus-visible, :root[data-ui="minimal"] a:focus-visible, :root[data-ui="minimal"] summary:focus-visible{
+  outline:1px solid var(--text); outline-offset:2px;
+}
+:root[data-ui="minimal"] input[type="checkbox"], :root[data-ui="minimal"] input[type="radio"]{ accent-color: var(--text); }
+:root[data-ui="minimal"] .field label{ font-size:10.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; }
+
+/* ---------- метки, чипы ---------- */
+:root[data-ui="minimal"] .badge{ border-radius:2px; background:none; font-size:10.5px; letter-spacing:.04em; }
+:root[data-ui="minimal"] .chip{ border-radius: var(--radius-sm); background:none; border-color: var(--border-lit); }
+:root[data-ui="minimal"] .chip button{ border-radius:2px; background:none; color: var(--text-dim); border:1px solid var(--border-lit); line-height:16px; }
+:root[data-ui="minimal"] .chip button:hover{ color: var(--bg); background: var(--danger-lit); border-color: var(--danger-lit); }
+:root[data-ui="minimal"] .roster-chip{ background:none; }
+
+/* ---------- таблицы ---------- */
+:root[data-ui="minimal"] table.data-table th, :root[data-ui="minimal"] .report-table th{
+  font-size:10.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color: var(--text-dim);
+}
+:root[data-ui="minimal"] table.data-table tr:hover td{ background: var(--panel-2); }
+
+/* ---------- оболочка: меню слева ---------- */
+:root[data-ui="minimal"] .sidebar-nav{ background: var(--bg); border-right-color: var(--border); padding-top:14px; }
+:root[data-ui="minimal"] .sidebar-nav > a,
+:root[data-ui="minimal"] .sidebar-nav > .nav-group-toggle,
+:root[data-ui="minimal"] .nav-group-children a{ animation:none; }
+:root[data-ui="minimal"] .sidebar-nav a,
+:root[data-ui="minimal"] .nav-group-toggle{ border-radius:0; margin:0; padding:8px 20px; font-size:12.5px; transition:none; }
+:root[data-ui="minimal"] .nav-group-toggle{ width:100%; margin-top:0; }
+:root[data-ui="minimal"] .sidebar-nav a:hover,
+:root[data-ui="minimal"] .nav-group-toggle:hover{ background:none; color: var(--text); }
+:root[data-ui="minimal"] .sidebar-nav a.active{ background: var(--panel-2); box-shadow:none; color: var(--text); }
+:root[data-ui="minimal"] .sidebar-nav a.active::before{ left:0; top:0; bottom:0; width:2px; border-radius:0; background: var(--gold); box-shadow:none; }
+:root[data-ui="minimal"] .sidebar-nav a.nav-sub{ padding-left:42px; }
+:root[data-ui="minimal"] .nav-group-children::before{ left:28px; background: var(--border); }
+:root[data-ui="minimal"] .nav-icon-svg{ width:16px; height:16px; stroke-width:1.4; opacity:.85; transition:none; }
+:root[data-ui="minimal"] .sidebar-nav a:hover .nav-icon-svg,
+:root[data-ui="minimal"] .nav-group-toggle:hover .nav-icon-svg{ transform:none; }
+:root[data-ui="minimal"] .sidebar-nav a.active .nav-icon-svg,
+:root[data-ui="minimal"] .nav-group-toggle.open .nav-icon-svg{ filter:none; opacity:1; }
+:root[data-ui="minimal"] .nav-section{ padding:18px 20px 6px; font-size:10px; letter-spacing:.16em; opacity:1; color: color-mix(in srgb, var(--text-dim) 75%, var(--bg)); }
+:root[data-ui="minimal"] .nav-alert{ animation:none; box-shadow:none; width:16px; height:16px; font-size:10.5px; border-radius:2px; }
+:root[data-ui="minimal"] .nav-dev-badge{ border-radius:2px; }
+:root[data-ui="minimal"] .nav-search-btn{ margin:0 14px 10px; border-radius: var(--radius-sm); background:none; }
+:root[data-ui="minimal"] .nav-search-btn:hover{ background:none; border-color: var(--text-dim); }
+:root[data-ui="minimal"] .nav-search-btn kbd, :root[data-ui="minimal"] .cmdk kbd{ border-radius:2px; background:none; }
+
+/* бренд клана: без золотого перелива и свечения — название строчными капсом, тонкая линия под ним */
+:root[data-ui="minimal"] .sidebar-brand{ background:none; padding:4px 20px 18px; margin:-14px 0 12px; text-align:left; align-items:flex-start; }
+:root[data-ui="minimal"] .brand-name{
+  background:none; -webkit-background-clip:border-box; background-clip:border-box; color: var(--text); filter:none;
+  font-size:14px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+}
+/* в «Строгом» все шапки — шрифтом интерфейса, кроме «II сквозь название»: там антиква — часть задумки */
+:root[data-ui="minimal"] .sidebar-brand:not([data-style="pillars-cross"]) .brand-name{ font-family: inherit !important; }
+/* стили «две палки» сами задают раскладку — общий «Строгий» отступ шапки им не навязываем */
+:root[data-ui="minimal"] .sidebar-brand[data-style="pillars-top"],
+:root[data-ui="minimal"] .sidebar-brand[data-style="pillars-cross"],
+:root[data-ui="minimal"] .sidebar-brand[data-style="pillars-flank"]{ align-items:center; text-align:center; }
+:root[data-ui="minimal"] .sidebar-brand[data-style="pillars-left"]{ align-items:center; }
+:root[data-ui="minimal"] .sidebar-brand[data-style="pillars-cross"]{ padding:30px 12px 30px; }
+:root[data-ui="minimal"] .sidebar-brand[data-style="pillars-cross"] .brand-name{ font-size:16px; letter-spacing:.1em; }
+:root[data-ui="minimal"] .sidebar-brand[data-style="pillars-flank"],
+:root[data-ui="minimal"] .sidebar-brand[data-style="pillars-left"]{ padding:14px 14px 16px; }
+:root[data-ui="minimal"] .sidebar-brand[data-style="pillars-top"] .brand-orn,
+:root[data-ui="minimal"] .sidebar-brand[data-style="pillars-cross"] .brand-orn,
+:root[data-ui="minimal"] .sidebar-brand[data-style="pillars-flank"] .brand-orn{ justify-content:center; }
+:root[data-ui="minimal"] .brand-orn{ margin:6px 0 0; justify-content:flex-start; }
+:root[data-ui="minimal"] .brand-orn::before, :root[data-ui="minimal"] .brand-orn::after{ display:none; }
+:root[data-ui="minimal"] .brand-sub{ color: var(--text-dim); font-weight:600; letter-spacing:.2em; }
+/* стили шапки с клинками сохраняют клинки (это выбор клана), только без отлива — плоский цвет акцента */
+:root[data-ui="minimal"] .sidebar-brand[data-style="blades-h"]{ align-items:center; text-align:center; }
+:root[data-ui="minimal"] .sidebar-brand[data-style="blades-h"] .brand-orn{ justify-content:center; }
+:root[data-ui="minimal"] .sidebar-brand[data-style="blades-i"]{ padding:14px 14px 16px; align-items:center; }
+:root[data-ui="minimal"] .brand-blades use{ fill: var(--gold) !important; }
+:root[data-ui="minimal"] .brand-lattice{ stroke-opacity:.08; }
+
+/* виджет профиля справа сверху */
+:root[data-ui="minimal"] .who-widget{
+  border-radius: var(--radius); background: var(--bg); box-shadow:none;
+  -webkit-backdrop-filter:none; backdrop-filter:none; border-color: var(--border-lit);
+}
+:root[data-ui="minimal"] .who-widget:hover{ background: var(--panel-2); border-color: var(--text-dim); }
+:root[data-ui="minimal"] .who-avatar{ border-radius:3px; }
+:root[data-ui="minimal"] .who-status{ color: var(--text-dim); }
+:root[data-ui="minimal"] .who-menu, :root[data-ui="minimal"] .who-account-ctx{ border-radius: var(--radius); box-shadow:none; border-color: var(--border-lit); }
+:root[data-ui="minimal"] .who-menu-item, :root[data-ui="minimal"] .who-account-ctx button{ border-radius:2px; }
+:root[data-ui="minimal"] .lang-switch-btn{ border-radius:2px; }
+:root[data-ui="minimal"] .lang-switch-btn.active{ color: var(--text); background:none; border-color: var(--border-lit); }
+:root[data-ui="minimal"] .nav-toggle{ border-radius: var(--radius); }
+
+/* скелет загрузки — без переливов, просто тусклые плашки */
+:root[data-ui="minimal"] .sk{ border-radius:2px; animation:none; background: var(--panel-2); }
+:root[data-ui="minimal"] .section-loader .spin{ border-top-color: var(--text); }
+
+/* вход */
+:root[data-ui="minimal"] .login-card{ border-radius:6px; box-shadow:none; }
+:root[data-ui="minimal"] .login-card h1{ font-size:15px; letter-spacing:.14em; text-transform:uppercase; }
+
+/* мобильная карточка таблицы, окно загрузки скринов, приветствие */
+:root[data-ui="minimal"] table.l2-cards tbody tr{ border-radius: var(--radius); background:none; border-color: var(--border); }
+:root[data-ui="minimal"] .er-up, :root[data-ui="minimal"] .er-drop, :root[data-ui="minimal"] .er-th,
+:root[data-ui="minimal"] .er-mc, :root[data-ui="minimal"] .er-warn, :root[data-ui="minimal"] .er-sec-chk{ border-radius: var(--radius); }
+:root[data-ui="minimal"] .er-step.on .er-n{ background: var(--text); color: var(--bg); }
+:root[data-ui="minimal"] .welcome-modal .welcome-ic{ border-radius: var(--radius); background:none; color: var(--text); border-color: var(--border-lit); }
+:root[data-ui="minimal"] .welcome-row{ border-radius: var(--radius-sm); background: var(--bg); }
+
+/* ---------- компоненты страниц: скругления 6–20px → 4px (128 селекторов, собрано скриптом из <style> страниц) ---------- */
+:root[data-ui="minimal"] #lbBtnsDensity,
+:root[data-ui="minimal"] #partyTotalsOverlay .pt-tabs .btn,
+:root[data-ui="minimal"] #shotLightbox img,
+:root[data-ui="minimal"] .ab-class img,
+:root[data-ui="minimal"] .ab-node,
+:root[data-ui="minimal"] .ab-node .fb,
+:root[data-ui="minimal"] .ab-node .lv,
+:root[data-ui="minimal"] .ab-node img,
+:root[data-ui="minimal"] .ab-row .lim,
+:root[data-ui="minimal"] .ab-tip .th .fb,
+:root[data-ui="minimal"] .ab-tip .th img,
+:root[data-ui="minimal"] .ab-tip li,
+:root[data-ui="minimal"] .admin-nav-item,
+:root[data-ui="minimal"] .brand-style-card,
+:root[data-ui="minimal"] .bulk-all,
+:root[data-ui="minimal"] .cab-boost-item,
+:root[data-ui="minimal"] .cab-buff,
+:root[data-ui="minimal"] .cab-buff .copy,
+:root[data-ui="minimal"] .cab-ev-pill,
+:root[data-ui="minimal"] .cab-toggle-row,
+:root[data-ui="minimal"] .cd-board,
+:root[data-ui="minimal"] .cd-cell,
+:root[data-ui="minimal"] .cd-compact .cd-cell,
+:root[data-ui="minimal"] .cd-menu,
+:root[data-ui="minimal"] .cd-modal,
+:root[data-ui="minimal"] .cd-off-n,
+:root[data-ui="minimal"] .cd-skill-icon,
+:root[data-ui="minimal"] .cv-copy-dropdown,
+:root[data-ui="minimal"] .cvname-row,
+:root[data-ui="minimal"] .cw-archive-menu,
+:root[data-ui="minimal"] .day-add-toggle,
+:root[data-ui="minimal"] .day-event-preview,
+:root[data-ui="minimal"] .day-today-tag,
+:root[data-ui="minimal"] .filter-tab,
+:root[data-ui="minimal"] .gc-back-arrow,
+:root[data-ui="minimal"] .gc-class-dropdown,
+:root[data-ui="minimal"] .gc-class-picker-btn,
+:root[data-ui="minimal"] .gc-drawer-head img,
+:root[data-ui="minimal"] .gc-foot-toggle,
+:root[data-ui="minimal"] .gc-group-card,
+:root[data-ui="minimal"] .gc-group-card-icon,
+:root[data-ui="minimal"] .gc-item-card,
+:root[data-ui="minimal"] .gc-item-card img,
+:root[data-ui="minimal"] .gc-item-head .ic,
+:root[data-ui="minimal"] .gc-sec-title,
+:root[data-ui="minimal"] .gc-shot-paste,
+:root[data-ui="minimal"] .gc-shot-paste img,
+:root[data-ui="minimal"] .gcmp-legend button,
+:root[data-ui="minimal"] .gcmp-seg,
+:root[data-ui="minimal"] .gcmp-seg button,
+:root[data-ui="minimal"] .gcmp-tile,
+:root[data-ui="minimal"] .gcmp-tile .ti,
+:root[data-ui="minimal"] .gm-hovercard,
+:root[data-ui="minimal"] .gm-member-card,
+:root[data-ui="minimal"] .gm-member-menu,
+:root[data-ui="minimal"] .group-card,
+:root[data-ui="minimal"] .group-card-icon,
+:root[data-ui="minimal"] .group-card-stat,
+:root[data-ui="minimal"] .group-note,
+:root[data-ui="minimal"] .hc-stat,
+:root[data-ui="minimal"] .inv-btn,
+:root[data-ui="minimal"] .inv-result,
+:root[data-ui="minimal"] .lb-card,
+:root[data-ui="minimal"] .lb-card-h .mi,
+:root[data-ui="minimal"] .lb-feat,
+:root[data-ui="minimal"] .lb-legend button,
+:root[data-ui="minimal"] .lb-mvp .chip-m,
+:root[data-ui="minimal"] .lb-row img,
+:root[data-ui="minimal"] .lb-row.me,
+:root[data-ui="minimal"] .lb-row.me .nm::after,
+:root[data-ui="minimal"] .lb-sec-h .ic,
+:root[data-ui="minimal"] .lb-seg,
+:root[data-ui="minimal"] .lb-seg button,
+:root[data-ui="minimal"] .lb-share-modal .lb-share-img,
+:root[data-ui="minimal"] .lb-tile,
+:root[data-ui="minimal"] .lb-tile .ti,
+:root[data-ui="minimal"] .lb-tip,
+:root[data-ui="minimal"] .lb-title .ic,
+:root[data-ui="minimal"] .lg-eye,
+:root[data-ui="minimal"] .lg-feat i,
+:root[data-ui="minimal"] .lg-invite,
+:root[data-ui="minimal"] .lg-shell,
+:root[data-ui="minimal"] .loot-coef-row,
+:root[data-ui="minimal"] .lp-alias-pop,
+:root[data-ui="minimal"] .lp-archive-entry,
+:root[data-ui="minimal"] .lp-tab,
+:root[data-ui="minimal"] .ls-day-icon-btn,
+:root[data-ui="minimal"] .ls-ev-chip,
+:root[data-ui="minimal"] .ls-ev-picker,
+:root[data-ui="minimal"] .ls-manual,
+:root[data-ui="minimal"] .ls-roster-scroll,
+:root[data-ui="minimal"] .nu-modes,
+:root[data-ui="minimal"] .nu-modes button,
+:root[data-ui="minimal"] .oc-banner,
+:root[data-ui="minimal"] .oc-modal,
+:root[data-ui="minimal"] .oc-temp-pass,
+:root[data-ui="minimal"] .preset-card,
+:root[data-ui="minimal"] .pt-tabs,
+:root[data-ui="minimal"] .rep-class-popup,
+:root[data-ui="minimal"] .rep-hl-card,
+:root[data-ui="minimal"] .rep-hl-card img,
+:root[data-ui="minimal"] .rep-tile,
+:root[data-ui="minimal"] .rw-gear-btn,
+:root[data-ui="minimal"] .rw-party-count,
+:root[data-ui="minimal"] .rw-row,
+:root[data-ui="minimal"] .rw-tab,
+:root[data-ui="minimal"] .scan-stats .mc,
+:root[data-ui="minimal"] .sec-btn,
+:root[data-ui="minimal"] .sec-order-row,
+:root[data-ui="minimal"] .sec-title-input,
+:root[data-ui="minimal"] .section-toggle-row,
+:root[data-ui="minimal"] .settings-btn,
+:root[data-ui="minimal"] .share-table-scroll,
+:root[data-ui="minimal"] .si-row-shot,
+:root[data-ui="minimal"] .sim-box,
+:root[data-ui="minimal"] .tax-amount-row,
+:root[data-ui="minimal"] .tax-side-box,
+:root[data-ui="minimal"] .tax-side-box-row,
+:root[data-ui="minimal"] .tr-badge,
+:root[data-ui="minimal"] .tr-pill,
+:root[data-ui="minimal"] .tr-rank-row,
+:root[data-ui="minimal"] .tr-tip,
+:root[data-ui="minimal"] .user-del-btn,
+:root[data-ui="minimal"] .users-group-tab,
+:root[data-ui="minimal"] .week-multi-dropdown,
+:root[data-ui="minimal"] [data-tip]::after,
+:root[data-ui="minimal"] body.shot-mode #shotExit,
+:root[data-ui="minimal"] table.pt-table img.pt-ico{ border-radius: var(--radius) !important; }

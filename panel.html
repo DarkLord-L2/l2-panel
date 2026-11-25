@@ -1,12 +1,12 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Панель скилов</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=29"></script>
-<script src="js/i18n.js?v=140"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
+<script src="js/supabase-client.js?v=34"></script>
+<script src="js/i18n.js?v=145"></script>
 <script>
   // Раздел кабинета — без сессии сюда попадать нельзя, даже по прямой ссылке.
   (function(){ L2Cabinet.requireSession(); })();
@@ -1245,7 +1245,10 @@
     return p;
   }
   function saveState(){
-    localStorage.setItem(activeStorageKey, JSON.stringify(state));
+    // картинки лежат в state как base64 — при большом числе иконок localStorage (~5 МБ) переполняется и setItem
+    // бросает QuotaExceededError. Раньше исключение обрывало и облачное сохранение ниже — правка терялась молча
+    try { localStorage.setItem(activeStorageKey, JSON.stringify(state)); }
+    catch(e){ console.warn("panel: localStorage save failed", e); }
     scheduleCloudSave();
   }
 
@@ -1435,8 +1438,10 @@
   function renderCell(key){
     const data = prof.cells[slotToData(key)];
     const { cell, badge } = cellEls[key];
-    if(data && data.img){
-      cell.style.backgroundImage = 'url("' + data.img + '")';
+    // картинка ячейки может прийти по чужой ссылке «Поделиться» (#s=…) — пропускаем только картинку, не произвольный адрес
+    const img = data && l2SafeImg(data.img);
+    if(img){
+      cell.style.backgroundImage = 'url("' + img + '")';
       cell.classList.add("filled");
       cell.draggable = true;
     } else {
@@ -1521,7 +1526,7 @@
   const libFileInput = document.getElementById("libFileInput");
 
   const LIB_COLLAPSE_KEY = "l2LibraryCollapsed";
-  let libraryCollapsed = localStorage.getItem(LIB_COLLAPSE_KEY) === "1";
+  let libraryCollapsed = l2LS.get(LIB_COLLAPSE_KEY) === "1";
   function applyLibraryCollapsed(){
     libraryEl.classList.toggle("collapsed", libraryCollapsed);
     document.body.classList.toggle("sidebar-collapsed", libraryCollapsed);
@@ -1532,7 +1537,7 @@
   }
   libCollapseBtn.addEventListener("click", () => {
     libraryCollapsed = !libraryCollapsed;
-    localStorage.setItem(LIB_COLLAPSE_KEY, libraryCollapsed ? "1" : "0");
+    l2LS.set(LIB_COLLAPSE_KEY, libraryCollapsed ? "1" : "0");
     applyLibraryCollapsed();
   });
   applyLibraryCollapsed();
@@ -1616,7 +1621,7 @@
         const item = document.createElement("div");
         item.className = "lib-item";
         item.draggable = true;
-        item.style.backgroundImage = 'url("' + src + '")';
+        item.style.backgroundImage = 'url("' + l2SafeImg(src) + '")';
         item.title = L2I18n.t("panel.dragToCellTitle", "Перетащите на ячейку панели");
         item.addEventListener("dragstart", (e) => {
           e.dataTransfer.setData("text/plain", "lib:" + g.scope + ":" + g.id + ":" + i);
@@ -2386,9 +2391,9 @@
       state = normalizeRoot(cloud);
       if(!CLASSES[state.currentRace]) state.currentRace = RACES[0];
       if(!CLASSES[state.currentRace].includes(state.currentClass)) state.currentClass = CLASSES[state.currentRace][0];
-    } else if(localStorage.getItem(activeStorageKey)){
+    } else if(l2LS.get(activeStorageKey)){
       state = loadState(activeStorageKey);
-    } else if(localStorage.getItem(legacySharedKey)){
+    } else if(l2LS.get(legacySharedKey)){
       state = loadState(legacySharedKey);
     }
     refreshNav();
@@ -2419,7 +2424,7 @@
     state.macroIcons.forEach((src) => {
       const item = document.createElement("div");
       item.className = "lib-item";
-      item.style.backgroundImage = 'url("' + src + '")';
+      item.style.backgroundImage = 'url("' + l2SafeImg(src) + '")';
       item.title = L2I18n.t("panel.pickThisIconTitle", "Выбрать эту иконку");
       if(macroSelectedIcon === src) item.classList.add("selected");
       item.addEventListener("click", () => {
@@ -2497,7 +2502,8 @@
       const item = document.createElement("div");
       item.className = "lib-item";
       item.draggable = true;
-      item.style.backgroundImage = 'url("' + m.icon + '")';
+      const macroIcon = l2SafeImg(m.icon);
+      if(macroIcon) item.style.backgroundImage = 'url("' + macroIcon + '")';
       item.title = L2I18n.t("panel.macroDragTitle", "{name} — перетащите на ячейку").replace("{name}", m.name);
       item.addEventListener("dragstart", (e) => {
         e.dataTransfer.setData("text/plain", "macro:" + m.id);

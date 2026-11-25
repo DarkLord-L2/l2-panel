@@ -340,6 +340,33 @@
       "Another account's login and password — same clan or a completely different one. Afterwards you can switch between them right from this menu, without entering the password again.",
     ],
     "shell.addAccountSubmit": ["Добавить и переключиться", "Додати і перемкнутися", "Add and switch"],
+    "shell.addAccountHintNoKeep": [
+      "Логин и пароль другого аккаунта — может быть тем же кланом или совсем другим. Он появится в этом меню; чтобы переключаться без пароля, включите «Помнить вход в аккаунты».",
+      "Логін і пароль іншого акаунта — може бути тим самим кланом або зовсім іншим. Він з'явиться в цьому меню; щоб перемикатися без пароля, увімкніть «Пам'ятати вхід в акаунти».",
+      "Another account's login and password — same clan or a completely different one. It will appear in this menu; to switch without a password, turn on “Remember account sign-ins”.",
+    ],
+    "common.dbProblem": [
+      "Нет связи с сервером — часть данных могла не загрузиться или не сохраниться.",
+      "Немає зв'язку з сервером — частина даних могла не завантажитися або не зберегтися.",
+      "Can't reach the server — some data may not have loaded or saved.",
+    ],
+    "common.reloadPage": ["Обновить страницу", "Оновити сторінку", "Reload page"],
+    "common.saveFailed": ["Не удалось сохранить изменение:", "Не вдалося зберегти зміну:", "Couldn't save the change:"],
+    "common.ownerViewReadonly": ["Режим просмотра: изменения запрещены.", "Режим перегляду: зміни заборонені.", "View mode: changes are not allowed."],
+    "shell.keepAccounts": ["Помнить вход в аккаунты (без пароля)", "Пам'ятати вхід в акаунти (без пароля)", "Remember account sign-ins (no password)"],
+    "shell.keepAccountsTitle": [
+      "Вход во все добавленные аккаунты хранится в этом браузере — переключение без пароля. Не включайте на чужом или общем компьютере.",
+      "Вхід в усі додані акаунти зберігається в цьому браузері — перемикання без пароля. Не вмикайте на чужому чи спільному комп'ютері.",
+      "Sign-ins for all added accounts are stored in this browser — switch without a password. Don't turn this on on someone else's or a shared computer.",
+    ],
+    "shell.accountNeedsPassword": ["Для переключения нужен пароль", "Для перемикання потрібен пароль", "Password needed to switch"],
+    "shell.switchAccountTitle": ["Переключиться на аккаунт", "Перемкнутися на акаунт", "Switch account"],
+    "shell.switchAccountHint": [
+      "Вход в этот аккаунт не хранится в браузере («Помнить вход в аккаунты» выключено) — введите пароль.",
+      "Вхід у цей акаунт не зберігається в браузері («Пам'ятати вхід в акаунти» вимкнено) — введіть пароль.",
+      "This account's sign-in isn't stored in the browser (“Remember account sign-ins” is off) — enter the password.",
+    ],
+    "shell.switchAccountSubmit": ["Войти и переключиться", "Увійти і перемкнутися", "Sign in and switch"],
     "shell.accountCtxEdit": ["Изменить…", "Змінити…", "Edit…"],
     "shell.accountCtxDelete": ["Удалить", "Видалити", "Delete"],
     "shell.confirmDeleteAccount": ["Убрать «{username}» из списка аккаунтов?", "Прибрати «{username}» зі списку акаунтів?", "Remove “{username}” from the account list?"],
@@ -365,6 +392,12 @@
       "Access to the clan cabinet is temporarily disabled. Contact your clan leader.",
     ],
     "shell.sectionNotFound": ["Раздел не найден.", "Розділ не знайдено.", "Section not found."],
+    "shell.sectionInDev": [
+      "🛠 Раздел закрыт на доработку — скоро снова будет доступен.",
+      "🛠 Розділ закрито на доопрацювання — скоро знову буде доступний.",
+      "🛠 This section is closed for improvements — it will be back soon.",
+    ],
+    "shell.inDevBadge": ["скоро", "скоро", "soon"],
     "shell.sectionComingSoon": ["Этот раздел скоро появится.", "Цей розділ скоро з'явиться.", "This section is coming soon."],
     "shell.noSectionsForRole": [
       "Для вашей роли пока не открыто ни одного раздела.",
@@ -1957,6 +1990,21 @@
     "admin.brandStyleClassic": ["Классика (как сейчас)", "Класика (як зараз)", "Classic (as now)"],
     "admin.brandStyleBladesH": ["Два клинка над названием", "Два клинки над назвою", "Two blades above the name"],
     "admin.brandStyleBladesI": ["Клинки слева, ромбовая сетка", "Клинки зліва, ромбова сітка", "Blades on the left, diamond lattice"],
+    "admin.brandStylePillarsTop": ["Две палки над названием", "Дві палиці над назвою", "Two pillars above the name"],
+    "admin.brandStylePillarsLeft": ["Две палки слева", "Дві палиці зліва", "Two pillars on the left"],
+    "admin.brandStylePillarsFlank": ["Название между палками", "Назва між палицями", "Name between pillars"],
+    "admin.brandStylePillarsCross": ["Палки сквозь название", "Палиці крізь назву", "Pillars through the name"],
+    "admin.uiStyleTitle": ["Стиль интерфейса", "Стиль інтерфейсу", "Interface style"],
+    "admin.uiStyleHint": [
+      "Общий вид всего сайта: кнопки, карточки, меню, таблицы. Применяется сразу всем в клане; цветовая схема и стиль шапки ниже работают в любом из них.",
+      "Загальний вигляд усього сайту: кнопки, картки, меню, таблиці. Застосовується одразу всім у клані; кольорова схема і стиль шапки нижче працюють у будь-якому з них.",
+      "The overall look of the whole site: buttons, cards, menu, tables. Applies to everyone in the clan right away; the color scheme and header style below work with either.",
+    ],
+    "admin.uiStyleDefault": ["Обычный", "Звичайний", "Standard"],
+    "admin.uiStyleDefaultDesc": ["Мягкие скругления, градиенты и свечение цвета клана.", "М'які заокруглення, градієнти й світіння кольору клану.", "Soft corners, gradients and a glow in the clan color."],
+    "admin.uiStyleMinimal": ["Строгий", "Строгий", "Strict"],
+    "admin.uiStyleMinimalDesc": ["Минимализм: плоско, тонкие линии, острые углы, без свечений.", "Мінімалізм: пласко, тонкі лінії, гострі кути, без світіння.", "Minimalist: flat, thin lines, sharp corners, no glow."],
+    "admin.uiStyleNeedSql": ["(если ошибка про функцию — выполните в Supabase SQL Editor файл supabase/schema_ui_style.sql)", "(якщо помилка про функцію — виконайте в Supabase SQL Editor файл supabase/schema_ui_style.sql)", "(if the error mentions the function — run supabase/schema_ui_style.sql in the Supabase SQL Editor)"],
     "admin.brandStyleNeedSql": ["(если ошибка про функцию — выполните в Supabase SQL Editor файл supabase/schema_brand_style.sql)", "(якщо помилка про функцію — виконайте в Supabase SQL Editor файл supabase/schema_brand_style.sql)", "(if the error mentions the function — run supabase/schema_brand_style.sql in the Supabase SQL Editor)"],
 
     "admin.unknownRole": ["Неизвестная роль", "Невідома роль", "Unknown role"],
@@ -2940,10 +2988,16 @@
     "reports.overallSub": ["За всё время", "За весь час", "All time"],
   };
 
-  function getLang(){
-    const v = localStorage.getItem(LANG_KEY);
+  // язык читается из localStorage ОДИН раз и кэшируется: t() зовётся тысячи раз при отрисовке таблиц, а каждый
+  // getItem — синхронное обращение к хранилищу. Кэш обновляют setLang() и storage-событие (смена языка в другой
+  // вкладке/iframe). try — если браузер запретил хранилище, getItem бросает исключение и раньше ронял весь сайт
+  function readLang(){
+    let v = null;
+    try { v = localStorage.getItem(LANG_KEY); } catch(e){}
     return LANGS.includes(v) ? v : DEFAULT_LANG;
   }
+  let currentLang = readLang();
+  function getLang(){ return currentLang; }
 
   function locale(){
     return BCP47_LANG[getLang()] || BCP47_LANG[DEFAULT_LANG];
@@ -2988,7 +3042,8 @@
 
   function setLang(code){
     if(!LANGS.includes(code)) return;
-    localStorage.setItem(LANG_KEY, code);
+    currentLang = code;
+    try { localStorage.setItem(LANG_KEY, code); } catch(e){}
     applyTranslations();
   }
 
@@ -3007,7 +3062,7 @@
   // storage-событие долетает во все same-origin окна (включая уже открытый
   // iframe), кроме того, где localStorage реально поменяли, — без postMessage
   window.addEventListener("storage", (e) => {
-    if(e.key === LANG_KEY) applyTranslations();
+    if(e.key === LANG_KEY){ currentLang = readLang(); applyTranslations(); }
   });
 
   window.L2I18n = { t, getLang, setLang, applyTranslations, renderSwitcher, locale };

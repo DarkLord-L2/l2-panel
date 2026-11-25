@@ -1,10 +1,11 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Отчёты по мероприятиям — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=44" />
+<link rel="stylesheet" href="js/theme.css?v=50" />
+<link rel="stylesheet" href="js/theme-minimal.css?v=5" />
 <style>
   .rep-wrap{ padding:0 0 32px; }
 
@@ -502,10 +503,10 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
 <script src="js/page-keys.js?v=2"></script>
-<script src="js/supabase-client.js?v=29"></script>
-<script src="js/i18n.js?v=140"></script>
+<script src="js/supabase-client.js?v=34"></script>
+<script src="js/i18n.js?v=145"></script>
 <script src="js/paste-drop.js?v=1"></script>
 <script src="js/nick-match.js?v=8"></script>
 <script src="js/classes.js?v=3"></script>
@@ -1420,7 +1421,7 @@
   function renderPersonRow(body, r){
     const info = lookupMemberInfo(r.nickname);
     const picked = pickDisplayClassForPeriod(info, r.kills, r.nickname, r.entries);
-    const avatarSrc = info.icon || classIcon(picked.name) || BLANK_IMG;
+    const avatarSrc = l2SafeImg(info.icon) || classIcon(picked.name) || BLANK_IMG;
     const tr = document.createElement("tr");
     if(r.removed) tr.className = "rep-row-removed";
 
@@ -1689,7 +1690,7 @@
     return aggregateByNickname(periodRowsRaw).filter(r => !r.removed).map(r => {
       const info = lookupMemberInfo(r.nickname);
       const picked = pickDisplayClassForPeriod(info, r.kills, r.nickname, r.entries);
-      return { r, cls: picked.name || "", src: info.icon || classIcon(picked.name) || BLANK_IMG };
+      return { r, cls: picked.name || "", src: l2SafeImg(info.icon) || classIcon(picked.name) || BLANK_IMG };
     });
   }
 
@@ -2220,7 +2221,7 @@
     return w;
   }
 
-  const savedWidth = Number(localStorage.getItem(SUMMARY_WIDTH_KEY));
+  const savedWidth = Number(l2LS.get(SUMMARY_WIDTH_KEY));
   applySummaryWidth(savedWidth > 0 ? savedWidth : SUMMARY_DEFAULT_W);
 
   let splitStartX = 0, splitStartW = 0, splitting = false;
@@ -2242,11 +2243,11 @@
     splitting = false;
     splitterEl.classList.remove("dragging");
     document.body.classList.remove("rep-resizing");
-    localStorage.setItem(SUMMARY_WIDTH_KEY, String(Math.round(summaryEl.getBoundingClientRect().width)));
+    l2LS.set(SUMMARY_WIDTH_KEY, String(Math.round(summaryEl.getBoundingClientRect().width)));
   });
   splitterEl.addEventListener("dblclick", () => {
     applySummaryWidth(SUMMARY_DEFAULT_W);
-    localStorage.setItem(SUMMARY_WIDTH_KEY, String(SUMMARY_DEFAULT_W));
+    l2LS.set(SUMMARY_WIDTH_KEY, String(SUMMARY_DEFAULT_W));
   });
 
   // панель шире — заголовки и плитки крупнее, плитки сами перестраиваются в 3-4 колонки
@@ -2317,7 +2318,7 @@
   function ptAvatar(nickname){
     const info = lookupMemberInfo(nickname);
     const cls = (ptMode === "event" && ptEventClass.get(normalizeNick(nickname))) || info.class_name;
-    return info.icon || classIcon(cls) || BLANK_IMG;
+    return l2SafeImg(info.icon) || classIcon(cls) || BLANK_IMG;
   }
   function ptPartyIcon(p){
     const g = groups.find(x => x.name === p.label);

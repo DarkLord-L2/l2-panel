@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
@@ -7,7 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap" />
-<link rel="stylesheet" href="js/theme.css?v=44" />
+<link rel="stylesheet" href="js/theme.css?v=50" />
+<link rel="stylesheet" href="js/theme-minimal.css?v=5" />
 <!-- приложение на телефоне/компьютере: иконка, название, тёмная шапка -->
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" type="image/png" sizes="32x32" href="assets/app/favicon-32.png" />
@@ -53,6 +54,10 @@
       <div class="who-menu-sep"></div>
       <div id="whoAccountsList"></div>
       <button type="button" class="who-menu-item" id="whoAddAccountBtn" data-i18n="shell.addAccountBtn">+ Добавить аккаунт</button>
+      <label class="who-menu-item who-keep-toggle" data-i18n-attr="title:shell.keepAccountsTitle" title="Вход во все добавленные аккаунты хранится в этом браузере — переключение без пароля. Не включайте на чужом или общем компьютере.">
+        <input type="checkbox" id="whoKeepAccounts" />
+        <span data-i18n="shell.keepAccounts">Помнить вход в аккаунты (без пароля)</span>
+      </label>
       <div class="who-menu-sep"></div>
       <button type="button" class="who-menu-item" id="whoMenuCabinet" data-i18n="section.my_cabinet">Мой кабинет</button>
       <button type="button" class="who-menu-item" id="whoInstallBtn" style="display:none;" data-i18n="shell.installApp">📲 Установить приложение</button>
@@ -74,6 +79,13 @@
           <g transform="translate(37 0) scale(-1 1)"><use href="#brandBlade" fill="url(#brandCu)"/></g>
           <path class="brand-chev" d="M17 22L23 30L29 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gold)"/>
         </svg>
+        <!-- «две палки» (стили шапки pillars-*): тонкий ствол, расширяющийся к концам; видны только в своём стиле -->
+        <svg class="brand-pillars" viewBox="0 0 26 100" preserveAspectRatio="none" aria-hidden="true">
+          <path transform="translate(8 0)" d="M-3.4 0H3.4C1.6 7 1.15 16 1.15 28V72C1.15 84 1.6 93 3.4 100H-3.4C-1.6 93-1.15 84-1.15 72V28C-1.15 16-1.6 7-3.4 0Z"/>
+          <path transform="translate(18 0)" d="M-3.4 0H3.4C1.6 7 1.15 16 1.15 28V72C1.15 84 1.6 93 3.4 100H-3.4C-1.6 93-1.15 84-1.15 72V28C-1.15 16-1.6 7-3.4 0Z"/>
+        </svg>
+        <svg class="brand-pillar brand-pillar-l" viewBox="0 0 8 100" preserveAspectRatio="none" aria-hidden="true"><path transform="translate(4 0)" d="M-3.4 0H3.4C1.6 7 1.15 16 1.15 28V72C1.15 84 1.6 93 3.4 100H-3.4C-1.6 93-1.15 84-1.15 72V28C-1.15 16-1.6 7-3.4 0Z"/></svg>
+        <svg class="brand-pillar brand-pillar-r" viewBox="0 0 8 100" preserveAspectRatio="none" aria-hidden="true"><path transform="translate(4 0)" d="M-3.4 0H3.4C1.6 7 1.15 16 1.15 28V72C1.15 84 1.6 93 3.4 100H-3.4C-1.6 93-1.15 84-1.15 72V28C-1.15 16-1.6 7-3.4 0Z"/></svg>
         <div class="brand-text">
           <span class="brand-name" id="brandName" data-i18n="shell.defaultBrandName">Кабинет клана</span>
           <div class="brand-orn">
@@ -135,10 +147,10 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=29"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
+<script src="js/supabase-client.js?v=34"></script>
 <script src="js/classes.js?v=3"></script>
-<script src="js/i18n.js?v=140"></script>
+<script src="js/i18n.js?v=145"></script>
 <script src="js/nick-match.js?v=8"></script>
 <script src="js/nick-tools.js?v=7"></script>
 <script src="js/tax-flag.js?v=1"></script>
@@ -153,7 +165,10 @@
   const SECTION_VIEWS = {
     my_cabinet:  { type: "iframe", src: "my-cabinet.html" },
     groups:      { type: "iframe", src: "groups.html" },
-    skill_panel: { type: "iframe", src: "panel.html" },
+    // «Панель скилов» закрыта на доработку: пункт меню остаётся (с меткой), вместо раздела — заглушка «в разработке».
+    // Сама страница panel.html никуда не делась — открыть её для разработки можно напрямую по адресу /panel.html.
+    // Вернуть раздел всем: type: "iframe"
+    skill_panel: { type: "dev", src: "panel.html" },
     admin:       { type: "iframe", src: "admin.html" },
     census:      { type: "iframe", src: "census.html" },
     roster:      { type: "iframe", src: "roster.html" },
@@ -494,7 +509,11 @@
       const label = L2I18n.t("section." + key, sections.find(s => s.key === key)?.label || key);
       const stub = document.createElement("div");
       stub.className = "card";
-      stub.innerHTML = "<h2></h2><p class=\"hint\">" + L2I18n.t("shell.sectionComingSoon", "Этот раздел скоро появится.") + "</p>";
+      const stubText = view.type === "dev"
+        ? L2I18n.t("shell.sectionInDev", "🛠 Раздел закрыт на доработку — скоро снова будет доступен.")
+        : L2I18n.t("shell.sectionComingSoon", "Этот раздел скоро появится.");
+      stub.innerHTML = "<h2></h2><p class=\"hint\"></p>";
+      stub.querySelector(".hint").textContent = stubText;
       stub.querySelector("h2").textContent = label;
       content.appendChild(stub);
     }
@@ -517,6 +536,14 @@
     label.dataset.i18nFallback = s.label;
     label.textContent = L2I18n.t("section." + s.key, s.label);
     a.appendChild(label);
+    // раздел на доработке — маленькая метка «скоро» справа от названия
+    if(SECTION_VIEWS[s.key]?.type === "dev"){
+      const badge = document.createElement("span");
+      badge.className = "nav-dev-badge";
+      badge.dataset.i18n = "shell.inDevBadge";
+      badge.textContent = L2I18n.t("shell.inDevBadge", "скоро");
+      a.appendChild(badge);
+    }
     a.style.setProperty("--i", navStagger++);
     a.addEventListener("click", (e) => { e.preventDefault(); renderSection(s.key); setMobileNavOpen(false); });
     return a;
@@ -689,7 +716,7 @@
     appShell.classList.toggle("classic-topbar", classic);
     classicTopbarEl.style.display = classic ? "flex" : "none";
   }
-  applyClassicTopbar(localStorage.getItem(CLASSIC_TOPBAR_KEY) === "1");
+  applyClassicTopbar(l2LS.get(CLASSIC_TOPBAR_KEY) === "1");
 
   // статус — не через data-i18n (значение либо перевод, либо кастомное название
   // роли из БД), поэтому переводим вручную по смене языка в шапке
@@ -720,21 +747,34 @@
   function renderAccountsList(){
     const wrap = document.getElementById("whoAccountsList");
     const others = L2Cabinet.getSavedAccounts().filter(a => a.userId !== profile.id);
+    const lockTitle = L2I18n.t("shell.accountNeedsPassword", "Для переключения нужен пароль");
     wrap.innerHTML = others.map(a =>
-      `<button type="button" class="who-menu-item who-account-item" data-user-id="${escapeHtml(a.userId)}" data-username="${escapeHtml(a.username)}">` +
-      `<span class="who-account-name">${escapeHtml(a.username || (a.isPlatformAdmin ? L2I18n.t("shell.platformOwnerLabel", "Владелец платформы") : ""))}</span>` +
+      `<button type="button" class="who-menu-item who-account-item" data-user-id="${escapeHtml(a.userId)}" data-username="${escapeHtml(a.username)}"` +
+      (a.refresh_token ? "" : ` data-needs-password="1" title="${escapeHtml(lockTitle)}"`) + `>` +
+      `<span class="who-account-name">${escapeHtml(a.username || (a.isPlatformAdmin ? L2I18n.t("shell.platformOwnerLabel", "Владелец платформы") : ""))}` +
+      (a.refresh_token ? "" : `<span class="who-account-lock" aria-label="${escapeHtml(lockTitle)}">🔒</span>`) + `</span>` +
       (a.clanName ? `<span class="who-account-clan">${escapeHtml(a.clanName)}</span>` : "") +
       `</button>`
     ).join("");
     wrap.querySelectorAll(".who-account-item").forEach(btn => {
       btn.addEventListener("click", async (e) => {
         e.stopPropagation();
+        // «Помнить вход» выключено — токенов этого аккаунта в браузере нет, переключаемся через пароль
+        // (у владельца платформы логин в списке не хранится — поле останется пустым, его вписывают сами)
+        if(btn.dataset.needsPassword){
+          whoWidget.classList.remove("open");
+          openAddAccountModal(btn.dataset.username || "", "switch");
+          return;
+        }
         btn.disabled = true;
         try{
           await L2Cabinet.switchAccount(btn.dataset.userId);
           location.reload();
         }catch(err){
-          if(err.code === "clan_access_disabled"){
+          if(err.code === "password_required"){
+            whoWidget.classList.remove("open");
+            openAddAccountModal(btn.dataset.username || "", "switch");
+          } else if(err.code === "clan_access_disabled"){
             // аккаунт рабочий, просто клану сейчас закрыт доступ — остаёмся,
             // где были, никуда не переключаемся и из списка не убираем
             whoWidget.classList.remove("open");
@@ -767,6 +807,8 @@
   let ctxUserId = null, ctxUsername = null;
   function openAccountCtxMenu(x, y, userId, username){
     ctxUserId = userId; ctxUsername = username;
+    // «Изменить…» обновляет сохранённые токены аккаунта — без «Помнить вход» их не хранят, пункт не нужен
+    document.getElementById("accountCtxEdit").style.display = L2Cabinet.keepAccountsEnabled() ? "" : "none";
     accountCtxMenu.style.display = "flex";
     // сначала показываем (чтобы узнать реальные размеры), потом позиционируем —
     // не даём меню вылезти за правый/нижний край окна
@@ -796,17 +838,32 @@
   const addAccountOverlay = document.getElementById("addAccountOverlay");
   const addAccountError = document.getElementById("addAccountError");
   const addAccountSubmit = document.getElementById("addAccountSubmit");
-  // prefillUsername задан → это «Изменить…» для уже сохранённого аккаунта
-  // (перезайти под тем же логином, чтобы обновить токен, без переключения на
-  // него — см. reauthAccount), иначе — обычное «Добавить аккаунт» с чистой формой
+  // mode: "add" — обычное «Добавить аккаунт» с чистой формой; "edit" — «Изменить…» для уже сохранённого
+  // аккаунта (перезайти под тем же логином, чтобы обновить токен, без переключения на него — см. reauthAccount);
+  // "switch" — переключение на аккаунт без сохранённого входа («Помнить вход» выключено): пароль и сразу переход
   let isEditingAccount = false;
-  function openAddAccountModal(prefillUsername){
-    isEditingAccount = !!prefillUsername;
+  function submitLabel(mode){
+    return mode === "edit" ? L2I18n.t("shell.editAccountSubmit", "Обновить")
+      : mode === "switch" ? L2I18n.t("shell.switchAccountSubmit", "Войти и переключиться")
+      : L2I18n.t("shell.addAccountSubmit", "Добавить и переключиться");
+  }
+  let accountModalMode = "add";
+  function openAddAccountModal(prefillUsername, mode){
+    accountModalMode = mode || (prefillUsername ? "edit" : "add");
+    isEditingAccount = accountModalMode === "edit";
     addAccountError.textContent = "";
     document.getElementById("addAccountForm").reset();
     const titleEl = document.getElementById("addAccountTitle");
     const hintEl = document.getElementById("addAccountHint");
-    if(prefillUsername){
+    if(accountModalMode === "switch"){
+      titleEl.textContent = L2I18n.t("shell.switchAccountTitle", "Переключиться на аккаунт");
+      titleEl.removeAttribute("data-i18n");
+      hintEl.textContent = L2I18n.t("shell.switchAccountHint", "Вход в этот аккаунт не хранится в браузере («Помнить вход в аккаунты» выключено) — введите пароль.");
+      hintEl.removeAttribute("data-i18n");
+      document.getElementById("addAccountUsername").value = prefillUsername || "";
+      addAccountSubmit.textContent = submitLabel("switch");
+      addAccountSubmit.removeAttribute("data-i18n");
+    } else if(isEditingAccount){
       titleEl.textContent = L2I18n.t("shell.editAccountTitle", "Обновить вход");
       titleEl.removeAttribute("data-i18n");
       hintEl.textContent = L2I18n.t("shell.editAccountHint", "Введите пароль ещё раз — например, если он изменился и переключение перестало работать.");
@@ -817,10 +874,12 @@
     } else {
       titleEl.setAttribute("data-i18n", "shell.addAccountTitle");
       titleEl.textContent = L2I18n.t("shell.addAccountTitle", "Добавить аккаунт");
-      hintEl.setAttribute("data-i18n", "shell.addAccountHint");
-      hintEl.textContent = L2I18n.t("shell.addAccountHint", "Логин и пароль другого аккаунта — может быть тем же кланом или совсем другим. Дальше переключаться между ними можно будет прямо из этого меню, без повторного ввода пароля.");
+      // подсказка зависит от «Помнить вход»: обещать «без повторного ввода пароля» можно, только если он включён
+      const hintKey = L2Cabinet.keepAccountsEnabled() ? "shell.addAccountHint" : "shell.addAccountHintNoKeep";
+      hintEl.setAttribute("data-i18n", hintKey);
+      hintEl.textContent = L2I18n.t(hintKey, "Логин и пароль другого аккаунта — может быть тем же кланом или совсем другим.");
       addAccountSubmit.setAttribute("data-i18n", "shell.addAccountSubmit");
-      addAccountSubmit.textContent = L2I18n.t("shell.addAccountSubmit", "Добавить и переключиться");
+      addAccountSubmit.textContent = submitLabel("add");
     }
     addAccountOverlay.classList.add("show");
     setTimeout(() => document.getElementById(prefillUsername ? "addAccountPassword" : "addAccountUsername").focus(), 0);
@@ -858,10 +917,22 @@
     }catch(err){
       addAccountError.textContent = L2I18n.t("login.error", "Неверный логин или пароль");
       addAccountSubmit.disabled = false;
-      addAccountSubmit.textContent = isEditingAccount
-        ? L2I18n.t("shell.editAccountSubmit", "Обновить")
-        : L2I18n.t("shell.addAccountSubmit", "Добавить и переключиться");
+      addAccountSubmit.textContent = submitLabel(accountModalMode);
     }
+  });
+
+  // «Помнить вход в аккаунты» — галочка в меню профиля (настройка этого браузера, не аккаунта)
+  const keepBox = document.getElementById("whoKeepAccounts");
+  keepBox.checked = L2Cabinet.keepAccountsEnabled();
+  keepBox.addEventListener("change", async () => {
+    keepBox.disabled = true;
+    try { await L2Cabinet.setKeepAccounts(keepBox.checked); } finally { keepBox.disabled = false; }
+    renderAccountsList();
+  });
+  // другая вкладка поменяла настройку или список аккаунтов — обновляем меню здесь
+  window.addEventListener("storage", (e) => {
+    if(e.key === "l2KeepAccounts") keepBox.checked = L2Cabinet.keepAccountsEnabled();
+    if(e.key === "l2KeepAccounts" || e.key === "l2SavedAccounts") renderAccountsList();
   });
 
   // ---------- «Установить приложение» (manifest.webmanifest): пункт в меню профиля
@@ -1021,7 +1092,7 @@
   // стиль шапки меню (clans.brand_style, выбирает глав-админ в «Оформление»). Кэш в localStorage — чтобы при следующем
   // заходе шапка сразу рисовалась нужным стилем, без мигания; актуальное значение подтягиваем из БД. Если колонки ещё
   // нет (SQL schema_brand_style.sql не выполнен) — молча остаётся classic
-  const BRAND_STYLES = ["classic", "blades-h", "blades-i"];
+  const BRAND_STYLES = ["classic", "blades-h", "blades-i", "pillars-top", "pillars-left", "pillars-flank", "pillars-cross"];
   window.applyBrandStyle = function(style){
     const s = BRAND_STYLES.includes(style) ? style : "classic";
     document.getElementById("brand").dataset.style = s;
@@ -1031,6 +1102,11 @@
   try{ const cached = localStorage.getItem("l2BrandStyle"); if(cached) window.applyBrandStyle(cached); }catch(e){}
   db.from("clans").select("brand_style").eq("id", profile.clan_id).maybeSingle()
     .then(({ data, error }) => { if(!error && data) window.applyBrandStyle(data.brand_style); })
+    .catch(() => {});
+  // стиль интерфейса клана («Обычный»/«Строгий», clans.ui_style) — отдельным запросом: пока не выполнен
+  // schema_ui_style.sql, колонки нет, и общий запрос сломал бы и стиль шапки выше. Нет колонки — остаётся как было
+  db.from("clans").select("ui_style").eq("id", profile.clan_id).maybeSingle()
+    .then(({ data, error }) => { if(!error && data) L2Cabinet.setClanUiStyle(data.ui_style); })
     .catch(() => {});
   // шрифт Cinzel подгружается позже — после загрузки пересчитываем размер названия
   if(document.fonts && document.fonts.ready) document.fonts.ready.then(fitBrandName);

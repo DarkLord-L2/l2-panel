@@ -1,10 +1,11 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Участники клана — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=44" />
+<link rel="stylesheet" href="js/theme.css?v=50" />
+<link rel="stylesheet" href="js/theme-minimal.css?v=5" />
 <style>
   .rw-wrap{ padding:0 0 32px; }
 
@@ -258,11 +259,11 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
 <script src="js/page-keys.js?v=2"></script>
-<script src="js/supabase-client.js?v=29"></script>
+<script src="js/supabase-client.js?v=34"></script>
 <script src="js/classes.js?v=3"></script>
-<script src="js/i18n.js?v=140"></script>
+<script src="js/i18n.js?v=145"></script>
 <script src="js/nick-match.js?v=8"></script>
 <script>
 (async function(){
@@ -539,7 +540,7 @@
 
   function renderRow(nick){
     const info = memberInfo.get(nick) || {};
-    const avatarSrc = info.icon || classIcon(info.class_name) || BLANK_IMG;
+    const avatarSrc = l2SafeImg(info.icon) || classIcon(info.class_name) || BLANK_IMG;
     const clsText = classLabelOf(info);
     const subAvatars = [2,3,4]
       .map(n => classIcon(info[classNameCol(n)]))
@@ -791,14 +792,14 @@
 
     if(tagSettings.enabled){
       const checked = document.getElementById("memberTagCheckbox").checked;
-      if(checked){
-        await db.from("roster_tagged_members").upsert(
-          { clan_id: profile.clan_id, nickname: memberModalNick }, { onConflict: "clan_id,nickname" }
-        );
-      } else {
-        await db.from("roster_tagged_members").delete()
-          .eq("clan_id", profile.clan_id).eq("nickname", memberModalNick);
-      }
+      const tagRes = checked
+        ? await db.from("roster_tagged_members").upsert(
+            { clan_id: profile.clan_id, nickname: memberModalNick }, { onConflict: "clan_id,nickname" }
+          )
+        : await db.from("roster_tagged_members").delete()
+            .eq("clan_id", profile.clan_id).eq("nickname", memberModalNick);
+      // профессии уже сохранены, а отметку списка — нет: окно не закрываем и пишем, что не так
+      if(tagRes.error){ errEl.textContent = tagRes.error.message; await loadMemberInfo(); renderList(); return; }
       await loadTagged();
     }
 

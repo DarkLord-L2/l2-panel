@@ -1,10 +1,11 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>ДКП Соло — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=44" />
+<link rel="stylesheet" href="js/theme.css?v=50" />
+<link rel="stylesheet" href="js/theme-minimal.css?v=5" />
 <style>
   .ls-wrap{ padding:0 0 24px; }
   .ls-wrap .page-head{ margin-bottom:0; }
@@ -155,11 +156,11 @@
 
 <input type="file" id="dayIconPicker" accept="image/*" style="display:none;" />
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
 <script src="js/page-keys.js?v=2"></script>
-<script src="js/supabase-client.js?v=29"></script>
+<script src="js/supabase-client.js?v=34"></script>
 <script src="js/classes.js?v=3"></script>
-<script src="js/i18n.js?v=140"></script>
+<script src="js/i18n.js?v=145"></script>
 <script src="js/datepicker.js?v=2"></script>
 <script src="js/table-cards.js?v=2"></script>
 <script src="js/num-format.js?v=1"></script>
@@ -535,9 +536,10 @@
       const dt = new Date(e.event_date + "T00:00:00");
       const dateLabel = String(dt.getDate()).padStart(2, "0") + "." + String(dt.getMonth() + 1).padStart(2, "0");
       const title = escapeHtml((e.event_name || "") + " — " + e.event_date);
-      const bg = e.icon ? ` style="background-image:url('${e.icon}')"` : "";
+      const icon = l2SafeImg(e.icon);
+      const bg = icon ? ` style="background-image:url('${icon}')"` : "";
       h += `<th class="ls-col-day" title="${title}"><div class="ls-day-head">` +
-        `<button type="button" class="ls-day-icon-btn" data-event="${e.id}"${bg} ${isAdmin ? "" : "disabled"}>${e.icon ? "" : "+"}</button>` +
+        `<button type="button" class="ls-day-icon-btn" data-event="${e.id}"${bg} ${isAdmin ? "" : "disabled"}>${icon ? "" : "+"}</button>` +
         `<span class="ls-day-wd">${dateLabel}</span></div></th>`;
     });
     h += "</tr>";
@@ -563,7 +565,7 @@
   // кто вышел из клана; колонки те же самые, разница только в крестике у ника
   // и лёгкой тусклости строки (см. .ls-row-left)
   function rowHtml(r, isLeft){
-    const avatarSrc = memberIcons.get(r.nick) || classIcon(r.cls) || BLANK_IMG;
+    const avatarSrc = l2SafeImg(memberIcons.get(r.nick)) || classIcon(r.cls) || BLANK_IMG;
     const leftTitle = leftMembersWeek
       ? L2I18n.t("dkp.leftClanTitleWithDate", "Уже не в клане — был в переписи от {date}").replace("{date}", fmtDate(leftMembersWeek))
       : L2I18n.t("dkp.leftClanTitle", "Уже не в клане");
@@ -678,7 +680,7 @@
   // суммы у них обычно разные
   const DKP_FILTERS_KEY = "l2DkpSoloFilters";
   function saveDkpFilters(){
-    localStorage.setItem(DKP_FILTERS_KEY, JSON.stringify({
+    l2LS.set(DKP_FILTERS_KEY, JSON.stringify({
       from: document.getElementById("fromDate").value,
       to: document.getElementById("toDate").value,
       gold: document.getElementById("goldInput").value,

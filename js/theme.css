@@ -256,6 +256,47 @@ input[type="date"]{ color-scheme: dark; }
 .sidebar-brand[data-style="blades-i"] .brand-orn::after{ display:none; }
 .sidebar-brand[data-style="blades-i"] .brand-lattice{ display:block; position:absolute; inset:0; width:100%; height:100%; stroke: var(--gold); stroke-opacity:.14; fill:none; pointer-events:none; }
 
+/* ---- «Две палки» (II) — четыре стиля шапки pillars-*. Палка — тонкий ствол, расширяющийся к концам (svg path в index.html
+   и admin.html), цвет — акцент клана (в «Строгом» интерфейсе при «Классике» — белый). Разметка есть всегда, видна только
+   в своём стиле ----
+   pillars-top   — II над названием, всё по центру, название капсом в разрядку;
+   pillars-left  — II слева, название и подпись слева (компактно);
+   pillars-flank — по палке с каждой стороны от названия: | НАЗВАНИЕ |;
+   pillars-cross — II проходит сквозь название (палки видны над и под текстом), название шрифтом Cinzel */
+.brand-pillars, .brand-pillar{ display:none; fill: currentColor; color: var(--gold); flex:none; }
+.sidebar-brand[data-style^="pillars-"] .brand-name{ text-transform:uppercase; letter-spacing:.14em; font-weight:700; }
+.sidebar-brand[data-style^="pillars-"] .brand-orn::before,
+.sidebar-brand[data-style^="pillars-"] .brand-orn::after{ display:none; }
+
+.sidebar-brand[data-style="pillars-top"] .brand-pillars{ display:block; width:24px; height:46px; margin:4px auto 10px; }
+.sidebar-brand[data-style="pillars-top"] .brand-name{ font-size:15px; }
+.sidebar-brand[data-style="pillars-top"] .brand-orn{ justify-content:center; margin-top:6px; }
+
+.sidebar-brand[data-style="pillars-left"]{ flex-direction:row; align-items:center; gap:12px; text-align:left; padding:14px 16px 16px; }
+.sidebar-brand[data-style="pillars-left"] .brand-pillars{ display:block; width:20px; height:42px; }
+.sidebar-brand[data-style="pillars-left"] .brand-text{ min-width:0; flex:1; }
+.sidebar-brand[data-style="pillars-left"] .brand-name{ font-size:14px; padding:0; }
+.sidebar-brand[data-style="pillars-left"] .brand-orn{ justify-content:flex-start; margin:5px 0 0; }
+
+.sidebar-brand[data-style="pillars-flank"]{ flex-direction:row; align-items:center; justify-content:center; gap:12px; padding:14px 12px 16px; }
+.sidebar-brand[data-style="pillars-flank"] .brand-pillar{ display:block; width:8px; height:46px; }
+.sidebar-brand[data-style="pillars-flank"] .brand-pillar-l{ order:0; }
+.sidebar-brand[data-style="pillars-flank"] .brand-text{ order:1; min-width:0; flex:0 1 auto; }
+.sidebar-brand[data-style="pillars-flank"] .brand-pillar-r{ order:2; }
+.sidebar-brand[data-style="pillars-flank"] .brand-name{ font-size:14px; padding:0; }
+.sidebar-brand[data-style="pillars-flank"] .brand-orn{ justify-content:center; margin:5px 0 0; }
+
+.sidebar-brand[data-style="pillars-cross"]{ position:relative; padding:30px 12px 30px; }
+.sidebar-brand[data-style="pillars-cross"] .brand-pillars{
+  display:block; position:absolute; left:50%; top:4px; width:30px; height:calc(100% - 8px); transform:translateX(-50%);
+  /* посередине палки «прерываются» под текстом — как буквы поверх II на логотипе; полоса подогнана под название и подпись */
+  -webkit-mask-image: linear-gradient(#000 0 26%, transparent 26% 76%, #000 76%);
+          mask-image: linear-gradient(#000 0 26%, transparent 26% 76%, #000 76%);
+}
+.sidebar-brand[data-style="pillars-cross"] .brand-text{ position:relative; }
+.sidebar-brand[data-style="pillars-cross"] .brand-name{ font-family:'Cinzel', Georgia, 'Times New Roman', serif; font-size:17px; letter-spacing:.12em; }
+.sidebar-brand[data-style="pillars-cross"] .brand-orn{ justify-content:center; margin-top:4px; }
+
 /* классическая полоса сверху — старый вид шапки, скрыта по умолчанию (только
    .classic-topbar её показывает и прячет sidebar-brand/who-widget взамен) */
 .topbar{
@@ -312,6 +353,23 @@ input[type="date"]{ color-scheme: dark; }
 .who-account-item{ display:flex; flex-direction:column; align-items:flex-start; gap:0; }
 .who-account-name{ font-weight:600; }
 .who-account-clan{ font-size:10.5px; color: var(--text-dim); }
+.who-account-lock{ font-size:10px; color: var(--text-dim); font-weight:400; margin-left:4px; }
+/* плашка «нет связи с сервером» (js/supabase-client.js → notifyDbProblem) — снизу по центру, поверх всего */
+.db-problem-bar{
+  position:fixed; left:50%; bottom:16px; transform:translateX(-50%); z-index:200;
+  display:flex; align-items:center; gap:10px; max-width:calc(100vw - 32px); box-sizing:border-box;
+  padding:10px 12px 10px 14px; border-radius:9px; font-size:13px; color: var(--text);
+  background: var(--panel); border:1px solid var(--danger-lit, #d07070); box-shadow: 0 10px 28px rgba(0,0,0,.45);
+}
+.db-problem-bar .btn{ flex:none; padding:5px 10px; font-size:12px; }
+.db-problem-x{ all:unset; cursor:pointer; padding:2px 6px; font-size:18px; line-height:1; color: var(--text-dim); border-radius:5px; }
+.db-problem-x:hover{ color: var(--text); background: var(--panel-2); }
+.db-problem-x:focus-visible{ outline:2px solid color-mix(in srgb, var(--focus) 70%, transparent); }
+@media (max-width:560px){ .db-problem-bar{ flex-wrap:wrap; bottom:10px; } }
+/* «Помнить вход в аккаунты» — галочка в меню профиля под списком аккаунтов */
+.who-keep-toggle{ display:flex; align-items:flex-start; gap:8px; font-size:11.5px; color: var(--text-dim); line-height:1.35; }
+.who-keep-toggle input{ margin:1px 0 0; flex:none; accent-color: var(--gold); }
+.who-keep-toggle:focus-within{ outline:2px solid color-mix(in srgb, var(--focus) 70%, transparent); outline-offset:-2px; }
 
 /* контекстное меню ПКМ по строке аккаунта — «Изменить…»/«Удалить» */
 .who-account-ctx{
@@ -397,6 +455,11 @@ input[type="date"]{ color-scheme: dark; }
    мышью (фокус возвращается в документ из iframe раздела). Для клавиатуры — мягкий фон */
 .sidebar-nav a:focus, .nav-group-toggle:focus{ outline:none; }
 .sidebar-nav a:focus-visible, .nav-group-toggle:focus-visible{ background: rgba(255,255,255,.06); color: var(--text); }
+/* метка «скоро» у раздела, закрытого на доработку (index.html → SECTION_VIEWS type:"dev") */
+.nav-dev-badge{
+  margin-left:auto; flex:none; font-size:9.5px; font-weight:600; letter-spacing:.02em; text-transform:uppercase;
+  padding:1px 5px; border-radius:4px; color: var(--text-dim); border:1px solid var(--border-lit);
+}
 .sidebar-nav .soon{ opacity:.5; cursor:default; pointer-events:none; }
 
 /* мобильное меню — гамбургер + выезжающая панель вместо фикс-220px колонки:
@@ -870,7 +933,8 @@ table.data-table tr:hover td{ background: rgba(255,255,255,.025); }
   font-family:inherit; font-size:10.5px; font-weight:600; padding:1px 6px; border-radius:5px;
   border:1px solid var(--border-lit); background: var(--panel-2); color: var(--text-dim);
 }
-.nav-search-btn:focus{ outline:none; }
+/* без рамки только при клике мышью; с клавиатуры (Tab) рамка фокуса остаётся — иначе не видно, где фокус */
+.nav-search-btn:focus:not(:focus-visible){ outline:none; }
 .cmdk-overlay{
   position:fixed; inset:0; z-index:95; display:none; align-items:flex-start; justify-content:center; padding:12vh 16px 16px;
   background: rgba(5,6,8,.6); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);

@@ -1,10 +1,11 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Группы — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=44" />
+<link rel="stylesheet" href="js/theme.css?v=50" />
+<link rel="stylesheet" href="js/theme-minimal.css?v=5" />
 <style>
   .groups-wrap{ padding:0 0 32px; }
   .groups-toolbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:10px 0 14px; }
@@ -633,10 +634,10 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
 <script src="js/page-keys.js?v=2"></script>
-<script src="js/supabase-client.js?v=29"></script>
-<script src="js/i18n.js?v=140"></script>
+<script src="js/supabase-client.js?v=34"></script>
+<script src="js/i18n.js?v=145"></script>
 <script src="js/tax-flag.js?v=1"></script>
 <script src="js/layout-board.js?v=10"></script>
 <script src="js/nick-match.js?v=8"></script>
@@ -958,8 +959,9 @@
         db.from("clan_group_members").update({ sort_order: idx }).eq("group_id", currentGroupId).eq("nickname", n)
       )
     );
+    // порядок на экране уже новый — если в базу не записался, говорим об этом (после F5 вернулся бы старый)
     const failed = results.find(r => r.error);
-    if(failed) console.error(failed.error);
+    if(failed) l2WriteOk(failed, "clan_group_members sort_order");
   }
 
   // ---- раскладка карточек (личная настройка, хранится в браузере): списки групп и участников можно показать
@@ -1429,7 +1431,7 @@
     const st = statsByNick.get(normalizeNick(nick));
     const kd = st ? (st.deaths > 0 ? st.kills / st.deaths : st.kills) : null;
     const classes = [1, 2, 3, 4].map(n => ({ name: info[classNameCol(n)], level: info[classLevelCol(n)] })).filter(c => c.name);
-    const avatar = info.icon || classIcon(info.class_name) || BLANK_IMG;
+    const avatar = l2SafeImg(info.icon) || classIcon(info.class_name) || BLANK_IMG;
     const role = (g && g.leader_nickname === nick) ? "👑 " + L2I18n.t("groups.partyLeaderTitle", "Пати лидер")
       : (g && g.deputy_nickname === nick) ? "🥈 " + L2I18n.t("groups.partyDeputyTitle", "Зам пати лидера") : "";
     const stat = (lbl, val, cls) => `<div class="hc-stat"><span class="lbl">${escapeHtml(lbl)}</span><span class="val ${cls || ""}">${val}</span></div>`;
@@ -1686,7 +1688,8 @@
       delBtn.textContent = L2I18n.t("groups.removeOption", "Убрать из группы");
       delBtn.addEventListener("click", async () => {
         closeMemberMenu();
-        await db.from("clan_group_members").delete().eq("group_id", currentGroupId).eq("nickname", nick);
+        const res = await db.from("clan_group_members").delete().eq("group_id", currentGroupId).eq("nickname", nick);
+        if(!l2WriteOk(res, "clan_group_members delete")) return; // не удалилось — человек остаётся в группе и на экране
         membersByGroup.set(currentGroupId, (membersByGroup.get(currentGroupId) || []).filter(n => n !== nick));
         forgetSection(currentGroupId, nick);
         renderMembers();
@@ -1917,10 +1920,13 @@
       alert(insErr.code === "23505" ? L2I18n.t("groups.alreadyInGroup", "«{nick}» уже есть в этой группе.").replace("{nick}", nick) : (L2I18n.t("groups.moveFailed", "Не удалось переместить: ") + insErr.message));
       return;
     }
-    await db.from("clan_group_members").delete().eq("group_id", currentGroupId).eq("nickname", nick);
-    membersByGroup.set(currentGroupId, (membersByGroup.get(currentGroupId) || []).filter(n => n !== nick));
-    forgetSection(currentGroupId, nick);
+    const del = await db.from("clan_group_members").delete().eq("group_id", currentGroupId).eq("nickname", nick);
     membersByGroup.set(targetGroupId, [...(membersByGroup.get(targetGroupId) || []), nick]);
+    // в новую группу уже добавлен, а из старой убрать не вышло — честно показываем, что он теперь в обеих
+    if(l2WriteOk(del, "clan_group_members move")){
+      membersByGroup.set(currentGroupId, (membersByGroup.get(currentGroupId) || []).filter(n => n !== nick));
+      forgetSection(currentGroupId, nick);
+    }
     closeMemberMenu();
     renderMembers();
   }
@@ -2001,7 +2007,7 @@
 
   function buildMemberCard(nick, g){
       const info = infoOf(nick) || {};
-      const avatarSrc = info.icon || classIcon(info.class_name) || BLANK_IMG;
+      const avatarSrc = l2SafeImg(info.icon) || classIcon(info.class_name) || BLANK_IMG;
 
       // все заданные профессии по порядку слотов; уровень пишем прямо в подписи
       const classes = [1, 2, 3, 4]
@@ -2455,7 +2461,8 @@
   document.getElementById("groupHideBtn").addEventListener("click", async () => {
     const g = groups.find(x => x.id === currentGroupId);
     if(!confirm(L2I18n.t("groups.confirmHide", "Скрыть группу «{name}»? Она пропадёт из общего списка и фильтров «Пати», но данные участников сохранятся — вернуть или удалить навсегда можно в «Скрытые группы».").replace("{name}", g?.name))) return;
-    await db.from("clan_groups").update({ hidden: true }).eq("id", currentGroupId);
+    const res = await db.from("clan_groups").update({ hidden: true }).eq("id", currentGroupId);
+    if(!l2WriteOk(res, "clan_groups hide")) return;
     document.getElementById("detailView").style.display = "none";
     document.getElementById("listView").style.display = "";
     await loadGroups();
@@ -2483,7 +2490,8 @@
       showBtn.className = "btn";
       showBtn.textContent = L2I18n.t("groups.showBtn", "Показать");
       showBtn.addEventListener("click", async () => {
-        await db.from("clan_groups").update({ hidden: false }).eq("id", g.id);
+        const res = await db.from("clan_groups").update({ hidden: false }).eq("id", g.id);
+        if(!l2WriteOk(res, "clan_groups show")) return;
         await loadGroups();
         renderHiddenGroupsList();
         renderGrid(document.getElementById("groupSearch").value);

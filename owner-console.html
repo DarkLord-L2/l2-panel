@@ -1,11 +1,12 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="robots" content="noindex,nofollow" />
 <title>Консоль</title>
-<link rel="stylesheet" href="js/theme.css?v=44" />
+<link rel="stylesheet" href="js/theme.css?v=50" />
+<link rel="stylesheet" href="js/theme-minimal.css?v=5" />
 <style>
   /* 52px сверху — чтобы шапка (заголовок + «Выйти») не наезжала на фиксированный
      переключатель языка в правом верхнем углу на узких экранах */
@@ -184,9 +185,9 @@
   </section>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-client.js?v=29"></script>
-<script src="js/i18n.js?v=140"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
+<script src="js/supabase-client.js?v=34"></script>
+<script src="js/i18n.js?v=145"></script>
 <script>
 (async function(){
   // тот же публичный URL проекта, что и в js/supabase-client.js — не тянем его оттуда,
@@ -217,7 +218,9 @@
 
   // ---------- выбор оформления при создании клана ----------
   const THEMES = [["default", "admin.presetDefault", "Классика"], ["amber", "admin.presetAmber", "Янтарь"], ["azure", "admin.presetAzure", "Лазурь"], ["emerald", "admin.presetEmerald", "Изумруд"]];
-  const STYLES = [["classic", "admin.brandStyleClassic", "Классика (как сейчас)"], ["blades-h", "admin.brandStyleBladesH", "Два клинка над названием"], ["blades-i", "admin.brandStyleBladesI", "Клинки слева, ромбовая сетка"]];
+  const STYLES = [["classic", "admin.brandStyleClassic", "Классика (как сейчас)"], ["blades-h", "admin.brandStyleBladesH", "Два клинка над названием"], ["blades-i", "admin.brandStyleBladesI", "Клинки слева, ромбовая сетка"],
+    ["pillars-top", "admin.brandStylePillarsTop", "Две палки над названием"], ["pillars-left", "admin.brandStylePillarsLeft", "Две палки слева"],
+    ["pillars-flank", "admin.brandStylePillarsFlank", "Название между палками"], ["pillars-cross", "admin.brandStylePillarsCross", "Палки сквозь название"]];
   function fillSelect(id, rows){
     const sel = document.getElementById(id); sel.innerHTML = "";
     rows.forEach(([v, k, fb]) => { const o = document.createElement("option"); o.value = v; o.textContent = T(k, fb); sel.appendChild(o); });

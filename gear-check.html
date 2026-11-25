@@ -1,10 +1,11 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Проверка буста — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=44" />
+<link rel="stylesheet" href="js/theme.css?v=50" />
+<link rel="stylesheet" href="js/theme-minimal.css?v=5" />
 <style>
   .gc-wrap{ padding:0 0 32px; }
   .gc-avg{ display:inline-flex; align-items:center; gap:8px; font-size:13px; color: var(--text-dim); margin:0; }
@@ -606,10 +607,10 @@
 
 <input type="file" id="iconPicker" accept="image/*" style="display:none;" />
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
 <script src="js/page-keys.js?v=2"></script>
-<script src="js/supabase-client.js?v=29"></script>
-<script src="js/i18n.js?v=140"></script>
+<script src="js/supabase-client.js?v=34"></script>
+<script src="js/i18n.js?v=145"></script>
 <script src="js/nick-match.js?v=8"></script>
 <script src="js/classes.js?v=3"></script>
 <script>
@@ -703,7 +704,13 @@
     const targetW = Math.max(GC_COL_W - overflow / itemCols - 1, 58);
     if(targetW < GC_COL_W) gcTableEl.style.setProperty("--gc-col-w", targetW + "px");
   }
-  window.addEventListener("resize", fitTableWidth);
+  // resize сыплет десятками событий в секунду, а fitTableWidth сбрасывает ширину и сразу меряет таблицу
+  // (принудительный пересчёт раскладки) — считаем не чаще одного раза за кадр
+  let fitRaf = 0;
+  window.addEventListener("resize", () => {
+    if(fitRaf) return;
+    fitRaf = requestAnimationFrame(() => { fitRaf = 0; fitTableWidth(); });
+  });
 
   let nicks = [];
   let sections = [];     // [{id, name, sort_order}]
@@ -1042,7 +1049,7 @@
     colGroups.forEach(group => {
       // склеенные пункты — одна колонка на всех: иконки в ряд, названия через «+»,
       // вес в шапке общий (сумма), балл в строке участника тоже один на группу
-      const icons = group.map(i => `<img class="ic" src="${i.icon || BLANK_IMG}" alt="" />`).join("");
+      const icons = group.map(i => `<img class="ic" src="${l2SafeImg(i.icon, BLANK_IMG)}" alt="" />`).join("");
       const names = group.map(i => escapeHtml(i.name)).join(" + ");
       const groupWeight = group.reduce((s, i) => s + i.weight, 0);
       h += `<th class="gc-col-item${group.length > 1 ? " gc-merged-head" : ""}">` +
@@ -1068,7 +1075,7 @@
       wrap.className = "gc-nick";
       // своя загруженная аватарка в приоритете; если её нет — вместо пустого кружка
       // показываем иконку класса (если класс выбран из списка), и только потом заглушку
-      const avatarSrc = info.icon || classIcon(info.class_name) || BLANK_IMG;
+      const avatarSrc = l2SafeImg(info.icon) || classIcon(info.class_name) || BLANK_IMG;
       wrap.innerHTML =
         `<img class="avatar" src="${avatarSrc}" alt="" />` +
         `<span class="who"><span class="name">${escapeHtml(nick)}</span>` +

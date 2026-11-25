@@ -1,10 +1,11 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Журнал посещаемости — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=44" />
+<link rel="stylesheet" href="js/theme.css?v=50" />
+<link rel="stylesheet" href="js/theme-minimal.css?v=5" />
 <style>
   #daysContainer{
     display:grid;
@@ -446,10 +447,10 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
 <script src="js/page-keys.js?v=2"></script>
-<script src="js/supabase-client.js?v=29"></script>
-<script src="js/i18n.js?v=140"></script>
+<script src="js/supabase-client.js?v=34"></script>
+<script src="js/i18n.js?v=145"></script>
 <script src="js/datepicker.js?v=2"></script>
 <script src="js/paste-drop.js?v=1"></script>
 <script src="js/tax-flag.js?v=1"></script>
@@ -457,7 +458,7 @@
 <script src="js/classes.js?v=3"></script>
 <script src="js/class-icon-match.js?v=1"></script>
 <script src="js/screenshot-review.js?v=5"></script>
-<script src="js/event-roster.js?v=38"></script>
+<script src="js/event-roster.js?v=39"></script>
 <script src="js/share-report.js?v=2"></script>
 <script>
 (async function(){
@@ -1176,7 +1177,7 @@
     const wrapEl = document.getElementById("attTableWrap");
     wrapEl.classList.add("matrix-mode");
     wrapEl.classList.toggle("dark-matrix", darkMatrix);
-    const savedWidth = localStorage.getItem(TABLE_WIDTH_KEY);
+    const savedWidth = l2LS.get(TABLE_WIDTH_KEY);
     if(savedWidth) wrapEl.style.width = savedWidth + "px";
     const filter = REPORT_FILTERS().find(f => f.key === filterKey);
     const baseRows = attReportRows
@@ -1560,10 +1561,12 @@
       cb.checked = isDayVisible(i);
       cb.addEventListener("change", async () => {
         cb.disabled = true;
-        await db.from("attendance_day_visibility").upsert(
+        const res = await db.from("attendance_day_visibility").upsert(
           { clan_id: profile.clan_id, day_offset: i, visible: cb.checked },
           { onConflict: "clan_id,day_offset" }
         );
+        // не сохранилось — возвращаем галочку как было, иначе на экране одно, а в базе другое
+        if(!l2WriteOk(res, "attendance_day_visibility")){ cb.checked = !cb.checked; cb.disabled = false; return; }
         dayVisibility[i] = cb.checked;
         cb.disabled = false;
         renderDays();
@@ -1584,10 +1587,11 @@
       cb.checked = isFilterVisible(f.key);
       cb.addEventListener("change", async () => {
         cb.disabled = true;
-        await db.from("attendance_report_filters").upsert(
+        const res = await db.from("attendance_report_filters").upsert(
           { clan_id: profile.clan_id, filter_key: f.key, visible: cb.checked },
           { onConflict: "clan_id,filter_key" }
         );
+        if(!l2WriteOk(res, "attendance_report_filters")){ cb.checked = !cb.checked; cb.disabled = false; return; }
         attFilterVisibility[f.key] = cb.checked;
         cb.disabled = false;
       });
@@ -1599,10 +1603,11 @@
   document.getElementById("advancedViewToggle").addEventListener("change", async (e) => {
     const checked = e.target.checked;
     e.target.disabled = true;
-    await db.from("attendance_report_style").upsert(
+    const res = await db.from("attendance_report_style").upsert(
       { clan_id: profile.clan_id, advanced_view: checked },
       { onConflict: "clan_id" }
     );
+    if(!l2WriteOk(res, "attendance_report_style")){ e.target.checked = !checked; e.target.disabled = false; return; }
     advancedView = checked;
     e.target.disabled = false;
     document.getElementById("reportModeTabs").style.display = advancedView ? "" : "none";
@@ -1615,10 +1620,11 @@
   document.getElementById("darkMatrixToggle").addEventListener("change", async (e) => {
     const checked = e.target.checked;
     e.target.disabled = true;
-    await db.from("attendance_report_style").upsert(
+    const res = await db.from("attendance_report_style").upsert(
       { clan_id: profile.clan_id, dark_matrix: checked },
       { onConflict: "clan_id" }
     );
+    if(!l2WriteOk(res, "attendance_report_style")){ e.target.checked = !checked; e.target.disabled = false; return; }
     darkMatrix = checked;
     e.target.disabled = false;
     document.getElementById("attTableWrap").classList.toggle("dark-matrix", darkMatrix);
@@ -1691,7 +1697,7 @@
     resizing = false;
     resizeHandle.classList.remove("dragging");
     document.body.style.userSelect = "";
-    localStorage.setItem(TABLE_WIDTH_KEY, String(Math.round(attTableWrapEl.getBoundingClientRect().width)));
+    l2LS.set(TABLE_WIDTH_KEY, String(Math.round(attTableWrapEl.getBoundingClientRect().width)));
   });
 
   // ---- сохранение/восстановление открытого отчёта ----
@@ -1701,7 +1707,7 @@
 
   function saveReportState(){
     if(document.getElementById("attReportView").style.display === "none") return;
-    sessionStorage.setItem(REPORT_STATE_KEY, JSON.stringify({
+    l2LS.sset(REPORT_STATE_KEY, JSON.stringify({
       mode: reportMode,
       from: document.getElementById("attFrom").value,
       to: document.getElementById("attTo").value,
@@ -1714,9 +1720,9 @@
   }
 
   async function restoreReportState(){
-    const raw = sessionStorage.getItem(REPORT_STATE_KEY);
+    const raw = l2LS.sget(REPORT_STATE_KEY);
     if(!raw) return;
-    sessionStorage.removeItem(REPORT_STATE_KEY); // одноразово: обычное открытие раздела не трогаем
+    l2LS.sremove(REPORT_STATE_KEY); // одноразово: обычное открытие раздела не трогаем
     let st;
     try{ st = JSON.parse(raw); }catch(e){ return; }
 

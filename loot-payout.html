@@ -1,10 +1,11 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Раздача — Кабинет клана</title>
-<link rel="stylesheet" href="js/theme.css?v=44" />
+<link rel="stylesheet" href="js/theme.css?v=50" />
+<link rel="stylesheet" href="js/theme-minimal.css?v=5" />
 <style>
   .lp-wrap{ padding:0 0 24px; }
   .lp-wrap .page-head{ margin-bottom:0; }
@@ -189,10 +190,10 @@
   </section>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
 <script src="js/page-keys.js?v=2"></script>
-<script src="js/supabase-client.js?v=29"></script>
-<script src="js/i18n.js?v=140"></script>
+<script src="js/supabase-client.js?v=34"></script>
+<script src="js/i18n.js?v=145"></script>
 <script src="js/datepicker.js?v=2"></script>
 <script src="js/nick-match.js?v=8"></script>
 <script>
@@ -413,8 +414,9 @@
       ? new Map(Object.entries(data.unit_by_nick).map(([n, u]) => [normalizeNick(n), Number(u) || 0])) : null;
     return { from: data.from_date, to: data.to_date, goldByNick: data.gold_by_nick, goldByNorm, source: data.source, createdAt: data.created_at, eventIds: Array.isArray(data.event_ids) ? data.event_ids : null, unitByNorm, unitRaw: data.unit_by_nick || null };
   }
+  // true — удалено; false — нет (сообщение уже показано)
   async function deleteDkpPayload(){
-    await db.from("payout_batches").delete().eq("clan_id", profile.clan_id);
+    return l2WriteOk(await db.from("payout_batches").delete().eq("clan_id", profile.clan_id), "payout_batches delete");
   }
   // лидер на скрине не распознаётся отдельным ОСР-полем — event-roster.js просто
   // помечает is_party_leader=true у первого валидного ника скрина (лидер пати в игре
@@ -815,7 +817,7 @@
     }
     if(e.target.closest(".lp-un-del")){
       const alias = rowEl.dataset.alias;
-      await db.from("nick_aliases").delete().eq("clan_id", profile.clan_id).eq("alias", alias);
+      if(!l2WriteOk(await db.from("nick_aliases").delete().eq("clan_id", profile.clan_id).eq("alias", alias), "nick_aliases delete")) return;
       L2Nick.invalidate(profile.clan_id);
       await loadNickAliases(); prepareNicks(); await reload();
     }
@@ -1016,7 +1018,7 @@
   document.getElementById("lpDeleteBatchBtn").addEventListener("click", async () => {
     const actionsEl = document.getElementById("lpBatchActions");
     actionsEl.querySelectorAll("button").forEach(b => b.disabled = true);
-    await deleteDkpPayload();
+    if(!await deleteDkpPayload()){ actionsEl.querySelectorAll("button").forEach(b => b.disabled = false); return; }
     dkpPayload = null;
     renderOverview(false);
     renderLeftBox();
@@ -1138,8 +1140,8 @@
       card.querySelector(".lp-archive-delete").addEventListener("click", async () => {
         const id = card.dataset.id;
         if(!confirm(L2I18n.t("payout.confirmDeleteArchiveEntry", "Удалить эту раздачу из архива? Это необратимо."))) return;
-        await db.from("payout_archive").delete().eq("id", id);
-        archiveEntries = archiveEntries.filter(e => e.id !== id);
+        if(!l2WriteOk(await db.from("payout_archive").delete().eq("id", id), "payout_archive delete")) return;
+        archiveEntries =archiveEntries.filter(e => e.id !== id);
         renderArchiveList();
       });
     });

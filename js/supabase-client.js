@@ -7,20 +7,87 @@
 const SUPABASE_URL = "https://owacpvydbqxdhrxxitlj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_eQhDBY7sz0esE6HwwfNUYA_tRh9_OvL";
 
+// ---------- стиль интерфейса (js/theme-minimal.css): data-ui на <html> ----------
+// Стиль выбирает глав-админ на весь клан («Админ-панель → Оформление», clans.ui_style). Оболочка index.html читает его
+// из базы и кладёт в localStorage (UI_CLAN_KEY) — оттуда его сразу при загрузке берут все разделы-iframe, без мигания.
+// Поверх — личный предпросмотр только для своего браузера: ?ui=minimal / ?ui=default у любой страницы; ?ui=clan — снять
+// предпросмотр и вернуться к стилю клана (выбор в «Оформлении» тоже снимает предпросмотр)
+const UI_PREVIEW_KEY = "l2UiPreview";
+const UI_CLAN_KEY = "l2UiStyle";
+const UI_STYLES = ["default", "minimal"];
+function currentUiStyle(){
+  try{
+    const p = localStorage.getItem(UI_PREVIEW_KEY);
+    if(UI_STYLES.includes(p)) return p;
+    const c = localStorage.getItem(UI_CLAN_KEY);
+    if(UI_STYLES.includes(c)) return c;
+  }catch(e){}
+  return "default";
+}
+function paintUiStyle(){
+  const ui = currentUiStyle();
+  if(ui === "default") delete document.documentElement.dataset.ui;
+  else document.documentElement.dataset.ui = ui;
+}
+(function initUiStyle(){
+  try{
+    const q = new URLSearchParams(location.search).get("ui");
+    if(q === "clan") localStorage.removeItem(UI_PREVIEW_KEY);
+    else if(UI_STYLES.includes(q)) localStorage.setItem(UI_PREVIEW_KEY, q);
+  }catch(e){}
+  paintUiStyle();
+})();
+// стиль клана сменили в «Оформлении» / в другой вкладке — перекрашиваемся без перезагрузки
+window.addEventListener("storage", (e) => {
+  if(e.key === UI_PREVIEW_KEY || e.key === UI_CLAN_KEY) paintUiStyle();
+});
+// стиль клана из базы (вызывает оболочка index.html и «Оформление»): запомнить и применить здесь же
+function setClanUiStyle(style, opts){
+  const s = UI_STYLES.includes(style) ? style : "default";
+  try{
+    localStorage.setItem(UI_CLAN_KEY, s);
+    if(opts && opts.clearPreview) localStorage.removeItem(UI_PREVIEW_KEY);
+  }catch(e){}
+  paintUiStyle();
+}
+
 const REMEMBER_KEY = "l2RememberMe";
 const EMAIL_DOMAIN = "@l2clan.local";
 
+// Запасное хранилище в памяти вкладки — если браузер запретил хранилище (режим инкогнито с жёсткими
+// настройками, заблокированные данные сайта), доступ к localStorage бросает исключение и раньше ронял ВЕСЬ сайт
+// ещё до входа. Теперь вход работает, просто сессия живёт до закрытия вкладки.
+const memoryStorage = (() => { const m = new Map(); return {
+  getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => { m.set(k, String(v)); }, removeItem: (k) => { m.delete(k); },
+}; })();
 function currentBackingStorage(){
-  const remember = localStorage.getItem(REMEMBER_KEY) !== "0";
-  return remember ? window.localStorage : window.sessionStorage;
+  try{
+    const remember = localStorage.getItem(REMEMBER_KEY) !== "0";
+    return remember ? window.localStorage : window.sessionStorage;
+  }catch(e){ return memoryStorage; }
 }
 // адаптер хранилища сессии: "запомнить меня" снята → токены живут в sessionStorage
 // (переживают перезагрузку вкладки, но не переживают закрытие браузера/новую вкладку)
 const sessionAwareStorage = {
-  getItem: (k) => currentBackingStorage().getItem(k),
-  setItem: (k, v) => currentBackingStorage().setItem(k, v),
-  removeItem: (k) => currentBackingStorage().removeItem(k),
+  // в памяти значение появляется только если запись в хранилище не удалась — тогда оно и свежее
+  getItem: (k) => { const m = memoryStorage.getItem(k); if(m !== null) return m; try{ return currentBackingStorage().getItem(k); }catch(e){ return null; } },
+  setItem: (k, v) => { try{ currentBackingStorage().setItem(k, v); memoryStorage.removeItem(k); }catch(e){ memoryStorage.setItem(k, v); } },
+  removeItem: (k) => { try{ currentBackingStorage().removeItem(k); }catch(e){} memoryStorage.removeItem(k); },
 };
+function setRemember(on){ try{ localStorage.setItem(REMEMBER_KEY, on ? "1" : "0"); }catch(e){} }
+
+// Адрес картинки из базы (иконки участников/предметов/мероприятий, лого клана) перед вставкой в HTML-строку
+// (src="…", style="background-image:url('…')"). Сайт сам кладёт туда только data:image/…;base64 (canvas.toDataURL)
+// или http(s)-ссылку на лого, классы — assets/…. Кавычки, скобки, пробелы, javascript: и прочее значат, что значение
+// подложили в базу в обход интерфейса (через API своим токеном) — его отбрасываем, иначе это XSS у всех, кто откроет
+// страницу, включая владельца платформы в режиме «Войти в клан».
+function safeImageUrl(u, fallback){
+  const s = typeof u === "string" ? u.trim() : "";
+  if(s && !/["'<>()\\\s`]/.test(s) &&
+     /^(data:image\/(png|jpe?g|gif|webp|avif|svg\+xml);base64,[A-Za-z0-9+/=]+$|https?:\/\/|(\.\/)?assets\/)/i.test(s)) return s;
+  return fallback === undefined ? "" : fallback;
+}
+window.l2SafeImg = safeImageUrl;
 
 // ---------- режим «просмотр клана» для владельца платформы (owner-console → «Войти в клан») ----------
 // Владелец заходит в чужой клан под сессией лидера этого клана (без создания своего пользователя), но ТОЛЬКО ДЛЯ ЧТЕНИЯ:
@@ -52,8 +119,78 @@ function guardedFetch(input, init){
       }
     }
   }catch(e){}
-  return fetch(input, init);
+  const p = fetch(input, init);
+  // Сбой сети / ошибка сервера при обращении к базе или авторизации — показываем плашку. Многие страницы читают
+  // `const { data } = await db.from(…)` без проверки error, и при обрыве связи рисовали «пусто», будто данных нет.
+  // 4xx сюда не попадают: 404 у rpc — штатная проверка «миграция не выполнена», ошибки записи страницы обрабатывают сами
+  let watch = false;
+  try{
+    const url = typeof input === "string" ? input : (input && input.url) || String(input);
+    watch = url.indexOf(SUPABASE_URL + "/rest/v1/") === 0 || url.indexOf(SUPABASE_URL + "/auth/v1/") === 0;
+  }catch(e){}
+  if(!watch) return p;
+  return p.then(
+    (res) => { if(res.status >= 500) notifyDbProblem(); return res; },
+    (err) => { if(!(err && err.name === "AbortError")) notifyDbProblem(); throw err; },
+  );
 }
+
+// плашка «нет связи с сервером» — одна на страницу (у каждого раздела-iframe своя), закрывается крестиком
+let dbProblemShown = false;
+function notifyDbProblem(){
+  if(dbProblemShown) return;
+  const show = () => {
+    if(dbProblemShown || !document.body) return;
+    dbProblemShown = true;
+    const T = (k, f) => (window.L2I18n ? window.L2I18n.t(k, f) : f);
+    const bar = document.createElement("div");
+    bar.className = "db-problem-bar";
+    bar.setAttribute("role", "alert");
+    const text = document.createElement("span");
+    text.textContent = T("common.dbProblem", "Нет связи с сервером — часть данных могла не загрузиться или не сохраниться.");
+    const reload = document.createElement("button");
+    reload.type = "button"; reload.className = "btn";
+    reload.textContent = T("common.reloadPage", "Обновить страницу");
+    reload.addEventListener("click", () => location.reload());
+    const close = document.createElement("button");
+    close.type = "button"; close.className = "db-problem-x";
+    close.textContent = "×";
+    close.setAttribute("aria-label", T("common.close", "Закрыть"));
+    close.addEventListener("click", () => { bar.remove(); dbProblemShown = false; });
+    bar.append(text, reload, close);
+    document.body.appendChild(bar);
+  };
+  if(document.body) show(); else document.addEventListener("DOMContentLoaded", show, { once: true });
+}
+
+// Обращение к localStorage для настроек интерфейса (ширина таблиц, выбранная вкладка, фильтры): если браузер запретил
+// хранилище или оно переполнено, getItem/setItem бросают исключение — раньше это роняло всю страницу. Теперь
+// настройка просто не запоминается, страница работает
+const l2LS = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k, v){ try{ localStorage.setItem(k, v); return true; }catch(e){ return false; } },
+  remove(k){ try{ localStorage.removeItem(k); }catch(e){} },
+  sget(k){ try{ return sessionStorage.getItem(k); }catch(e){ return null; } },
+  sset(k, v){ try{ sessionStorage.setItem(k, v); return true; }catch(e){ return false; } },
+  sremove(k){ try{ sessionStorage.removeItem(k); }catch(e){} },
+};
+window.l2LS = l2LS;
+
+// Общая проверка результата записи в базу: ошибка → сообщение человеку, true/false — удалось ли.
+// Для мест, где раньше писали `await db.from(…).update(…)` и не смотрели на error (изменение молча не сохранялось,
+// например в режиме просмотра владельца, при отказе RLS или обрыве связи)
+function reportWriteError(res, context){
+  const err = res && res.error;
+  if(!err) return true;
+  console.error(context || "db write failed", err);
+  const T = (k, f) => (window.L2I18n ? window.L2I18n.t(k, f) : f);
+  const readonly = err.code === "owner_view_readonly";
+  alert(readonly
+    ? T("common.ownerViewReadonly", "Режим просмотра: изменения запрещены.")
+    : T("common.saveFailed", "Не удалось сохранить изменение:") + " " + (err.message || String(err)));
+  return false;
+}
+window.l2WriteOk = reportWriteError;
 
 const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { storage: sessionAwareStorage, autoRefreshToken: true, persistSession: true },
@@ -66,7 +203,7 @@ function usernameToEmail(username){
 
 async function login(username, password, remember){
   try{ localStorage.removeItem(OWNER_VIEW_KEY); }catch(e){}
-  localStorage.setItem(REMEMBER_KEY, remember ? "1" : "0");
+  setRemember(remember);
   return client.auth.signInWithPassword({ email: usernameToEmail(username), password });
 }
 
@@ -86,10 +223,12 @@ async function signOut(){
 // Войти в клан: token_hash выдаёт функция owner-enter-clan (только владельцу платформы). Свою сессию владелец сохраняет в список
 // аккаунтов (чтобы вернуться), затем входит под лидером клана; включается режим «только чтение» (см. guardedFetch выше)
 async function enterClanView(tokenHash, meta){
-  await persistCurrentAccountSession();
+  // токены владельца сохраняются ВСЕГДА, даже при выключенном «Помнить вход в аккаунты» — без них из клана не вернуться;
+  // при выходе (exitClanView) запись снова сохраняется по общему правилу, т.е. без токенов, если настройка выключена
+  await persistCurrentAccountSession({ withTokens: true });
   const { data: { session: cur } } = await client.auth.getSession();
   const ownerId = cur && cur.user ? cur.user.id : null;
-  localStorage.setItem(REMEMBER_KEY, "1");
+  setRemember(true);
   let r = await client.auth.verifyOtp({ token_hash: tokenHash, type: "magiclink" });
   if(r.error) r = await client.auth.verifyOtp({ token_hash: tokenHash, type: "email" });
   if(r.error) throw r.error;
@@ -103,7 +242,7 @@ async function exitClanView(){
   try{ await client.auth.signOut({ scope: "local" }); }catch(e){}
   if(ov && ov.leaderId) forgetAccount(ov.leaderId);
   const acc = ov && loadSavedAccounts().find(a => a.userId === ov.ownerId);
-  if(acc){
+  if(acc && acc.refresh_token){
     const { error } = await client.auth.setSession({ access_token: acc.access_token, refresh_token: acc.refresh_token });
     if(!error){ await persistCurrentAccountSession(); return true; }
   }
@@ -121,16 +260,49 @@ function loadSavedAccounts(){
   try{ return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || "[]"); }catch(e){ return []; }
 }
 function saveSavedAccountsList(list){
-  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(list));
+  try{ localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(list)); }catch(e){}
 }
 function forgetAccount(userId){
   saveSavedAccountsList(loadSavedAccounts().filter(a => a.userId !== userId));
 }
 
+// «Помнить вход в аккаунты» (меню профиля). Включено — как раньше: у каждого добавленного аккаунта в этом браузере лежат
+// его токены, переключение без пароля. Выключено (по умолчанию) — в списке остаются только логин/клан, токены есть лишь у
+// ТЕКУЩЕЙ сессии (её хранит сам Supabase), при переключении пароль вводится заново. Смысл: если на сайте когда-нибудь найдётся
+// XSS, украсть можно будет одну сессию, а не все добавленные аккаунты сразу (и не токен владельца платформы).
+const KEEP_ACCOUNTS_KEY = "l2KeepAccounts";
+function keepAccountsEnabled(){
+  try{
+    const v = localStorage.getItem(KEEP_ACCOUNTS_KEY);
+    if(v === "1") return true;
+    if(v === "0") return false;
+    // ключа ещё нет — первый заход после обновления сайта. Кто уже пользовался быстрым переключением (в списке токены
+    // больше чем одного аккаунта), тому оставляем как было; остальным — выключено
+    const ov = ownerView();
+    const withTokens = loadSavedAccounts().filter(a => a.refresh_token && !(ov && a.userId === ov.leaderId)).length;
+    const on = withTokens > 1;
+    localStorage.setItem(KEEP_ACCOUNTS_KEY, on ? "1" : "0");
+    return on;
+  }catch(e){ return false; }
+}
+function stripTokens(a){
+  const { access_token, refresh_token, ...rest } = a;
+  return rest;
+}
+// выключение сразу стирает токены всех сохранённых аккаунтов, кроме токена владельца, пока он внутри чужого клана
+// (иначе ему не вернуться); включение сохраняет токены текущей сессии — остальные появятся при следующем входе в них
+async function setKeepAccounts(on){
+  try{ localStorage.setItem(KEEP_ACCOUNTS_KEY, on ? "1" : "0"); }catch(e){}
+  if(on) return persistCurrentAccountSession();
+  const ov = ownerView();
+  saveSavedAccountsList(loadSavedAccounts().map(a => (ov && a.userId === ov.ownerId) ? a : stripTokens(a)));
+}
+
 // сохраняет АКТУАЛЬНУЮ активную сессию в список — вызывается перед уходом на
 // другой аккаунт (чтобы не потерять её свежий refresh_token) и сразу после
-// входа/переключения (сохранить то, что реально стало активным)
-async function persistCurrentAccountSession(){
+// входа/переключения (сохранить то, что реально стало активным).
+// opts.withTokens — сохранить токены, даже если «Помнить вход в аккаунты» выключено (только для enterClanView)
+async function persistCurrentAccountSession(opts){
   const { data: { session } } = await client.auth.getSession();
   if(!session) return;
   const profile = await getProfile().catch(() => null);
@@ -142,16 +314,21 @@ async function persistCurrentAccountSession(){
   if(!profile){
     isPlatformAdmin = await client.rpc("is_platform_admin").then(r => r.data === true).catch(() => false);
   }
-  const list = loadSavedAccounts();
+  const keep = keepAccountsEnabled();
+  const ov = ownerView();
+  // настройка выключена — у остальных записей токенов быть не должно (кроме владельца, пока он в чужом клане)
+  const list = keep ? loadSavedAccounts() : loadSavedAccounts().map(a => (ov && a.userId === ov.ownerId) ? a : stripTokens(a));
   const entry = {
     userId: session.user.id,
     username: profile?.username || (isPlatformAdmin ? "" : (session.user.email?.replace(EMAIL_DOMAIN, "") || "")),
     nickname: profile?.nickname || null,
     clanName: profile?.clans?.display_name || profile?.clans?.name || null,
     isPlatformAdmin,
-    access_token: session.access_token,
-    refresh_token: session.refresh_token,
   };
+  if(keep || (opts && opts.withTokens)){
+    entry.access_token = session.access_token;
+    entry.refresh_token = session.refresh_token;
+  }
   const i = list.findIndex(a => a.userId === entry.userId);
   if(i >= 0) list[i] = entry; else list.push(entry);
   saveSavedAccountsList(list);
@@ -163,7 +340,7 @@ async function persistCurrentAccountSession(){
 // сохранёнными аккаунтами не переживёт закрытие вкладки
 async function addAccount(username, password){
   await persistCurrentAccountSession();
-  localStorage.setItem(REMEMBER_KEY, "1");
+  setRemember(true);
   const { data, error } = await client.auth.signInWithPassword({ email: usernameToEmail(username), password });
   if(error) throw error;
   await persistCurrentAccountSession();
@@ -180,14 +357,14 @@ async function reauthAccount(username, password){
   const prevUserId = prevSession?.user?.id || null;
 
   await persistCurrentAccountSession();
-  localStorage.setItem(REMEMBER_KEY, "1");
+  setRemember(true);
   const { data, error } = await client.auth.signInWithPassword({ email: usernameToEmail(username), password });
   if(error) throw error;
   await persistCurrentAccountSession(); // свежие токены под её userId
 
   if(prevUserId && prevUserId !== data.session.user.id){
     const prevAcc = loadSavedAccounts().find(a => a.userId === prevUserId);
-    if(prevAcc) await client.auth.setSession({ access_token: prevAcc.access_token, refresh_token: prevAcc.refresh_token });
+    if(prevAcc && prevAcc.refresh_token) await client.auth.setSession({ access_token: prevAcc.access_token, refresh_token: prevAcc.refresh_token });
   }
   return data;
 }
@@ -201,12 +378,14 @@ async function reauthAccount(username, password){
 async function switchAccount(userId){
   const acc = loadSavedAccounts().find(a => a.userId === userId);
   if(!acc) throw new Error("account_not_found");
+  // «Помнить вход» выключено — токенов нет, переключаться только через пароль (index.html открывает форму входа)
+  if(!acc.refresh_token){ const err = new Error("password_required"); err.code = "password_required"; throw err; }
 
   const { data: { session: prevSession } } = await client.auth.getSession();
   const prevUserId = prevSession?.user?.id || null;
 
   await persistCurrentAccountSession();
-  localStorage.setItem(REMEMBER_KEY, "1");
+  setRemember(true);
   const { data, error } = await client.auth.setSession({ access_token: acc.access_token, refresh_token: acc.refresh_token });
   if(error) throw error;
 
@@ -214,7 +393,7 @@ async function switchAccount(userId){
   if(profile?.clans?.access_enabled === false){
     if(prevUserId && prevUserId !== userId){
       const prevAcc = loadSavedAccounts().find(a => a.userId === prevUserId);
-      if(prevAcc) await client.auth.setSession({ access_token: prevAcc.access_token, refresh_token: prevAcc.refresh_token });
+      if(prevAcc && prevAcc.refresh_token) await client.auth.setSession({ access_token: prevAcc.access_token, refresh_token: prevAcc.refresh_token });
     }
     const err = new Error("clan_access_disabled");
     err.code = "clan_access_disabled";
@@ -603,10 +782,15 @@ window.L2Cabinet = {
   adminOcrEventStats,
   clearMustChangePassword,
   applyClanBranding,
+  setClanUiStyle,
+  currentUiStyle,
+  safeImageUrl,
   getSavedAccounts: loadSavedAccounts,
   addAccount,
   reauthAccount,
   switchAccount,
   forgetAccount,
-  rememberCurrentAccount: persistCurrentAccountSession,
+  keepAccountsEnabled,
+  setKeepAccounts,
+  rememberCurrentAccount: () => persistCurrentAccountSession(),
 };

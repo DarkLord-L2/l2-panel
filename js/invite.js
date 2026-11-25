@@ -21,7 +21,9 @@
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(JSON.stringify({ u: username, p: password })));
     // прежние неиспользованные ссылки этого человека больше не нужны — гасим
-    await db.from("invite_links").update({ used_at: new Date().toISOString() }).eq("user_id", userId).is("used_at", null);
+    // не погасили — не выдаём новую: иначе по старой ссылке тоже можно было бы войти
+    const revoke = await db.from("invite_links").update({ used_at: new Date().toISOString() }).eq("user_id", userId).is("used_at", null);
+    if(revoke.error) throw revoke.error;
     const { data, error } = await db.from("invite_links")
       .insert({ clan_id: clanId, user_id: userId, key: enc(raw), created_by: createdBy || null })
       .select("id").single();

@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
@@ -7,7 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap" />
-<link rel="stylesheet" href="js/theme.css?v=44" />
+<link rel="stylesheet" href="js/theme.css?v=50" />
+<link rel="stylesheet" href="js/theme-minimal.css?v=5" />
 <style>
   .admin-wrap{ display:flex; flex-direction:column; gap:14px; padding:0 0 32px; }
   .admin-head{ display:flex; align-items:center; justify-content:space-between; }
@@ -264,6 +265,41 @@
   .brand-style-card .sidebar-brand{ margin:0; border-bottom:1px solid var(--border); pointer-events:none; }
   .brand-style-card .bs-label{ padding:9px 12px; font-size:12.5px; color: var(--text-dim); }
   .brand-style-card.active .bs-label{ color: var(--text); }
+
+  /* выбор стиля интерфейса: мини-макет страницы (меню + карточка), нарисованный в духе каждого стиля — независимо от того,
+     какой стиль сейчас включён (поэтому цвета заданы здесь, а не переменными темы) */
+  .ui-style-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap:14px; }
+  .ui-style-card{ border:1px solid var(--border); border-radius:10px; background: var(--panel-2); cursor:pointer; overflow:hidden; display:flex; flex-direction:column; }
+  .ui-style-card:hover{ border-color: var(--border-lit); }
+  .ui-style-card.active{ border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+  .ui-style-card .us-label{ padding:9px 12px 2px; font-size:12.5px; color: var(--text); font-weight:600; }
+  .ui-style-card .us-desc{ padding:0 12px 10px; font-size:11.5px; color: var(--text-dim); line-height:1.45; }
+  .us-mock{ display:flex; height:112px; border-bottom:1px solid var(--border); pointer-events:none; }
+  .us-mock .m-nav{ width:30%; padding:10px 0; display:flex; flex-direction:column; gap:5px; }
+  .us-mock .m-nav i{ display:block; height:7px; margin:0 8px; border-radius:3px; background:#2a2c33; }
+  .us-mock .m-main{ flex:1; padding:10px; display:flex; flex-direction:column; gap:7px; }
+  .us-mock .m-h{ width:46%; height:9px; border-radius:3px; }
+  .us-mock .m-card{ flex:1; padding:8px; display:flex; flex-direction:column; gap:6px; }
+  .us-mock .m-row{ display:flex; gap:6px; }
+  .us-mock .m-tile{ flex:1; height:22px; }
+  .us-mock .m-btn{ width:40%; height:12px; margin-top:auto; }
+  /* «Обычный» — мягкие скругления, градиенты, свечение акцента, зелёная кнопка */
+  .us-mock.m-default{ background: radial-gradient(160px 60px at 60% -20px, color-mix(in srgb, var(--gold) 16%, transparent), transparent), #0d0e11; }
+  .us-mock.m-default .m-nav{ background: linear-gradient(180deg, #15161a, #101114); border-right:1px solid #26282e; }
+  .us-mock.m-default .m-nav i.on{ background: color-mix(in srgb, var(--gold) 30%, #2a2c33); box-shadow: 0 0 8px color-mix(in srgb, var(--gold) 45%, transparent); }
+  .us-mock.m-default .m-h{ background: var(--gold); }
+  .us-mock.m-default .m-card{ border-radius:8px; border:1px solid #26282e; background: linear-gradient(180deg, #1b1c21, #15161a); box-shadow: 0 4px 12px rgba(0,0,0,.35); }
+  .us-mock.m-default .m-tile{ border-radius:6px; background:#1f2026; border-left:2px solid var(--gold); }
+  .us-mock.m-default .m-btn{ border-radius:5px; background: linear-gradient(180deg, #52b073, #3f9560); box-shadow: 0 2px 8px rgba(70,160,102,.35); }
+  /* «Строгий» — плоско, тонкие линии, острые углы, кнопка-инверсия */
+  .us-mock.m-minimal{ background:#0a0a0b; }
+  .us-mock.m-minimal .m-nav{ border-right:1px solid #212123; }
+  .us-mock.m-minimal .m-nav i{ border-radius:0; margin:0; height:7px; background:none; border-bottom:1px solid #1a1a1c; }
+  .us-mock.m-minimal .m-nav i.on{ background:#141415; box-shadow: inset 2px 0 0 var(--gold); }
+  .us-mock.m-minimal .m-h{ background:#ececee; height:7px; width:38%; border-radius:0; }
+  .us-mock.m-minimal .m-card{ border-radius:3px; border:1px solid #212123; background:#0e0e0f; }
+  .us-mock.m-minimal .m-tile{ border-radius:2px; border:1px solid #2d2d30; }
+  .us-mock.m-minimal .m-btn{ border-radius:2px; background:#ececee; }
 </style>
 </head>
 <body>
@@ -655,6 +691,13 @@
 
     <div class="admin-tab-panel" data-panel="branding">
   <section class="card">
+    <h2 data-i18n="admin.uiStyleTitle">Стиль интерфейса</h2>
+    <p class="hint" data-i18n="admin.uiStyleHint">Общий вид всего сайта: кнопки, карточки, меню, таблицы. Применяется сразу всем в клане; цветовая схема и стиль шапки ниже работают в любом из них.</p>
+    <div class="ui-style-grid" id="uiStyleGrid"></div>
+    <p class="error-msg" id="uiStyleError"></p>
+  </section>
+
+  <section class="card">
     <h2 data-i18n="admin.colorSchemeTitle">Цветовая схема</h2>
     <p class="hint" data-i18n="admin.colorSchemeHint">Общий тёмный фон везде одинаковый, меняется только акцентный цвет (заголовки, ссылки, кнопки). Применяется сразу всем в клане.</p>
     <div class="preset-grid" id="presetGrid"></div>
@@ -810,14 +853,14 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
 <script src="js/page-keys.js?v=2"></script>
-<script src="js/supabase-client.js?v=29"></script>
-<script src="js/i18n.js?v=140"></script>
+<script src="js/supabase-client.js?v=34"></script>
+<script src="js/i18n.js?v=145"></script>
 <script src="js/nav-config.js?v=1"></script>
 <script src="js/nick-match.js?v=8"></script>
 <script src="js/nick-tools.js?v=7"></script>
-<script src="js/invite.js?v=1"></script>
+<script src="js/invite.js?v=2"></script>
 <script src="js/backup.js?v=7"></script>
 <script src="js/num-format.js?v=1"></script>
 <script src="js/classes.js?v=3"></script>
@@ -841,7 +884,7 @@
     currentTab = tab;
     document.querySelectorAll(".admin-nav-item").forEach(btn => btn.classList.toggle("active", btn.dataset.tab === tab));
     document.querySelectorAll(".admin-tab-panel").forEach(p => p.classList.toggle("active", p.dataset.panel === tab));
-    localStorage.setItem(ADMIN_TAB_KEY, tab);
+    l2LS.set(ADMIN_TAB_KEY, tab);
     if(adminReady) ensureTab(tab); // данные вкладки грузятся при первом открытии, а не все сразу
   }
   document.querySelectorAll(".admin-nav-item").forEach(btn => {
@@ -852,7 +895,7 @@
   // над последней открытой вкладкой из localStorage
   const knownTabs = new Set(Array.from(document.querySelectorAll(".admin-nav-item")).map(btn => btn.dataset.tab));
   const urlTab = new URLSearchParams(location.search).get("tab");
-  setAdminTab((urlTab && knownTabs.has(urlTab)) ? urlTab : (localStorage.getItem(ADMIN_TAB_KEY) || "users"));
+  setAdminTab((urlTab && knownTabs.has(urlTab)) ? urlTab : (l2LS.get(ADMIN_TAB_KEY) || "users"));
 
   const db = L2Cabinet.client;
   let roles = [], parties = [], sections = [];
@@ -2212,7 +2255,7 @@
 
   // ---------- «Пользователи»: группировка по пати или по роли, с переключателем ----------
   let lastUsersData = [];
-  let usersGroupBy = localStorage.getItem("l2AdminUsersGroupBy") || "party";
+  let usersGroupBy = l2LS.get("l2AdminUsersGroupBy") || "party";
 
   function updateUsersGroupTabs(){
     document.querySelectorAll("#usersGroupTabs .users-group-tab").forEach(btn => {
@@ -2272,7 +2315,7 @@
     btn.addEventListener("click", () => {
       if(btn.dataset.group === usersGroupBy) return;
       usersGroupBy = btn.dataset.group;
-      localStorage.setItem("l2AdminUsersGroupBy", usersGroupBy);
+      l2LS.set("l2AdminUsersGroupBy", usersGroupBy);
       updateUsersGroupTabs();
       renderUsersGrouped();
     });
@@ -2406,12 +2449,13 @@
       cb.addEventListener("change", async () => {
         const roleId = cb.dataset.role, sectionKey = cb.dataset.section;
         cb.disabled = true;
-        const { error } = await db.from("role_sections")
+        const res = await db.from("role_sections")
           .upsert(
             { clan_id: profile.clan_id, role_id: roleId, section_key: sectionKey, visible: cb.checked },
             { onConflict: "clan_id,role_id,section_key" }
           );
-        if(error) console.error(error);
+        // не сохранилось — галочку обратно, иначе админ уверен, что раздел роли открыт/закрыт, а в базе по-старому
+        if(!l2WriteOk(res, "role_sections")) cb.checked = !cb.checked;
         cb.disabled = false;
       });
     });
@@ -2509,7 +2553,56 @@
     { key: "classic", i18nKey: "admin.brandStyleClassic", label: "Классика (как сейчас)" },
     { key: "blades-h", i18nKey: "admin.brandStyleBladesH", label: "Два клинка над названием" },
     { key: "blades-i", i18nKey: "admin.brandStyleBladesI", label: "Клинки слева, ромбовая сетка" },
+    { key: "pillars-top", i18nKey: "admin.brandStylePillarsTop", label: "Две палки над названием" },
+    { key: "pillars-left", i18nKey: "admin.brandStylePillarsLeft", label: "Две палки слева" },
+    { key: "pillars-flank", i18nKey: "admin.brandStylePillarsFlank", label: "Название между палками" },
+    { key: "pillars-cross", i18nKey: "admin.brandStylePillarsCross", label: "Палки сквозь название" },
   ];
+  // ---- Стиль интерфейса (clans.ui_style, SQL: schema_ui_style.sql): «Обычный» / «Строгий» (js/theme-minimal.css) ----
+  const UI_STYLES = [
+    { key: "default", i18nKey: "admin.uiStyleDefault", label: "Обычный", descKey: "admin.uiStyleDefaultDesc", desc: "Мягкие скругления, градиенты и свечение цвета клана." },
+    { key: "minimal", i18nKey: "admin.uiStyleMinimal", label: "Строгий", descKey: "admin.uiStyleMinimalDesc", desc: "Минимализм: плоско, тонкие линии, острые углы, без свечений." },
+  ];
+  let uiStyleKey = "default";
+  function renderUiStyleGrid(){
+    const grid = document.getElementById("uiStyleGrid");
+    if(!grid) return;
+    grid.innerHTML = "";
+    UI_STYLES.forEach(s => {
+      const card = document.createElement("div");
+      card.className = "ui-style-card" + (uiStyleKey === s.key ? " active" : "");
+      card.setAttribute("role", "button"); card.tabIndex = 0;
+      card.innerHTML =
+        `<div class="us-mock m-${s.key}" aria-hidden="true"><div class="m-nav"><i></i><i class="on"></i><i></i><i></i><i></i></div>` +
+        `<div class="m-main"><div class="m-h"></div><div class="m-card"><div class="m-row"><div class="m-tile"></div><div class="m-tile"></div><div class="m-tile"></div></div><div class="m-btn"></div></div></div></div>` +
+        `<div class="us-label">${escapeHtml(L2I18n.t(s.i18nKey, s.label))}</div>` +
+        `<div class="us-desc">${escapeHtml(L2I18n.t(s.descKey, s.desc))}</div>`;
+      card.addEventListener("click", () => selectUiStyle(s.key));
+      card.addEventListener("keydown", (e) => { if(e.key === "Enter" || e.key === " "){ e.preventDefault(); selectUiStyle(s.key); } });
+      grid.appendChild(card);
+    });
+  }
+  async function selectUiStyle(key){
+    const errEl = document.getElementById("uiStyleError");
+    errEl.textContent = "";
+    if(key === uiStyleKey) return;
+    const prev = uiStyleKey;
+    uiStyleKey = key;
+    renderUiStyleGrid();
+    const { error } = await db.rpc("update_clan_ui_style", { p_style: key });
+    if(error){
+      uiStyleKey = prev;
+      renderUiStyleGrid();
+      errEl.textContent = L2I18n.t("admin.saveFailed", "Не удалось сохранить: ") + error.message + " " +
+        L2I18n.t("admin.uiStyleNeedSql", "(если ошибка про функцию — выполните в Supabase SQL Editor файл supabase/schema_ui_style.sql)");
+      return;
+    }
+    // сразу перекрашиваем: эту страницу, оболочку и другие открытые разделы (storage-событие); личный предпросмотр снимаем
+    L2Cabinet.setClanUiStyle(key, { clearPreview: true });
+  }
+
+  // палка «II»: тонкий ствол, расширяющийся к концам (та же фигура, что в index.html)
+  const PILLAR_D = "M-3.4 0H3.4C1.6 7 1.15 16 1.15 28V72C1.15 84 1.6 93 3.4 100H-3.4C-1.6 93-1.15 84-1.15 72V28C-1.15 16-1.6 7-3.4 0Z";
   let brandStyleKey = "classic";
 
   function brandPreviewHtml(key){
@@ -2528,8 +2621,11 @@
         <g transform="translate(37 0) scale(-1 1)"><use href="#${id}Bl" fill="url(#${id}Cu)"/></g>
         <path class="brand-chev" d="M17 22L23 30L29 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gold)"/>
       </svg>
+      <svg class="brand-pillars" viewBox="0 0 26 100" preserveAspectRatio="none" aria-hidden="true"><path transform="translate(8 0)" d="${PILLAR_D}"/><path transform="translate(18 0)" d="${PILLAR_D}"/></svg>
+      <svg class="brand-pillar brand-pillar-l" viewBox="0 0 8 100" preserveAspectRatio="none" aria-hidden="true"><path transform="translate(4 0)" d="${PILLAR_D}"/></svg>
+      <svg class="brand-pillar brand-pillar-r" viewBox="0 0 8 100" preserveAspectRatio="none" aria-hidden="true"><path transform="translate(4 0)" d="${PILLAR_D}"/></svg>
       <div class="brand-text">
-        <span class="brand-name" style="font-size:${key === "classic" ? 20 : key === "blades-h" ? 17 : 15}px">${escapeHtml(name)}</span>
+        <span class="brand-name"${key.startsWith("pillars-") ? "" : ` style="font-size:${key === "classic" ? 20 : key === "blades-h" ? 17 : 15}px"`}>${escapeHtml(name)}</span>
         <div class="brand-orn"><span class="brand-orn-in">${logo}${sub}</span></div>
       </div>
     </div>`;
@@ -2589,6 +2685,12 @@
       const r = await db.from("clans").select("brand_style").eq("id", profile.clan_id).maybeSingle();
       if(!r.error && r.data && BRAND_STYLES.some(s => s.key === r.data.brand_style)) brandStyleKey = r.data.brand_style;
     }catch(e){}
+    // стиль интерфейса — тоже отдельным запросом (колонка ui_style появится после schema_ui_style.sql)
+    try{
+      const r = await db.from("clans").select("ui_style").eq("id", profile.clan_id).maybeSingle();
+      if(!r.error && r.data && UI_STYLES.some(s => s.key === r.data.ui_style)) uiStyleKey = r.data.ui_style;
+    }catch(e){}
+    renderUiStyleGrid();
     updateLogoPreview();
   }
 

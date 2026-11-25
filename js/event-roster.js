@@ -338,10 +338,12 @@ function initEventRoster({ root, eventId, profile, isAdmin, db }){
           // явку убираем, а статистику не стираем — только помечаем removed=true,
           // чтобы килы/смерти не терялись из истории; в «Отчётах» такая строка
           // помечается и уходит в самый низ, а не пропадает молча
-          await db.from("event_stats").update({ removed: true, updated_at: new Date().toISOString() })
+          // сначала статистика: если её пометить не вышло, явку тоже не трогаем — иначе строка статистики останется «живой» без явки
+          const st = await db.from("event_stats").update({ removed: true, updated_at: new Date().toISOString() })
             .eq("event_id", eventId).eq("nickname", entry.nickname);
-          const { error } = await db.from("attendance_entries").delete().in("id", entry.ids || [entry.id]);
-          if(!error) await load();
+          if(!l2WriteOk(st, "event_stats remove")) return;
+          const res = await db.from("attendance_entries").delete().in("id", entry.ids || [entry.id]);
+          if(l2WriteOk(res, "attendance_entries delete")) await load();
         });
         chip.appendChild(x);
       }
