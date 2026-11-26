@@ -11,7 +11,7 @@ window.L2_NAV = {
   ],
   SECTIONS: [
     { id: "main", i18nKey: null, label: null, keys: ["my_cabinet"] },
-    { id: "clan", i18nKey: "navsec.clan", label: "Клан", keys: ["groups", "roster", "gear_check", "census", "taxes", "attendance"] },
+    { id: "clan", i18nKey: "navsec.clan", label: "Клан", keys: ["groups", "needs", "roster", "gear_check", "census", "taxes", "attendance"] },
     { id: "stats", i18nKey: "navsec.stats", label: "Статистика", keys: ["reports", "leaderboard", "trends"] },
     { id: "economy", i18nKey: "navsec.economy", label: "Экономика", keys: ["loot_split", "loot_split_party", "loot_payout"] },
     { id: "tools", i18nKey: "navsec.tools", label: "Инструменты", keys: ["skill_cd", "abilities", "skill_panel"], rest: true },

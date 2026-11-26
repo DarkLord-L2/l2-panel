@@ -7,6 +7,8 @@ with expected(file, tbl, col) as (
   values
     ('schema_nick_aliases.sql',            'nick_aliases',            null),
     ('schema_group_notes.sql',             'clan_group_notes',        null),
+    ('schema_party_needs.sql',             'party_needs',             null),
+    ('schema_party_needs.sql',             'party_needs_closed',      null),
     ('schema_group_sections.sql',          'clan_group_sections',     null),
     ('schema_group_sections.sql',          'clan_group_members',      'section_id'),
     ('schema_report_class_source.sql',     'report_class_overrides',  'source'),
