@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap" />
 <style>
-  /* ===== Потребности пати (макет на тестовых данных, без базы) ===== */
+  /* ===== Потребности пати: доска добора (party_needs) ===== */
   body{ overflow:hidden; }
   .nd{
     display:grid;
@@ -17,7 +17,9 @@
     grid-template-rows: auto minmax(0,1fr);
     gap:14px; height:100vh; padding:14px;
   }
-  .nd-top{ grid-column:1 / -1; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  /* справа сверху поверх раздела висит плашка профиля оболочки (.who-widget, ~240px) —
+     кнопки ставим сразу за счётчиками, а правый край шапки оставляем пустым */
+  .nd-top{ grid-column:1 / -1; display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding-right:260px; min-height:48px; }
   .nd-title{ display:flex; flex-direction:column; gap:2px; margin-right:6px; }
   .nd-title h1{ margin:0; font:700 20px/1.1 'Cinzel', Georgia, serif; letter-spacing:.05em; color:var(--text); }
   .nd-title small{ color:var(--text-dim); font-size:12px; }
@@ -25,7 +27,7 @@
   .nd-stat{ display:flex; align-items:center; gap:7px; padding:6px 11px; border:1px solid var(--border); border-radius:999px; background:var(--panel); font-size:12.5px; color:var(--text-dim); white-space:nowrap; }
   .nd-stat b{ color:var(--text); font-weight:600; }
   .nd-stat img{ width:18px; height:18px; border-radius:4px; }
-  .nd-actions{ margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .nd-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .seg{ display:inline-flex; border:1px solid var(--border); border-radius:9px; overflow:hidden; background:var(--panel); }
   .seg button{ border:0; background:transparent; color:var(--text-dim); padding:7px 12px; font:500 12.5px/1 "Inter","Segoe UI",system-ui,sans-serif; cursor:pointer; }
   .seg button + button{ border-left:1px solid var(--border); }
@@ -92,7 +94,7 @@
   .x-btn{ border:0; background:transparent; color:var(--text-dim); cursor:pointer; font-size:18px; line-height:1; padding:4px 6px; border-radius:6px; }
   .x-btn:hover{ color:var(--text); background:var(--panel-3); }
 
-  .tree{ position:relative; display:grid; grid-template-columns: 230px minmax(0,1fr); gap:0 92px; align-items:center; min-width:640px; }
+  .tree{ position:relative; display:grid; grid-template-columns: clamp(170px, 18vw, 230px) minmax(0,1fr); gap:0 clamp(36px, 5vw, 92px); align-items:center; min-width:560px; }
   .wires{ position:absolute; left:0; top:0; pointer-events:none; overflow:visible; }
   .wires path{ fill:none; stroke: color-mix(in srgb, var(--gold) 42%, transparent); stroke-width:2; stroke-linecap:round; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--gold) 25%, transparent)); }
   .wires path.dash{ stroke-dasharray:4 6; stroke: color-mix(in srgb, var(--gold) 22%, transparent); filter:none; }
@@ -118,7 +120,7 @@
   .pnode .cnt b{ color:var(--text); }
 
   .zones{ display:flex; flex-direction:column; gap:26px; padding:6px 0; }
-  .zone{ display:grid; grid-template-columns: 118px minmax(0,1fr); gap:0 64px; align-items:center; border-radius:14px; padding:6px; margin:-6px; transition: background .15s var(--ease), box-shadow .15s var(--ease); }
+  .zone{ display:grid; grid-template-columns: 108px minmax(0,1fr); gap:0 clamp(32px, 3.5vw, 64px); align-items:center; border-radius:14px; padding:6px; margin:-6px; transition: background .15s var(--ease), box-shadow .15s var(--ease); }
   .zone.over{ background: color-mix(in srgb, var(--gold) 6%, transparent); box-shadow: inset 0 0 0 1px var(--accent-line); }
   .zone-pill{
     position:relative; z-index:1; cursor:pointer; user-select:none;
@@ -134,7 +136,7 @@
   .slots{ display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
   .slot{
     position:relative; z-index:1; display:flex; align-items:center; gap:10px; cursor:grab;
-    padding:5px 12px 5px 5px; border-radius:12px; min-width:220px; max-width:100%;
+    padding:5px 12px 5px 5px; border-radius:12px; min-width:190px; max-width:100%;
     background:var(--panel-2); border:1px solid var(--border-lit); color:var(--text);
     box-shadow: 0 4px 14px rgba(0,0,0,.3);
     transition: border-color .15s var(--ease), transform .15s var(--ease), opacity .2s var(--ease);
@@ -153,7 +155,7 @@
   .slot-name{ font-weight:600; font-size:13.5px; white-space:nowrap; }
   .slot-sub{ font-size:11.5px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:260px; }
   .slot-ph{
-    position:relative; z-index:1; min-width:220px; padding:13px 14px; border-radius:12px;
+    position:relative; z-index:1; min-width:190px; padding:13px 14px; border-radius:12px;
     border:1.5px dashed var(--border-lit); color:var(--text-dim); font-size:12.5px; text-align:center;
     transition: border-color .15s var(--ease), color .15s var(--ease);
   }
@@ -295,6 +297,7 @@
   @media (max-width: 900px){
     body{ overflow:auto; }
     .nd{ grid-template-columns: minmax(0,1fr); grid-template-rows:auto; height:auto; padding:12px 12px 140px; }
+    .nd-top{ padding-right:0; padding-top:44px; }  /* на узком экране плашка профиля над заголовком */
     .nd-parties{ flex-direction:row; overflow-x:auto; padding-bottom:6px; }
     .nd-parties .nd-col-h{ display:none; }
     .party{ min-width:210px; }
