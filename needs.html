@@ -183,6 +183,11 @@
   .closed-row b{ color:var(--text); font-weight:500; }
   .closed-row .ok{ color:var(--ok); }
   .closed-row time{ margin-left:auto; font-size:11.5px; }
+  .trash-btn{ flex:none; width:28px; height:28px; display:grid; place-items:center; border-radius:7px; border:1px solid transparent; background:transparent; color:var(--text-dim); cursor:pointer; transition: color .15s, border-color .15s, background .15s; }
+  .trash-btn svg{ width:15px; height:15px; }
+  .trash-btn:hover{ color:var(--danger-lit); border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+  .undo-ask{ display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:12.5px; color:var(--text); animation: fadeIn .15s var(--ease); }
+  .undo-ask .tbtn{ padding:5px 10px; }
   .empty{ color:var(--text-dim); font-size:13px; padding:20px; text-align:center; border:1px dashed var(--border-lit); border-radius:12px; }
 
   /* ---------- правая колонка: профы ---------- */
@@ -394,6 +399,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
 <script src="js/supabase-client.js?v=34"></script>
 <script src="js/i18n.js?v=150"></script>
+<script src="js/nick-match.js?v=8"></script>
 <script src="js/classes.js?v=3"></script>
 <script>
 (async function(){
@@ -407,6 +413,8 @@
     return;
   }
   const db = L2Cabinet.client;
+  // справочник ников клана (перепись + привязки) — чтобы вписанный при закрытии ник лёг в группу как в переписи
+  if (window.L2Nick) L2Nick.init(db, profile.clan_id).catch(e => console.error(e));
   const isAdmin = ["glavadmin", "admin"].includes(profile.roles && profile.roles.key);
   const viewOnly = !!(L2Cabinet.ownerView && L2Cabinet.ownerView());
 
@@ -489,14 +497,16 @@
     const [g, n, c] = await Promise.all([
       db.from("clan_groups").select("id, name, sort_order, hidden, leader_nickname, deputy_nickname, class_name").order("sort_order").order("name"),
       db.from("party_needs").select("id, group_id, cls, alts, tier, qty, note, created_at").order("created_at"),
-      db.from("party_needs_closed").select("id, group_id, cls, title, nick, closed_at").order("closed_at", { ascending: false }).limit(20),
+      db.from("party_needs_closed").select("id, group_id, cls, title, nick, closed_at, added_to_group").order("closed_at", { ascending: false }).limit(20)
+        // schema_party_needs_close.sql ещё не выполнен — читаем без новой колонки
+        .then(r => r.error ? db.from("party_needs_closed").select("id, group_id, cls, title, nick, closed_at").order("closed_at", { ascending: false }).limit(20) : r),
     ]);
     if (g.error) throw g.error;
     if (n.error) throw n.error;
     S.parties = (g.data || []).filter(x => !x.hidden).map(x => ({ id: x.id, name: x.name, pl: x.leader_nickname || "—", leader: x.leader_nickname, deputy: x.deputy_nickname, icon: x.class_name }));
     const ids = new Set(S.parties.map(p => p.id));
     S.slots = (n.data || []).filter(r => ids.has(r.group_id)).map(rowToSlot);
-    S.closed = (c.error ? [] : (c.data || [])).map(r => ({ cls: r.cls, title: r.title, party: r.group_id, nick: r.nick, at: Date.parse(r.closed_at) }));
+    S.closed = (c.error ? [] : (c.data || [])).map(r => ({ id: r.id, cls: r.cls, title: r.title, party: r.group_id, nick: r.nick, added: !!r.added_to_group, at: Date.parse(r.closed_at) }));
     if (!ui.sel || !party(ui.sel)){
       const mine = S.parties.find(p => p.id === profile.party_id);
       ui.sel = (mine || S.parties[0] || {}).id || null;
@@ -587,19 +597,56 @@
     const el = document.querySelector('.slot[data-id="' + id + '"]');
     if (animate && el){ el.classList.add("gone"); setTimeout(doIt, 260); } else doIt();
   }
-  function closeSlot(id, nick){
+  // ник как в переписи: точное совпадение, регистр или привязка — берём написание из базы;
+  // похожие по OCR не подменяем (новичка ещё нет в переписи, его ник надо оставить как вписали)
+  function canonNick(nick){
+    nick = String(nick || "").trim().slice(0, 32);
+    if (!nick || !window.L2Nick || !L2Nick.ready()) return nick;
+    const r = L2Nick.resolve(nick);
+    return (r && r.canon && ["exact", "case", "alias"].includes(r.how)) ? r.canon : nick;
+  }
+  // закрыть слот: в базе одной операцией (close_party_need) — слот −1, запись в историю,
+  // ник в состав группы (если его там ещё нет)
+  async function closeSlot(id, rawNick){
     const s = S.slots.find(x => x.id === id); if (!s || denied(s.party)) return;
-    const title = slotTitle(s);
-    S.closed.unshift({ cls: s.cls, title, party: s.party, nick: nick || "", at: Date.now() });
-    S.closed = S.closed.slice(0, 20);
+    const title = slotTitle(s), nick = canonNick(rawNick), pname = (party(s.party) || {}).name;
+    const rec = { id: null, cls: s.cls, title, party: s.party, nick, added: false, at: Date.now() };
+    S.closed.unshift(rec); S.closed = S.closed.slice(0, 20);
     const last = s.count <= 1;
     if (last) S.slots = S.slots.filter(x => x !== s); else s.count--;
     render();
-    Promise.all([
-      db.from("party_needs_closed").insert({ clan_id: profile.clan_id, group_id: s.party, cls: s.cls, title, nick: (nick || "").slice(0, 32) }).then(r => { if (r.error) throw r.error; }),
-      last ? del(s.id) : upd(s.id, { qty: s.count }),
-    ]).catch(fail);
-    toast("✓ " + title + " → " + (party(s.party) || {}).name + (nick ? " (" + nick + ")" : ""), null);
+    const r = await db.rpc("close_party_need", { p_need: s.id, p_nick: nick, p_title: title });
+    if (r.error){
+      if (r.error.code === "owner_view_readonly") return fail(r.error);
+      // функции ещё нет (не выполнен schema_party_needs_close.sql) — закрываем по-старому, без добавления в группу
+      if (r.error.code === "PGRST202" || /close_party_need/.test(r.error.message || "")){
+        try {
+          const ins = await db.from("party_needs_closed").insert({ clan_id: profile.clan_id, group_id: s.party, cls: s.cls, title, nick }).select("id").single();
+          if (ins.error) throw ins.error;
+          rec.id = ins.data.id;
+          await (last ? del(s.id) : upd(s.id, { qty: s.count }));
+          toast("✓ " + title + " → " + pname + (nick ? " (" + nick + ")" : "") + ". В группу не добавлен: выполните schema_party_needs_close.sql");
+        } catch(e){ fail(e); }
+        return;
+      }
+      return fail(r.error);
+    }
+    rec.id = r.data && r.data.closed_id; rec.added = !!(r.data && r.data.added);
+    render();
+    toast("✓ " + title + " → " + pname + (nick ? (rec.added ? " · " + nick + " добавлен в группу" : " · " + nick + " уже был в группе") : ""));
+  }
+  // ведро в «Недавно закрыто»: вернуть слот и убрать ник из группы (если его добавило это закрытие)
+  async function undoClose(closedId){
+    const c = S.closed.find(x => x.id === closedId); if (!c || denied(c.party)) return;
+    const r = await db.rpc("undo_party_need_close", { p_closed: closedId });
+    if (r.error){
+      if (r.error.code === "PGRST202" || /undo_party_need_close/.test(r.error.message || ""))
+        return toast("Сначала выполните в Supabase файл supabase/schema_party_needs_close.sql");
+      return fail(r.error);
+    }
+    toast("↩ " + (c.title || c.cls) + " снова нужен в " + ((party(c.party) || {}).name || "пати") +
+      (r.data && r.data.removed_member ? " · " + c.nick + " убран из группы" : ""));
+    await reload();
   }
 
   // ---------- отрисовка ----------
@@ -713,7 +760,15 @@
     h += S.closed.length ? '<div class="closed-list">' + S.closed.slice(0, 10).map(c =>
       '<div class="closed-row"><img src="' + esc(icon(c.cls)) + '" alt=""><span class="ok">✓</span>' +
       '<span><b>' + esc(c.title || c.cls) + '</b> → ' + esc((party(c.party) || {}).name || "?") + (c.nick ? ' · взяли <b>' + esc(c.nick) + '</b>' : "") + '</span>' +
-      '<time>' + ago(c.at) + '</time></div>').join("") + '</div>' : '<div class="empty">Пока ничего</div>';
+      '<time>' + ago(c.at) + '</time>' +
+      (c.id && canEdit(c.party)
+        ? (ui.undoAsk === c.id
+            ? '<span class="undo-ask">Вернуть слот' + (c.added ? ' и убрать ' + esc(c.nick) + ' из группы' : "") + '?' +
+              '<button class="tbtn bad" data-undo-yes="' + esc(c.id) + '">Да</button><button class="tbtn" data-undo-no="1">Нет</button></span>'
+            : '<button class="trash-btn" data-undo="' + esc(c.id) + '" title="Закрыл по ошибке — вернуть слот' + (c.added ? " и убрать ник из группы" : "") + '">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>')
+        : "") +
+      '</div>').join("") + '</div>' : '<div class="empty">Пока ничего</div>';
     return h;
   }
 
@@ -838,6 +893,11 @@
     const go = t.closest("[data-go]");
     if (go){ ui.sel = go.dataset.go; ui.view = "tree"; render(); return; }
     if (t.closest("#clearFind")){ ui.search = null; render(); return; }
+    const und = t.closest("[data-undo]");
+    if (und){ ui.undoAsk = und.dataset.undo; render(); return; }
+    const undY = t.closest("[data-undo-yes]");
+    if (undY){ ui.undoAsk = null; undoClose(undY.dataset.undoYes); return; }
+    if (t.closest("[data-undo-no]")){ ui.undoAsk = null; render(); return; }
     const p = t.closest(".party");
     if (p){ ui.sel = p.dataset.pid; ui.view = "tree"; hideHpop(); render(); return; }
     const pill = t.closest("[data-act]");
@@ -954,7 +1014,7 @@
       '<input id="spNote" maxlength="60" placeholder="Заметка: прайм вечер, с ПА…" value="' + esc(s.note) + '">' +
       '<div class="spop-btns">' +
         '<button class="tbtn ok" data-sp="close">✓ Нашли — закрыть слот</button>' +
-        '<div class="close-box" id="closeBox"><input id="spNick" maxlength="16" placeholder="Ник, кого взяли (можно пусто)"><button class="tbtn ok" data-sp="closeok">OK</button></div>' +
+        '<div class="close-box" id="closeBox"><input id="spNick" maxlength="32" placeholder="Ник → в группу (необязательно)"><button class="tbtn ok" data-sp="closeok">OK</button></div>' +
         '<button class="tbtn" data-sp="move">→ Перенести в «' + TIER[other] + '»</button>' +
         '<button class="tbtn bad" data-sp="del">Убрать</button>' +
       '</div>';
