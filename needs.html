@@ -611,13 +611,9 @@
   function renderStats(){
     const open = sum(S.slots.filter(tierOk));
     const withNeeds = S.parties.filter(p => slotsOf(p.id).length).length;
-    const byCls = {};
-    S.slots.filter(tierOk).forEach(s => clsOf(s).forEach(c => { byCls[c] = (byCls[c] || 0) + s.count; }));
-    const top = Object.entries(byCls).sort((a, b) => b[1] - a[1])[0];
     $("stats").innerHTML =
       '<span class="nd-stat">Открыто: <b>' + open + '</b> ' + plural(open, "слот", "слота", "слотов") + '</span>' +
-      '<span class="nd-stat">Набирают: <b>' + withNeeds + '</b> из ' + S.parties.length + ' пати</span>' +
-      (top ? '<span class="nd-stat"><img src="' + esc(icon(top[0])) + '" alt="">Чаще всего: <b>' + esc(top[0]) + '</b> ×' + top[1] + '</span>' : "");
+      '<span class="nd-stat">Набирают: <b>' + withNeeds + '</b> из ' + S.parties.length + ' пати</span>';
   }
 
   function renderParties(){
