@@ -1,10 +1,9 @@
 -- L2 Clan Cabinet — «Казна КЛа»: закрытый учёт казны клан-лидера (приход, расход, резервы, лента операций).
 --
 -- Кто видит:
---   * клан-лидер — аккаунт с ролью glavadmin, чей логин записан в clans.leader_username
---     (если такого нет — самый первый созданный glavadmin клана; так же лидера ищет owner-enter-clan);
---   * те, кому лидер САМ выдал доступ на странице казны (treasury_access): «смотреть» или «смотреть и вносить».
---   Остальные — включая админов, замов и других главных админов — ни строки не прочитают: правила доступа в базе,
+--   * каждый аккаунт с ролью «Клан-лидер» (glavadmin) — смотрит, вносит и раздаёт доступ;
+--   * те, кому клан-лидер САМ выдал доступ на странице казны (treasury_access): «смотреть» или «смотреть и вносить».
+--   Остальные — включая админов и замов — ни строки не прочитают: правила доступа в базе,
 --   не только в меню. Раздела НЕТ в sections/role_sections: в Админ-панели он не настраивается и в меню остальных
 --   не появляется; пункт меню оболочка добавляет только тем, кому treasury_my_access() что-то вернула.
 --   Вход владельца платформы «Войти в клан» (одноразовая ссылка, amr = otp/magiclink) казну тоже не видит.
@@ -69,7 +68,8 @@ as $$
   end
 $$;
 
--- текущий пользователь — клан-лидер своего клана
+-- текущий пользователь — клан-лидер своего клана: любой аккаунт с ролью «Клан-лидер» (glavadmin)
+-- видит и правит казну и раздаёт доступ остальным
 create or replace function public.treasury_is_leader()
 returns boolean
 language sql
@@ -77,19 +77,14 @@ stable
 security definer
 set search_path = public
 as $$
-  select public.treasury_session_ok() and coalesce((
-    select l.id = auth.uid()
-    from (
-      select p.id
-      from public.profiles p
-      join public.roles r on r.id = p.role_id
-      join public.clans c on c.id = p.clan_id
-      where p.clan_id = public.current_clan_id()
-        and r.key = 'glavadmin'
-      order by (lower(p.username) = lower(coalesce(c.leader_username, ''))) desc, p.created_at, p.id
-      limit 1
-    ) l
-  ), false)
+  select public.treasury_session_ok() and exists (
+    select 1
+    from public.profiles p
+    join public.roles r on r.id = p.role_id
+    where p.id = auth.uid()
+      and p.clan_id = public.current_clan_id()
+      and r.key = 'glavadmin'
+  )
 $$;
 
 -- 'leader' | 'edit' | 'view' | null — что текущему пользователю можно в казне

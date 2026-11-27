@@ -197,6 +197,7 @@
   .acc .nm b{ display:block; font-weight:600; font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .acc .nm small{ color:var(--text-dim); font-size:11.5px; }
   .acc.has .nm b{ color:var(--gold); }
+  .acc .always{ font-size:12px; color:var(--text-dim); white-space:nowrap; }
   #accSearch{ padding:8px 11px; border-radius:9px; border:1px solid var(--border-lit); background:var(--panel); color:var(--text); font:13.5px "Inter","Segoe UI",system-ui,sans-serif; }
 
   .toast{ position:fixed; left:50%; bottom:22px; z-index:60; transform:translate(-50%, 20px); opacity:0; display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:12px; background:var(--panel-3); border:1px solid var(--border-lit); box-shadow:var(--shadow-2); font-size:13px; transition: opacity .2s, transform .2s var(--ease); pointer-events:none; max-width:calc(100vw - 32px); }
@@ -343,7 +344,7 @@
 <div class="md-back" id="accBack">
   <div class="md" role="dialog" aria-label="Доступ к казне">
     <div class="md-h"><h3>Доступ к казне</h3><button class="x-btn" data-close title="Закрыть">×</button></div>
-    <p class="hint">По умолчанию казну видишь только ты. Здесь можно открыть её конкретным людям: «Смотрит» — видит цифры и ленту, «Вносит» — ещё и добавляет/правит записи. Остальным раздел не виден вовсе.</p>
+    <p class="hint">Казну всегда видят и правят все с ролью «Клан-лидер». Остальным её можно открыть поимённо: «Смотрит» — видит цифры и ленту, «Вносит» — ещё и добавляет/правит записи. Кому не открыли — раздел не виден вовсе.</p>
     <input id="accSearch" placeholder="Найти по нику" />
     <div class="acc-list" id="accList"></div>
   </div>
@@ -938,7 +939,12 @@
   });
 
   // ---------- доступ (только лидер) ----------
-  let accPeople = [], accMap = new Map();
+  // accMap — выданный доступ (без клан-лидеров: у них он и так всегда), leaders — другие клан-лидеры клана
+  let accPeople = [], accMap = new Map(), leaders = new Set();
+  const isKL = x => !!(x.roles && x.roles.key === "glavadmin");
+  function setAccess(rows){
+    accMap = new Map((rows || []).filter(r => !leaders.has(r.user_id)).map(r => [r.user_id, r.can_edit ? "edit" : "view"]));
+  }
   async function openAccess(){
     $("accList").innerHTML = '<div class="empty">Загрузка…</div>';
     $("accBack").classList.add("show");
@@ -947,19 +953,23 @@
       db.from("treasury_access").select("user_id, can_edit"),
     ]);
     if (p.error || a.error){ $("accList").innerHTML = '<div class="empty">Не удалось загрузить: ' + esc((p.error || a.error).message) + '</div>'; return; }
-    accMap = new Map((a.data || []).map(r => [r.user_id, r.can_edit ? "edit" : "view"]));
+    leaders = new Set((p.data || []).filter(x => isKL(x) && x.id !== profile.id).map(x => x.id));
+    setAccess(a.data);
     accPeople = (p.data || []).filter(x => x.id !== profile.id)
-      .map(x => ({ id: x.id, name: x.nickname || x.username, login: x.username, role: (x.roles && x.roles.label) || "" }));
+      .map(x => ({ id: x.id, name: x.nickname || x.username, login: x.username, role: (x.roles && x.roles.label) || "", kl: isKL(x) }));
     renderAccess();
+    renderSub();
     $("accSearch").focus();
   }
   function renderAccess(){
     const q = $("accSearch").value.trim().toLowerCase();
     const list = accPeople.filter(x => !q || (x.name + " " + x.login).toLowerCase().includes(q))
-      .sort((a, b) => (accMap.has(b.id) - accMap.has(a.id)) || a.name.localeCompare(b.name, "ru"));
+      .sort((a, b) => (b.kl - a.kl) || (accMap.has(b.id) - accMap.has(a.id)) || a.name.localeCompare(b.name, "ru"));
     $("accList").innerHTML = list.length ? list.map(x => {
       const lv = accMap.get(x.id) || "none";
-      return '<div class="acc' + (lv !== "none" ? " has" : "") + '"><div class="nm"><b>' + esc(x.name) + '</b><small>' + esc(x.role) + (x.login !== x.name ? " · " + esc(x.login) : "") + '</small></div>' +
+      const nm = '<div class="nm"><b>' + esc(x.name) + '</b><small>' + esc(x.role) + (x.login !== x.name ? " · " + esc(x.login) : "") + '</small></div>';
+      if (x.kl) return '<div class="acc has">' + nm + '<span class="always">Клан-лидер — всегда</span></div>';
+      return '<div class="acc' + (lv !== "none" ? " has" : "") + '">' + nm +
         '<div class="seg" data-uid="' + x.id + '">' +
           '<button data-lv="none"' + (lv === "none" ? ' class="on"' : "") + '>Нет</button>' +
           '<button data-lv="view"' + (lv === "view" ? ' class="on"' : "") + '>Смотрит</button>' +
@@ -987,12 +997,19 @@
   // ---------- подпись под заголовком ----------
   async function loadAccessCount(){
     if (!isLeader) return;
-    const r = await db.from("treasury_access").select("user_id, can_edit");
-    if (!r.error) accMap = new Map((r.data || []).map(x => [x.user_id, x.can_edit ? "edit" : "view"]));
+    const [p, r] = await Promise.all([
+      db.from("profiles").select("id, roles(key)").eq("clan_id", profile.clan_id),
+      db.from("treasury_access").select("user_id, can_edit"),
+    ]);
+    if (!p.error) leaders = new Set((p.data || []).filter(x => isKL(x) && x.id !== profile.id).map(x => x.id));
+    if (!r.error) setAccess(r.data);
   }
   function renderSub(){
     let t;
-    if (isLeader) t = accMap.size ? "🔒 Видишь ты и ещё " + accMap.size + " " + plural(accMap.size, "человек", "человека", "человек") : "🔒 Видишь только ты";
+    if (isLeader){
+      const n = leaders.size + accMap.size;
+      t = n ? "🔒 Видишь ты и ещё " + n + " " + plural(n, "человек", "человека", "человек") + (leaders.size ? " (клан-лидеров: " + leaders.size + ")" : "") : "🔒 Видишь только ты";
+    }
     else t = access === "edit" ? "🔒 Доступ выдал клан-лидер — можно вносить записи" : "🔒 Доступ выдал клан-лидер — только просмотр";
     $("trSub").textContent = t;
   }
