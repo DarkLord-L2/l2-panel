@@ -25,6 +25,7 @@
     "section.my_cabinet": ["Мой кабинет", "Мій кабінет", "My Cabinet"],
     "section.groups": ["Группы", "Групи", "Groups"],
     "section.needs": ["Потребности", "Потреби", "Recruitment needs"],
+    "section.treasury": ["Казна", "Скарбниця", "Treasury"],
     "section.skill_panel": ["Панель скилов", "Панель скілів", "Skill Panel"],
     "section.admin": ["Админ-панель", "Адмін-панель", "Admin Panel"],
     "section.census": ["Перепись клана", "Перепис клану", "Clan Census"],

@@ -10,6 +10,8 @@ with expected(file, tbl, col) as (
     ('schema_party_needs.sql',             'party_needs',             null),
     ('schema_party_needs.sql',             'party_needs_closed',      null),
     ('schema_party_needs_close.sql',       'party_needs_closed',      'added_to_group'),
+    ('schema_treasury.sql',                'treasury_ops',            null),
+    ('schema_treasury.sql',                'treasury_access',         null),
     ('schema_group_sections.sql',          'clan_group_sections',     null),
     ('schema_group_sections.sql',          'clan_group_members',      'section_id'),
     ('schema_report_class_source.sql',     'report_class_overrides',  'source'),

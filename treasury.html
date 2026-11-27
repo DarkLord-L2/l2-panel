@@ -1,0 +1,1042 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Казна — Кабинет клана</title>
+<link rel="stylesheet" href="js/theme.css?v=54" />
+<link rel="stylesheet" href="js/theme-minimal.css?v=7" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap" />
+<style>
+  /* ===== Казна КЛа (treasury_ops) — закрытый учёт: приход, расход, резервы ===== */
+  :root{ --in:#5fcf8a; --out:#ef6f6c; --ice:#7cc4ff; }
+  [hidden]{ display:none !important; }
+  .tr{ max-width:1240px; margin:0 auto; padding:14px 16px 60px; display:flex; flex-direction:column; gap:14px; }
+  /* справа сверху поверх раздела висит плашка профиля оболочки (.who-widget) — правый край шапки пустой */
+  .tr-top{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding-right:260px; min-height:48px; }
+  .tr-title{ display:flex; flex-direction:column; gap:2px; margin-right:auto; }
+  .tr-title h1{ margin:0; font:700 22px/1.1 'Cinzel', Georgia, serif; letter-spacing:.05em; color:var(--text); }
+  .tr-title small{ color:var(--text-dim); font-size:12px; display:flex; align-items:center; gap:6px; }
+  .tr-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .tbtn{ display:inline-flex; align-items:center; gap:7px; border:1px solid var(--border); background:var(--panel); color:var(--text); padding:8px 13px; border-radius:9px; font:500 13px/1 "Inter","Segoe UI",system-ui,sans-serif; cursor:pointer; transition:border-color .15s var(--ease), background .15s var(--ease); white-space:nowrap; }
+  .tbtn:hover{ border-color:var(--border-lit); }
+  .tbtn:disabled{ opacity:.5; cursor:default; }
+  .tbtn svg{ width:15px; height:15px; }
+  .tbtn.pri{ border-color:var(--accent-line); background:var(--accent-soft); }
+  .tbtn.done{ border-color:color-mix(in srgb, var(--in) 60%, transparent); color:var(--in); }
+  .demo-tag{ font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; padding:3px 7px; border-radius:6px; border:1px dashed var(--border-lit); color:var(--text-dim); }
+  .seg{ display:inline-flex; border:1px solid var(--border); border-radius:9px; overflow:hidden; background:var(--panel); flex-wrap:wrap; }
+  .seg button{ border:0; background:transparent; color:var(--text-dim); padding:7px 12px; font:500 12.5px/1 "Inter","Segoe UI",system-ui,sans-serif; cursor:pointer; }
+  .seg button + button{ border-left:1px solid var(--border); }
+  .seg button.on{ background:var(--accent-soft); color:var(--text); }
+  .x-btn{ border:0; background:transparent; color:var(--text-dim); cursor:pointer; font-size:20px; line-height:1; padding:4px 7px; border-radius:6px; }
+  .x-btn:hover{ color:var(--text); background:var(--panel-3); }
+
+  /* ---------- три главных цифры ---------- */
+  .cards{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px; }
+  .bc{
+    position:relative; padding:16px 18px 14px; border-radius:14px; border:1px solid var(--border); overflow:hidden;
+    background: linear-gradient(180deg, rgba(255,255,255,.03), transparent 70px), var(--panel); box-shadow:var(--shadow-1);
+  }
+  .bc::before{ content:""; position:absolute; left:0; top:0; right:0; height:3px; background:var(--c, var(--gold)); opacity:.75; }
+  .bc .lbl{ display:flex; align-items:center; gap:7px; font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--text-dim); }
+  .bc .cvs{ display:flex; flex-direction:column; gap:4px; margin-top:9px; }
+  .cv{ display:flex; align-items:center; gap:9px; min-width:0; }
+  .cv b{ font:700 clamp(21px, 2.4vw, 28px)/1.1 "Inter","Segoe UI",system-ui,sans-serif; color:var(--text); font-variant-numeric:tabular-nums; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cv small{ font-size:12px; color:var(--text-dim); white-space:nowrap; }
+  .cv.g b{ font-size:clamp(17px, 1.8vw, 21px); }
+  .cv.zero{ opacity:.45; }
+  .cv.neg b{ color:var(--out); }
+  .bc .sub{ display:block; margin-top:6px; font-size:12.5px; color:var(--text-dim); }
+  .bc.total{ --c: var(--gold); }
+  .bc.res{ --c: var(--ice); }
+  .bc.free{ --c: var(--in); border-color:color-mix(in srgb, var(--in) 35%, var(--border)); background: linear-gradient(180deg, color-mix(in srgb, var(--in) 8%, transparent), transparent 90px), var(--panel); }
+  .bc.bump .cvs{ animation: bump .5s var(--ease); transform-origin:left center; }
+  /* монетки валют: A — адена (серебро), G — голда (золото) */
+  .coin{ display:inline-grid; place-items:center; flex:none; width:18px; height:18px; border-radius:50%; font:800 9.5px/1 "Inter","Segoe UI",system-ui,sans-serif; font-style:normal; color:#1b1b1b; vertical-align:-3px; box-shadow: inset 0 -1px 0 rgba(0,0,0,.25), 0 0 0 1px rgba(0,0,0,.35); }
+  .coin.a{ background: radial-gradient(circle at 35% 30%, #ffffff, #c9ced6 45%, #8b929c); }
+  .coin.g{ background: radial-gradient(circle at 35% 30%, #fff3b0, #f0c04a 45%, #b07d12); }
+  .cv .coin{ width:22px; height:22px; font-size:11px; }
+  .cv.g .coin{ width:18px; height:18px; font-size:9.5px; }
+  .coin.sm{ width:14px; height:14px; font-size:7.5px; vertical-align:-2px; }
+  @keyframes bump{ 0%{ transform:scale(1); } 35%{ transform:scale(1.045); } 100%{ transform:scale(1); } }
+  .week{ display:flex; gap:8px; flex-wrap:wrap; font-size:12.5px; color:var(--text-dim); }
+  .week span{ padding:5px 11px; border:1px solid var(--border); border-radius:999px; background:var(--panel); white-space:nowrap; }
+  .week b{ font-weight:600; font-variant-numeric:tabular-nums; }
+  .week .pin b{ color:var(--in); } .week .pout b{ color:var(--out); }
+
+  /* ---------- быстрые действия ---------- */
+  .acts{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px; }
+  .act{
+    display:flex; align-items:center; gap:12px; padding:13px 15px; border-radius:13px; cursor:pointer; text-align:left;
+    border:1px solid var(--border); background:var(--panel); color:var(--text); font:600 14.5px/1.15 "Inter","Segoe UI",system-ui,sans-serif;
+    transition:border-color .15s var(--ease), background .15s var(--ease), transform .15s var(--ease);
+  }
+  .act i{ font-style:normal; width:34px; height:34px; flex:none; display:grid; place-items:center; border-radius:10px; font-size:19px; font-weight:700; color:var(--c); background:color-mix(in srgb, var(--c) 14%, transparent); border:1px solid color-mix(in srgb, var(--c) 40%, transparent); }
+  .act small{ display:block; font-weight:400; font-size:11.5px; color:var(--text-dim); margin-top:3px; }
+  .act:hover{ border-color:color-mix(in srgb, var(--c) 55%, var(--border)); transform:translateY(-1px); }
+  .act.on{ border-color:var(--c); background: linear-gradient(90deg, color-mix(in srgb, var(--c) 12%, transparent), transparent 80%), var(--panel); }
+  .act:disabled{ opacity:.45; cursor:default; transform:none; }
+  .act.in{ --c: var(--in); } .act.out{ --c: var(--out); } .act.freeze{ --c: var(--ice); } .act.unfreeze{ --c: var(--gold); }
+
+  .op-form{
+    --c: var(--gold);
+    border:1px solid color-mix(in srgb, var(--c) 50%, var(--border)); border-radius:14px; padding:14px 16px 12px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--c) 7%, transparent), transparent 80px), var(--panel-2); box-shadow:var(--shadow-2);
+    display:flex; flex-direction:column; gap:10px; animation: drop .18s var(--ease);
+  }
+  @keyframes drop{ from{ opacity:0; transform:translateY(-6px); } to{ opacity:1; transform:none; } }
+  .op-form.k-in{ --c: var(--in); } .op-form.k-out{ --c: var(--out); } .op-form.k-freeze{ --c: var(--ice); } .op-form.k-unfreeze{ --c: var(--gold); }
+  .of-h{ display:flex; align-items:center; gap:10px; }
+  .of-h b{ font-size:15px; }
+  .of-h span{ color:var(--text-dim); font-size:12.5px; }
+  .of-h .x-btn{ margin-left:auto; }
+  .of-row{ display:grid; grid-template-columns: minmax(200px, 300px) minmax(0,1fr) auto; gap:10px; align-items:end; }
+  .of-row label{ display:flex; flex-direction:column; gap:5px; font-size:11.5px; color:var(--text-dim); letter-spacing:.04em; }
+  .of-row input{ width:100%; box-sizing:border-box; padding:10px 12px; border-radius:10px; border:1px solid var(--border-lit); background:var(--panel); color:var(--text); font:500 15px/1.2 "Inter","Segoe UI",system-ui,sans-serif; }
+  .of-row input:focus{ outline:none; border-color:var(--c); box-shadow:0 0 0 3px color-mix(in srgb, var(--c) 18%, transparent); }
+  #ofAmt{ font-variant-numeric:tabular-nums; font-weight:600; }
+  .of-hint{ min-height:16px; font-size:12px; color:var(--text-dim); font-variant-numeric:tabular-nums; }
+  .of-hint.bad{ color:var(--out); }
+  .of-save{ padding:11px 18px; border-radius:10px; border:1px solid var(--c); background:color-mix(in srgb, var(--c) 22%, var(--panel)); color:var(--text); font:600 14px/1 "Inter","Segoe UI",system-ui,sans-serif; cursor:pointer; margin-bottom:21px; white-space:nowrap; }
+  .of-save:hover{ background:color-mix(in srgb, var(--c) 32%, var(--panel)); }
+  .of-save:disabled{ opacity:.55; cursor:default; }
+  .of-warn{ font-size:12.5px; color:var(--out); }
+  .of-warn:empty{ display:none; }
+  .of-res{ display:flex; gap:8px; flex-wrap:wrap; }
+  .rchip{ display:flex; flex-direction:column; gap:2px; text-align:left; padding:8px 12px; border-radius:10px; border:1px solid var(--border-lit); background:var(--panel); color:var(--text); cursor:pointer; font:500 13px/1.2 "Inter","Segoe UI",system-ui,sans-serif; max-width:260px; }
+  .rchip small{ color:var(--text-dim); font-size:11.5px; font-variant-numeric:tabular-nums; }
+  .rchip.on{ border-color:var(--ice); background:color-mix(in srgb, var(--ice) 12%, var(--panel)); }
+  .rchip span{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .of-quick{ display:flex; gap:6px; flex-wrap:wrap; }
+  .of-quick button{ border:1px dashed var(--border-lit); background:transparent; color:var(--text-dim); border-radius:999px; padding:4px 10px; font:500 12px/1 "Inter","Segoe UI",system-ui,sans-serif; cursor:pointer; }
+  .of-quick button:hover{ color:var(--text); border-color:var(--c); }
+
+  /* ---------- лента и резервы ---------- */
+  .cols{ display:grid; grid-template-columns: minmax(0,1fr) 300px; gap:14px; align-items:start; }
+  .panel-b{ border:1px solid var(--border); border-radius:14px; background:var(--panel); box-shadow:var(--shadow-1); }
+  .ph{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:12px 14px; border-bottom:1px solid var(--border); }
+  .ph h2{ margin:0 auto 0 0; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-dim); font-weight:600; }
+  .ph input{ padding:7px 11px; border-radius:9px; border:1px solid var(--border); background:var(--panel-2); color:var(--text); font:13px "Inter","Segoe UI",system-ui,sans-serif; width:170px; }
+  .feed{ padding:4px 6px 8px; }
+  .day{ font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-dim); padding:12px 10px 4px; display:flex; justify-content:space-between; gap:10px; }
+  .day em{ font-style:normal; letter-spacing:0; text-transform:none; font-variant-numeric:tabular-nums; }
+  .op{
+    display:grid; grid-template-columns: 44px 128px minmax(0,1fr) auto 62px; gap:10px; align-items:center;
+    padding:9px 10px; border-radius:10px; border:1px solid transparent; font-size:13.5px;
+  }
+  .op:hover{ background:var(--panel-2); border-color:var(--border); }
+  .op.fresh{ animation: fresh 1.4s var(--ease); }
+  @keyframes fresh{ 0%{ background:color-mix(in srgb, var(--gold) 16%, transparent); } 100%{ background:transparent; } }
+  .op-time{ color:var(--text-dim); font-size:12px; font-variant-numeric:tabular-nums; }
+  .op-kind{ display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; padding:3px 9px; border-radius:999px; width:max-content; max-width:100%;
+    color:var(--c); background:color-mix(in srgb, var(--c) 12%, transparent); border:1px solid color-mix(in srgb, var(--c) 35%, transparent); white-space:nowrap; }
+  .op-note{ min-width:0; color:var(--text); overflow-wrap:anywhere; }
+  .op-note em{ font-style:normal; color:var(--text-dim); font-size:12px; }
+  .op-note .none{ color:var(--text-dim); }
+  .op-sub{ display:block; font-size:11.5px; color:var(--text-dim); margin-top:2px; font-variant-numeric:tabular-nums; }
+  .op-amt{ text-align:right; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; color:var(--c); }
+  .op-amt small{ display:block; font-weight:400; font-size:11px; color:var(--text-dim); }
+  .op-amt .coin{ margin-left:6px; }
+  .of-cur{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:12px; color:var(--text-dim); }
+  .of-cur .seg button{ display:inline-flex; align-items:center; gap:7px; padding:8px 14px; font-size:13.5px; }
+  .of-cur .seg button.on{ color:var(--text); background:color-mix(in srgb, var(--c) 16%, var(--panel)); }
+  .op-edit select{ padding:7px 8px; border-radius:8px; border:1px solid var(--border-lit); background:var(--panel); color:var(--text); font:13px "Inter","Segoe UI",system-ui,sans-serif; }
+  .op-tools{ display:flex; gap:2px; justify-content:flex-end; opacity:0; transition:opacity .15s; }
+  .op:hover .op-tools, .op:focus-within .op-tools{ opacity:1; }
+  .ibtn{ border:0; background:transparent; color:var(--text-dim); cursor:pointer; padding:5px; border-radius:7px; display:grid; place-items:center; }
+  .ibtn svg{ width:16px; height:16px; }
+  .ibtn:hover{ color:var(--text); background:var(--panel-3); }
+  .ibtn.del:hover{ color:var(--out); }
+  .op.k-in{ --c: var(--in); } .op.k-out, .op.k-spend{ --c: var(--out); } .op.k-freeze{ --c: var(--ice); } .op.k-unfreeze{ --c: var(--gold); }
+  .op.editing, .op.asking{ background:var(--panel-2); border-color:var(--border-lit); }
+  .op-edit{ grid-column: 3 / -1; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .op-edit input{ padding:7px 10px; border-radius:8px; border:1px solid var(--border-lit); background:var(--panel); color:var(--text); font:13.5px "Inter","Segoe UI",system-ui,sans-serif; }
+  .op-edit input.a{ width:150px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .op-edit input.n{ flex:1; min-width:140px; }
+  .op-edit .h{ font-size:11.5px; color:var(--text-dim); width:100%; }
+  .op-ask{ grid-column: 3 / -1; display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:13px; }
+  .sbtn{ border:1px solid var(--border-lit); background:var(--panel); color:var(--text); border-radius:8px; padding:6px 11px; font:500 12.5px/1 "Inter","Segoe UI",system-ui,sans-serif; cursor:pointer; }
+  .sbtn.ok{ border-color:var(--accent-line); background:var(--accent-soft); }
+  .sbtn.danger{ border-color:color-mix(in srgb, var(--out) 55%, transparent); color:var(--out); }
+  .more{ display:block; margin:8px auto 4px; }
+  .empty{ color:var(--text-dim); font-size:13px; padding:26px 20px; text-align:center; }
+
+  .res-list{ padding:8px; display:flex; flex-direction:column; gap:8px; }
+  .rc{ padding:11px 12px 10px; border-radius:11px; border:1px solid color-mix(in srgb, var(--ice) 28%, var(--border)); background: linear-gradient(180deg, color-mix(in srgb, var(--ice) 6%, transparent), transparent 60px), var(--panel-2); }
+  .rc-h{ display:flex; gap:8px; align-items:baseline; }
+  .rc-h b{ flex:1; min-width:0; font-size:13.5px; font-weight:600; overflow-wrap:anywhere; }
+  .rc-h span{ font-weight:700; font-variant-numeric:tabular-nums; color:var(--ice); white-space:nowrap; }
+  .rc-bar{ height:5px; border-radius:5px; background:var(--panel-3); margin:8px 0 6px; overflow:hidden; }
+  .rc-bar i{ display:block; height:100%; background:var(--ice); border-radius:5px; }
+  .rc-f{ display:flex; gap:6px; align-items:center; font-size:11.5px; color:var(--text-dim); font-variant-numeric:tabular-nums; }
+  .rc-f .sp{ flex:1; }
+  .rc-f button{ border:1px solid var(--border-lit); background:var(--panel); color:var(--text); border-radius:7px; padding:4px 8px; font:500 11.5px/1 "Inter","Segoe UI",system-ui,sans-serif; cursor:pointer; }
+  .rc-f button:hover{ border-color:var(--ice); }
+
+  /* ---------- окна: отчёт, доступ ---------- */
+  .md-back{ position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; padding:16px; background:rgba(0,0,0,.55); backdrop-filter:blur(2px); }
+  .md-back.show{ display:flex; }
+  .md{ width:min(620px, 100%); max-height:calc(100vh - 32px); overflow:auto; border-radius:16px; border:1px solid var(--border-lit); background:var(--panel-2); box-shadow:var(--shadow-2); padding:16px 18px; display:flex; flex-direction:column; gap:12px; }
+  .md-h{ display:flex; align-items:center; gap:10px; }
+  .md-h h3{ margin:0; font:700 16px/1.2 'Cinzel', Georgia, serif; letter-spacing:.04em; flex:1; }
+  .md p.hint{ margin:0; font-size:12.5px; color:var(--text-dim); }
+  .rep-opts{ display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center; font-size:13px; }
+  .rep-opts label{ display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
+  .rep-opts .t{ flex-basis:100%; }
+  .rep-opts .t input{ flex:1; padding:7px 10px; border-radius:8px; border:1px solid var(--border-lit); background:var(--panel); color:var(--text); font:13.5px "Inter","Segoe UI",system-ui,sans-serif; }
+  .rep-prev{ white-space:pre-wrap; font:14px/1.55 "Inter","Segoe UI",system-ui,sans-serif; padding:12px 14px; border-radius:12px; background:var(--panel); border:1px solid var(--border); min-height:80px; outline:none; font-variant-numeric:tabular-nums; }
+  .rep-prev:focus{ border-color:var(--accent-line); }
+  .md-f{ display:flex; gap:10px; align-items:center; }
+  .md-f .note{ flex:1; font-size:11.5px; color:var(--text-dim); }
+  .acc-list{ display:flex; flex-direction:column; gap:4px; max-height:50vh; overflow:auto; }
+  .acc{ display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:9px; }
+  .acc:hover{ background:var(--panel); }
+  .acc .nm{ flex:1; min-width:0; }
+  .acc .nm b{ display:block; font-weight:600; font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .acc .nm small{ color:var(--text-dim); font-size:11.5px; }
+  .acc.has .nm b{ color:var(--gold); }
+  #accSearch{ padding:8px 11px; border-radius:9px; border:1px solid var(--border-lit); background:var(--panel); color:var(--text); font:13.5px "Inter","Segoe UI",system-ui,sans-serif; }
+
+  .toast{ position:fixed; left:50%; bottom:22px; z-index:60; transform:translate(-50%, 20px); opacity:0; display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:12px; background:var(--panel-3); border:1px solid var(--border-lit); box-shadow:var(--shadow-2); font-size:13px; transition: opacity .2s, transform .2s var(--ease); pointer-events:none; max-width:calc(100vw - 32px); }
+  .toast.show{ opacity:1; transform:translate(-50%, 0); pointer-events:auto; }
+  .toast button{ border:0; background:transparent; color:var(--gold); font:600 13px "Inter","Segoe UI",system-ui,sans-serif; cursor:pointer; }
+
+  .locked{ min-height:80vh; display:grid; place-items:center; padding:20px; }
+  .lk{ text-align:center; max-width:420px; }
+  .lk-ic{ font-size:40px; opacity:.8; }
+  .lk h2{ font:700 19px/1.2 'Cinzel', Georgia, serif; letter-spacing:.04em; margin:12px 0 6px; }
+  .lk p{ color:var(--text-dim); font-size:13.5px; line-height:1.5; margin:0; }
+
+  @media (max-width: 980px){
+    .cols{ grid-template-columns: minmax(0,1fr); }
+    .reserves{ order:-1; }
+  }
+  @media (max-width: 760px){
+    .tr{ padding:12px 12px 60px; }
+    .tr-top{ padding-right:0; padding-top:44px; }  /* на узком экране плашка профиля над заголовком */
+    .cards{ grid-template-columns: minmax(0,1fr); gap:8px; }
+    .bc{ padding:12px 14px; }
+    .bc .cvs{ margin-top:6px; }
+    .cv b{ font-size:21px; }
+    .cv.g b{ font-size:17px; }
+    .acts{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .act{ padding:11px 12px; font-size:13.5px; }
+    .act small{ display:none; }
+    .of-row{ grid-template-columns: minmax(0,1fr); }
+    .of-save{ margin-bottom:0; }
+    .op{ grid-template-columns: 40px minmax(0,1fr) auto; gap:4px 8px; }
+    .op-kind{ grid-column:2; grid-row:1; }
+    .op-note{ grid-column:1 / -1; grid-row:2; font-size:13px; }
+    .op-amt{ grid-column:3; grid-row:1; }
+    .op-tools{ grid-column:1 / -1; grid-row:3; opacity:1; }
+    .op-tools:empty{ display:none; }
+    .op-edit, .op-ask{ grid-column:1 / -1; }
+    .ph input{ width:100%; }
+  }
+  @media (hover:none){ .op-tools{ opacity:1; } }
+</style>
+</head>
+<body>
+<div class="tr" id="app" hidden>
+  <header class="tr-top">
+    <div class="tr-title">
+      <h1>Казна</h1>
+      <small id="trSub"></small>
+    </div>
+    <div class="tr-actions">
+      <span class="demo-tag" id="roTag" hidden>только просмотр</span>
+      <button class="tbtn" id="reportBtn" title="Короткая сводка для клан-чата — только то, что отметишь">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1h3"/></svg>
+        Скопировать отчёт
+      </button>
+      <button class="tbtn" id="accessBtn" hidden title="Кому ещё открыта казна">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/></svg>
+        Доступ
+      </button>
+    </div>
+  </header>
+
+  <section class="cards">
+    <div class="bc total" id="cTotal">
+      <span class="lbl">Всего в казне</span>
+      <div class="cvs" id="vTotal"></div>
+    </div>
+    <div class="bc res" id="cRes">
+      <span class="lbl">❄ В резерве</span>
+      <div class="cvs" id="vRes"></div>
+      <span class="sub" id="sRes"></span>
+    </div>
+    <div class="bc free" id="cFree">
+      <span class="lbl">Свободно</span>
+      <div class="cvs" id="vFree"></div>
+      <span class="sub" id="sFree"></span>
+    </div>
+  </section>
+  <div class="week" id="week"></div>
+
+  <section class="acts" id="acts">
+    <button class="act in" data-k="in"><i>+</i><span>Приход<small>дроп, продажа, сбор</small></span></button>
+    <button class="act out" data-k="out"><i>−</i><span>Расход<small>раздача, выдал паку</small></span></button>
+    <button class="act freeze" data-k="freeze"><i>❄</i><span>Заморозить<small>отложить под цель</small></span></button>
+    <button class="act unfreeze" data-k="unfreeze"><i>↩</i><span>Из резерва<small>вернуть или потратить</small></span></button>
+  </section>
+  <form class="op-form" id="opForm" hidden autocomplete="off"></form>
+
+  <div class="cols">
+    <section class="panel-b">
+      <div class="ph">
+        <h2>Лента операций</h2>
+        <div class="seg" id="feedSeg">
+          <button data-f="all" class="on">Все</button>
+          <button data-f="in">Приход</button>
+          <button data-f="out">Расход</button>
+          <button data-f="res">Резерв</button>
+        </div>
+        <div class="seg" id="curSeg">
+          <button data-c="all" class="on">A + G</button>
+          <button data-c="adena" title="Только адена"><i class="coin a sm">A</i></button>
+          <button data-c="gold" title="Только голда"><i class="coin g sm">G</i></button>
+        </div>
+        <input id="feedSearch" placeholder="Поиск по заметке" />
+      </div>
+      <div class="feed" id="feed"></div>
+    </section>
+    <aside class="panel-b reserves">
+      <div class="ph"><h2>Резервы</h2></div>
+      <div class="res-list" id="resList"></div>
+    </aside>
+  </div>
+</div>
+<div class="locked" id="locked" hidden></div>
+
+<div class="md-back" id="repBack">
+  <div class="md" role="dialog" aria-label="Отчёт для клана">
+    <div class="md-h"><h3>Отчёт для клана</h3><button class="x-btn" data-close title="Закрыть">×</button></div>
+    <div class="rep-opts">
+      <label class="t">Заголовок <input id="repTitle" maxlength="60" value="Казна клана"></label>
+      <div class="seg" id="repPeriod">
+        <button data-p="week" class="on">Эта неделя</button>
+        <button data-p="d7">7 дней</button>
+        <button data-p="month">Этот месяц</button>
+        <button data-p="all">Всё время</button>
+      </div>
+      <div class="seg" id="repFmt"><button data-f="full" class="on">6 000 000 000</button><button data-f="short">6ккк</button></div>
+    </div>
+    <div class="rep-opts">
+      <label><input type="checkbox" id="repIn" checked> приход</label>
+      <label><input type="checkbox" id="repOut" checked> расход</label>
+      <label><input type="checkbox" id="repTotal" checked> в казне сейчас</label>
+      <label><input type="checkbox" id="repFree"> свободно</label>
+      <label><input type="checkbox" id="repRes"> в резерве</label>
+      <label title="Каждый приход и расход за период с заметкой"><input type="checkbox" id="repList"> по операциям</label>
+    </div>
+    <div class="rep-prev" id="repPrev" contenteditable="true" spellcheck="false"></div>
+    <div class="md-f">
+      <span class="note">В отчёт попадает только отмеченное. Текст можно поправить прямо тут.</span>
+      <button class="tbtn pri" id="repCopy">Скопировать</button>
+    </div>
+  </div>
+</div>
+
+<div class="md-back" id="accBack">
+  <div class="md" role="dialog" aria-label="Доступ к казне">
+    <div class="md-h"><h3>Доступ к казне</h3><button class="x-btn" data-close title="Закрыть">×</button></div>
+    <p class="hint">По умолчанию казну видишь только ты. Здесь можно открыть её конкретным людям: «Смотрит» — видит цифры и ленту, «Вносит» — ещё и добавляет/правит записи. Остальным раздел не виден вовсе.</p>
+    <input id="accSearch" placeholder="Найти по нику" />
+    <div class="acc-list" id="accList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastText"></span><button id="toastUndo">Отменить</button></div>
+
+<script src="js/page-keys.js?v=2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
+<script src="js/supabase-client.js?v=34"></script>
+<script src="js/i18n.js?v=151"></script>
+<script>
+(async function(){
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  function lock(title, html){
+    $("app").hidden = true;
+    const l = $("locked"); l.hidden = false;
+    l.innerHTML = '<div class="lk"><div class="lk-ic">🔒</div><h2>' + esc(title) + '</h2><p>' + html + '</p></div>';
+  }
+
+  const session = await L2Cabinet.requireSession();
+  if (!session) return;
+  const profile = await L2Cabinet.getProfile();
+  if (!profile){ lock("Профиль не найден", "Обратитесь к клан-лидеру."); return; }
+  const db = L2Cabinet.client;
+  // вход владельца платформы «Войти в клан» — казна лидера закрыта (база её тоже не отдаёт)
+  if (L2Cabinet.ownerView && L2Cabinet.ownerView()){ lock("Казна закрыта", "Это личный раздел клан-лидера — в режиме просмотра клана он не открывается."); return; }
+
+  // ---------- кто я для казны: leader | edit | view | null (решает база) ----------
+  let access = null;
+  {
+    const r = await db.rpc("treasury_my_access");
+    if (r.error){
+      const missing = r.error.code === "PGRST202" || /could not find|does not exist|schema cache/i.test(r.error.message || "");
+      lock(missing ? "Казна ещё не подключена" : "Не удалось открыть казну",
+        missing ? "Клан-лидеру: выполните в Supabase файл <b>supabase/schema_treasury.sql</b>." : esc(r.error.message));
+      return;
+    }
+    access = r.data;
+  }
+  if (!access){ lock("Раздел недоступен", "Казна — личный раздел клан-лидера."); return; }
+  const isLeader = access === "leader";
+  const canWrite = access === "leader" || access === "edit";
+  $("app").hidden = false;
+
+  // ---------- числа: 6 000 000 000 / 6ккк, ввод «6ккк», «200кк», «1,5 лярда» ----------
+  const group = (n, sep) => String(Math.abs(Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, sep);
+  const fmt = (n, sep) => (n < 0 ? "−" : "") + group(n, sep == null ? " " : sep);
+  function short(n){
+    const a = Math.abs(n), s = n < 0 ? "−" : "";
+    const f = v => String(Math.round(v * 100) / 100).replace(".", ",");
+    if (a >= 1e9) return s + f(a / 1e9) + "ккк";
+    if (a >= 1e6) return s + f(a / 1e6) + "кк";
+    if (a >= 1e3) return s + f(a / 1e3) + "к";
+    return s + a;
+  }
+  const MAX = 1e15;
+  function parseAmt(raw){
+    let s = String(raw || "").toLowerCase().replace(/[\s  _']/g, "").replace(/,/g, ".");
+    if (!s) return 0;
+    const m = s.match(/^(\d+(?:\.\d+)*)([a-zа-яё]*)\.?$/);
+    if (!m) return NaN;
+    let num = m[1];
+    const suf = m[2];
+    const dots = (num.match(/\./g) || []).length;
+    if (dots > 1 || (!suf && /^\d{1,3}(\.\d{3})+$/.test(num))) num = num.replace(/\./g, ""); // 6.000.000.000
+    const v = parseFloat(num);
+    let mult = 1;
+    if (!suf) mult = 1;
+    else if (/^[кk]+$/.test(suf)) mult = Math.pow(1000, suf.length);
+    else if (/^(лярд[а-я]*|млрд|b|bn|kkk)$/.test(suf)) mult = 1e9;
+    else if (/^(лям[а-я]*|млн|m|mln|kk)$/.test(suf)) mult = 1e6;
+    else if (/^(тыс|т)$/.test(suf)) mult = 1e3;
+    else return NaN;
+    const out = Math.round(v * mult);
+    return Number.isFinite(out) ? out : NaN;
+  }
+  const amtOk = v => Number.isFinite(v) && v > 0 && v <= MAX;
+
+  // ---------- валюты: адена и голда — всё считается по каждой отдельно ----------
+  const CUR = {
+    adena: { label: "Адена", gen: "адены", ic: "A", cls: "a" },
+    gold:  { label: "Голда", gen: "голды", ic: "G", cls: "g" },
+  };
+  const CURS = ["adena", "gold"];
+  const curOf = o => (o && CUR[o.currency]) ? o.currency : "adena";
+  const coin = (c, sm) => '<i class="coin ' + CUR[c].cls + (sm ? " sm" : "") + '" title="' + CUR[c].label + '">' + CUR[c].ic + '</i>';
+  const LAST_CUR_KEY = "l2TreasuryCur";
+  let memCur = null; // выбор в этой вкладке; в браузере ещё и запоминается между заходами
+  const lastCur = () => { const v = memCur || (window.l2LS ? l2LS.get(LAST_CUR_KEY) : null); return CUR[v] ? v : "adena"; };
+  const rememberCur = c => { memCur = c; if (window.l2LS) l2LS.set(LAST_CUR_KEY, c); };
+
+  // ---------- данные ----------
+  const KIND = {
+    in:       { label: "Приход",            sign: "+", ic: "+" },
+    out:      { label: "Расход",            sign: "−", ic: "−" },
+    freeze:   { label: "Заморозка",         sign: "❄ ", ic: "❄" },
+    unfreeze: { label: "Возврат из резерва", sign: "↩ ", ic: "↩" },
+    spend:    { label: "Расход из резерва", sign: "−", ic: "−" },
+  };
+  let OPS = [];
+  const ui = { filter: "all", cur: "all", q: "", limit: 80, edit: null, ask: null, fresh: null, form: null };
+  const byId = id => OPS.find(o => o.id === id);
+  const toN = v => Number(v) || 0;
+
+  const COLS = "id, kind, amount, currency, note, reserve_id, created_at, updated_at";
+  let cols = COLS;
+  async function loadAll(){
+    const page = 1000, rows = [];
+    for (let from = 0; ; from += page){
+      const r = await db.from("treasury_ops").select(cols)
+        .order("created_at", { ascending: false }).order("id").range(from, from + page - 1);
+      if (r.error){
+        // база ещё по первой версии schema_treasury.sql (без валюты) — читаем без неё, всё считается как адена
+        if (cols === COLS && /currency/i.test(r.error.message || "")){ cols = COLS.replace(" currency,", ""); return loadAll(); }
+        throw r.error;
+      }
+      rows.push(...(r.data || []));
+      if (!r.data || r.data.length < page) break;
+    }
+    OPS = rows.map(o => Object.assign(o, { amount: toN(o.amount), currency: curOf(o) }));
+  }
+  const hasCurCol = () => cols === COLS;
+  // итоги по каждой валюте: { adena: {total, reserve, free}, gold: {…}, used: Map(id резерва → сколько из него снято) }
+  function calc(){
+    const s = {};
+    CURS.forEach(c => { s[c] = { in: 0, out: 0, fr: 0, un: 0, sp: 0 }; });
+    const used = new Map();
+    for (const o of OPS){
+      const a = o.amount, t = s[curOf(o)];
+      if (o.kind === "in") t.in += a;
+      else if (o.kind === "out") t.out += a;
+      else if (o.kind === "freeze") t.fr += a;
+      else if (o.kind === "unfreeze") t.un += a;
+      else if (o.kind === "spend") t.sp += a;
+      if (o.reserve_id) used.set(o.reserve_id, (used.get(o.reserve_id) || 0) + a);
+    }
+    const res = { used };
+    CURS.forEach(c => {
+      const t = s[c], total = t.in - t.out - t.sp, reserve = t.fr - t.un - t.sp;
+      res[c] = { total, reserve, free: total - reserve };
+    });
+    return res;
+  }
+  // открытые резервы: заморозка минус то, что из неё уже вернули/потратили
+  function reserves(c){
+    c = c || calc();
+    return OPS.filter(o => o.kind === "freeze")
+      .map(o => ({ op: o, cur: curOf(o), left: o.amount - (c.used.get(o.id) || 0) }))
+      .sort((a, b) => Date.parse(a.op.created_at) - Date.parse(b.op.created_at));
+  }
+  const resName = o => (o && o.note) || "Резерв от " + dateShort(o && o.created_at);
+
+  // ---------- даты ----------
+  const pad = n => String(n).padStart(2, "0");
+  const dayKey = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  const dateShort = iso => { const d = new Date(iso); return pad(d.getDate()) + "." + pad(d.getMonth() + 1); };
+  const timeOf = iso => { const d = new Date(iso); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
+  function dayTitle(d){
+    const t = new Date(); t.setHours(0, 0, 0, 0);
+    const x = new Date(d); x.setHours(0, 0, 0, 0);
+    const diff = Math.round((t - x) / 864e5);
+    if (diff === 0) return "Сегодня";
+    if (diff === 1) return "Вчера";
+    return x.toLocaleDateString("ru-RU", { day: "numeric", month: "long", weekday: "short", year: x.getFullYear() === t.getFullYear() ? undefined : "numeric" });
+  }
+  function weekStart(){ const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; }
+
+  // ---------- отрисовка ----------
+  let prev = null;
+  // сумма с монеткой валюты: «+6 000 000 000 (A)» — для ленты, недели, резервов
+  const money = (v, c, sign) => (sign || "") + fmt(v) + " " + coin(c, true);
+  function renderCards(){
+    const c = calc();
+    const set = (id, key, card) => {
+      const sig = CURS.map(k => c[k][key]).join("|");
+      $(id).innerHTML = CURS.map(k => {
+        const v = c[k][key];
+        return '<div class="cv ' + CUR[k].cls + (v === 0 ? " zero" : "") + (v < 0 ? " neg" : "") + '">' + coin(k) +
+          '<b>' + fmt(v) + '</b><small>' + (v ? "≈ " + short(v) : CUR[k].label.toLowerCase()) + '</small></div>';
+      }).join("");
+      if (prev && prev[id] !== sig){ $(card).classList.remove("bump"); void $(card).offsetWidth; $(card).classList.add("bump"); }
+      return sig;
+    };
+    const next = { vTotal: set("vTotal", "total", "cTotal"), vRes: set("vRes", "reserve", "cRes"), vFree: set("vFree", "free", "cFree") };
+    prev = next;
+    const open = reserves(c).filter(r => r.left > 0).length;
+    $("sRes").textContent = open ? open + " " + plural(open, "открытый резерв", "открытых резерва", "открытых резервов") : "ничего не отложено";
+    $("sFree").textContent = CURS.some(k => c[k].free < 0) ? "резервов больше, чем денег" : "можно тратить";
+
+    const ws = weekStart().getTime();
+    const w = {};
+    CURS.forEach(k => { w[k] = { in: 0, out: 0 }; });
+    for (const o of OPS){
+      if (Date.parse(o.created_at) < ws) continue;
+      if (o.kind === "in") w[curOf(o)].in += o.amount;
+      else if (o.kind === "out" || o.kind === "spend") w[curOf(o)].out += o.amount;
+    }
+    const part = (key, sign) => {
+      const xs = CURS.filter(k => w[k][key]).map(k => '<b>' + sign + fmt(w[k][key]) + '</b> ' + coin(k, true));
+      return xs.length ? xs.join(" · ") : '<b>0</b>';
+    };
+    $("week").innerHTML = '<span>Эта неделя</span><span class="pin">приход ' + part("in", "+") + '</span><span class="pout">расход ' + part("out", "−") + '</span>';
+  }
+  function plural(n, one, few, many){
+    const a = Math.abs(n) % 100, b = a % 10;
+    if (a > 10 && a < 20) return many;
+    if (b > 1 && b < 5) return few;
+    if (b === 1) return one;
+    return many;
+  }
+
+  const ICON_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m13.5 6.5 4 4"/></svg>';
+  const ICON_DEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+
+  function matches(o){
+    const f = ui.filter;
+    if (f === "in" && o.kind !== "in") return false;
+    if (f === "out" && !(o.kind === "out" || o.kind === "spend")) return false;
+    if (f === "res" && !(o.kind === "freeze" || o.kind === "unfreeze" || o.kind === "spend")) return false;
+    if (ui.cur !== "all" && curOf(o) !== ui.cur) return false;
+    if (ui.q){
+      const r = o.reserve_id ? byId(o.reserve_id) : null;
+      const hay = (o.note + " " + (r ? r.note : "") + " " + KIND[o.kind].label + " " + CUR[curOf(o)].label).toLowerCase();
+      if (!hay.includes(ui.q)) return false;
+    }
+    return true;
+  }
+  const curEditable = o => hasCurCol() && (o.kind === "in" || o.kind === "out" || (o.kind === "freeze" && !OPS.some(x => x.reserve_id === o.id)));
+  function opRow(o, c){
+    const k = KIND[o.kind] || KIND.in;
+    const r = o.reserve_id ? byId(o.reserve_id) : null;
+    let note = o.note ? esc(o.note) : (r ? "" : '<span class="none">без заметки</span>');
+    if (r) note += (note ? " " : "") + '<em>из резерва «' + esc(resName(r)) + '»</em>';
+    let sub = "";
+    if (o.kind === "freeze"){
+      const used = c.used.get(o.id) || 0;
+      sub = '<span class="op-sub">' + (used >= o.amount ? "резерв закрыт" : used ? "осталось " + fmt(o.amount - used) + " из " + fmt(o.amount) : "не тронут") + "</span>";
+    }
+    const edited = o.updated_at && Date.parse(o.updated_at) - Date.parse(o.created_at) > 60000 ? ' · <span title="' + esc(new Date(o.updated_at).toLocaleString("ru-RU")) + '">испр.</span>' : "";
+    let tail;
+    if (ui.edit === o.id){
+      // валюту можно поправить у прихода/расхода и у резерва, из которого ещё ничего не снимали
+      const curSel = curEditable(o)
+        ? '<select data-e-cur title="Валюта">' + CURS.map(k => '<option value="' + k + '"' + (k === curOf(o) ? " selected" : "") + '>' + CUR[k].label + '</option>').join("") + '</select>'
+        : coin(curOf(o));
+      tail = '<div class="op-edit"><input class="a" data-e-amt value="' + esc(group(o.amount, " ")) + '" inputmode="decimal">' + curSel +
+        '<input class="n" data-e-note maxlength="200" value="' + esc(o.note) + '" placeholder="Заметка">' +
+        '<button class="sbtn ok" data-e-save="' + o.id + '">Сохранить</button><button class="sbtn" data-e-cancel>Отмена</button>' +
+        '<span class="h" data-e-hint></span></div>';
+    } else if (ui.ask === o.id){
+      const kids = OPS.filter(x => x.reserve_id === o.id).length;
+      tail = '<div class="op-ask">' + (kids ? "Удалить резерв и " + kids + " " + plural(kids, "связанную запись", "связанные записи", "связанных записей") + "?" : "Удалить эту запись?") +
+        ' <button class="sbtn danger" data-d-yes="' + o.id + '">Удалить</button><button class="sbtn" data-d-no>Нет</button></div>';
+    } else {
+      tail = '<span class="op-note">' + note + sub + '</span>' +
+        '<span class="op-amt">' + k.sign + fmt(o.amount) + coin(curOf(o), true) + '<small>' + short(o.amount) + " " + CUR[curOf(o)].gen + edited + '</small></span>' +
+        '<span class="op-tools">' + (canWrite ? '<button class="ibtn" data-edit="' + o.id + '" title="Исправить">' + ICON_EDIT + '</button><button class="ibtn del" data-del="' + o.id + '" title="Удалить">' + ICON_DEL + '</button>' : "") + '</span>';
+    }
+    return '<div class="op k-' + o.kind + (ui.edit === o.id ? " editing" : "") + (ui.ask === o.id ? " asking" : "") + (ui.fresh === o.id ? " fresh" : "") + '" data-id="' + o.id + '">' +
+      '<span class="op-time">' + timeOf(o.created_at) + '</span><span class="op-kind">' + k.ic + " " + k.label + '</span>' + tail + '</div>';
+  }
+  function renderFeed(){
+    const c = calc();
+    const list = OPS.filter(matches);
+    if (!OPS.length){
+      $("feed").innerHTML = '<div class="empty">Записей пока нет. ' + (canWrite ? "Нажми «Приход», чтобы внести первую сумму." : "") + '</div>';
+      return;
+    }
+    if (!list.length){ $("feed").innerHTML = '<div class="empty">Ничего не найдено</div>'; return; }
+    let html = "", last = "";
+    const shown = list.slice(0, ui.limit);
+    shown.forEach(o => {
+      const d = new Date(o.created_at), key = dayKey(d);
+      if (key !== last){
+        last = key;
+        const dd = {};
+        CURS.forEach(k => { dd[k] = { in: 0, out: 0 }; });
+        list.forEach(x => {
+          if (dayKey(new Date(x.created_at)) !== key) return;
+          if (x.kind === "in") dd[curOf(x)].in += x.amount;
+          else if (x.kind === "out" || x.kind === "spend") dd[curOf(x)].out += x.amount;
+        });
+        const parts = [];
+        CURS.forEach(k => {
+          if (dd[k].in) parts.push("+" + short(dd[k].in) + " " + coin(k, true));
+          if (dd[k].out) parts.push("−" + short(dd[k].out) + " " + coin(k, true));
+        });
+        html += '<div class="day"><span>' + esc(dayTitle(d)) + '</span><em>' + parts.join(" · ") + '</em></div>';
+      }
+      html += opRow(o, c);
+    });
+    if (list.length > shown.length) html += '<button class="tbtn more" id="moreBtn">Показать ещё (' + (list.length - shown.length) + ')</button>';
+    $("feed").innerHTML = html;
+    ui.fresh = null;
+    const ed = document.querySelector("[data-e-amt]");
+    if (ed && document.activeElement && !document.activeElement.closest(".op-edit")){ ed.focus(); ed.select(); }
+  }
+  function renderReserves(){
+    const list = reserves().filter(r => r.left > 0);
+    if (!list.length){
+      $("resList").innerHTML = '<div class="empty">Открытых резервов нет.<br>«Заморозить» — отложить деньги под осаду, эпик или доплату.</div>';
+      return;
+    }
+    $("resList").innerHTML = list.map(r => {
+      const pct = Math.max(0, Math.min(100, r.left / r.op.amount * 100));
+      return '<div class="rc"><div class="rc-h"><b>' + esc(resName(r.op)) + '</b><span>' + fmt(r.left) + " " + coin(r.cur, true) + '</span></div>' +
+        '<div class="rc-bar"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
+        '<div class="rc-f"><span>' + (r.left < r.op.amount ? "из " + short(r.op.amount) + " · " : "") + "с " + dateShort(r.op.created_at) + '</span><span class="sp"></span>' +
+        (canWrite ? '<button data-r-back="' + r.op.id + '" title="Вернуть в свободные">↩ Вернуть</button><button data-r-spend="' + r.op.id + '" title="Потратил по назначению">Потрачено</button>' : "") +
+        '</div></div>';
+    }).join("");
+  }
+  function render(){ renderCards(); renderFeed(); renderReserves(); renderActs(); }
+  function renderActs(){
+    document.querySelectorAll(".act").forEach(b => {
+      b.classList.toggle("on", !!ui.form && (ui.form.kind === b.dataset.k || (b.dataset.k === "unfreeze" && ui.form.kind === "unfreeze")));
+      if (b.dataset.k === "unfreeze") b.disabled = !canWrite || !reserves().some(r => r.left > 0);
+      else b.disabled = !canWrite;
+    });
+  }
+
+  // ---------- форма быстрого действия ----------
+  const PH = { in: "Дроп с Истхины за понедельник, всё скопом", out: "Раздача на КК / выдал паку за осаду", freeze: "Резерв под осаду / на гнома", unfreeze: "Необязательно" };
+  const TITLE = { in: ["Приход", "деньги пришли в казну"], out: ["Расход", "деньги ушли из свободных"], freeze: ["Заморозить", "из «Свободно» в «В резерве»"], unfreeze: ["Из резерва", "вернуть в свободные или списать как потраченное"] };
+  function openForm(kind, reserveId, mode){
+    if (!canWrite) return;
+    const open = reserves().filter(r => r.left > 0);
+    if (kind === "unfreeze" && !open.length){ toast("Открытых резервов нет"); return; }
+    ui.form = { kind, reserveId: reserveId || (open[0] && open[0].op.id) || null, mode: mode || "unfreeze", over: false, cur: lastCur() };
+    const f = $("opForm");
+    f.className = "op-form k-" + kind;
+    let resHtml = "";
+    if (kind === "unfreeze"){
+      resHtml = '<div class="of-res" id="ofRes">' + open.map(r => '<button type="button" class="rchip' + (r.op.id === ui.form.reserveId ? " on" : "") + '" data-rid="' + r.op.id + '"><span>' + esc(resName(r.op)) + '</span><small>' + fmt(r.left) + " " + coin(r.cur, true) + '</small></button>').join("") + '</div>' +
+        '<div class="seg" id="ofMode"><button type="button" data-m="unfreeze"' + (ui.form.mode === "unfreeze" ? ' class="on"' : "") + '>↩ Вернуть в свободные</button><button type="button" data-m="spend"' + (ui.form.mode === "spend" ? ' class="on"' : "") + '>Потратил по назначению</button></div>';
+    }
+    // валюта: у прихода/расхода/заморозки — выбор (запоминается); у «Из резерва» — валюта самого резерва
+    const curHtml = kind === "unfreeze" ? "" :
+      '<div class="of-cur"><div class="seg" id="ofCur">' + CURS.map(k => '<button type="button" data-cur="' + k + '"' + (k === ui.form.cur ? ' class="on"' : "") + '>' + coin(k) + CUR[k].label + '</button>').join("") + '</div>' +
+      (hasCurCol() ? "" : '<span>голда заработает после выполнения обновлённого supabase/schema_treasury.sql</span>') + '</div>';
+    f.innerHTML = '<div class="of-h"><b>' + TITLE[kind][0] + '</b><span>' + TITLE[kind][1] + '</span><button type="button" class="x-btn" id="ofClose" title="Закрыть (Esc)">×</button></div>' + curHtml + resHtml +
+      '<div class="of-row">' +
+        '<label>Сумма<input id="ofAmt" inputmode="decimal" placeholder="6 000 000 000 или 6ккк"><span class="of-hint" id="ofHint">можно «6ккк», «200кк», «1,5 лярда»</span></label>' +
+        '<label>Заметка для себя<input id="ofNote" maxlength="200" placeholder="' + esc(PH[kind]) + '"><span class="of-quick" id="ofQuick"></span></label>' +
+        '<button type="submit" class="of-save" id="ofSave">Сохранить</button>' +
+      '</div><div class="of-warn" id="ofWarn"></div>';
+    f.hidden = false;
+    if (kind === "unfreeze") fillLeft();
+    renderQuick();
+    renderActs();
+    $("ofAmt").focus();
+  }
+  function closeForm(){ ui.form = null; $("opForm").hidden = true; $("opForm").innerHTML = ""; renderActs(); }
+  function selRes(){ return ui.form && ui.form.reserveId ? reserves().find(r => r.op.id === ui.form.reserveId) : null; }
+  function fillLeft(){ const r = selRes(); if (r){ $("ofAmt").value = group(r.left, " "); updHint(); } }
+  // валюта, в которой сейчас сохраняется форма
+  function formCur(){
+    if (!ui.form) return "adena";
+    if (ui.form.kind === "unfreeze"){ const r = selRes(); return r ? r.cur : "adena"; }
+    return ui.form.cur;
+  }
+  function renderQuick(){
+    const q = $("ofQuick"); if (!q || !ui.form) return;
+    const c = calc(), k = ui.form.kind, cu = formCur(), free = c[cu].free;
+    let html = "";
+    if (k === "unfreeze"){ const r = selRes(); if (r) html = '<button type="button" data-q="' + r.left + '">весь остаток ' + short(r.left) + " " + CUR[r.cur].gen + '</button>'; }
+    else if ((k === "out" || k === "freeze") && free > 0) html = '<button type="button" data-q="' + free + '">всё свободное ' + short(free) + " " + CUR[cu].gen + '</button>';
+    q.innerHTML = html;
+  }
+  function updHint(){
+    const v = parseAmt($("ofAmt").value), h = $("ofHint");
+    ui.form.over = false; $("ofWarn").textContent = ""; $("ofSave").textContent = "Сохранить";
+    if (!$("ofAmt").value.trim()){ h.className = "of-hint"; h.textContent = "можно «6ккк», «200кк», «1,5 лярда»"; return; }
+    if (!amtOk(v)){ h.className = "of-hint bad"; h.textContent = "не понял сумму"; return; }
+    h.className = "of-hint"; h.textContent = "= " + fmt(v) + " " + CUR[formCur()].gen + " · " + short(v);
+  }
+  $("opForm").addEventListener("input", e => { if (e.target.id === "ofAmt") updHint(); });
+  $("opForm").addEventListener("click", e => {
+    const t = e.target.closest("button"); if (!t) return;
+    if (t.id === "ofClose"){ closeForm(); return; }
+    if (t.dataset.rid){ ui.form.reserveId = t.dataset.rid; document.querySelectorAll("#ofRes .rchip").forEach(b => b.classList.toggle("on", b === t)); fillLeft(); renderQuick(); return; }
+    if (t.dataset.cur){
+      if (!hasCurCol() && t.dataset.cur !== "adena"){ toast("Голда появится после выполнения обновлённого supabase/schema_treasury.sql"); return; }
+      ui.form.cur = t.dataset.cur;
+      rememberCur(ui.form.cur);
+      document.querySelectorAll("#ofCur button").forEach(b => b.classList.toggle("on", b === t));
+      updHint(); renderQuick(); $("ofAmt").focus();
+      return;
+    }
+    if (t.dataset.m){ ui.form.mode = t.dataset.m; document.querySelectorAll("#ofMode button").forEach(b => b.classList.toggle("on", b === t)); return; }
+    if (t.dataset.q){ $("ofAmt").value = group(+t.dataset.q, " "); updHint(); $("ofNote").focus(); }
+  });
+  $("opForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!ui.form) return;
+    const v = parseAmt($("ofAmt").value), note = $("ofNote").value.trim().slice(0, 200);
+    if (!amtOk(v)){ $("ofWarn").textContent = "Введите сумму — например 6 000 000 000 или 6ккк"; $("ofAmt").focus(); return; }
+    const c = calc();
+    const cu = formCur(), free = c[cu].free, gen = CUR[cu].gen;
+    let kind = ui.form.kind, reserve_id = null;
+    if (kind === "unfreeze"){
+      const r = selRes();
+      if (!r){ $("ofWarn").textContent = "Выберите резерв"; return; }
+      if (v > r.left){ $("ofWarn").textContent = "В этом резерве только " + fmt(r.left) + " " + gen; return; }
+      kind = ui.form.mode === "spend" ? "spend" : "unfreeze";
+      reserve_id = r.op.id;
+    } else if ((kind === "out" || kind === "freeze") && v > free && !ui.form.over){
+      ui.form.over = true;
+      $("ofWarn").textContent = "Свободной " + gen + " только " + fmt(free) + " — после этого станет " + fmt(free - v) + ". Нажмите ещё раз, если всё верно.";
+      $("ofSave").textContent = "Всё равно сохранить";
+      return;
+    }
+    $("ofSave").disabled = true;
+    const row = { clan_id: profile.clan_id, kind, amount: v, note, reserve_id };
+    if (hasCurCol()) row.currency = cu;
+    const r = await db.from("treasury_ops").insert(row).select(cols).single();
+    if ($("ofSave")) $("ofSave").disabled = false;
+    if (r.error){ fail(r.error); return; }
+    const o = Object.assign(r.data, { amount: toN(r.data.amount), currency: curOf(r.data) });
+    OPS.unshift(o);
+    ui.fresh = o.id;
+    closeForm();
+    render();
+    toast(KIND[kind].label + " " + KIND[kind].sign + fmt(v) + " " + gen + " — сохранено", async () => {
+      const d = await db.from("treasury_ops").delete().eq("id", o.id).select("id");
+      if (d.error){ fail(d.error); return; }
+      OPS = OPS.filter(x => x.id !== o.id && x.reserve_id !== o.id);
+      render();
+    });
+  });
+  document.querySelectorAll(".act").forEach(b => b.addEventListener("click", () => {
+    if (ui.form && ui.form.kind === b.dataset.k){ closeForm(); return; }
+    openForm(b.dataset.k);
+  }));
+
+  // ---------- лента: фильтр, поиск, исправить, удалить ----------
+  $("feedSeg").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    ui.filter = b.dataset.f; ui.limit = 80;
+    document.querySelectorAll("#feedSeg button").forEach(x => x.classList.toggle("on", x === b));
+    renderFeed();
+  });
+  $("feedSearch").addEventListener("input", e => { ui.q = e.target.value.trim().toLowerCase(); ui.limit = 80; renderFeed(); });
+
+  async function saveEdit(id){
+    const o = byId(id); if (!o) return;
+    const row = document.querySelector('.op[data-id="' + id + '"]');
+    const hint = row.querySelector("[data-e-hint]");
+    const v = parseAmt(row.querySelector("[data-e-amt]").value);
+    const note = row.querySelector("[data-e-note]").value.trim().slice(0, 200);
+    if (!amtOk(v)){ hint.textContent = "Не понял сумму"; return; }
+    const c = calc();
+    if (o.kind === "freeze"){
+      const used = c.used.get(o.id) || 0;
+      if (v < used){ hint.textContent = "Из этого резерва уже снято " + fmt(used) + " — меньше нельзя"; return; }
+    }
+    if (o.reserve_id){
+      const f = byId(o.reserve_id);
+      const maxV = f ? f.amount - ((c.used.get(f.id) || 0) - o.amount) : v;
+      if (v > maxV){ hint.textContent = "В резерве осталось только " + fmt(maxV); return; }
+    }
+    const curEl = row.querySelector("[data-e-cur]");
+    const cu = curEl && CUR[curEl.value] ? curEl.value : curOf(o);
+    if (v === o.amount && note === o.note && cu === curOf(o)){ ui.edit = null; renderFeed(); return; }
+    const patch = { amount: v, note, updated_at: new Date().toISOString() };
+    if (curEl && hasCurCol()) patch.currency = cu;
+    const r = await db.from("treasury_ops").update(patch).eq("id", id).select(cols).single();
+    if (r.error){ fail(r.error); return; }
+    Object.assign(o, r.data, { amount: toN(r.data.amount), currency: curOf(r.data) });
+    ui.edit = null; ui.fresh = o.id;
+    render();
+    toast("Исправлено");
+  }
+  async function delOp(id){
+    const o = byId(id); if (!o) return;
+    const r = await db.from("treasury_ops").delete().eq("id", id).select("id");
+    if (r.error){ fail(r.error); return; }
+    if (!r.data || !r.data.length){ fail(new Error("запись не удалилась (нет прав?)")); return; }
+    OPS = OPS.filter(x => x.id !== id && x.reserve_id !== id);
+    ui.ask = null;
+    render();
+    toast("Запись удалена");
+  }
+  document.addEventListener("click", e => {
+    const t = e.target.closest("button"); if (!t) return;
+    if (t.id === "moreBtn"){ ui.limit += 150; renderFeed(); return; }
+    if (t.dataset.edit){ ui.edit = t.dataset.edit; ui.ask = null; renderFeed(); return; }
+    if (t.dataset.eSave){ saveEdit(t.dataset.eSave); return; }
+    if (t.hasAttribute("data-e-cancel")){ ui.edit = null; renderFeed(); return; }
+    if (t.dataset.del){ ui.ask = t.dataset.del; ui.edit = null; renderFeed(); return; }
+    if (t.dataset.dYes){ delOp(t.dataset.dYes); return; }
+    if (t.hasAttribute("data-d-no")){ ui.ask = null; renderFeed(); return; }
+    if (t.dataset.rBack){ openForm("unfreeze", t.dataset.rBack, "unfreeze"); $("opForm").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+    if (t.dataset.rSpend){ openForm("unfreeze", t.dataset.rSpend, "spend"); $("opForm").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+    if (t.hasAttribute("data-close")){ t.closest(".md-back").classList.remove("show"); return; }
+  });
+  $("feed").addEventListener("keydown", e => {
+    if (!e.target.closest(".op-edit")) return;
+    if (e.key === "Enter"){ e.preventDefault(); saveEdit(e.target.closest(".op").dataset.id); }
+    if (e.key === "Escape"){ ui.edit = null; renderFeed(); }
+  });
+  function editHint(box){
+    const v = parseAmt(box.querySelector("[data-e-amt]").value), h = box.querySelector("[data-e-hint]");
+    const sel = box.querySelector("[data-e-cur]");
+    const cu = sel && CUR[sel.value] ? sel.value : curOf(byId(box.closest(".op").dataset.id));
+    h.textContent = amtOk(v) ? "= " + fmt(v) + " " + CUR[cu].gen + " · " + short(v) : "не понял сумму";
+  }
+  $("feed").addEventListener("input", e => { if (e.target.matches("[data-e-amt]")) editHint(e.target.closest(".op-edit")); });
+  $("feed").addEventListener("change", e => { if (e.target.matches("[data-e-cur]")) editHint(e.target.closest(".op-edit")); });
+  $("curSeg").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    ui.cur = b.dataset.c; ui.limit = 80;
+    document.querySelectorAll("#curSeg button").forEach(x => x.classList.toggle("on", x === b));
+    renderFeed();
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape") return;
+    const md = document.querySelector(".md-back.show");
+    if (md){ md.classList.remove("show"); return; }
+    if (ui.form && !e.target.closest(".op-edit")) closeForm();
+  });
+  document.querySelectorAll(".md-back").forEach(b => b.addEventListener("mousedown", e => { if (e.target === b) b.classList.remove("show"); }));
+
+  // ---------- отчёт для клана ----------
+  const rep = { period: "week", fmt: "full" };
+  function periodStart(p){
+    const d = new Date(); d.setHours(0, 0, 0, 0);
+    if (p === "week") return weekStart();
+    if (p === "d7"){ d.setDate(d.getDate() - 6); return d; }
+    if (p === "month"){ d.setDate(1); return d; }
+    return null;
+  }
+  function reportText(){
+    const nf = (n, cu) => (n < 0 ? "−" : "") + (rep.fmt === "short" ? short(Math.abs(n)) : fmt(Math.abs(n), " ")) + " " + CUR[cu].gen;
+    const from = periodStart(rep.period), now = new Date();
+    const inP = o => !from || Date.parse(o.created_at) >= from.getTime();
+    const p = {};
+    CURS.forEach(k => { p[k] = { in: 0, out: 0 }; });
+    const items = [];
+    OPS.forEach(o => {
+      if (!inP(o)) return;
+      if (o.kind === "in"){ p[curOf(o)].in += o.amount; items.push(o); }
+      else if (o.kind === "out" || o.kind === "spend"){ p[curOf(o)].out += o.amount; items.push(o); }
+    });
+    const c = calc();
+    // в отчёте только те валюты, которые в казне вообще встречаются (нет голды — нет и строчек про неё)
+    let used = CURS.filter(k => OPS.some(o => curOf(o) === k));
+    if (!used.length) used = ["adena"];
+    const join = (fn, sign) => used.map(k => (sign || "") + fn(k)).join(" · ");
+    const plabel = rep.period === "all" ? "" : rep.period === "month"
+      ? " · " + now.toLocaleDateString("ru-RU", { month: "long" })
+      : " · " + dateShort(from) + "–" + dateShort(now);
+    const lines = ["💰 " + ($("repTitle").value.trim() || "Казна клана") + plabel];
+    if ($("repIn").checked) lines.push("Приход: " + join(k => nf(p[k].in, k), "+"));
+    if ($("repOut").checked) lines.push("Расход: " + join(k => nf(p[k].out, k), "−"));
+    if ($("repList").checked && items.length){
+      lines.push("");
+      items.slice().reverse().forEach(o => {
+        const r = o.reserve_id ? byId(o.reserve_id) : null;
+        const n = o.note || (r ? resName(r) : "");
+        lines.push("• " + dateShort(o.created_at) + (n ? " " + n : "") + " — " + (o.kind === "in" ? "+" : "−") + nf(o.amount, curOf(o)));
+      });
+      lines.push("");
+    }
+    if ($("repTotal").checked) lines.push("В казне: " + join(k => nf(c[k].total, k)));
+    if ($("repFree").checked) lines.push("Свободно: " + join(k => nf(c[k].free, k)));
+    if ($("repRes").checked) lines.push("В резерве: " + join(k => nf(c[k].reserve, k)));
+    while (lines.length && lines[lines.length - 1] === "") lines.pop();
+    return lines.join("\n");
+  }
+  const repUpd = () => { $("repPrev").textContent = reportText(); };
+  $("reportBtn").addEventListener("click", () => { repUpd(); $("repCopy").textContent = "Скопировать"; $("repCopy").classList.remove("done"); $("repBack").classList.add("show"); });
+  $("repPeriod").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; rep.period = b.dataset.p; document.querySelectorAll("#repPeriod button").forEach(x => x.classList.toggle("on", x === b)); repUpd(); });
+  $("repFmt").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; rep.fmt = b.dataset.f; document.querySelectorAll("#repFmt button").forEach(x => x.classList.toggle("on", x === b)); repUpd(); });
+  ["repIn", "repOut", "repTotal", "repFree", "repRes", "repList"].forEach(id => $(id).addEventListener("change", repUpd));
+  $("repTitle").addEventListener("input", repUpd);
+  $("repCopy").addEventListener("click", async () => {
+    const text = $("repPrev").innerText.replace(/\n{3,}/g, "\n\n").trim();
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch(e){
+      const ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { ok = document.execCommand("copy"); } catch(_){ ok = false; }
+      ta.remove();
+    }
+    $("repCopy").textContent = ok ? "✓ Скопировано" : "Не удалось — выделите текст и Ctrl+C";
+    $("repCopy").classList.toggle("done", ok);
+    if (ok) setTimeout(() => $("repBack").classList.remove("show"), 900);
+  });
+
+  // ---------- доступ (только лидер) ----------
+  let accPeople = [], accMap = new Map();
+  async function openAccess(){
+    $("accList").innerHTML = '<div class="empty">Загрузка…</div>';
+    $("accBack").classList.add("show");
+    const [p, a] = await Promise.all([
+      db.from("profiles").select("id, username, nickname, roles(key, label)").eq("clan_id", profile.clan_id),
+      db.from("treasury_access").select("user_id, can_edit"),
+    ]);
+    if (p.error || a.error){ $("accList").innerHTML = '<div class="empty">Не удалось загрузить: ' + esc((p.error || a.error).message) + '</div>'; return; }
+    accMap = new Map((a.data || []).map(r => [r.user_id, r.can_edit ? "edit" : "view"]));
+    accPeople = (p.data || []).filter(x => x.id !== profile.id)
+      .map(x => ({ id: x.id, name: x.nickname || x.username, login: x.username, role: (x.roles && x.roles.label) || "" }));
+    renderAccess();
+    $("accSearch").focus();
+  }
+  function renderAccess(){
+    const q = $("accSearch").value.trim().toLowerCase();
+    const list = accPeople.filter(x => !q || (x.name + " " + x.login).toLowerCase().includes(q))
+      .sort((a, b) => (accMap.has(b.id) - accMap.has(a.id)) || a.name.localeCompare(b.name, "ru"));
+    $("accList").innerHTML = list.length ? list.map(x => {
+      const lv = accMap.get(x.id) || "none";
+      return '<div class="acc' + (lv !== "none" ? " has" : "") + '"><div class="nm"><b>' + esc(x.name) + '</b><small>' + esc(x.role) + (x.login !== x.name ? " · " + esc(x.login) : "") + '</small></div>' +
+        '<div class="seg" data-uid="' + x.id + '">' +
+          '<button data-lv="none"' + (lv === "none" ? ' class="on"' : "") + '>Нет</button>' +
+          '<button data-lv="view"' + (lv === "view" ? ' class="on"' : "") + '>Смотрит</button>' +
+          '<button data-lv="edit"' + (lv === "edit" ? ' class="on"' : "") + '>Вносит</button>' +
+        '</div></div>';
+    }).join("") : '<div class="empty">Никого не нашли</div>';
+  }
+  $("accSearch").addEventListener("input", renderAccess);
+  $("accList").addEventListener("click", async e => {
+    const b = e.target.closest("button[data-lv]"); if (!b) return;
+    const uid = b.closest("[data-uid]").dataset.uid, lv = b.dataset.lv;
+    if ((accMap.get(uid) || "none") === lv) return;
+    const r = lv === "none"
+      ? await db.from("treasury_access").delete().eq("clan_id", profile.clan_id).eq("user_id", uid)
+      : await db.from("treasury_access").upsert({ clan_id: profile.clan_id, user_id: uid, can_edit: lv === "edit", granted_at: new Date().toISOString() }, { onConflict: "clan_id,user_id" });
+    if (r.error){ toast("Не сохранилось: " + r.error.message); return; }
+    if (lv === "none") accMap.delete(uid); else accMap.set(uid, lv);
+    renderAccess();
+    renderSub();
+    const who = (accPeople.find(x => x.id === uid) || {}).name || "";
+    toast(lv === "none" ? who + ": доступ закрыт" : who + (lv === "edit" ? ": может смотреть и вносить" : ": может смотреть"));
+  });
+  $("accessBtn").addEventListener("click", openAccess);
+
+  // ---------- подпись под заголовком ----------
+  async function loadAccessCount(){
+    if (!isLeader) return;
+    const r = await db.from("treasury_access").select("user_id, can_edit");
+    if (!r.error) accMap = new Map((r.data || []).map(x => [x.user_id, x.can_edit ? "edit" : "view"]));
+  }
+  function renderSub(){
+    let t;
+    if (isLeader) t = accMap.size ? "🔒 Видишь ты и ещё " + accMap.size + " " + plural(accMap.size, "человек", "человека", "человек") : "🔒 Видишь только ты";
+    else t = access === "edit" ? "🔒 Доступ выдал клан-лидер — можно вносить записи" : "🔒 Доступ выдал клан-лидер — только просмотр";
+    $("trSub").textContent = t;
+  }
+
+  // ---------- тост ----------
+  let toastT = 0, undoFn = null;
+  function toast(text, undo){
+    $("toastText").textContent = text;
+    undoFn = undo || null;
+    $("toastUndo").style.display = undo ? "" : "none";
+    $("toast").classList.add("show");
+    clearTimeout(toastT); toastT = setTimeout(() => $("toast").classList.remove("show"), undo ? 6000 : 2400);
+  }
+  $("toastUndo").addEventListener("click", () => { const f = undoFn; undoFn = null; $("toast").classList.remove("show"); if (f) f(); });
+  function fail(e){
+    console.error(e);
+    const ro = e && e.code === "owner_view_readonly";
+    toast(ro ? "Режим просмотра: изменения запрещены" : "Не сохранилось: " + ((e && e.message) || "ошибка базы"));
+    reload();
+  }
+  async function reload(){
+    try { await loadAll(); } catch(e){ console.error(e); return; }
+    if (ui.edit && !byId(ui.edit)) ui.edit = null;
+    if (ui.ask && !byId(ui.ask)) ui.ask = null;
+    renderCards(); renderReserves(); renderActs();
+    if (!ui.edit) renderFeed();
+  }
+  // вернулись на вкладку / раз в минуту — подтянуть записи, внесённые с другого устройства или тем, кому выдан доступ
+  const idle = () => !ui.form && !ui.edit && !ui.ask && !document.querySelector(".md-back.show");
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && idle()) reload(); });
+  setInterval(() => { if (document.visibilityState === "visible" && idle()) reload(); }, 60000);
+
+  // ---------- старт ----------
+  if (isLeader) $("accessBtn").hidden = false;
+  if (!canWrite) $("roTag").hidden = false;
+  try { await Promise.all([loadAll(), loadAccessCount()]); }
+  catch(e){
+    console.error(e);
+    lock("Не удалось загрузить казну", esc((e && e.message) || e));
+    return;
+  }
+  renderSub();
+  render();
+})();
+</script>
+</body>
+</html>

@@ -152,11 +152,11 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
 <script src="js/supabase-client.js?v=34"></script>
 <script src="js/classes.js?v=3"></script>
-<script src="js/i18n.js?v=150"></script>
+<script src="js/i18n.js?v=151"></script>
 <script src="js/nick-match.js?v=8"></script>
 <script src="js/nick-tools.js?v=7"></script>
 <script src="js/tax-flag.js?v=1"></script>
-<script src="js/nav-config.js?v=2"></script>
+<script src="js/nav-config.js?v=3"></script>
 <script>
 (async function(){
   const session = await L2Cabinet.requireSession();
@@ -168,6 +168,7 @@
     my_cabinet:  { type: "iframe", src: "my-cabinet.html" },
     groups:      { type: "iframe", src: "groups.html" },
     needs:       { type: "iframe", src: "needs.html" },
+    treasury:    { type: "iframe", src: "treasury.html" },
     // «Панель скилов» закрыта на доработку: пункт меню остаётся (с меткой), вместо раздела — заглушка «в разработке».
     // Сама страница panel.html никуда не делась — открыть её для разработки можно напрямую по адресу /panel.html.
     // Вернуть раздел всем: type: "iframe"
@@ -198,6 +199,7 @@
     my_cabinet:  '<circle cx="12" cy="8.2" r="3.4"/><path d="M5.3 20c0-3.6 3-6.3 6.7-6.3s6.7 2.7 6.7 6.3"/>',
     groups:      '<circle cx="8.8" cy="8.3" r="3"/><path d="M3.2 19.2c0-3 2.5-5.3 5.6-5.3s5.6 2.3 5.6 5.3"/><circle cx="16.8" cy="9.1" r="2.3"/><path d="M14.9 13.7c2.5.3 4.2 2.3 4.2 5"/>',
     needs:       '<circle cx="10.5" cy="8" r="3.2"/><path d="M4.2 19.5c0-3.4 2.8-6 6.3-6 1.1 0 2.1.2 3 .7"/><path d="M18 14.2v6M15 17.2h6"/>',
+    treasury:    '<path d="M3.5 10.5h17v8.2a1.3 1.3 0 01-1.3 1.3H4.8a1.3 1.3 0 01-1.3-1.3v-8.2z"/><path d="M3.5 10.5V8.3A3.3 3.3 0 016.8 5h10.4a3.3 3.3 0 013.3 3.3v2.2"/><rect x="10" y="9" width="4" height="4.6" rx="1"/>',
     skill_panel: '<path d="M12 3c.7 3.6 2.2 5.1 5.8 5.8-3.6.7-5.1 2.2-5.8 5.8-.7-3.6-2.2-5.1-5.8-5.8C9.8 8.1 11.3 6.6 12 3z"/><circle cx="18.4" cy="17.4" r="1.3"/>',
     admin:       '<circle cx="12" cy="12" r="2.8"/><path d="M19.4 13.4a7.6 7.6 0 000-2.8l1.9-1.7-2-3.3-2.4.8a7.6 7.6 0 00-2.4-1.4L14 2.5h-4l-.5 2.5a7.6 7.6 0 00-2.4 1.4l-2.4-.8-2 3.3 1.9 1.7a7.6 7.6 0 000 2.8l-1.9 1.7 2 3.3 2.4-.8a7.6 7.6 0 002.4 1.4l.5 2.5h4l.5-2.5a7.6 7.6 0 002.4-1.4l2.4.8 2-3.3-1.9-1.7z"/>',
     census:      '<rect x="5.2" y="3.8" width="13.6" height="16.8" rx="2"/><path d="M9 3.8V3a1 1 0 011-1h4a1 1 0 011 1v.8"/><path d="M8.5 10.8h7M8.5 14.4h7M8.5 18h4"/>',
@@ -402,11 +404,18 @@
   document.getElementById("sidebarBackdrop").addEventListener("click", () => setMobileNavOpen(false));
 
   // права разделов, флаг налогов и справочник ников — параллельно (раньше шли друг за другом)
-  const [sections] = await Promise.all([
+  // «Казна» — личный раздел клан-лидера: её нет в sections/role_sections (в Админ-панели не настраивается), пункт меню
+  // появляется только тому, кому база отвечает доступом (сам КЛ или кому он выдал). В просмотре владельца — никогда.
+  const treasuryP = (L2Cabinet.ownerView && L2Cabinet.ownerView())
+    ? Promise.resolve(null)
+    : db.rpc("treasury_my_access").then(r => (r.error ? null : r.data), () => null);
+  const [sections, treasuryAccess] = await Promise.all([
     L2Cabinet.getVisibleSections(roleKey, profile.role_id),
+    treasuryP,
     L2Taxes.init(db, profile.clan_id).catch(e => console.error(e)),
     nickReady,
   ]);
+  if(treasuryAccess) sections.push({ key: "treasury", label: "Казна", sort: 9999 });
   // «Лидерборд» — пока в базе нет раздела leaderboard (не выполнен
   // supabase/schema_leaderboard_section.sql), показываем его тем, кому открыты
   // «Отчёты» (те же данные), сразу после них. Как только раздел появился в
